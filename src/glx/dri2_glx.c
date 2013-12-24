@@ -456,32 +456,23 @@ dri2DrawableGetMSC(struct glx_screen *psc, __GLXDRIdrawable *pdraw,
 
 #endif
 
+
+#ifdef X_DRI2WaitMSC
+
 static int
 dri2WaitForMSC(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
 	       int64_t remainder, int64_t *ust, int64_t *msc, int64_t *sbc)
 {
-   xcb_connection_t *c = XGetXCBConnection(pdraw->psc->dpy);
-   xcb_dri2_wait_msc_cookie_t wait_msc_cookie;
-   xcb_dri2_wait_msc_reply_t *wait_msc_reply;
-   uint32_t target_msc_hi, target_msc_lo;
-   uint32_t divisor_hi, divisor_lo;
-   uint32_t remainder_hi, remainder_lo;
+   CARD64 dri2_ust, dri2_msc, dri2_sbc;
+   int ret;
 
-   split_counter(target_msc, &target_msc_hi, &target_msc_lo);
-   split_counter(divisor, &divisor_hi, &divisor_lo);
-   split_counter(remainder, &remainder_hi, &remainder_lo);
+   ret = DRI2WaitMSC(pdraw->psc->dpy, pdraw->xDrawable, target_msc, divisor,
+		     remainder, &dri2_ust, &dri2_msc, &dri2_sbc);
+   *ust = dri2_ust;
+   *msc = dri2_msc;
+   *sbc = dri2_sbc;
 
-   wait_msc_cookie = xcb_dri2_wait_msc_unchecked(c, pdraw->xDrawable,
-                                                 target_msc_hi, target_msc_lo,
-                                                 divisor_hi, divisor_lo,
-                                                 remainder_hi, remainder_lo);
-   wait_msc_reply = xcb_dri2_wait_msc_reply(c, wait_msc_cookie, NULL);
-   *ust = merge_counter(wait_msc_reply->ust_hi, wait_msc_reply->ust_lo);
-   *msc = merge_counter(wait_msc_reply->msc_hi, wait_msc_reply->msc_lo);
-   *sbc = merge_counter(wait_msc_reply->sbc_hi, wait_msc_reply->sbc_lo);
-   free(wait_msc_reply);
-
-   return 0;
+   return ret;
 }
 
 static int
@@ -505,6 +496,7 @@ dri2WaitForSBC(__GLXDRIdrawable *pdraw, int64_t target_sbc, int64_t *ust,
 
    return 0;
 }
+#endif /* X_DRI2WaitMSC */
 
 static __DRIcontext *
 dri2GetCurrentContext()
@@ -1242,7 +1234,9 @@ dri2CreateScreen(int screen, struct glx_display * priv)
 #ifdef X_DRI2GetMSC
       psp->getDrawableMSC = dri2DrawableGetMSC;
 #endif
+#ifdef X_DRI2WaitMSC
       psp->waitForMSC = dri2WaitForMSC;
+#endif
       psp->waitForSBC = dri2WaitForSBC;
 #ifdef X_DRI2SwapInterval
       psp->setSwapInterval = dri2SetSwapInterval;
