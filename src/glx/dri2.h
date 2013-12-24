@@ -105,5 +105,7 @@ dri3_query_renderer_integer(struct glx_screen *base, int attribute,
 _X_HIDDEN int
 dri3_query_renderer_string(struct glx_screen *base, int attribute,
                            const char **value);
+extern void
+DRI2SwapInterval(Display *dpy, XID drawable, int interval);
 
 #endif
