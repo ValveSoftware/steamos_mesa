@@ -769,52 +769,6 @@ static void show_fps(struct dri2_drawable *draw)
 }
 
 static int64_t
-dri2XcbSwapBuffers(Display *dpy,
-                  __GLXDRIdrawable *pdraw,
-                  int64_t target_msc,
-                  int64_t divisor,
-                  int64_t remainder)
-{
-   xcb_dri2_swap_buffers_cookie_t swap_buffers_cookie;
-   xcb_dri2_swap_buffers_reply_t *swap_buffers_reply;
-   uint32_t target_msc_hi, target_msc_lo;
-   uint32_t divisor_hi, divisor_lo;
-   uint32_t remainder_hi, remainder_lo;
-   int64_t ret = 0;
-   xcb_connection_t *c = XGetXCBConnection(dpy);
-
-   split_counter(target_msc, &target_msc_hi, &target_msc_lo);
-   split_counter(divisor, &divisor_hi, &divisor_lo);
-   split_counter(remainder, &remainder_hi, &remainder_lo);
-
-   swap_buffers_cookie =
-      xcb_dri2_swap_buffers_unchecked(c, pdraw->xDrawable,
-                                      target_msc_hi, target_msc_lo,
-                                      divisor_hi, divisor_lo,
-                                      remainder_hi, remainder_lo);
-
-   /* Immediately wait on the swapbuffers reply.  If we didn't, we'd have
-    * to do so some time before reusing a (non-pageflipped) backbuffer.
-    * Otherwise, the new rendering could get ahead of the X Server's
-    * dispatch of the swapbuffer and you'd display garbage.
-    *
-    * We use XSync() first to reap the invalidate events through the event
-    * filter, to ensure that the next drawing doesn't use an invalidated
-    * buffer.
-    */
-   XSync(dpy, False);
-
-   swap_buffers_reply =
-      xcb_dri2_swap_buffers_reply(c, swap_buffers_cookie, NULL);
-   if (swap_buffers_reply) {
-      ret = merge_counter(swap_buffers_reply->swap_hi,
-                          swap_buffers_reply->swap_lo);
-      free(swap_buffers_reply);
-   }
-   return ret;
-}
-
-static int64_t
 dri2SwapBuffers(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
 		int64_t remainder, Bool flush)
 {
@@ -836,12 +790,14 @@ dri2SwapBuffers(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
     } else {
        __DRIcontext *ctx = dri2GetCurrentContext();
        unsigned flags = __DRI2_FLUSH_DRAWABLE;
+       CARD64 uret;
        if (flush)
           flags |= __DRI2_FLUSH_CONTEXT;
        dri2Flush(psc, ctx, priv, flags, __DRI2_THROTTLE_SWAPBUFFER);
 
-       ret = dri2XcbSwapBuffers(pdraw->psc->dpy, pdraw,
-                                target_msc, divisor, remainder);
+       DRI2SwapBuffers(psc->base.dpy, pdraw->xDrawable,
+		       target_msc, divisor, remainder, &uret);
+       ret = uret;
     }
 
     if (psc->show_fps_interval) {
