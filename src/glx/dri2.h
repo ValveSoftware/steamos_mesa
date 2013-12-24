@@ -108,6 +108,10 @@ dri3_query_renderer_string(struct glx_screen *base, int attribute,
 extern Bool
 DRI2GetMSC(Display *dpy, XID drawable, CARD64 *ust, CARD64 *msc, CARD64 *sbc);
 
+extern Bool
+DRI2WaitMSC(Display *dpy, XID drawable, CARD64 target_msc, CARD64 divisor,
+	    CARD64 remainder, CARD64 *ust, CARD64 *msc, CARD64 *sbc);
+
 extern void
 DRI2SwapInterval(Display *dpy, XID drawable, int interval);
 
