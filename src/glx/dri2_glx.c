@@ -436,23 +436,25 @@ dri2CreateDrawable(struct glx_screen *base, XID xDrawable,
    return &pdraw->base;
 }
 
+#ifdef X_DRI2GetMSC
+
 static int
 dri2DrawableGetMSC(struct glx_screen *psc, __GLXDRIdrawable *pdraw,
 		   int64_t *ust, int64_t *msc, int64_t *sbc)
 {
-   xcb_connection_t *c = XGetXCBConnection(pdraw->psc->dpy);
-   xcb_dri2_get_msc_cookie_t get_msc_cookie;
-   xcb_dri2_get_msc_reply_t *get_msc_reply;
+   CARD64 dri2_ust, dri2_msc, dri2_sbc;
+   int ret;
 
-   get_msc_cookie = xcb_dri2_get_msc_unchecked(c, pdraw->xDrawable);
-   get_msc_reply = xcb_dri2_get_msc_reply(c, get_msc_cookie, NULL);
-   *ust = merge_counter(get_msc_reply->ust_hi, get_msc_reply->ust_lo);
-   *msc = merge_counter(get_msc_reply->msc_hi, get_msc_reply->msc_lo);
-   *sbc = merge_counter(get_msc_reply->sbc_hi, get_msc_reply->sbc_lo);
-   free(get_msc_reply);
+   ret = DRI2GetMSC(psc->dpy, pdraw->xDrawable,
+		    &dri2_ust, &dri2_msc, &dri2_sbc);
+   *ust = dri2_ust;
+   *msc = dri2_msc;
+   *sbc = dri2_sbc;
 
-   return 0;
+   return ret;
 }
+
+#endif
 
 static int
 dri2WaitForMSC(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
@@ -1237,14 +1239,18 @@ dri2CreateScreen(int screen, struct glx_display * priv)
    psp->getSwapInterval = NULL;
 
    if (pdp->driMinor >= 2) {
+#ifdef X_DRI2GetMSC
       psp->getDrawableMSC = dri2DrawableGetMSC;
+#endif
       psp->waitForMSC = dri2WaitForMSC;
       psp->waitForSBC = dri2WaitForSBC;
 #ifdef X_DRI2SwapInterval
       psp->setSwapInterval = dri2SetSwapInterval;
       psp->getSwapInterval = dri2GetSwapInterval;
 #endif
+#if defined(X_DRI2GetMSC) && defined(X_DRI2WaitMSC) && defined(X_DRI2SwapInterval)
       __glXEnableDirectExtension(&psc->base, "GLX_OML_sync_control");
+#endif
    }
 
    /* DRI2 suports SubBuffer through DRI2CopyRegion, so it's always
