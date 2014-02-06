@@ -372,6 +372,11 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 1;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
+		if (family >= CHIP_CEDAR)
+		   return 330;
+		/* pre-evergreen geom shaders need newer kernel */
+		if (rscreen->b.info.drm_minor >= 37)
+		   return 330;
 		return 140;
 
 	/* Supported except the original R600. */
@@ -383,6 +388,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	/* Supported on Evergreen. */
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 	case PIPE_CAP_CUBE_MAP_ARRAY:
+	case PIPE_CAP_TGSI_VS_LAYER:
 		return family >= CHIP_CEDAR ? 1 : 0;
 
 	/* Unsupported features. */
@@ -392,7 +398,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
 	case PIPE_CAP_VERTEX_COLOR_CLAMPED:
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
-	case PIPE_CAP_TGSI_VS_LAYER:
 		return 0;
 
 	/* Stream output. */
@@ -416,7 +421,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return rscreen->b.info.drm_minor >= 9 ?
 			(family >= CHIP_CEDAR ? 16384 : 8192) : 0;
 	case PIPE_CAP_MAX_COMBINED_SAMPLERS:
-		return 32;
+		return 48;
 
 	/* Render targets. */
 	case PIPE_CAP_MAX_RENDER_TARGETS:
@@ -449,14 +454,20 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enum pipe_shader_cap param)
 {
+	struct r600_screen *rscreen = (struct r600_screen *)pscreen;
+
 	switch(shader)
 	{
 	case PIPE_SHADER_FRAGMENT:
 	case PIPE_SHADER_VERTEX:
-        case PIPE_SHADER_COMPUTE:
+	case PIPE_SHADER_COMPUTE:
 		break;
 	case PIPE_SHADER_GEOMETRY:
-		/* XXX: support and enable geometry programs */
+		if (rscreen->b.family >= CHIP_CEDAR)
+			break;
+		/* pre-evergreen geom shaders need newer kernel */
+		if (rscreen->b.info.drm_minor >= 37)
+			break;
 		return 0;
 	default:
 		/* XXX: support tessellation on Evergreen */
