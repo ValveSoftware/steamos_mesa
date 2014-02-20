@@ -79,6 +79,7 @@
 #include "dri_common.h"
 #include "dri3_priv.h"
 #include "loader.h"
+#include "dri2.h"
 
 static const struct glx_context_vtable dri3_context_vtable;
 
@@ -1580,12 +1581,19 @@ dri3_bind_extensions(struct dri3_screen *psc, struct glx_display * priv,
       if (strcmp(extensions[i]->name, __DRI2_ROBUSTNESS) == 0)
          __glXEnableDirectExtension(&psc->base,
                                     "GLX_ARB_create_context_robustness");
+
+      if (strcmp(extensions[i]->name, __DRI2_RENDERER_QUERY) == 0) {
+         psc->rendererQuery = (__DRI2rendererQueryExtension *) extensions[i];
+         __glXEnableDirectExtension(&psc->base, "GLX_MESA_query_renderer");
+      }
    }
 }
 
 static const struct glx_screen_vtable dri3_screen_vtable = {
    dri3_create_context,
-   dri3_create_context_attribs
+   dri3_create_context_attribs,
+   dri3_query_renderer_integer,
+   dri3_query_renderer_string,
 };
 
 /** dri3_create_screen
