@@ -1957,7 +1957,7 @@ _mesa_GetBooleani_v( GLenum pname, GLuint index, GLboolean *params )
       params[3] = INT_TO_BOOLEAN(v.value_int_4[3]);
       break;
    case TYPE_INT64:
-      params[0] = INT64_TO_BOOLEAN(v.value_int);
+      params[0] = INT64_TO_BOOLEAN(v.value_int64);
       break;
    default:
       ; /* nothing - GL error was recorded */
@@ -2002,7 +2002,7 @@ _mesa_GetIntegeri_v( GLenum pname, GLuint index, GLint *params )
       params[3] = v.value_int_4[3];
       break;
    case TYPE_INT64:
-      params[0] = INT64_TO_INT(v.value_int);
+      params[0] = INT64_TO_INT(v.value_int64);
       break;
    default:
       ; /* nothing - GL error was recorded */
@@ -2027,7 +2027,7 @@ _mesa_GetInteger64i_v( GLenum pname, GLuint index, GLint64 *params )
       params[3] = v.value_int_4[3];
       break;
    case TYPE_INT64:
-      params[0] = v.value_int;
+      params[0] = v.value_int64;
       break;
    default:
       ; /* nothing - GL error was recorded */
