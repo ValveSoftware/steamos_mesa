@@ -825,7 +825,6 @@ __glXInitialize(Display * dpy)
    dpyPriv->codes = XInitExtension(dpy, __glXExtensionName);
    if (!dpyPriv->codes) {
       free(dpyPriv);
-      _XUnlockMutex(_Xglobal_lock);
       return NULL;
    }
 
@@ -841,7 +840,6 @@ __glXInitialize(Display * dpy)
 		     &dpyPriv->majorVersion, &dpyPriv->minorVersion)
        || (dpyPriv->majorVersion == 1 && dpyPriv->minorVersion < 1)) {
       free(dpyPriv);
-      _XUnlockMutex(_Xglobal_lock);
       return NULL;
    }
 
@@ -906,7 +904,7 @@ __glXInitialize(Display * dpy)
    dpyPriv->next = glx_displays;
    glx_displays = dpyPriv;
 
-    _XUnlockMutex(_Xglobal_lock);
+   _XUnlockMutex(_Xglobal_lock);
 
    return dpyPriv;
 }
