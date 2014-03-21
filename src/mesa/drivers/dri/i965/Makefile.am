@@ -42,7 +42,13 @@ gen8_instruction_CFLAGS = $(AM_CFLAGS) -fkeep-inline-functions
 
 noinst_LTLIBRARIES = libi965_dri.la
 libi965_dri_la_SOURCES = $(i965_FILES)
-libi965_dri_la_LIBADD = $(INTEL_LIBS)
+libi965_dri_la_LIBADD = $(INTEL_LIBS) \
+        $(LUNARGLASS_LDFLAGS) \
+        $(GLSLANG_LDFLAGS) \
+        $(LLVM_LDFLAGS) \
+        $(LUNARGLASS_LIBS) \
+        $(GLSLANG_LIBS) \
+        $(LLVM_LIBS)
 
 TEST_LIBS = \
 	libi965_dri.la \

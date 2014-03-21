@@ -1654,6 +1654,65 @@ AC_ARG_WITH([llvm-prefix],
     [llvm_prefix="$withval"],
     [llvm_prefix=''])
 
+AC_ARG_WITH([lunarglass-prefix],
+    [AS_HELP_STRING([--with-lunarglass-prefix],
+        [Prefix for LunarGlass installations in non-standard locations])],
+    [lunarglass_prefix="$withval"],
+    [lunarglass_prefix='../LunarGLASS'])
+
+AC_ARG_WITH([glslang-prefix],
+    [AS_HELP_STRING([--with-glslang-prefix],
+        [Prefix for glslang installations in non-standard locations])],
+    [glslang_prefix="$withval"],
+    [glslang_prefix='../glslang'])
+
+AC_ARG_ENABLE([lunarglass],
+  [AS_HELP_STRING([--enable-lunarglass],
+    [enable LunarGlass parser and optimizer @<:@default=disabled@:>@])],
+  [enable_lunarglass="${enableval}"],
+  [enable_lunarglass=no]
+)
+if test "x${enable_lunarglass}" = "xyes" ; then
+  LUNARGLASS_ROOT=`readlink --canonicalize "$lunarglass_prefix"`
+  LUNARGLASS_INCLUDEDIR="$LUNARGLASS_ROOT"
+  GLSLANG_ROOT=`readlink --canonicalize "$glslang_prefix"`
+  GLSLANG_INCLUDEDIR="$GLSLANG_ROOT"
+  if ! test -d "$LUNARGLASS_INCLUDEDIR"; then
+     enable_lunarglass=no
+     LUNARGLASS_ROOT=''
+     LUNARGLASS_INCLUDEDIR=''
+     LUNARGLASS_CFLAGS=''
+     LUNARGLASS_LDFLAGS=''
+     LUNARGLASS_LIBS=''
+     GLSLANG_ROOT=''
+     GLSLANG_INCLUDEDIR=''
+     GLSLANG_LIBS=''
+     GLSLANG_LDFLAGS=''
+     GLSLANG_CFLAGS=''
+  else
+     # LunarGLASS flags
+     DEFINES="${DEFINES} -DUSE_LUNARGLASS"
+     LUNARGLASS_CFLAGS="-I$LUNARGLASS_INCLUDEDIR -Wno-unknown-pragmas"
+     LUNARGLASS_LIBS="-lglslangFrontend -lcore -lLLVMipo"
+     LUNARGLASS_LDFLAGS="-L$LUNARGLASS_ROOT/build/Core -L$LUNARGLASS_ROOT/build/Frontends/glslang -L$LUNARGLASS_ROOT/build/Core/Passes/Transforms -L$LUNARGLASS_ROOT/build/Core/Passes/Immutable -L$LUNARGLASS_ROOT/build/Core/Passes/Analysis -L$LUNARGLASS_ROOT/build/Core/Passes/Util"
+
+     # GLSLANG flags
+     GLSLANG_LIBS="-lglslang -lOSDependent -lOGLCompiler"
+     GLSLANG_CFLAGS="-I$GLSLANG_INCLUDEDIR"
+     GLSLANG_LDFLAGS="-L$GLSLANG_ROOT/build/install/lib"
+  fi
+fi
+
+AC_SUBST([LUNARGLASS_ROOT])
+AC_SUBST([LUNARGLASS_INCLUDEDIR])
+AC_SUBST([LUNARGLASS_CFLAGS])
+AC_SUBST([LUNARGLASS_LIBS])
+AC_SUBST([LUNARGLASS_LDFLAGS])
+AC_SUBST([GLSLANG_ROOT])
+AC_SUBST([GLSLANG_INCLUDEDIR])
+AC_SUBST([GLSLANG_LDFLAGS])
+AC_SUBST([GLSLANG_LIBS])
+AC_SUBST([GLSLANG_CFLAGS])
 
 # Call this inside ` ` to get the return value.
 # $1 is the llvm-config command with arguments.
@@ -2381,6 +2440,14 @@ else
     echo "        llvm:            no"
 fi
 
+dnl LunarGlass
+if test "x$enable_lunarglass" = xyes; then
+    echo ""
+    echo "        LunarGlass:      yes"
+    echo "        LunarGlass root: $LUNARGLASS_ROOT"
+    echo "        glslang root:    $GLSLANG_ROOT"
+fi
+
 echo ""
 if test -n "$with_gallium_drivers"; then
     echo "        Gallium:         yes"
@@ -2392,12 +2459,11 @@ else
     echo "        Gallium:         no"
 fi
 
-
 dnl Libraries
 echo ""
 echo "        Shared libs:     $enable_shared"
 echo "        Static libs:     $enable_static"
-echo "        Shared-glapi:    $enable_shared_glapi"
+echo " Shared-glapi: $enable_shared_glapi"
 
 dnl Compiler options
 # cleanup the CFLAGS/CXXFLAGS/DEFINES vars

@@ -26,6 +26,9 @@ LIBGLSL_FILES = \
 	$(GLSL_SRCDIR)/builtin_variables.cpp \
 	$(GLSL_SRCDIR)/glsl_parser_extras.cpp \
 	$(GLSL_SRCDIR)/glsl_types.cpp \
+	$(GLSL_SRCDIR)/glsl_glass_backend.cpp \
+	$(GLSL_SRCDIR)/glsl_glass_backend_translator.cpp \
+	$(GLSL_SRCDIR)/glsl_glass_manager.cpp \
 	$(GLSL_SRCDIR)/glsl_symbol_table.cpp \
 	$(GLSL_SRCDIR)/hir_field_selection.cpp \
 	$(GLSL_SRCDIR)/ir_basic_block.cpp \

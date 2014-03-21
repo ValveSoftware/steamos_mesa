@@ -25,9 +25,16 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/ \
 	-I$(top_srcdir)/src/glsl/glcpp \
 	-I$(top_srcdir)/src/gtest/include \
+	$(LLVM_CFLAGS) \
+	$(LUNARGLASS_CFLAGS) \
+	$(GLSLANG_CFLAGS) \
 	$(DEFINES)
 AM_CFLAGS = $(VISIBILITY_CFLAGS)
 AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
+
+# To resolve circular library dependencies in LunarGLASS, we must
+# request that libtool not remove duplicate libraries.
+AM_LIBTOOLFLAGS = --preserve-dup-deps
 
 include Makefile.sources
 
@@ -133,9 +140,19 @@ glsl_compiler_SOURCES = \
 	$(top_srcdir)/src/mesa/program/symbol_table.c \
 	$(GLSL_COMPILER_CXX_FILES)
 
+glsl_compiler_LDFLAGS =					\
+        $(LUNARGLASS_LDFLAGS)                           \
+        $(LLVM_LDFLAGS)                                 \
+        $(GLSLANG_LDFLAGS)
+
+# LUNARGLASS_LIBS is given twice to resolve circular dependencies
 glsl_compiler_LDADD =					\
 	libglsl.la					\
-	$(PTHREAD_LIBS)
+	$(PTHREAD_LIBS)                                 \
+	$(GLSLANG_LIBS)                                 \
+	$(LUNARGLASS_LIBS)                              \
+	$(LLVM_LIBS)                                    \
+	-ldl
 
 glsl_test_SOURCES = \
 	$(top_srcdir)/src/mesa/main/hash_table.c \

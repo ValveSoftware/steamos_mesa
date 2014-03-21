@@ -25,6 +25,15 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef USE_LUNARGLASS
+// These #includes MUST be provided before glext.h, which pollutes the global namespace.
+#include "glslang/Include/ShHandle.h"
+#include "glslang/Public/ShaderLang.h"
+#include "Frontends/glslang/GlslangToTop.h"
+#include "glsl_glass_manager.h"
+#include "glsl_glass_backend_translator.h"
+#endif // USE_LUNARGLASS
+
 extern "C" {
 #include "main/core.h" /* for struct gl_context */
 #include "main/context.h"
@@ -1433,6 +1442,256 @@ set_shader_inout_layout(struct gl_shader *shader,
 
 extern "C" {
 
+#ifdef USE_LUNARGLASS
+
+void _mesa_glslang_generate_resources(struct gl_context *ctx,
+                                      TBuiltInResource& resources)
+{
+   // LunarG TODO: Obtain proper values from Mesa
+
+   resources.maxLights = ctx->Const.MaxLights;
+   resources.maxClipPlanes = ctx->Const.MaxClipPlanes;
+   resources.maxTextureUnits = ctx->Const.MaxTextureUnits;
+   resources.maxTextureCoords = ctx->Const.MaxTextureCoordUnits;
+   resources.maxVertexAttribs = ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs;
+   resources.maxVertexUniformComponents = ctx->Const.Program[MESA_SHADER_VERTEX].MaxUniformComponents;
+   resources.maxVaryingFloats = ctx->Const.MaxVarying * 4;
+   resources.maxVertexTextureImageUnits = ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits;
+   resources.maxCombinedTextureImageUnits = ctx->Const.MaxCombinedTextureImageUnits;
+   resources.maxTextureImageUnits = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
+   resources.maxFragmentUniformComponents = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxUniformComponents;
+   resources.maxDrawBuffers = ctx->Const.MaxDrawBuffers;
+   resources.maxVertexUniformVectors = resources.maxVertexUniformComponents / 4;
+   resources.maxVaryingVectors = ctx->Const.MaxVarying;
+   resources.maxFragmentUniformVectors = resources.maxFragmentUniformComponents / 4;
+   resources.maxVertexOutputVectors = ctx->Const.MaxVarying;
+   resources.maxFragmentInputVectors = ctx->Const.MaxVarying - 1;
+   resources.minProgramTexelOffset = ctx->Const.MinProgramTexelOffset;
+   resources.maxProgramTexelOffset = ctx->Const.MaxProgramTexelOffset;
+   resources.maxClipDistances = 8;               // TODO: ...
+   resources.maxComputeWorkGroupCountX = ctx->Const.MaxComputeWorkGroupCount[0];
+   resources.maxComputeWorkGroupCountY = ctx->Const.MaxComputeWorkGroupCount[1];
+   resources.maxComputeWorkGroupCountZ = ctx->Const.MaxComputeWorkGroupCount[2];
+   resources.maxComputeWorkGroupSizeX = ctx->Const.MaxComputeWorkGroupSize[0];
+   resources.maxComputeWorkGroupSizeX = ctx->Const.MaxComputeWorkGroupSize[1];
+   resources.maxComputeWorkGroupSizeZ = ctx->Const.MaxComputeWorkGroupSize[2];
+   resources.maxComputeUniformComponents = 1024; // TODO: ...
+   resources.maxComputeTextureImageUnits = 16;   // TODO: ...
+   resources.maxComputeImageUniforms = 8;        // TODO: ...
+   resources.maxComputeAtomicCounters = 8;       // TODO: ...
+   resources.maxComputeAtomicCounterBuffers = 1; // TODO: ...
+   resources.maxVaryingComponents = ctx->Const.MaxVarying * 4;
+   resources.maxVertexOutputComponents = ctx->Const.Program[MESA_SHADER_VERTEX].MaxOutputComponents;
+   resources.maxGeometryInputComponents = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents;
+   resources.maxGeometryOutputComponents = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents;
+   resources.maxFragmentInputComponents = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents;
+   resources.maxImageUnits = ctx->Const.MaxImageUnits;
+   resources.maxCombinedImageUnitsAndFragmentOutputs = ctx->Const.MaxCombinedImageUnitsAndFragmentOutputs;
+   resources.maxImageSamples = ctx->Const.MaxImageSamples;
+   resources.maxVertexImageUniforms = ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms;
+   resources.maxTessControlImageUniforms = 0;    // TODO: ...
+   resources.maxTessEvaluationImageUniforms = 0; // TODO: ...
+   resources.maxGeometryImageUniforms = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms;
+   resources.maxFragmentImageUniforms = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms;
+   resources.maxCombinedImageUniforms = ctx->Const.MaxCombinedImageUniforms;
+   resources.maxGeometryTextureImageUnits = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits;
+   resources.maxGeometryOutputVertices = ctx->Const.MaxGeometryOutputVertices;
+   resources.maxGeometryTotalOutputComponents = ctx->Const.MaxGeometryTotalOutputComponents;
+   resources.maxGeometryUniformComponents = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents;
+   resources.maxGeometryVaryingComponents = 64;           // TODO: ...
+   resources.maxTessControlInputComponents = 128;         // TODO: ...
+   resources.maxTessControlOutputComponents = 128;        // TODO: ...
+   resources.maxTessControlTextureImageUnits = 16;        // TODO: ...
+   resources.maxTessControlUniformComponents = 1024;      // TODO: ...
+   resources.maxTessControlTotalOutputComponents = 4096;  // TODO: ...
+   resources.maxTessEvaluationInputComponents = 128;      // TODO: ...
+   resources.maxTessEvaluationOutputComponents = 128;     // TODO: ...
+   resources.maxTessEvaluationTextureImageUnits = 16;     // TODO: ...
+   resources.maxTessEvaluationUniformComponents = 1024;   // TODO: ...
+   resources.maxTessPatchComponents = 120;                // TODO: ...
+   resources.maxPatchVertices = 32;                       // TODO: ...
+   resources.maxTessGenLevel = 64;                        // TODO: ...
+   resources.maxViewports = ctx->Const.MaxViewports;
+   resources.maxVertexAtomicCounters = ctx->Const.Program[MESA_SHADER_VERTEX].MaxAtomicCounters;
+   resources.maxTessControlAtomicCounters = 0;            // TODO: ...
+   resources.maxTessEvaluationAtomicCounters = 0;         // TODO: ...
+   resources.maxGeometryAtomicCounters = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters;
+   resources.maxFragmentAtomicCounters = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters;
+   resources.maxCombinedAtomicCounters = ctx->Const.MaxCombinedAtomicCounters;
+   resources.maxAtomicCounterBindings = ctx->Const.MaxAtomicBufferBindings;
+   resources.maxVertexAtomicCounterBuffers = 0;           // TODO: ...
+   resources.maxTessControlAtomicCounterBuffers = 0;      // TODO: ...
+   resources.maxTessEvaluationAtomicCounterBuffers = 0;   // TODO: ...
+   resources.maxGeometryAtomicCounterBuffers = 0;         // TODO: ...
+   resources.maxFragmentAtomicCounterBuffers = 1;         // TODO: ...
+   resources.maxCombinedAtomicCounterBuffers = 1;         // TODO: ...
+   resources.maxAtomicCounterBufferSize = ctx->Const.MaxAtomicBufferSize;
+   resources.maxTransformFeedbackBuffers = ctx->Const.MaxTransformFeedbackBuffers;
+   resources.maxTransformFeedbackInterleavedComponents = ctx->Const.MaxTransformFeedbackInterleavedComponents;
+   resources.limits.nonInductiveForLoops = 1;
+   resources.limits.whileLoops = 1;
+   resources.limits.doWhileLoops = 1;
+   resources.limits.generalUniformIndexing = 1;
+   resources.limits.generalAttributeMatrixVectorIndexing = 1;
+   resources.limits.generalVaryingIndexing = 1;
+   resources.limits.generalSamplerIndexing = 1;
+   resources.limits.generalVariableIndexing = 1;
+   resources.limits.generalConstantMatrixVectorIndexing = 1;
+}
+
+
+EShLanguage _mesa_shader_stage_to_glslang_stage(unsigned stage)
+{
+   switch (stage)
+   {
+   case MESA_SHADER_VERTEX:          return EShLangVertex;
+   case MESA_SHADER_GEOMETRY:        return EShLangGeometry;
+   case MESA_SHADER_FRAGMENT:        return EShLangFragment;
+   case MESA_SHADER_COMPUTE:         return EShLangCompute;
+// LunarG TODO:  case MESA_SHADER_TESS_CONTROL:    return EShLangTessControl;
+// LunarG TODO:  case MESA_SHADER_TESS_EVALUATION: return EShLangTessEvaluation;
+   default:
+      assert(!"Should not get here.");
+   }
+}
+
+void
+_mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
+                          bool dump_ast, bool dump_hir)
+{
+   const char* infoLog = "";
+
+   // LunarG TODO: How much of this is needed?
+   // LunarG TODO: doing this here means we get the extension string wrong,
+   // among other things.  Needs work.
+   _mesa_glsl_parse_state *state =
+      new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
+
+   state->error = false;
+
+   // LunarG TODO: Don't do this each compile!!  Do once in setup fn.
+   glslang::InitializeProcess();
+
+   // LunarG TODO: Don't create and delete the manager for each compile.  Should have
+   // one per potential compilation thread, and re-use from a pool.
+   const EShLanguage glslang_stage = _mesa_shader_stage_to_glslang_stage(shader->Stage);
+   gla::Manager* glaManager = gla::getManager(glslang_stage);
+
+   // We know this is a MesaGlassManager, because its from our factory
+   gla::MesaGlassManager* manager = static_cast<gla::MesaGlassManager*>(glaManager);
+
+   glslang::TShader* glslang_shader = new glslang::TShader(glslang_stage);
+   glslang::TProgram& glslang_program = *new glslang::TProgram;
+
+   // Set the shader source into the TShader object
+   glslang_shader->setStrings(&shader->Source, 1);
+
+   // glslang message reporting level
+   const EShMessages messages = EShMsgDefault;
+
+   // LunarG TODO: don't do this per compile!  This is temporary.  Resource settings won't change.
+   TBuiltInResource resources;
+   _mesa_glslang_generate_resources(ctx, resources);
+
+   const int defaultVersion = state->es_shader ? 100 : 110;
+
+   if (! glslang_shader->parse(&resources, defaultVersion, false, messages)) {
+      state->error = true;
+      infoLog = glslang_shader->getInfoLog();
+   }
+
+   glslang_program.addShader(glslang_shader);
+
+   // Run glslang linking step
+   if (!state->error && !glslang_program.link(messages)) {
+      state->error = true;
+      infoLog = glslang_program.getInfoLog();
+   }
+
+   if (!state->error) {
+      for (int stage = 0; stage < EShLangCount; ++stage) {
+         glslang::TIntermediate* intermediate = glslang_program.getIntermediate((EShLanguage)stage);
+         if (! intermediate)
+            continue;
+
+         // Translate glslang to top.  TODO: move to encapsulation function
+         TranslateGlslangToTop(*intermediate, *manager);
+
+         if (dump_hir && false)
+            manager->dump("\nTop IR:\n");
+
+         // Top IR to bottom IR
+         manager->translateTopToBottom();
+
+         if (dump_hir)
+            manager->dump("\n\nBottom IR:\n");
+      }
+   }
+
+   if (!state->error) {
+      const bool prevEsShader = state->es_shader;
+
+      // We must provide some state that lower level functions depend upon
+      state->es_shader = (manager->getProfile() == EEsProfile);
+      state->language_version = manager->getVersion();
+      state->ARB_texture_rectangle_enable = true; // LunarG TODO: set for real (or do we need it?)
+      
+      // LunarG TODO: enable key extensions, in advance of better integration,
+      // so that texture fn lookup can find them.  This isn't the right way to
+      // go about it.
+      state->ARB_shader_texture_lod_enable = true;
+
+      // Allocate space for new instruction list
+      // Set required state for translation to HIR
+      manager->getBackendTranslator()->initializeTranslation(ctx, state, shader);
+
+      // Translate Bottom IR to HIR
+      // LunarG TODO: Skip empty translation units:
+      //     !state->translation_unit.is_empty() probably not set up in this path
+      manager->translateBottomToTarget();
+
+      manager->getBackendTranslator()->finalizeTranslation();
+
+      state->es_shader = prevEsShader;
+
+      // LunarG TODO: ensure that state->error is set if the translator
+      // fails
+
+      if (dump_hir)
+         _mesa_print_ir(stdout, shader->ir, state);
+   }
+
+   // Validate resulting HIR
+   if (!state->error) {
+      validate_ir_tree(shader->ir);
+   }
+
+   // Free old infolog if any
+   if (shader->InfoLog)
+      ralloc_free(shader->InfoLog);
+
+   shader->symbols                = state->symbols;
+   shader->CompileStatus          = !state->error;
+   shader->Version                = manager->getVersion();
+   shader->uses_builtin_functions = state->uses_builtin_functions;
+   shader->IsES                   = state->es_shader;
+
+   if (!state->error)
+      set_shader_inout_layout(shader, state);
+
+   // Return infolog from parser or linker
+   state->info_log = shader->InfoLog = ralloc_strdup(shader, infoLog);
+
+   // clean up
+   if (state)
+      ralloc_free(state);
+
+   delete glslang_shader;
+   delete manager;
+}
+
+#else  // USE_LUNARGLASS
+
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                           bool dump_ast, bool dump_hir)
@@ -1506,6 +1765,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    ralloc_free(state);
 }
 
+#endif // USE_LUNARGLASS
+
 } /* extern "C" */
 /**
  * Do the set of common optimizations passes
@@ -1556,6 +1817,7 @@ do_common_optimization(exec_list *ir, bool linked,
       progress = do_dead_code(ir, uniform_locations_assigned) || progress;
    else
       progress = do_dead_code_unlinked(ir) || progress;
+
    progress = do_dead_code_local(ir) || progress;
    progress = do_tree_grafting(ir) || progress;
    progress = do_constant_propagation(ir) || progress;

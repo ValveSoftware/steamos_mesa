@@ -68,11 +68,14 @@ public:
    backend_instruction *inst;
    schedule_node **children;
    int *child_latency;
+   int *child_platency;
    int child_count;
    int parent_count;
    int child_array_size;
    int unblocked_time;
+   int unblocked_ptime;
    int latency;
+   int platency;	// Physical latency
 
    /**
     * Which iteration of pushing groups of children onto the candidates list
@@ -123,6 +126,7 @@ schedule_node::set_latency_gen4()
       this->latency = 2;
       break;
    }
+   this->platency = this->latency;
 }
 
 void
@@ -389,6 +393,7 @@ schedule_node::set_latency_gen7(bool is_haswell)
       latency = 14;
       break;
    }
+   platency = latency;
 }
 
 class instruction_scheduler {
@@ -404,6 +409,7 @@ public:
       this->post_reg_alloc = (mode == SCHEDULE_POST);
       this->mode = mode;
       this->time = 0;
+      this->ptime = 0;
       if (!post_reg_alloc) {
          this->remaining_grf_uses = rzalloc_array(mem_ctx, int, grf_count);
          this->grf_active = rzalloc_array(mem_ctx, bool, grf_count);
@@ -418,7 +424,7 @@ public:
       ralloc_free(this->mem_ctx);
    }
    void add_barrier_deps(schedule_node *n);
-   void add_dep(schedule_node *before, schedule_node *after, int latency);
+   void add_dep(schedule_node *before, schedule_node *after, int latency, int platency);
    void add_dep(schedule_node *before, schedule_node *after);
 
    void run(exec_list *instructions);
@@ -448,6 +454,7 @@ public:
    int instructions_to_schedule;
    int grf_count;
    int time;
+   int ptime;
    exec_list instructions;
    backend_visitor *bv;
 
@@ -597,6 +604,8 @@ vec4_instruction_scheduler::get_register_pressure_benefit(backend_instruction *b
    return 0;
 }
 
+#define HW_THREAD_COUNT 2
+
 schedule_node::schedule_node(backend_instruction *inst,
                              instruction_scheduler *sched)
 {
@@ -606,21 +615,28 @@ schedule_node::schedule_node(backend_instruction *inst,
    this->child_array_size = 0;
    this->children = NULL;
    this->child_latency = NULL;
+   this->child_platency = NULL;
    this->child_count = 0;
    this->parent_count = 0;
    this->unblocked_time = 0;
+   this->unblocked_ptime = 0;
    this->cand_generation = 0;
    this->delay = 0;
 
    /* We can't measure Gen6 timings directly but expect them to be much
     * closer to Gen7 than Gen4.
     */
-   if (!sched->post_reg_alloc)
-      this->latency = 1;
-   else if (brw->gen >= 6)
+   if (brw->gen >= 6)
       set_latency_gen7(brw->is_haswell);
    else
       set_latency_gen4();
+
+   this->latency = this->latency / HW_THREAD_COUNT;
+   this->latency = (this->latency < 1) ? 1 : this->latency;
+   this->platency = this->latency; 
+
+   if (!sched->post_reg_alloc)	// Overwrite "scheduling" latency only
+      this->latency = 1;
 }
 
 void
@@ -660,7 +676,7 @@ instruction_scheduler::compute_delay(schedule_node *n)
  */
 void
 instruction_scheduler::add_dep(schedule_node *before, schedule_node *after,
-			       int latency)
+			       int latency, int platency)
 {
    if (!before || !after)
       return;
@@ -670,6 +686,7 @@ instruction_scheduler::add_dep(schedule_node *before, schedule_node *after,
    for (int i = 0; i < before->child_count; i++) {
       if (before->children[i] == after) {
 	 before->child_latency[i] = MAX2(before->child_latency[i], latency);
+	 before->child_platency[i] = MAX2(before->child_platency[i], platency);
 	 return;
       }
    }
@@ -685,10 +702,13 @@ instruction_scheduler::add_dep(schedule_node *before, schedule_node *after,
 				  before->child_array_size);
       before->child_latency = reralloc(mem_ctx, before->child_latency,
 				       int, before->child_array_size);
+      before->child_platency = reralloc(mem_ctx, before->child_platency,
+				       int, before->child_array_size);
    }
 
    before->children[before->child_count] = after;
    before->child_latency[before->child_count] = latency;
+   before->child_platency[before->child_count] = platency;
    before->child_count++;
    after->parent_count++;
 }
@@ -699,7 +719,7 @@ instruction_scheduler::add_dep(schedule_node *before, schedule_node *after)
    if (!before)
       return;
 
-   add_dep(before, after, before->latency);
+   add_dep(before, after, before->latency, before->platency);
 }
 
 /**
@@ -715,14 +735,14 @@ instruction_scheduler::add_barrier_deps(schedule_node *n)
 
    if (prev) {
       while (!prev->is_head_sentinel()) {
-	 add_dep(prev, n, 0);
+	 add_dep(prev, n, 0, 0);
 	 prev = (schedule_node *)prev->prev;
       }
    }
 
    if (next) {
       while (!next->is_tail_sentinel()) {
-	 add_dep(n, next, 0);
+	 add_dep(n, next, 0, 0);
 	 next = (schedule_node *)next->next;
       }
    }
@@ -878,7 +898,7 @@ fs_instruction_scheduler::calculate_deps()
       }
 
       if (inst->writes_flag()) {
-	 add_dep(last_conditional_mod[inst->flag_subreg], n, 0);
+	 add_dep(last_conditional_mod[inst->flag_subreg], n, 0, 0);
 	 last_conditional_mod[inst->flag_subreg] = n;
       }
 
@@ -943,7 +963,7 @@ fs_instruction_scheduler::calculate_deps()
 	     * instruction once it's sent, not when the result comes
 	     * back.
 	     */
-	    add_dep(n, last_mrf_write[inst->base_mrf + i], 2);
+	    add_dep(n, last_mrf_write[inst->base_mrf + i], 2, 2);
 	 }
       }
 
@@ -1108,7 +1128,7 @@ vec4_instruction_scheduler::calculate_deps()
       }
 
       if (inst->writes_flag()) {
-         add_dep(last_conditional_mod, n, 0);
+         add_dep(last_conditional_mod, n, 0, 0);
          last_conditional_mod = n;
       }
 
@@ -1160,7 +1180,7 @@ vec4_instruction_scheduler::calculate_deps()
           * instruction once it's sent, not when the result comes
           * back.
           */
-         add_dep(n, last_mrf_write[inst->base_mrf + i], 2);
+         add_dep(n, last_mrf_write[inst->base_mrf + i], 2, 2);
       }
 
       if (inst->reads_flag()) {
@@ -1379,6 +1399,7 @@ instruction_scheduler::schedule_instructions(backend_instruction *next_block_hea
        * chosen one.
        */
       time += issue_time(chosen->inst);
+      ptime += issue_time(chosen->inst);
 
       /* If we expected a delay for scheduling, then bump the clock to reflect
        * that as well.  In reality, the hardware will switch to another
@@ -1386,6 +1407,7 @@ instruction_scheduler::schedule_instructions(backend_instruction *next_block_hea
        * even after we're unblocked.
        */
       time = MAX2(time, chosen->unblocked_time);
+      ptime = MAX2(ptime, chosen->unblocked_ptime);
 
       if (debug) {
          fprintf(stderr, "clock %4d, scheduled: ", time);
@@ -1402,6 +1424,8 @@ instruction_scheduler::schedule_instructions(backend_instruction *next_block_hea
 
 	 child->unblocked_time = MAX2(child->unblocked_time,
 				      time + chosen->child_latency[i]);
+	 child->unblocked_ptime = MAX2(child->unblocked_ptime,
+				      ptime + chosen->child_platency[i]);
 
          if (debug) {
             fprintf(stderr, "\tchild %d, %d parents: ", i, child->parent_count);
@@ -1428,9 +1452,12 @@ instruction_scheduler::schedule_instructions(backend_instruction *next_block_hea
 	 foreach_list(node, &instructions) {
 	    schedule_node *n = (schedule_node *)node;
 
-	    if (n->inst->is_math())
+	    if (n->inst->is_math()) {
 	       n->unblocked_time = MAX2(n->unblocked_time,
 					time + chosen->latency);
+	       n->unblocked_ptime = MAX2(n->unblocked_ptime,
+					ptime + chosen->platency);
+            }
 	 }
       }
    }
@@ -1498,9 +1525,9 @@ fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
    fs_instruction_scheduler sched(this, grf_count, mode);
    sched.run(&instructions);
 
-   if (unlikely(INTEL_DEBUG & DEBUG_WM) && mode == SCHEDULE_POST) {
+   if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
       fprintf(stderr, "fs%d estimated execution time: %d cycles\n",
-             dispatch_width, sched.time);
+             dispatch_width, sched.ptime);
    }
 
    invalidate_live_intervals();
