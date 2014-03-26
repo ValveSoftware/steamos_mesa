@@ -37,6 +37,7 @@ extern "C" {
 #include "glsl_parser.h"
 #include "ir_optimization.h"
 #include "loop_analysis.h"
+#include "threadpool.h"
 
 /**
  * Format a short human-readable description of the given GLSL version.
@@ -1559,6 +1560,8 @@ extern "C" {
 void
 _mesa_destroy_shader_compiler(void)
 {
+   _mesa_glsl_destroy_threadpool();
+
    _mesa_destroy_shader_compiler_caches();
 
    _mesa_glsl_release_types();
@@ -1572,6 +1575,7 @@ _mesa_destroy_shader_compiler(void)
 void
 _mesa_destroy_shader_compiler_caches(void)
 {
+   _mesa_glsl_wait_threadpool();
    _mesa_glsl_release_builtin_functions();
 }
 
