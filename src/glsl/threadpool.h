@@ -55,6 +55,15 @@ bool
 _mesa_threadpool_complete_task(struct _mesa_threadpool *pool,
                                struct _mesa_threadpool_task *task);
 
+struct _mesa_threadpool *
+_mesa_glsl_get_threadpool(int max_threads);
+
+void
+_mesa_glsl_wait_threadpool(void);
+
+void
+_mesa_glsl_destroy_threadpool(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -55,6 +55,7 @@ struct _mesa_threadpool_task {
 struct _mesa_threadpool {
    mtx_t mutex;
    int refcnt;
+   bool shutdown;
 
    enum _mesa_threadpool_control thread_control;
    thrd_t *threads;
@@ -157,6 +158,12 @@ _mesa_threadpool_queue_task(struct _mesa_threadpool *pool,
    task->data = data;
 
    mtx_lock(&pool->mutex);
+
+   if (unlikely(pool->shutdown)) {
+      mtx_unlock(&pool->mutex);
+      free(task);
+      return NULL;
+   }
 
    while (unlikely(pool->thread_control != MESA_THREADPOOL_NORMAL))
       cnd_wait(&pool->thread_joined, &pool->mutex);
@@ -297,6 +304,17 @@ _mesa_threadpool_join(struct _mesa_threadpool *pool, bool graceful)
 }
 
 /**
+ * After this call, no task can be queued.
+ */
+static void
+_mesa_threadpool_set_shutdown(struct _mesa_threadpool *pool)
+{
+   mtx_lock(&pool->mutex);
+   pool->shutdown = true;
+   mtx_unlock(&pool->mutex);
+}
+
+/**
  * Decrease the reference count.  Destroy \p pool when the reference count
  * reaches zero.
  */
@@ -391,4 +409,58 @@ _mesa_threadpool_create(int max_threads)
    make_empty_list(&pool->pending_tasks);
 
    return pool;
+}
+
+static mtx_t threadpool_lock = _MTX_INITIALIZER_NP;
+static struct _mesa_threadpool *threadpool;
+
+/**
+ * Get the singleton GLSL thread pool.  \p max_threads is honored only by the
+ * first call to this function.
+ */
+struct _mesa_threadpool *
+_mesa_glsl_get_threadpool(int max_threads)
+{
+   mtx_lock(&threadpool_lock);
+   if (!threadpool)
+      threadpool = _mesa_threadpool_create(max_threads);
+   if (threadpool)
+      _mesa_threadpool_ref(threadpool);
+   mtx_unlock(&threadpool_lock);
+
+   return threadpool;
+}
+
+/**
+ * Wait until all tasks are completed and threads are joined.
+ */
+void
+_mesa_glsl_wait_threadpool(void)
+{
+   mtx_lock(&threadpool_lock);
+   if (threadpool)
+      _mesa_threadpool_join(threadpool, true);
+   mtx_unlock(&threadpool_lock);
+}
+
+/**
+ * Destroy the GLSL thread pool.
+ */
+void
+_mesa_glsl_destroy_threadpool(void)
+{
+   mtx_lock(&threadpool_lock);
+   if (threadpool) {
+      /*
+       * This is called from _mesa_destroy_shader_compiler().  No new task is
+       * allowed since this point.  But contexts, who also own references to
+       * the pool, can still complete tasks that have been queued.
+       */
+      _mesa_threadpool_set_shutdown(threadpool);
+
+      _mesa_threadpool_join(threadpool, false);
+      _mesa_threadpool_unref(threadpool);
+      threadpool = NULL;
+   }
+   mtx_unlock(&threadpool_lock);
 }

@@ -52,6 +52,7 @@
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
 #include "ralloc.h"
+#include "threadpool.h"
 #include <stdbool.h>
 #include "../glsl/glsl_parser_extras.h"
 #include "../glsl/ir.h"
@@ -684,6 +685,8 @@ get_shaderiv(struct gl_context *ctx, GLuint name, GLenum pname, GLint *params)
       return;
    }
 
+   _mesa_complete_shader_task(ctx, shader);
+
    switch (pname) {
    case GL_SHADER_TYPE:
       *params = shader->Type;
@@ -730,6 +733,7 @@ get_shader_info_log(struct gl_context *ctx, GLuint shader, GLsizei bufSize,
       _mesa_error(ctx, GL_INVALID_VALUE, "glGetShaderInfoLog(shader)");
       return;
    }
+   _mesa_complete_shader_task(ctx, sh);
    _mesa_copy_string(infoLog, bufSize, length, sh->InfoLog);
 }
 
@@ -763,6 +767,8 @@ shader_source(struct gl_context *ctx, GLuint shader, const GLchar *source)
    if (!sh)
       return;
 
+   _mesa_complete_shader_task(ctx, sh);
+
    /* free old shader source string and install new one */
    free((void *)sh->Source);
    sh->Source = source;
@@ -772,6 +778,37 @@ shader_source(struct gl_context *ctx, GLuint shader, const GLchar *source)
 #endif
 }
 
+static void
+deferred_compile_shader(void *data)
+{
+   struct gl_shader *sh = (struct gl_shader *) data;
+   struct gl_context *ctx = (struct gl_context *) sh->TaskData;
+
+   _mesa_glsl_compile_shader(ctx, sh, false, false);
+}
+
+static bool
+queue_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
+{
+   if (!ctx->ThreadPool)
+      return false;
+
+   /* MESA_GLSL is set */
+   if (ctx->Shader.Flags)
+      return false;
+
+   /* context requires synchronized compiler warnings and errors */
+   if (_mesa_get_debug_state_int(ctx, GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB))
+      return false;
+
+   sh->TaskData = (void *) ctx;
+   sh->Task = _mesa_threadpool_queue_task(ctx->ThreadPool,
+         deferred_compile_shader, (void *) sh);
+   if (!sh->Task)
+      sh->TaskData = NULL;
+
+   return (sh->Task != NULL);
+}
 
 /**
  * Compile a shader.
@@ -803,10 +840,13 @@ compile_shader(struct gl_context *ctx, GLuint shaderObj)
          printf("%s\n", sh->Source);
       }
 
+      _mesa_complete_shader_task(ctx, sh);
+
       /* this call will set the shader->CompileStatus field to indicate if
        * compilation was successful.
        */
-      _mesa_glsl_compile_shader(ctx, sh, false, false);
+      if (!queue_compile_shader(ctx, sh))
+         _mesa_glsl_compile_shader(ctx, sh, false, false);
 
       if (ctx->Shader.Flags & GLSL_LOG) {
          _mesa_write_shader_to_file(sh);
@@ -828,7 +868,7 @@ compile_shader(struct gl_context *ctx, GLuint shaderObj)
 
    }
 
-   if (!sh->CompileStatus) {
+   if (ctx->Shader.Flags && !sh->CompileStatus) {
       if (ctx->Shader.Flags & GLSL_DUMP_ON_ERROR) {
          fprintf(stderr, "GLSL source for %s shader %d:\n",
                  _mesa_shader_stage_to_string(sh->Stage), sh->Name);
@@ -852,6 +892,7 @@ static void
 link_program(struct gl_context *ctx, GLuint program)
 {
    struct gl_shader_program *shProg;
+   int i;
 
    shProg = _mesa_lookup_shader_program_err(ctx, program, "glLinkProgram");
    if (!shProg)
@@ -869,6 +910,9 @@ link_program(struct gl_context *ctx, GLuint program)
    }
 
    FLUSH_VERTICES(ctx, _NEW_PROGRAM);
+
+   for (i = 0; i < shProg->NumShaders; i++)
+      _mesa_complete_shader_task(ctx, shProg->Shaders[i]);
 
    _mesa_glsl_link_shader(ctx, shProg);
 
