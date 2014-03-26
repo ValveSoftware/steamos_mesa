@@ -41,6 +41,7 @@
 #include "program/prog_parameter.h"
 #include "program/hash_table.h"
 #include "ralloc.h"
+#include "threadpool.h"
 
 /**********************************************************************/
 /*** Shader object functions                                        ***/
@@ -95,6 +96,7 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
 void
 _mesa_init_shader(struct gl_context *ctx, struct gl_shader *shader)
 {
+   mtx_init(&shader->Mutex, mtx_plain);
    shader->RefCount = 1;
 }
 
@@ -125,9 +127,12 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 static void
 _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
+   _mesa_complete_shader_task(ctx, sh);
+
    free((void *)sh->Source);
    free(sh->Label);
    _mesa_reference_program(ctx, &sh->Program, NULL);
+   mtx_destroy(&sh->Mutex);
    ralloc_free(sh);
 }
 
@@ -179,6 +184,21 @@ _mesa_lookup_shader_err(struct gl_context *ctx, GLuint name, const char *caller)
    }
 }
 
+void
+_mesa_complete_shader_task(struct gl_context *ctx, struct gl_shader *sh)
+{
+   mtx_lock(&sh->Mutex);
+
+   if (sh->Task) {
+      struct gl_context *task_ctx = (struct gl_context *) sh->TaskData;
+
+      _mesa_threadpool_complete_task(task_ctx->ThreadPool, sh->Task);
+      sh->Task = NULL;
+      sh->TaskData = NULL;
+   }
+
+   mtx_unlock(&sh->Mutex);
+}
 
 
 /**********************************************************************/

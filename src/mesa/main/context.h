@@ -118,6 +118,9 @@ _mesa_create_context(gl_api api,
                      const struct dd_function_table *driverFunctions);
 
 extern void
+_mesa_enable_glsl_threadpool(struct gl_context *ctx, int max_threads);
+
+extern void
 _mesa_free_context_data( struct gl_context *ctx );
 
 extern void

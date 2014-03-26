@@ -59,6 +59,8 @@ _mesa_lookup_shader(struct gl_context *ctx, GLuint name);
 extern struct gl_shader *
 _mesa_lookup_shader_err(struct gl_context *ctx, GLuint name, const char *caller);
 
+extern void
+_mesa_complete_shader_task(struct gl_context *ctx, struct gl_shader *sh);
 
 
 extern void
