@@ -99,15 +99,17 @@ struct glsl_type {
     * easier to just ralloc_free 'mem_ctx' (or any of its ancestors). */
    static void* operator new(size_t size)
    {
-      if (glsl_type::mem_ctx == NULL) {
-	 glsl_type::mem_ctx = ralloc_context(NULL);
-	 assert(glsl_type::mem_ctx != NULL);
-      }
+      mtx_lock(&glsl_type::mutex);
+
+      /* mem_ctx should have been created by the static members */
+      assert(glsl_type::mem_ctx != NULL);
 
       void *type;
 
       type = ralloc_size(glsl_type::mem_ctx, size);
       assert(type != NULL);
+
+      mtx_unlock(&glsl_type::mutex);
 
       return type;
    }
@@ -116,7 +118,9 @@ struct glsl_type {
     * ralloc_free in that case. */
    static void operator delete(void *type)
    {
+      mtx_lock(&glsl_type::mutex);
       ralloc_free(type);
+      mtx_unlock(&glsl_type::mutex);
    }
 
    /**
@@ -550,6 +554,9 @@ struct glsl_type {
    bool record_compare(const glsl_type *b) const;
 
 private:
+
+   static mtx_t mutex;
+
    /**
     * ralloc context for all glsl_type allocations
     *
