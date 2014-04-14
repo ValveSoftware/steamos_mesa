@@ -1,0 +1,9 @@
+# This patch does not apply cleanly, author says it can be skipped.
+dff3eccd158d648482bb47118ef5d57a9186e5a4
+
+# And this one depends on the above, author says it too can be skipped.
+ac35ded4733883037316d556af596524e5e02535
+
+# This patch introduces some regressions. See:
+# https://bugs.freedesktop.org/show_bug.cgi?id=77443
+1afe3359258a9e89b62c8638761f52d78f6d1cbc
