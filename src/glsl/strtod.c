@@ -25,6 +25,7 @@
 
 
 #include <stdlib.h>
+#include "c11/threads.h"
 
 #ifdef _GNU_SOURCE
 #include <locale.h>
@@ -35,6 +36,27 @@
 
 #include "strtod.h"
 
+#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
+   !defined(__HAIKU__) && !defined(__UCLIBC__)
+#define GLSL_HAVE_LOCALE_T
+#endif
+
+#ifdef GLSL_HAVE_LOCALE_T
+static mtx_t loc_lock = _MTX_INITIALIZER_NP;
+static locale_t loc = NULL;
+#endif
+
+void
+glsl_initialize_strtod(void)
+{
+#ifdef GLSL_HAVE_LOCALE_T
+   mtx_lock(&loc_lock);
+   if (!loc)
+      loc = newlocale(LC_CTYPE_MASK, "C", NULL);
+   mtx_unlock(&loc_lock);
+#endif
+}
+
 
 
 /**
@@ -44,12 +66,7 @@
 double
 glsl_strtod(const char *s, char **end)
 {
-#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
-   !defined(__HAIKU__) && !defined(__UCLIBC__)
-   static locale_t loc = NULL;
-   if (!loc) {
-      loc = newlocale(LC_CTYPE_MASK, "C", NULL);
-   }
+#ifdef GLSL_HAVE_LOCALE_T
    return strtod_l(s, end, loc);
 #else
    return strtod(s, end);
@@ -64,12 +81,7 @@ glsl_strtod(const char *s, char **end)
 float
 glsl_strtof(const char *s, char **end)
 {
-#if defined(_GNU_SOURCE) && !defined(__CYGWIN__) && !defined(__FreeBSD__) && \
-   !defined(__HAIKU__) && !defined(__UCLIBC__)
-   static locale_t loc = NULL;
-   if (!loc) {
-      loc = newlocale(LC_CTYPE_MASK, "C", NULL);
-   }
+#ifdef GLSL_HAVE_LOCALE_T
    return strtof_l(s, end, loc);
 #elif _XOPEN_SOURCE >= 600 || _ISOC99_SOURCE
    return strtof(s, end);

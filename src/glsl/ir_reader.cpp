@@ -79,6 +79,8 @@ void
 _mesa_glsl_read_ir(_mesa_glsl_parse_state *state, exec_list *instructions,
 		   const char *src, bool scan_for_protos)
 {
+   glsl_initialize_strtod();
+
    ir_reader r(state);
    r.read(instructions, src, scan_for_protos);
 }
