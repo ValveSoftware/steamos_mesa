@@ -1203,7 +1203,7 @@ layout_qualifier_id:
 
       /* Layout qualifiers for GLSL 1.50 geometry shaders. */
       if (!$$.flags.i) {
-         struct {
+         static const struct {
             const char *s;
             GLenum e;
          } map[] = {
