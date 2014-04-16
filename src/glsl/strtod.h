@@ -31,6 +31,9 @@
 extern "C" {
 #endif
 
+extern void
+glsl_initialize_strtod(void);
+
 extern double
 glsl_strtod(const char *s, char **end);
 

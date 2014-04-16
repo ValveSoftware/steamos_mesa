@@ -549,6 +549,7 @@ classify_identifier(struct _mesa_glsl_parse_state *state, const char *name)
 void
 _mesa_glsl_lexer_ctor(struct _mesa_glsl_parse_state *state, const char *string)
 {
+   glsl_initialize_strtod();
    yylex_init_extra(state, & state->scanner);
    yy_scan_string(string, state->scanner);
 }
