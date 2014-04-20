@@ -548,6 +548,15 @@ brw_process_driconf_options(struct brw_context *brw)
 
    ctx->Const.DisableGLSLLineContinuations =
       driQueryOptionb(options, "disable_glsl_line_continuations");
+
+   const int multithread_glsl_compiler =
+      driQueryOptioni(options, "multithread_glsl_compiler");
+   if (multithread_glsl_compiler > 0) {
+      const int max_threads = (multithread_glsl_compiler > 1) ?
+         multithread_glsl_compiler : 2;
+
+      _mesa_enable_glsl_threadpool(ctx, max_threads);
+   }
 }
 
 GLboolean

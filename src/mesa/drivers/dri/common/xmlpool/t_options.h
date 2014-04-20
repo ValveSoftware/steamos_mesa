@@ -293,6 +293,10 @@ DRI_CONF_OPT_BEGIN_V(texture_heaps,enum,def,"0:2") \
 	DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_MULTITHREAD_GLSL_COMPILER(def) \
+DRI_CONF_OPT_BEGIN(multithread_glsl_compiler, int, def) \
+        DRI_CONF_DESC(en,gettext("Enable multithreading in the GLSL compiler")) \
+DRI_CONF_OPT_END
 
 
 /**

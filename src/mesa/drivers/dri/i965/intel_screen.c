@@ -47,6 +47,8 @@ static const __DRIconfigOptionsExtension brw_config_options = {
 DRI_CONF_BEGIN
    DRI_CONF_SECTION_PERFORMANCE
       DRI_CONF_VBLANK_MODE(DRI_CONF_VBLANK_ALWAYS_SYNC)
+      DRI_CONF_MULTITHREAD_GLSL_COMPILER(0)
+
       /* Options correspond to DRI_CONF_BO_REUSE_DISABLED,
        * DRI_CONF_BO_REUSE_ALL
        */
