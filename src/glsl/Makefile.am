@@ -35,6 +35,7 @@ TESTS = glcpp/tests/glcpp-test				\
 	tests/general-ir-test				\
 	tests/optimization-test				\
 	tests/ralloc-test				\
+	tests/threadpool-test				\
 	tests/sampler-types-test                        \
 	tests/uniform-initializer-test
 
@@ -48,6 +49,7 @@ check_PROGRAMS =					\
 	glsl_test					\
 	tests/general-ir-test				\
 	tests/ralloc-test				\
+	tests/threadpool-test				\
 	tests/sampler-types-test			\
 	tests/uniform-initializer-test
 
@@ -92,6 +94,14 @@ tests_ralloc_test_LDADD =				\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(PTHREAD_LIBS)
 
+tests_threadpool_test_SOURCES =				\
+	tests/threadpool_test.cpp			\
+	$(top_builddir)/src/glsl/threadpool.c
+tests_threadpool_test_CFLAGS = $(PTHREAD_CFLAGS)
+tests_threadpool_test_LDADD =				\
+	$(top_builddir)/src/gtest/libgtest.la		\
+	$(PTHREAD_LIBS)
+
 tests_sampler_types_test_SOURCES =			\
 	$(top_srcdir)/src/mesa/program/prog_hash_table.c\
 	$(top_srcdir)/src/mesa/program/symbol_table.c	\
@@ -115,7 +125,7 @@ glcpp_glcpp_LDADD =					\
 	libglcpp.la					\
 	-lm
 
-libglsl_la_LIBADD = libglcpp.la
+libglsl_la_LIBADD = libglcpp.la $(PTHREAD_LIBS)
 libglsl_la_SOURCES =					\
 	glsl_lexer.cpp					\
 	glsl_parser.cpp					\
