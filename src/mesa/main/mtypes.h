@@ -4058,6 +4058,7 @@ struct gl_context
    GLuint ErrorDebugCount;
 
    /* GL_ARB_debug_output/GL_KHR_debug */
+   mtx_t DebugMutex;
    struct gl_debug_state *Debug;
 
    GLenum RenderMode;        /**< either GL_RENDER, GL_SELECT, GL_FEEDBACK */
