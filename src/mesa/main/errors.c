@@ -218,6 +218,43 @@ debug_create(void)
    return debug;
 }
 
+/*
+ * Sets the state of the given message source/type/ID tuple.
+ */
+static void
+debug_set_message_enable(struct gl_debug_state *debug,
+                         enum mesa_debug_source source,
+                         enum mesa_debug_type type,
+                         GLuint id, GLboolean enabled)
+{
+   GLint gstack = debug->GroupStackDepth;
+   struct gl_debug_namespace *nspace =
+      &debug->Namespaces[gstack][source][type];
+   uintptr_t state;
+
+   /* In addition to not being able to store zero as a value, HashTable also
+    * can't use zero as a key.
+    */
+   if (id)
+      state = (uintptr_t)_mesa_HashLookup(nspace->IDs, id);
+   else
+      state = nspace->ZeroID;
+
+   if (state == NOT_FOUND)
+      state = enabled ? ENABLED : DISABLED;
+   else {
+      if (enabled)
+         state |= ENABLED_BIT;
+      else
+         state &= ~ENABLED_BIT;
+   }
+
+   if (id)
+      _mesa_HashInsert(nspace->IDs, id, (void*)state);
+   else
+      nspace->ZeroID = state;
+}
+
 /**
  * Returns if the given message source/type/ID tuple is enabled.
  */
@@ -317,9 +354,6 @@ should_log(struct gl_context *ctx,
 }
 
 
-/**
- * Sets the state of the given message source/type/ID tuple.
- */
 static void
 set_message_state(struct gl_context *ctx,
                   enum mesa_debug_source source,
@@ -328,34 +362,8 @@ set_message_state(struct gl_context *ctx,
 {
    struct gl_debug_state *debug = _mesa_get_debug_state(ctx);
 
-   if (debug) {
-      GLint gstack = debug->GroupStackDepth;
-      struct gl_debug_namespace *nspace =
-         &debug->Namespaces[gstack][source][type];
-      uintptr_t state;
-
-      /* In addition to not being able to store zero as a value, HashTable also
-       * can't use zero as a key.
-       */
-      if (id)
-         state = (uintptr_t)_mesa_HashLookup(nspace->IDs, id);
-      else
-         state = nspace->ZeroID;
-
-      if (state == NOT_FOUND)
-         state = enabled ? ENABLED : DISABLED;
-      else {
-         if (enabled)
-            state |= ENABLED_BIT;
-         else
-            state &= ~ENABLED_BIT;
-      }
-
-      if (id)
-         _mesa_HashInsert(nspace->IDs, id, (void*)state);
-      else
-         nspace->ZeroID = state;
-   }
+   if (debug)
+      debug_set_message_enable(debug, source, type, id, enabled);
 }
 
 
