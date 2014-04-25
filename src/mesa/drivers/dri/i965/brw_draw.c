@@ -306,8 +306,8 @@ static void brw_merge_inputs( struct brw_context *brw,
 /*
  * \brief Resolve buffers before drawing.
  *
- * Resolve the depth buffer's HiZ buffer and resolve the depth buffer of each
- * enabled depth texture.
+ * Resolve the depth buffer's HiZ buffer, resolve the depth buffer of each
+ * enabled depth texture, and flush the render cache for any dirty textures.
  *
  * (In the future, this will also perform MSAA resolves).
  */
@@ -323,9 +323,7 @@ brw_predraw_resolve_buffers(struct brw_context *brw)
    if (depth_irb)
       intel_renderbuffer_resolve_hiz(brw, depth_irb);
 
-   /* Resolve depth buffer of each enabled depth texture, and color buffer of
-    * each fast-clear-enabled color texture.
-    */
+   /* Resolve depth buffer and render cache of each enabled texture. */
    for (int i = 0; i < ctx->Const.MaxCombinedTextureImageUnits; i++) {
       if (!ctx->Texture.Unit[i]._ReallyEnabled)
 	 continue;
@@ -334,6 +332,7 @@ brw_predraw_resolve_buffers(struct brw_context *brw)
 	 continue;
       intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
       intel_miptree_resolve_color(brw, tex_obj->mt);
+      brw_render_cache_set_check_flush(brw, tex_obj->mt->region->bo);
    }
 }
 
@@ -345,6 +344,9 @@ brw_predraw_resolve_buffers(struct brw_context *brw)
  *
  * If the color buffer is a multisample window system buffer, then
  * mark that it needs a downsample.
+ *
+ * Also mark any render targets which will be textured as needing a render
+ * cache flush.
  */
 static void brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
 {
@@ -363,8 +365,18 @@ static void brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       intel_renderbuffer_set_needs_downsample(front_irb);
    if (back_irb)
       intel_renderbuffer_set_needs_downsample(back_irb);
-   if (depth_irb && ctx->Depth.Mask)
+   if (depth_irb && ctx->Depth.Mask) {
       intel_renderbuffer_att_set_needs_depth_resolve(depth_att);
+      brw_render_cache_set_add_bo(brw, depth_irb->mt->region->bo);
+   }
+
+   for (int i = 0; i < fb->_NumColorDrawBuffers; i++) {
+      struct intel_renderbuffer *irb =
+         intel_renderbuffer(fb->_ColorDrawBuffers[i]);
+
+      if (irb)
+         brw_render_cache_set_add_bo(brw, irb->mt->region->bo);
+   }
 }
 
 /* May fail if out of video memory for texture or vbo upload, or on

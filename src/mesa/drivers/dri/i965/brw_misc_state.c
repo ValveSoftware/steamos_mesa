@@ -583,6 +583,9 @@ brw_emit_depthbuffer(struct brw_context *brw)
       height = stencil_irb->Base.Base.Height;
    }
 
+   if (depth_mt)
+      brw_render_cache_set_check_flush(brw, depth_mt->region->bo);
+
    brw->vtbl.emit_depth_stencil_hiz(brw, depth_mt, depth_offset,
                                     depthbuffer_format, depth_surface_type,
                                     stencil_mt, hiz, separate_stencil,

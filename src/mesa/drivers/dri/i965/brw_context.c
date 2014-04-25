@@ -680,6 +680,8 @@ brwCreateContext(gl_api api,
    /* Reinitialize the context point state.  It depends on ctx->Const values. */
    _mesa_init_point(ctx);
 
+   intel_fbo_init(brw);
+
    intel_batchbuffer_init(brw);
 
    if (brw->gen >= 6) {
@@ -702,8 +704,6 @@ brwCreateContext(gl_api api,
    brw_init_state(brw);
 
    intelInitExtensions(ctx);
-
-   intel_fbo_init(brw);
 
    brw_init_surface_formats(brw);
 
