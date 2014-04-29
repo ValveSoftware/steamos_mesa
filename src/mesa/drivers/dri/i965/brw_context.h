@@ -1190,11 +1190,6 @@ struct brw_context
    const struct gl_geometry_program *geometry_program;
    const struct gl_fragment_program *fragment_program;
 
-   /* hw-dependent 3DSTATE_VF_STATISTICS opcode */
-   uint32_t CMD_VF_STATISTICS;
-   /* hw-dependent 3DSTATE_PIPELINE_SELECT opcode */
-   uint32_t CMD_PIPELINE_SELECT;
-
    /**
     * Platform specific constants containing the maximum number of threads
     * for each pipeline stage.
