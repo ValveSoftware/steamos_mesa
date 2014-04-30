@@ -7,3 +7,7 @@ ac35ded4733883037316d556af596524e5e02535
 # This patch introduces some regressions. See:
 # https://bugs.freedesktop.org/show_bug.cgi?id=77443
 1afe3359258a9e89b62c8638761f52d78f6d1cbc
+
+# This patch introduces a piglit regression. See:
+# https://bugs.freedesktop.org/show_bug.cgi?id=77702
+1d350b9e228462390b1883abace24c15d4741932 i965: Add glBlitFramebuffer to commands affected by conditional rendering
