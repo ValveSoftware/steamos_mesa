@@ -1335,20 +1335,27 @@ set_shader_inout_layout(struct gl_shader *shader,
       return;
    }
 
-   shader->Geom.VerticesOut = 0;
-   if (state->out_qualifier->flags.q.max_vertices)
-      shader->Geom.VerticesOut = state->out_qualifier->max_vertices;
+   switch(shader->Stage) {
+   case MESA_SHADER_GEOMETRY:
+      shader->Geom.VerticesOut = 0;
+      if (state->out_qualifier->flags.q.max_vertices)
+         shader->Geom.VerticesOut = state->out_qualifier->max_vertices;
 
-   if (state->gs_input_prim_type_specified) {
-      shader->Geom.InputType = state->gs_input_prim_type;
-   } else {
-      shader->Geom.InputType = PRIM_UNKNOWN;
-   }
+      if (state->gs_input_prim_type_specified) {
+         shader->Geom.InputType = state->gs_input_prim_type;
+      } else {
+         shader->Geom.InputType = PRIM_UNKNOWN;
+      }
 
-   if (state->out_qualifier->flags.q.prim_type) {
-      shader->Geom.OutputType = state->out_qualifier->prim_type;
-   } else {
-      shader->Geom.OutputType = PRIM_UNKNOWN;
+      if (state->out_qualifier->flags.q.prim_type) {
+         shader->Geom.OutputType = state->out_qualifier->prim_type;
+      } else {
+         shader->Geom.OutputType = PRIM_UNKNOWN;
+      }
+      break;
+    default:
+      /* Nothing to do. */
+      break;
    }
 }
 
