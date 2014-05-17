@@ -7,3 +7,9 @@ ac35ded4733883037316d556af596524e5e02535
 # This patch introduces some regressions. See:
 # https://bugs.freedesktop.org/show_bug.cgi?id=77443
 1afe3359258a9e89b62c8638761f52d78f6d1cbc
+
+# Author retracted this from consideration for stable branch
+3e817e7e56806d8adb8f16c35136045c29908944
+
+# And this one was simply a bug fix for the previously-retracted commit
+2bab95973d8ad3a84f62670143d6f26c230d9582
