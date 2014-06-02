@@ -13,3 +13,9 @@ ac35ded4733883037316d556af596524e5e02535
 
 # And this one was simply a bug fix for the previously-retracted commit
 2bab95973d8ad3a84f62670143d6f26c230d9582
+
+# Here we have a commit, and its subsequent "revert" both proposed within a
+# single window of the stable release. So we can achieve the same final effect
+# by ignoring both of the commits.
+e3cc0d90e14e62a0a787b6c07a6df0f5c84039be
+0d5ec2c615784929be095951f9269773a790a2dd
