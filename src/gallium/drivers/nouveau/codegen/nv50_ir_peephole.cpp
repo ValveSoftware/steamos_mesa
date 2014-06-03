@@ -535,6 +535,7 @@ ConstantFolding::expr(Instruction *i,
    } else {
       i->op = OP_MOV;
    }
+   i->subOp = 0;
 }
 
 void
