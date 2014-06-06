@@ -19,3 +19,7 @@ ac35ded4733883037316d556af596524e5e02535
 # by ignoring both of the commits.
 e3cc0d90e14e62a0a787b6c07a6df0f5c84039be
 0d5ec2c615784929be095951f9269773a790a2dd
+
+# The function being modified here (_eglCreateWindowSurfaceCommon) does not
+# exist in the 10.1 branch.
+91ff0d4c6510dc38f279c586ced17fba917873e7
