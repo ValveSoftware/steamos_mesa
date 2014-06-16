@@ -531,6 +531,7 @@ _mesa_clone_program(struct gl_context *ctx, const struct gl_program *prog)
          gpc->VerticesOut = gp->VerticesOut;
          gpc->InputType = gp->InputType;
          gpc->OutputType = gp->OutputType;
+         gpc->UsesEndPrimitive = gp->UsesEndPrimitive;
       }
       break;
    default:
