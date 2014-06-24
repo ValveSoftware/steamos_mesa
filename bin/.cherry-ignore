@@ -23,3 +23,6 @@ e3cc0d90e14e62a0a787b6c07a6df0f5c84039be
 # The function being modified here (_eglCreateWindowSurfaceCommon) does not
 # exist in the 10.1 branch.
 91ff0d4c6510dc38f279c586ced17fba917873e7
+
+# This patch is not needed (modifies work only in 10.2)
+6980cae6aeb6671b6b0245e20a2d34957c1fff0a
