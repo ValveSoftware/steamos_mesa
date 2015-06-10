@@ -26,14 +26,6 @@
  *
  **************************************************************************/
 
-/* TODO:
- *
- * xshm / EGLImage:
- *
- * Allow the loaders to use the XSHM extension. It probably requires callbacks
- * for createImage/destroyImage similar to DRI2 getBuffers.
- */
-
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
@@ -84,6 +76,19 @@ put_image2(__DRIdrawable *dPriv, void *data, int x, int y,
    loader->putImage2(dPriv, __DRI_SWRAST_IMAGE_OP_SWAP,
                      x, y, width, height, stride,
                      data, dPriv->loaderPrivate);
+}
+
+static inline void
+put_image_shm(__DRIdrawable *dPriv, int shmid, char *shmaddr,
+              unsigned offset, int x, int y,
+              unsigned width, unsigned height, unsigned stride)
+{
+   __DRIscreen *sPriv = dPriv->driScreenPriv;
+   const __DRIswrastLoaderExtension *loader = sPriv->swrast_loader;
+
+   loader->putImageShm(dPriv, __DRI_SWRAST_IMAGE_OP_SWAP,
+                       x, y, width, height, stride,
+                       shmid, shmaddr, offset, dPriv->loaderPrivate);
 }
 
 static inline void
@@ -150,6 +155,17 @@ drisw_put_image2(struct dri_drawable *drawable,
    __DRIdrawable *dPriv = drawable->dPriv;
 
    put_image2(dPriv, data, x, y, width, height, stride);
+}
+
+static inline void
+drisw_put_image_shm(struct dri_drawable *drawable,
+                    int shmid, char *shmaddr, unsigned offset,
+                    int x, int y, unsigned width, unsigned height,
+                    unsigned stride)
+{
+   __DRIdrawable *dPriv = drawable->dPriv;
+
+   put_image_shm(dPriv, shmid, shmaddr, offset, x, y, width, height, stride);
 }
 
 static inline void
@@ -394,6 +410,7 @@ static struct drisw_loader_funcs drisw_lf = {
 static const __DRIconfig **
 drisw_init_screen(__DRIscreen * sPriv)
 {
+   const __DRIswrastLoaderExtension *loader = sPriv->swrast_loader;
    const __DRIconfig **configs;
    struct dri_screen *screen;
    struct pipe_screen *pscreen = NULL;
@@ -409,6 +426,10 @@ drisw_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
    sPriv->extensions = drisw_screen_extensions;
+   if (loader->base.version >= 4) {
+      if (loader->putImageShm)
+         drisw_lf.put_image_shm = drisw_put_image_shm;
+   }
 
    if (pipe_loader_sw_probe_dri(&screen->dev, &drisw_lf)) {
       dri_init_options(screen);
