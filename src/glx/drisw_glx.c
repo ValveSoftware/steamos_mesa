@@ -313,6 +313,32 @@ swrastGetImage(__DRIdrawable * read,
    swrastGetImage2(read, x, y, w, h, 0, data, loaderPrivate);
 }
 
+static void
+swrastGetImageShm(__DRIdrawable * read,
+                  int x, int y, int w, int h,
+                  int shmid, void *loaderPrivate)
+{
+   struct drisw_drawable *prp = loaderPrivate;
+   __GLXDRIdrawable *pread = &(prp->base);
+   Display *dpy = pread->psc->dpy;
+   Drawable readable;
+   XImage *ximage;
+
+   if (!prp->ximage || shmid != prp->shminfo.shmid) {
+      if (!XCreateDrawable(prp, shmid, dpy))
+         return;
+   }
+   readable = pread->xDrawable;
+
+   ximage = prp->ximage;
+   ximage->data = prp->shminfo.shmaddr; /* no offset */
+   ximage->width = w;
+   ximage->height = h;
+   ximage->bytes_per_line = bytes_per_line(w * ximage->bits_per_pixel, 32);
+
+   XShmGetImage(dpy, readable, ximage, x, y, ~0L);
+}
+
 static __DRIswrastLoaderExtension swrastLoaderExtension = {
    .base = {__DRI_SWRAST_LOADER, 4 },
 
@@ -322,6 +348,7 @@ static __DRIswrastLoaderExtension swrastLoaderExtension = {
    .putImage2           = swrastPutImage2,
    .getImage2           = swrastGetImage2,
    .putImageShm         = swrastPutImageShm,
+   .getImageShm         = swrastGetImageShm,
 };
 
 static const __DRIextension *loader_extensions[] = {
@@ -802,8 +829,10 @@ driswCreateScreen(int screen, struct glx_display *priv)
    if (extensions == NULL)
       goto handle_error;
 
-   if (!check_xshm(psc->base.dpy))
+   if (!check_xshm(psc->base.dpy)) {
       swrastLoaderExtension.putImageShm = NULL;
+      swrastLoaderExtension.getImageShm = NULL;
+   }
 
    for (i = 0; extensions[i]; i++) {
       if (strcmp(extensions[i]->name, __DRI_CORE) == 0)
