@@ -9,6 +9,7 @@ extern "C" {
 #define WINSYS_HANDLE_TYPE_SHARED 0
 #define WINSYS_HANDLE_TYPE_KMS    1
 #define WINSYS_HANDLE_TYPE_FD     2
+#define WINSYS_HANDLE_TYPE_SHMID   3
 
 /**
  * For use with pipe_screen::{texture_from_handle|texture_get_handle}.

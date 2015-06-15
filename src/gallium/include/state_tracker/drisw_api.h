@@ -2,6 +2,7 @@
 #define _DRISW_API_H_
 
 #include "pipe/p_compiler.h"
+#include "sw_winsys.h"
 
 struct pipe_screen;
 struct dri_drawable;

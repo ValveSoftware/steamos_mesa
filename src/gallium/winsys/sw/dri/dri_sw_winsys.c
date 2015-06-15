@@ -209,7 +209,15 @@ dri_sw_displaytarget_get_handle(struct sw_winsys *winsys,
                                 struct sw_displaytarget *dt,
                                 struct winsys_handle *whandle)
 {
-   assert(0);
+   struct dri_sw_displaytarget *dri_sw_dt = dri_sw_displaytarget(dt);
+
+   if (whandle->type == WINSYS_HANDLE_TYPE_SHMID) {
+      if (dri_sw_dt->shmid < 0)
+         return FALSE;
+      whandle->handle = dri_sw_dt->shmid;
+      return TRUE;
+   }
+
    return FALSE;
 }
 
