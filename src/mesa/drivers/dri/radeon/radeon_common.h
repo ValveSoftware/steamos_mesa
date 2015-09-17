@@ -37,7 +37,6 @@ radeonReadPixels(struct gl_context * ctx,
 				GLenum format, GLenum type,
 				const struct gl_pixelstore_attrib *pack, GLvoid * pixels);
 
-void radeon_check_front_buffer_rendering(struct gl_context *ctx);
 static inline struct radeon_renderbuffer *radeon_renderbuffer(struct gl_renderbuffer *rb)
 {
 	struct radeon_renderbuffer *rrb = (struct radeon_renderbuffer *)rb;

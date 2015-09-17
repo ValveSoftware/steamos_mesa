@@ -44,6 +44,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/texformat.h"
 #include "main/renderbuffer.h"
 #include "main/samplerobj.h"
+#include "main/framebuffer.h"
 #include "swrast/swrast.h"
 #include "swrast/s_renderbuffer.h"
 
@@ -97,7 +98,8 @@ radeon_map_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 	for (i = 0; i < BUFFER_COUNT; i++)
 		radeon_renderbuffer_map(ctx, fb->Attachment[i].Renderbuffer);
 
-	radeon_check_front_buffer_rendering(ctx);
+        if (_mesa_is_front_buffer_drawing(fb))
+		RADEON_CONTEXT(ctx)->front_buffer_dirty = true;
 }
 
 static void
@@ -113,7 +115,8 @@ radeon_unmap_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 	for (i = 0; i < BUFFER_COUNT; i++)
 		radeon_renderbuffer_unmap(ctx, fb->Attachment[i].Renderbuffer);
 
-	radeon_check_front_buffer_rendering(ctx);
+        if (_mesa_is_front_buffer_drawing(fb))
+		RADEON_CONTEXT(ctx)->front_buffer_dirty = true;
 }
 
 static void radeonSpanRenderStart(struct gl_context * ctx)

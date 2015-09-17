@@ -175,27 +175,6 @@ uint32_t radeonGetAge(radeonContextPtr radeon)
 	return age;
 }
 
-/**
- * Check if we're about to draw into the front color buffer.
- * If so, set the intel->front_buffer_dirty field to true.
- */
-void
-radeon_check_front_buffer_rendering(struct gl_context *ctx)
-{
-	radeonContextPtr radeon = RADEON_CONTEXT(ctx);
-	const struct gl_framebuffer *fb = ctx->DrawBuffer;
-
-	if (fb->Name == 0) {
-		/* drawing to window system buffer */
-		if (fb->_NumColorDrawBuffers > 0) {
-			if (fb->_ColorDrawBufferIndexes[0] == BUFFER_FRONT_LEFT) {
-				radeon->front_buffer_dirty = GL_TRUE;
-			}
-		}
-	}
-}
-
-
 void radeon_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 {
 	radeonContextPtr radeon = RADEON_CONTEXT(ctx);
