@@ -323,22 +323,17 @@ void radeonDrawBuffer( struct gl_context *ctx, GLenum mode )
 		fprintf(stderr, "%s %s\n", __func__,
 			_mesa_enum_to_string( mode ));
 
-	if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+	if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer)) {
 		radeonContextPtr radeon = RADEON_CONTEXT(ctx);
 
-		const GLboolean was_front_buffer_rendering =
-			radeon->is_front_buffer_rendering;
-
-		radeon->is_front_buffer_rendering = (mode == GL_FRONT_LEFT) ||
-                                            (mode == GL_FRONT);
-
-      /* If we weren't front-buffer rendering before but we are now, make sure
-       * that the front-buffer has actually been allocated.
-       */
-		if (!was_front_buffer_rendering && radeon->is_front_buffer_rendering) {
-			radeon_update_renderbuffers(radeon->driContext,
-				radeon->driContext->driDrawablePriv, GL_FALSE);
-      }
+		/* If we might be front-buffer rendering on this buffer for
+		 * the first time, invalidate our DRI drawable so we'll ask
+		 * for new buffers (including the fake front) before we start
+		 * rendering again.
+		 */
+		radeon_update_renderbuffers(radeon->driContext,
+					    radeon->driContext->driDrawablePriv,
+					    GL_FALSE);
 	}
 
 	radeon_draw_buffer(ctx, ctx->DrawBuffer);
@@ -346,16 +341,10 @@ void radeonDrawBuffer( struct gl_context *ctx, GLenum mode )
 
 void radeonReadBuffer( struct gl_context *ctx, GLenum mode )
 {
-	if (ctx->DrawBuffer && _mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+	if (_mesa_is_front_buffer_reading(ctx->ReadBuffer)) {
 		struct radeon_context *const rmesa = RADEON_CONTEXT(ctx);
-		const GLboolean was_front_buffer_reading = rmesa->is_front_buffer_reading;
-		rmesa->is_front_buffer_reading = (mode == GL_FRONT_LEFT)
-					|| (mode == GL_FRONT);
-
-		if (!was_front_buffer_reading && rmesa->is_front_buffer_reading) {
-			radeon_update_renderbuffers(rmesa->driContext,
-						    rmesa->driContext->driReadablePriv, GL_FALSE);
-	 	}
+		radeon_update_renderbuffers(rmesa->driContext,
+					    rmesa->driContext->driReadablePriv, GL_FALSE);
 	}
 	/* nothing, until we implement h/w glRead/CopyPixels or CopyTexImage */
 	if (ctx->ReadBuffer == ctx->DrawBuffer) {
@@ -381,7 +370,7 @@ void radeon_viewport(struct gl_context *ctx)
 	void (*old_viewport)(struct gl_context *ctx);
 
 	if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
-		if (radeon->is_front_buffer_rendering) {
+		if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer)) {
 			ctx->Driver.Flush(ctx);
 		}
 		radeon_update_renderbuffers(driContext, driContext->driDrawablePriv, GL_FALSE);
