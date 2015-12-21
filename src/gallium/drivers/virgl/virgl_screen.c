@@ -198,12 +198,13 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v1.bset.has_sample_shading;
    case PIPE_CAP_CULL_DISTANCE:
       return vscreen->caps.caps.v1.bset.has_cull;
+   case PIPE_CAP_MAX_VERTEX_STREAMS:
+      return vscreen->caps.caps.v1.glsl_level >= 400 ? 4 : 1;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
    case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
    case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
-   case PIPE_CAP_MAX_VERTEX_STREAMS:
    case PIPE_CAP_MULTI_DRAW_INDIRECT:
    case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
    case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:

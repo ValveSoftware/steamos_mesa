@@ -232,7 +232,7 @@ static void virgl_emit_shader_streamout(struct virgl_context *ctx,
            VIRGL_OBJ_SHADER_SO_OUTPUT_BUFFER(so_info->output[i].output_buffer) |
            VIRGL_OBJ_SHADER_SO_OUTPUT_DST_OFFSET(so_info->output[i].dst_offset);
          virgl_encoder_write_dword(ctx->cbuf, tmp);
-         virgl_encoder_write_dword(ctx->cbuf, 0);
+         virgl_encoder_write_dword(ctx->cbuf, so_info->output[i].stream);
       }
    }
 }
