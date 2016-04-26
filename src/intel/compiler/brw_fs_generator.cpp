@@ -887,6 +887,11 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
    uint32_t return_format;
    bool is_combined_send = inst->eot;
 
+   /* Sampler EOT message of less than the dispatch width would kill the
+    * thread prematurely.
+    */
+   assert(!is_combined_send || inst->exec_size == dispatch_width);
+
    switch (dst.type) {
    case BRW_REGISTER_TYPE_D:
       return_format = BRW_SAMPLER_RETURN_FORMAT_SINT32;

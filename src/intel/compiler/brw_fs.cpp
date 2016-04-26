@@ -2666,7 +2666,7 @@ fs_visitor::opt_sampler_eot()
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   if (stage != MESA_SHADER_FRAGMENT)
+   if (stage != MESA_SHADER_FRAGMENT || dispatch_width > 16)
       return false;
 
    if (devinfo->gen != 9 && !devinfo->is_cherryview)
