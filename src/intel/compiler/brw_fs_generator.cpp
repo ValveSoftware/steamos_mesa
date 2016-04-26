@@ -1590,17 +1590,19 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
    assert(src0.type == BRW_REGISTER_TYPE_D ||
           src0.type == BRW_REGISTER_TYPE_UD);
 
-   struct brw_reg reg = stride(src1, 1, 4, 0);
-   if (devinfo->gen >= 8 || inst->exec_size == 8) {
-      brw_ADD(p, dst, src0, reg);
-   } else if (inst->exec_size == 16) {
-      brw_push_insn_state(p);
-      brw_set_default_exec_size(p, BRW_EXECUTE_8);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      brw_ADD(p, firsthalf(dst), firsthalf(src0), reg);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
-      brw_ADD(p, sechalf(dst), sechalf(src0), suboffset(reg, 2));
-      brw_pop_insn_state(p);
+   const struct brw_reg reg = stride(src1, 1, 4, 0);
+   const unsigned lower_size = MIN2(inst->exec_size,
+                                    devinfo->gen >= 8 ? 16 : 8);
+
+   for (unsigned i = 0; i < inst->exec_size / lower_size; i++) {
+      brw_inst *insn = brw_ADD(p, offset(dst, i * lower_size / 8),
+                               offset(src0, (src0.vstride == 0 ? 0 : (1 << (src0.vstride - 1)) *
+                                             (i * lower_size / (1 << src0.width))) *
+                                            type_sz(src0.type) / REG_SIZE),
+                               suboffset(reg, i * lower_size / 4));
+      brw_inst_set_exec_size(devinfo, insn, cvt(lower_size) - 1);
+      brw_inst_set_group(devinfo, insn, inst->group + lower_size * i);
+      brw_inst_set_compression(devinfo, insn, lower_size > 8);
    }
 }
 
