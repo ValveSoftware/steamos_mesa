@@ -387,7 +387,6 @@ class fs_generator
 public:
    fs_generator(const struct brw_compiler *compiler, void *log_data,
                 void *mem_ctx,
-                const void *key,
                 struct brw_stage_prog_data *prog_data,
                 unsigned promoted_constants,
                 bool runtime_check_aads_emit,
@@ -485,7 +484,6 @@ private:
    const struct gen_device_info *devinfo;
 
    struct brw_codegen *p;
-   const void * const key;
    struct brw_stage_prog_data * const prog_data;
 
    unsigned dispatch_width; /**< 8, 16 or 32 */

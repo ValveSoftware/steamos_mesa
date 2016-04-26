@@ -7170,7 +7170,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
     */
    brw_compute_flat_inputs(prog_data, shader);
 
-   fs_generator g(compiler, log_data, mem_ctx, (void *) key, &prog_data->base,
+   fs_generator g(compiler, log_data, mem_ctx, &prog_data->base,
                   v8.promoted_constants, v8.runtime_check_aads_emit,
                   MESA_SHADER_FRAGMENT);
 
@@ -7410,7 +7410,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, fail_msg);
    } else {
-      fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
+      fs_generator g(compiler, log_data, mem_ctx, &prog_data->base,
                      promoted_constants, false, MESA_SHADER_COMPUTE);
       if (INTEL_DEBUG & DEBUG_CS) {
          char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",

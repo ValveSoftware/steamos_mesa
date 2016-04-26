@@ -175,14 +175,13 @@ brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
 
 fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
                            void *mem_ctx,
-                           const void *key,
                            struct brw_stage_prog_data *prog_data,
                            unsigned promoted_constants,
                            bool runtime_check_aads_emit,
                            gl_shader_stage stage)
 
    : compiler(compiler), log_data(log_data),
-     devinfo(compiler->devinfo), key(key),
+     devinfo(compiler->devinfo),
      prog_data(prog_data),
      promoted_constants(promoted_constants),
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
