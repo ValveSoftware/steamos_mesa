@@ -805,6 +805,8 @@ fs_inst::components_read(unsigned i) const
       else
          return 1;
    }
+   case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
+      return (i == 0 ? 2 : 1);
 
    default:
       return 1;
@@ -840,7 +842,6 @@ fs_inst::size_read(int arg) const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
    case FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET:
-   case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
    case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
    case SHADER_OPCODE_BYTE_SCATTERED_READ:
       if (arg == 0)

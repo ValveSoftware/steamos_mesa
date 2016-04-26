@@ -1579,16 +1579,18 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
                                                 struct brw_reg msg_data,
                                                 unsigned msg_type)
 {
-   assert(inst->size_written % REG_SIZE == 0);
+   const bool has_payload = inst->src[0].file != BAD_FILE;
    assert(msg_data.type == BRW_REGISTER_TYPE_UD);
+   assert(inst->size_written % REG_SIZE == 0);
 
    brw_pixel_interpolator_query(p,
          retype(dst, BRW_REGISTER_TYPE_UW),
-         src,
+         /* If we don't have a payload, what we send doesn't matter */
+         has_payload ? src : brw_vec8_grf(0, 0),
          inst->pi_noperspective,
          msg_type,
          msg_data,
-         inst->mlen,
+         has_payload ? 2 * inst->exec_size / 8 : 1,
          inst->size_written / REG_SIZE);
 }
 
