@@ -135,17 +135,15 @@ fs_visitor::emit_dummy_fs()
  * data.  It will get adjusted to be a real location before
  * generate_code() time.
  */
-struct brw_reg
+fs_reg
 fs_visitor::interp_reg(int location, int channel)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
-   int regnr = prog_data->urb_setup[location] * 2 + channel / 2;
-   int stride = (channel & 1) * 4;
-
+   int regnr = prog_data->urb_setup[location] * 4 + channel;
    assert(prog_data->urb_setup[location] != -1);
 
-   return brw_vec1_grf(regnr, stride);
+   return fs_reg(ATTR, regnr, BRW_REGISTER_TYPE_F);
 }
 
 /** Emits the interpolation for the varying inputs. */
@@ -192,7 +190,7 @@ fs_visitor::emit_interpolation_setup_gen4()
     */
    this->wpos_w = vgrf(glsl_type::float_type);
    abld.emit(FS_OPCODE_LINTERP, wpos_w, delta_xy,
-             interp_reg(VARYING_SLOT_POS, 3));
+             component(interp_reg(VARYING_SLOT_POS, 3), 0));
    /* Compute the pixel 1/W value from wpos.w. */
    this->pixel_w = vgrf(glsl_type::float_type);
    abld.emit(SHADER_OPCODE_RCP, this->pixel_w, wpos_w);

@@ -1079,8 +1079,8 @@ fs_visitor::emit_fragcoord_interpolation(fs_reg wpos)
       bld.MOV(wpos, fs_reg(brw_vec8_grf(payload.source_depth_reg, 0)));
    } else {
       bld.emit(FS_OPCODE_LINTERP, wpos,
-           this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL],
-           interp_reg(VARYING_SLOT_POS, 2));
+               this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL],
+               component(interp_reg(VARYING_SLOT_POS, 2), 0));
    }
    wpos = offset(wpos, bld, 1);
 
@@ -1609,14 +1609,26 @@ fs_visitor::assign_urb_setup()
     * setup regs, now that the location of the constants has been chosen.
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
-      if (inst->opcode == FS_OPCODE_LINTERP) {
-	 assert(inst->src[1].file == FIXED_GRF);
-         inst->src[1].nr += urb_start;
-      }
-
-      if (inst->opcode == FS_OPCODE_CINTERP) {
-	 assert(inst->src[0].file == FIXED_GRF);
-         inst->src[0].nr += urb_start;
+      for (int i = 0; i < inst->sources; i++) {
+         if (inst->src[i].file == ATTR) {
+            /* ATTR regs in the FS are in units of logical scalar inputs each
+             * of which consumes half of a GRF register.
+             */
+            assert(inst->src[i].offset < REG_SIZE / 2);
+            const unsigned grf = urb_start + inst->src[i].nr / 2;
+            const unsigned offset = (inst->src[i].nr % 2) * (REG_SIZE / 2) +
+                                    inst->src[i].offset;
+            const unsigned width = inst->src[i].stride == 0 ?
+                                   1 : MIN2(inst->exec_size, 8);
+            struct brw_reg reg = stride(
+               byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
+                           offset),
+               width * inst->src[i].stride,
+               width, inst->src[i].stride);
+            reg.abs = inst->src[i].abs;
+            reg.negate = inst->src[i].negate;
+            inst->src[i] = reg;
+         }
       }
    }
 

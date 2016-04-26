@@ -276,7 +276,7 @@ public:
 
    fs_reg get_timestamp(const brw::fs_builder &bld);
 
-   struct brw_reg interp_reg(int location, int channel);
+   fs_reg interp_reg(int location, int channel);
 
    int implied_mrf_writes(fs_inst *inst) const;
 

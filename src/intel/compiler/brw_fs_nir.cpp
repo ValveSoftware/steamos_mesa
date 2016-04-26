@@ -3392,10 +3392,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       }
 
       for (unsigned int i = 0; i < num_components; i++) {
-         struct brw_reg interp = interp_reg(base, comp + i);
-         interp = suboffset(interp, 3);
          bld.emit(FS_OPCODE_CINTERP, offset(retype(dest, type), bld, i),
-                  retype(fs_reg(interp), type));
+                  retype(component(interp_reg(base, comp + i), 3), type));
       }
 
       if (nir_dest_bit_size(instr->dest) == 64) {
@@ -3568,8 +3566,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
 
       for (unsigned int i = 0; i < instr->num_components; i++) {
          fs_reg interp =
-            fs_reg(interp_reg(nir_intrinsic_base(instr),
-                              nir_intrinsic_component(instr) + i));
+            component(interp_reg(nir_intrinsic_base(instr),
+                                 nir_intrinsic_component(instr) + i), 0);
          interp.type = BRW_REGISTER_TYPE_F;
          dest.type = BRW_REGISTER_TYPE_F;
 
