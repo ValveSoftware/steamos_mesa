@@ -541,6 +541,7 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
+      case ST_FS32:
       case ST_CS:
          written = brw->shader_time.cumulative[i].written;
          reset = brw->shader_time.cumulative[i].reset;
@@ -569,6 +570,7 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
+      case ST_FS32:
       case ST_CS:
          total_by_type[type] += scaled[i];
          break;
@@ -618,6 +620,9 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_FS16:
          stage = "fs16";
          break;
+      case ST_FS32:
+         stage = "fs32";
+         break;
       case ST_CS:
          stage = "cs";
          break;
@@ -637,6 +642,7 @@ brw_report_shader_time(struct brw_context *brw)
    print_shader_time_line("total", "gs", 0, total_by_type[ST_GS], total);
    print_shader_time_line("total", "fs8", 0, total_by_type[ST_FS8], total);
    print_shader_time_line("total", "fs16", 0, total_by_type[ST_FS16], total);
+   print_shader_time_line("total", "fs32", 0, total_by_type[ST_FS32], total);
    print_shader_time_line("total", "cs", 0, total_by_type[ST_CS], total);
 }
 

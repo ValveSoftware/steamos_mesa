@@ -426,6 +426,7 @@ enum shader_time_shader_type {
    ST_GS,
    ST_FS8,
    ST_FS16,
+   ST_FS32,
    ST_CS,
 };
 

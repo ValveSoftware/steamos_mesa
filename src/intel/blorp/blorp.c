@@ -217,7 +217,7 @@ blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
 
    const unsigned *program =
       brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx, wm_key,
-                     wm_prog_data, nir, NULL, -1, -1, false, use_repclear,
+                     wm_prog_data, nir, NULL, -1, -1, -1, false, use_repclear,
                      NULL, NULL);
 
    return program;

@@ -164,18 +164,20 @@ brw_codegen_wm_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
-   int st_index8 = -1, st_index16 = -1;
+   int st_index8 = -1, st_index16 = -1, st_index32 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
       st_index8 = brw_get_shader_time_index(brw, &fp->program, ST_FS8,
                                             !fp->program.is_arb_asm);
       st_index16 = brw_get_shader_time_index(brw, &fp->program, ST_FS16,
+                                             !fp->program.is_arb_asm);
+      st_index32 = brw_get_shader_time_index(brw, &fp->program, ST_FS32,
                                              !fp->program.is_arb_asm);
    }
 
    char *error_str = NULL;
    program = brw_compile_fs(brw->screen->compiler, brw, mem_ctx,
                             key, &prog_data, fp->program.nir,
-                            &fp->program, st_index8, st_index16,
+                            &fp->program, st_index8, st_index16, st_index32,
                             true, false, vue_map,
                             &error_str);
 

@@ -986,7 +986,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
       const unsigned *shader_code =
          brw_compile_fs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, -1, true, false, NULL, NULL);
+                        NULL, -1, -1, -1, true, false, NULL, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
