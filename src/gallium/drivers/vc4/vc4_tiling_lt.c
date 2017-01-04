@@ -41,6 +41,12 @@
 #define NEON_TAG(x) x ## _base
 #endif
 
+static inline uint32_t
+align_down(uint32_t val, uint32_t align)
+{
+        return val & ~(align - 1);
+}
+
 /** Returns the stride in bytes of a 64-byte microtile. */
 static uint32_t
 vc4_utile_stride(int cpp)
@@ -252,6 +258,66 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
 #endif
 
 }
+/**
+ * Returns the X value into the address bits for LT tiling.
+ *
+ * The LT tile load/stores rely on the X bits not intersecting with the Y
+ * bits.  Because of this, we have to choose to put the utile index within the
+ * LT tile into one of the two values, and we do so in swizzle_lt_x() to make
+ * NPOT handling easier.
+ */
+static uint32_t
+swizzle_lt_x(int x, int cpp)
+{
+        switch (cpp) {
+        case 1:
+                /* 8x8 inside of 4x4 */
+                return ((x & 0x7) << (0 - 0) |
+                        (x & ~0x7) << (6 - 3));
+        case 2:
+                /* 8x4 inside of 4x4 */
+                return ((x & 0x7) << (1 - 0) |
+                        (x & ~0x7) << (6 - 3));
+        case 4:
+                /* 4x4 inside of 4x4 */
+                return ((x & 0x3) << (2 - 0) |
+                        (x & ~0x3) << (6 - 2));
+        case 8:
+                /* 2x4 inside of 4x4 */
+                return ((x & 0x1) << (3 - 0) |
+                        (x & ~0x1) << (6 - 1));
+        default:
+                unreachable("bad cpp");
+        }
+}
+
+/**
+ * Returns the Y value into the address bits for LT tiling.
+ *
+ * The LT tile load/stores rely on the X bits not intersecting with the Y
+ * bits.
+ */
+static uint32_t
+swizzle_lt_y(int y, int cpp)
+{
+
+        switch (cpp) {
+        case 1:
+                /* 8x8 inside of 4x4 */
+                return ((y & 0x7) << 3);
+        case 2:
+                /* 8x4 inside of 4x4 */
+                return ((y & 0x3) << 4);
+        case 4:
+                /* 4x4 inside of 4x4 */
+                return ((y & 0x3) << 4);
+        case 8:
+                /* 2x4 inside of 4x4 */
+                return ((y & 0x3) << 4);
+        default:
+                unreachable("bad cpp");
+        }
+}
 
 /**
  * Helper for loading or storing to an LT image, where the box is aligned
@@ -261,9 +327,9 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
  * vc4_load_utile/vc4_store_utile helpers.
  */
 static inline void
-vc4_lt_image_helper(void *gpu, uint32_t gpu_stride,
-                    void *cpu, uint32_t cpu_stride,
-                    int cpp, const struct pipe_box *box, bool to_cpu)
+vc4_lt_image_aligned(void *gpu, uint32_t gpu_stride,
+                     void *cpu, uint32_t cpu_stride,
+                     int cpp, const struct pipe_box *box, bool to_cpu)
 {
         uint32_t utile_w = vc4_utile_width(cpp);
         uint32_t utile_h = vc4_utile_height(cpp);
@@ -286,6 +352,90 @@ vc4_lt_image_helper(void *gpu, uint32_t gpu_stride,
                                                 cpu_stride, cpp);
                         }
                 }
+        }
+}
+
+/**
+ * Helper for loading or storing to an LT image, where the box is not aligned
+ * to utiles.
+ *
+ * This walks through the raster-order data, copying to/from the corresponding
+ * tiled pixel.  This means we don't get write-combining on stores, but the
+ * loop is very few CPU instructions since the memcpy will be inlined.
+ */
+static inline void
+vc4_lt_image_unaligned(void *gpu, uint32_t gpu_stride,
+                       void *cpu, uint32_t cpu_stride,
+                       int cpp, const struct pipe_box *box, bool to_cpu)
+{
+
+        /* These are the address bits for the start of the box, split out into
+         * x/y so that they can be incremented separately in their loops.
+         */
+        uint32_t offs_x0 = swizzle_lt_x(box->x, cpp);
+        uint32_t offs_y = swizzle_lt_y(box->y, cpp);
+        /* The *_mask values are "what bits of the address are from x or y" */
+        uint32_t x_mask = swizzle_lt_x(~0, cpp);
+        uint32_t y_mask = swizzle_lt_y(~0, cpp);
+        uint32_t incr_y = swizzle_lt_x(gpu_stride / cpp, cpp);
+
+        assert(!(x_mask & y_mask));
+
+        offs_x0 += incr_y * (box->y / vc4_utile_height(cpp));
+
+        for (uint32_t y = 0; y < box->height; y++) {
+                void *gpu_row = gpu + offs_y;
+
+                uint32_t offs_x = offs_x0;
+
+                for (uint32_t x = 0; x < box->width; x++) {
+                        /* Use a memcpy here to move a pixel's worth of data.
+                         * We're relying on this function to be inlined, so
+                         * this will get expanded into the appropriate 1, 2,
+                         * or 4-byte move.
+                         */
+                        if (to_cpu) {
+                                memcpy(cpu + x * cpp, gpu_row + offs_x, cpp);
+                        } else {
+                                memcpy(gpu_row + offs_x, cpu + x * cpp, cpp);
+                        }
+
+                        /* This math trick with x_mask increments offs_x by 1
+                         * in x.
+                         */
+                        offs_x = (offs_x - x_mask) & x_mask;
+                }
+
+                offs_y = (offs_y - y_mask) & y_mask;
+                /* When offs_y wraps (we hit the end of the utile), we
+                 * increment offs_x0 by effectively the utile stride.
+                 */
+                if (!offs_y)
+                        offs_x0 += incr_y;
+
+                cpu += cpu_stride;
+        }
+}
+
+/**
+ * General LT image load/store helper.
+ */
+static inline void
+vc4_lt_image_helper(void *gpu, uint32_t gpu_stride,
+                    void *cpu, uint32_t cpu_stride,
+                    int cpp, const struct pipe_box *box, bool to_cpu)
+{
+        if (box->x & (vc4_utile_width(cpp) - 1) ||
+            box->y & (vc4_utile_height(cpp) - 1) ||
+            box->width & (vc4_utile_width(cpp) - 1) ||
+            box->height & (vc4_utile_height(cpp) - 1)) {
+                vc4_lt_image_unaligned(gpu, gpu_stride,
+                                       cpu, cpu_stride,
+                                       cpp, box, to_cpu);
+        } else {
+                vc4_lt_image_aligned(gpu, gpu_stride,
+                                     cpu, cpu_stride,
+                                     cpp, box, to_cpu);
         }
 }
 
