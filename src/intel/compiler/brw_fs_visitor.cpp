@@ -440,7 +440,8 @@ fs_visitor::emit_fb_writes()
       inst->target = target;
    }
 
-   prog_data->dual_src_blend = (this->dual_src_output.file != BAD_FILE);
+   prog_data->dual_src_blend = (this->dual_src_output.file != BAD_FILE &&
+                                this->outputs[0].file != BAD_FILE);
    assert(!prog_data->dual_src_blend || key->nr_color_regions == 1);
 
    if (inst == NULL) {
