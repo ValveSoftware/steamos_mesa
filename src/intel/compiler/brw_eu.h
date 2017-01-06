@@ -63,7 +63,6 @@ struct brw_codegen {
    /* Allow clients to push/pop instruction state:
     */
    brw_inst stack[BRW_EU_MAX_INSN_STACK];
-   bool compressed_stack[BRW_EU_MAX_INSN_STACK];
    brw_inst *current;
 
    /** Whether or not the user wants automatic exec sizes
