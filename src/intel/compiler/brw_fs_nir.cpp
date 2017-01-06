@@ -3361,6 +3361,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       if (devinfo->gen >= 6) {
          emit_discard_jump();
       }
+
+      limit_dispatch_width(16, "Fragment discard not implemented in SIMD32 mode.");
       break;
    }
 
