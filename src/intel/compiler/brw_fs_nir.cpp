@@ -185,11 +185,15 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
              * masks for 2 and 3) in SIMD16.
              */
             fs_reg shifted = abld.vgrf(BRW_REGISTER_TYPE_UW, 1);
-            abld.SHR(shifted,
-                     stride(byte_offset(retype(brw_vec1_grf(1, 0),
-                                               BRW_REGISTER_TYPE_UB), 28),
-                            1, 8, 0),
-                     brw_imm_v(0x76543210));
+
+            for (unsigned i = 0; i < DIV_ROUND_UP(v->dispatch_width, 16); i++) {
+               const fs_builder hbld = abld.group(MIN2(16, v->dispatch_width), i);
+               hbld.SHR(offset(shifted, hbld, i),
+                        stride(retype(brw_vec1_grf(1 + i, 7),
+                                      BRW_REGISTER_TYPE_UB),
+                               1, 8, 0),
+                        brw_imm_v(0x76543210));
+            }
 
             /* A set bit in the pixel mask means the channel is enabled, but
              * that is the opposite of gl_HelperInvocation so we need to invert
