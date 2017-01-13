@@ -848,6 +848,11 @@ fs_inst::size_read(int arg) const
          return mlen * REG_SIZE;
       break;
 
+   case FS_OPCODE_SET_SAMPLE_ID:
+      if (arg == 1)
+         return 1;
+      break;
+
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7:
       /* The payload is actually stored in src1 */
       if (arg == 1)
@@ -1271,16 +1276,20 @@ fs_visitor::emit_sampleid_setup()
        * TODO: These payload bits exist on Gen7 too, but they appear to always
        *       be zero, so this code fails to work.  We should find out why.
        */
-      fs_reg tmp(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UW);
+      const fs_reg tmp = abld.vgrf(BRW_REGISTER_TYPE_UW);
 
-      abld.SHR(tmp, fs_reg(stride(retype(brw_vec1_grf(1, 0),
-                                         BRW_REGISTER_TYPE_UB), 1, 8, 0)),
-                    brw_imm_v(0x44440000));
+      for (unsigned i = 0; i < DIV_ROUND_UP(dispatch_width, 16); i++) {
+         const fs_builder hbld = abld.group(MIN2(16, dispatch_width), i);
+         hbld.SHR(offset(tmp, hbld, i),
+                  stride(retype(brw_vec1_grf(1 + i, 0), BRW_REGISTER_TYPE_UB),
+                         1, 8, 0),
+                  brw_imm_v(0x44440000));
+      }
+
       abld.AND(*reg, tmp, brw_imm_w(0xf));
    } else {
-      const fs_reg t1 = component(fs_reg(VGRF, alloc.allocate(1),
-                                         BRW_REGISTER_TYPE_UD), 0);
-      const fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UW);
+      const fs_reg t1 = component(abld.vgrf(BRW_REGISTER_TYPE_UD), 0);
+      const fs_reg t2 = abld.vgrf(BRW_REGISTER_TYPE_UW);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N
@@ -1310,8 +1319,15 @@ fs_visitor::emit_sampleid_setup()
                brw_imm_ud(0xc0));
       abld.exec_all().group(1, 0).SHR(t1, t1, brw_imm_d(5));
 
-      /* This works for both SIMD8 and SIMD16 */
-      abld.exec_all().group(4, 0).MOV(t2, brw_imm_v(0x3210));
+      /* This works for SIMD8-SIMD16.  It also works for SIMD32 but only if we
+       * can assume 4x MSAA.  Disallow it on IVB+
+       *
+       * FINISHME: One day, we could come up with a way to do this that
+       * actually works on gen7.
+       */
+      if (devinfo->gen >= 7)
+         limit_dispatch_width(16, "gl_SampleId is unsupported in SIMD32 on gen7");
+      abld.exec_all().group(8, 0).MOV(t2, brw_imm_v(0x32103210));
 
       /* This special instruction takes care of setting vstride=1,
        * width=4, hstride=0 of t2 during an ADD instruction.
