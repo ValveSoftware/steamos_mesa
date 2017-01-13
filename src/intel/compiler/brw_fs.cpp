@@ -1075,7 +1075,7 @@ fs_visitor::emit_fragcoord_interpolation(fs_reg wpos)
 
    /* gl_FragCoord.z */
    if (devinfo->gen >= 6) {
-      bld.MOV(wpos, fs_reg(brw_vec8_grf(payload.source_depth_reg, 0)));
+      bld.MOV(wpos, fetch_payload_reg(bld, payload.source_depth_reg));
    } else {
       bld.emit(FS_OPCODE_LINTERP, wpos,
                this->delta_xy[BRW_BARYCENTRIC_PERSPECTIVE_PIXEL],
@@ -1213,8 +1213,8 @@ fs_visitor::emit_samplepos_setup()
     * The X, Y sample positions come in as bytes in  thread payload. So, read
     * the positions using vstride=16, width=8, hstride=2.
     */
-   const fs_reg sample_pos_reg = retype(brw_vec8_grf(payload.sample_pos_reg, 0),
-                                        BRW_REGISTER_TYPE_W);
+   const fs_reg sample_pos_reg =
+      fetch_payload_reg(abld, payload.sample_pos_reg, BRW_REGISTER_TYPE_W);
 
    /* Compute gl_SamplePosition.x */
    abld.MOV(int_sample_x, subscript(sample_pos_reg, BRW_REGISTER_TYPE_B, 0));
@@ -1331,8 +1331,8 @@ fs_visitor::emit_samplemaskin_setup()
 
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
-   fs_reg coverage_mask(retype(brw_vec8_grf(payload.sample_mask_in_reg, 0),
-                               BRW_REGISTER_TYPE_D));
+   fs_reg coverage_mask =
+      fetch_payload_reg(bld, payload.sample_mask_in_reg, BRW_REGISTER_TYPE_D);
 
    if (wm_prog_data->persample_dispatch) {
       /* gl_SampleMaskIn[] comes from two sources: the input coverage mask,

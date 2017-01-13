@@ -497,6 +497,19 @@ private:
    void *mem_ctx;
 };
 
+namespace brw {
+   inline fs_reg
+   fetch_payload_reg(const brw::fs_builder &bld, uint8_t reg,
+                     brw_reg_type type = BRW_REGISTER_TYPE_F, unsigned n = 1)
+   {
+      if (!reg) {
+         return fs_reg();
+      } else {
+         return fs_reg(retype(brw_vec8_grf(reg, 0), type));
+      }
+   }
+}
+
 void shuffle_from_32bit_read(const brw::fs_builder &bld,
                              const fs_reg &dst,
                              const fs_reg &src,

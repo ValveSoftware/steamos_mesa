@@ -258,7 +258,7 @@ fs_visitor::emit_interpolation_setup_gen6()
    }
 
    abld = bld.annotate("compute pos.w");
-   this->pixel_w = fs_reg(brw_vec8_grf(payload.source_w_reg, 0));
+   this->pixel_w = fetch_payload_reg(abld, payload.source_w_reg);
    this->wpos_w = vgrf(glsl_type::float_type);
    abld.emit(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
@@ -268,8 +268,8 @@ fs_visitor::emit_interpolation_setup_gen6()
        1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
 
    for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
-      this->delta_xy[i] =
-         fs_reg(brw_vec8_grf(payload.barycentric_coord_reg[i], 0));
+      this->delta_xy[i] = fetch_payload_reg(
+         bld, payload.barycentric_coord_reg[i], BRW_REGISTER_TYPE_F, 2);
 
       if (devinfo->needs_unlit_centroid_workaround &&
           (centroid_modes & (1 << i))) {
@@ -363,16 +363,14 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
 
    /* Hand over gl_FragDepth or the payload depth. */
-   const fs_reg dst_depth = (payload.dest_depth_reg ?
-                             fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0)) :
-                             fs_reg());
+   const fs_reg dst_depth = fetch_payload_reg(bld, payload.dest_depth_reg);
    fs_reg src_depth, src_stencil;
 
    if (source_depth_to_render_target) {
       if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
          src_depth = frag_depth;
       else
-         src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
+         src_depth = fetch_payload_reg(bld, payload.source_depth_reg);
    }
 
    if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL))
