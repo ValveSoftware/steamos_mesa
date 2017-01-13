@@ -3246,6 +3246,7 @@ fs_visitor::emit_repclear_shader()
       }
    }
    write->eot = true;
+   write->last_rt = true;
 
    calculate_cfg();
 

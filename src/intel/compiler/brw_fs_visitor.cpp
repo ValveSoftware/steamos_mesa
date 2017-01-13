@@ -103,6 +103,7 @@ fs_visitor::emit_dummy_fs()
    fs_inst *write;
    write = bld.emit(FS_OPCODE_FB_WRITE);
    write->eot = true;
+   write->last_rt = true;
    if (devinfo->gen >= 6) {
       write->base_mrf = 2;
       write->mlen = 4 * reg_width;
@@ -459,6 +460,7 @@ fs_visitor::emit_fb_writes()
       inst->target = 0;
    }
 
+   inst->last_rt = true;
    inst->eot = true;
 }
 

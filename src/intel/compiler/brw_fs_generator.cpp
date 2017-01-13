@@ -289,10 +289,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
     */
    const uint32_t surf_index = inst->target;
 
-   bool last_render_target = inst->eot ||
-                             (prog_data->dual_src_blend && dispatch_width == 16);
-
-
    brw_fb_WRITE(p,
                 payload,
                 implied_header,
@@ -301,7 +297,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
                 nr,
                 0,
                 inst->eot,
-                last_render_target,
+                inst->last_rt,
                 inst->header_size != 0);
 
    brw_mark_surface_used(&prog_data->base, surf_index);
