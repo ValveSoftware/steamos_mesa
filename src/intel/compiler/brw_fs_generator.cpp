@@ -271,17 +271,30 @@ fs_generator::fire_fb_write(fs_inst *inst,
       brw_pop_insn_state(p);
    }
 
-   if (inst->opcode == FS_OPCODE_REP_FB_WRITE)
+   if (inst->opcode == FS_OPCODE_REP_FB_WRITE) {
+      assert(inst->group == 0 && inst->exec_size == 16);
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE_REPLICATED;
-   else if (prog_data->dual_src_blend) {
-      if (!inst->group)
+
+   } else if (prog_data->dual_src_blend) {
+      assert(inst->exec_size == 8);
+
+      if (inst->group % 16 == 0)
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN01;
-      else
+      else if (inst->group % 16 == 8)
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN23;
-   } else if (inst->exec_size == 16)
-      msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE;
-   else
-      msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_SINGLE_SOURCE_SUBSPAN01;
+      else
+         unreachable("Invalid dual-source FB write instruction group");
+
+   } else {
+      assert(inst->group == 0 || (inst->group == 16 && inst->exec_size == 16));
+
+      if (inst->exec_size == 16)
+         msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE;
+      else if (inst->exec_size == 8)
+         msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_SINGLE_SOURCE_SUBSPAN01;
+      else
+         unreachable("Invalid FB write execution size");
+   }
 
    /* We assume render targets start at 0, because headerless FB write
     * messages set "Render Target Index" to 0.  Using a different binding
@@ -289,16 +302,19 @@ fs_generator::fire_fb_write(fs_inst *inst,
     */
    const uint32_t surf_index = inst->target;
 
-   brw_fb_WRITE(p,
-                payload,
-                retype(implied_header, BRW_REGISTER_TYPE_UW),
-                msg_control,
-                surf_index,
-                nr,
-                0,
-                inst->eot,
-                inst->last_rt,
-                inst->header_size != 0);
+   brw_inst *insn = brw_fb_WRITE(p,
+                                 payload,
+                                 retype(implied_header, BRW_REGISTER_TYPE_UW),
+                                 msg_control,
+                                 surf_index,
+                                 nr,
+                                 0,
+                                 inst->eot,
+                                 inst->last_rt,
+                                 inst->header_size != 0);
+
+   if (devinfo->gen >= 6)
+      brw_inst_set_rt_slot_group(devinfo, insn, inst->group / 16);
 
    brw_mark_surface_used(&prog_data->base, surf_index);
 }
