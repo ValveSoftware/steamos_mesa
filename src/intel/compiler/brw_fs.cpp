@@ -3972,6 +3972,9 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    unsigned length = 0;
 
    if (devinfo->gen < 6) {
+      /* TODO: Support SIMD32 on gen4-5 */
+      assert(bld.group() < 16);
+
       /* For gen4-5, we always have a header consisting of g0 and g1.  We have
        * an implied MOV from g0,g1 to the start of the message.  The MOV from
        * g0 is handled by the hardware and the MOV from g1 is provided by the
@@ -4005,10 +4008,20 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
        */
       const fs_builder ubld = bld.exec_all().group(8, 0);
 
-      /* The header starts off as g0 and g1 */
       fs_reg header = ubld.vgrf(BRW_REGISTER_TYPE_UD, 2);
-      ubld.group(16, 0).MOV(header, retype(brw_vec8_grf(0, 0),
-                                           BRW_REGISTER_TYPE_UD));
+      if (bld.group() < 16) {
+         /* The header starts off as g0 and g1 for the first half */
+         ubld.group(16, 0).MOV(header, retype(brw_vec8_grf(0, 0),
+                                              BRW_REGISTER_TYPE_UD));
+      } else {
+         /* The header starts off as g0 and g2 for the second half */
+         assert(bld.group() < 32);
+         const fs_reg header_sources[2] = {
+            retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD),
+            retype(brw_vec8_grf(2, 0), BRW_REGISTER_TYPE_UD),
+         };
+         ubld.LOAD_PAYLOAD(header, header_sources, 2, 0);
+      }
 
       uint32_t g00_bits = 0;
 
@@ -4036,6 +4049,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       }
 
       if (prog_data->uses_kill) {
+         assert(bld.group() < 16);
          ubld.group(1, 0).MOV(retype(component(header, 15),
                                      BRW_REGISTER_TYPE_UW),
                               brw_flag_reg(0, 1));
@@ -4050,6 +4064,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    header_size = length;
 
    if (payload.aa_dest_stencil_reg) {
+      assert(inst->group < 16);
       sources[length] = fs_reg(VGRF, bld.shader->alloc.allocate(1));
       bld.group(8, 0).exec_all().annotate("FB write stencil/AA alpha")
          .MOV(sources[length],
@@ -4073,7 +4088,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
       bld.exec_all().annotate("FB write oMask")
          .MOV(horiz_offset(retype(sources[length], BRW_REGISTER_TYPE_UW),
-                           inst->group),
+                           inst->group % 16),
               sample_mask);
       length++;
    }
@@ -4118,7 +4133,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
    if (src_stencil.file != BAD_FILE) {
       assert(devinfo->gen >= 9);
-      assert(bld.dispatch_width() != 16);
+      assert(bld.dispatch_width() == 8);
 
       /* XXX: src_stencil is only available on gen9+. dst_depth is never
        * available on gen9+. As such it's impossible to have both enabled at the
