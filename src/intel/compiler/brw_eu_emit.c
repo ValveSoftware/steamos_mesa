@@ -2285,17 +2285,17 @@ void brw_oword_block_read(struct brw_codegen *p,
    brw_pop_insn_state(p);
 }
 
-
-void brw_fb_WRITE(struct brw_codegen *p,
-                  struct brw_reg payload,
-                  struct brw_reg implied_header,
-                  unsigned msg_control,
-                  unsigned binding_table_index,
-                  unsigned msg_length,
-                  unsigned response_length,
-                  bool eot,
-                  bool last_render_target,
-                  bool header_present)
+brw_inst *
+brw_fb_WRITE(struct brw_codegen *p,
+             struct brw_reg payload,
+             struct brw_reg implied_header,
+             unsigned msg_control,
+             unsigned binding_table_index,
+             unsigned msg_length,
+             unsigned response_length,
+             bool eot,
+             bool last_render_target,
+             bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned target_cache =
@@ -2344,6 +2344,8 @@ void brw_fb_WRITE(struct brw_codegen *p,
 			    response_length,
 			    eot,
 			    0 /* send_commit_msg */);
+
+   return insn;
 }
 
 brw_inst *

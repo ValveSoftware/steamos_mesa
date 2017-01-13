@@ -328,16 +328,16 @@ void brw_svb_write(struct brw_codegen *p,
                    unsigned binding_table_index,
                    bool   send_commit_msg);
 
-void brw_fb_WRITE(struct brw_codegen *p,
-		   struct brw_reg payload,
-		   struct brw_reg implied_header,
-		   unsigned msg_control,
-		   unsigned binding_table_index,
-		   unsigned msg_length,
-		   unsigned response_length,
-		   bool eot,
-		   bool last_render_target,
-		   bool header_present);
+brw_inst *brw_fb_WRITE(struct brw_codegen *p,
+                       struct brw_reg payload,
+                       struct brw_reg implied_header,
+                       unsigned msg_control,
+                       unsigned binding_table_index,
+                       unsigned msg_length,
+                       unsigned response_length,
+                       bool eot,
+                       bool last_render_target,
+                       bool header_present);
 
 brw_inst *gen9_fb_READ(struct brw_codegen *p,
                        struct brw_reg dst,
