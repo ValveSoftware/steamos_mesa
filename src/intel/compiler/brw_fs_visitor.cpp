@@ -268,32 +268,32 @@ fs_visitor::emit_interpolation_setup_gen6()
        1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
 
    for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
-      uint8_t reg = payload.barycentric_coord_reg[i];
-      this->delta_xy[i] = fs_reg(brw_vec16_grf(reg, 0));
+      this->delta_xy[i] =
+         fs_reg(brw_vec8_grf(payload.barycentric_coord_reg[i], 0));
 
       if (devinfo->needs_unlit_centroid_workaround &&
           (centroid_modes & (1 << i))) {
+         const fs_reg &pixel_delta_xy = delta_xy[i - 1];
+
          /* Get the pixel/sample mask into f0 so that we know which
           * pixels are lit.  Then, for each channel that is unlit,
           * replace the centroid data with non-centroid data.
           */
          bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
-         uint8_t pixel_reg = payload.barycentric_coord_reg[i - 1];
-
          set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                           bld.half(0).MOV(brw_vec8_grf(reg, 0),
-                                           brw_vec8_grf(pixel_reg, 0)));
+                           bld.half(0).MOV(horiz_offset(delta_xy[i], 0),
+                                           horiz_offset(pixel_delta_xy, 0)));
          set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                           bld.half(0).MOV(brw_vec8_grf(reg + 1, 0),
-                                           brw_vec8_grf(pixel_reg + 1, 0)));
+                           bld.half(0).MOV(horiz_offset(delta_xy[i], 8),
+                                           horiz_offset(pixel_delta_xy, 8)));
          if (dispatch_width == 16) {
             set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                              bld.half(1).MOV(brw_vec8_grf(reg + 2, 0),
-                                              brw_vec8_grf(pixel_reg + 2, 0)));
+                              bld.half(1).MOV(horiz_offset(delta_xy[i], 16),
+                                              horiz_offset(pixel_delta_xy, 16)));
             set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                              bld.half(1).MOV(brw_vec8_grf(reg + 3, 0),
-                                              brw_vec8_grf(pixel_reg + 3, 0)));
+                              bld.half(1).MOV(horiz_offset(delta_xy[i], 24),
+                                              horiz_offset(pixel_delta_xy, 24)));
          }
          assert(dispatch_width != 32); /* not implemented yet */
       }
