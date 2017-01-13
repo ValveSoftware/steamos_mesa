@@ -281,21 +281,15 @@ fs_visitor::emit_interpolation_setup_gen6()
           */
          bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
-         set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                           bld.half(0).MOV(horiz_offset(delta_xy[i], 0),
-                                           horiz_offset(pixel_delta_xy, 0)));
-         set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                           bld.half(0).MOV(horiz_offset(delta_xy[i], 8),
-                                           horiz_offset(pixel_delta_xy, 8)));
-         if (dispatch_width == 16) {
-            set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                              bld.half(1).MOV(horiz_offset(delta_xy[i], 16),
-                                              horiz_offset(pixel_delta_xy, 16)));
-            set_predicate_inv(BRW_PREDICATE_NORMAL, true,
-                              bld.half(1).MOV(horiz_offset(delta_xy[i], 24),
-                                              horiz_offset(pixel_delta_xy, 24)));
+         for (unsigned q = 0; q < dispatch_width / 8; q++) {
+            for (unsigned c = 0; c < 2; c++) {
+               const unsigned idx = c + (q & 2) + (q & 1) * dispatch_width / 8;
+               set_predicate_inv(
+                  BRW_PREDICATE_NORMAL, true,
+                  bld.half(q).MOV(horiz_offset(delta_xy[i], idx * 8),
+                                  horiz_offset(pixel_delta_xy, idx * 8)));
+            }
          }
-         assert(dispatch_width != 32); /* not implemented yet */
       }
    }
 }
