@@ -1007,7 +1007,8 @@ fs_visitor::implied_mrf_writes(fs_inst *inst) const
    case SHADER_OPCODE_SAMPLEINFO:
       return 1;
    case FS_OPCODE_FB_WRITE:
-      return 2;
+   case FS_OPCODE_REP_FB_WRITE:
+      return inst->src[0].file == BAD_FILE ? 0 : 2;
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
       return 1;
