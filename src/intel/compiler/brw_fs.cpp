@@ -6038,86 +6038,76 @@ fs_visitor::setup_fs_payload_gen6()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
-
+   const unsigned payload_width = MIN2(16, dispatch_width);
+   assert(dispatch_width % payload_width == 0);
    assert(devinfo->gen >= 6);
 
-   /* R0-1: masks, pixel X/Y coordinates. */
-   payload.num_regs = 2;
-   /* R2: only for 32-pixel dispatch.*/
-
-   /* R3-26: barycentric interpolation coordinates.  These appear in the
-    * same order that they appear in the brw_barycentric_mode
-    * enum.  Each set of coordinates occupies 2 registers if dispatch width
-    * == 8 and 4 registers if dispatch width == 16.  Coordinates only
-    * appear if they were enabled using the "Barycentric Interpolation
-    * Mode" bits in WM_STATE.
-    */
-   for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
-      if (prog_data->barycentric_interp_modes & (1 << i)) {
-         payload.barycentric_coord_reg[i][0] = payload.num_regs;
-         payload.num_regs += 2;
-         if (dispatch_width == 16) {
-            payload.num_regs += 2;
-         }
-      }
-   }
-
-   /* R27: interpolated depth if uses source depth */
-   prog_data->uses_src_depth =
+   prog_data->uses_src_depth = prog_data->uses_src_w =
       (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
-   if (prog_data->uses_src_depth) {
-      payload.source_depth_reg[0] = payload.num_regs;
-      payload.num_regs++;
-      if (dispatch_width == 16) {
-         /* R28: interpolated depth if not SIMD8. */
-         payload.num_regs++;
-      }
-   }
 
-   /* R29: interpolated W set if GEN6_WM_USES_SOURCE_W. */
-   prog_data->uses_src_w =
-      (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
-   if (prog_data->uses_src_w) {
-      payload.source_w_reg[0] = payload.num_regs;
-      payload.num_regs++;
-      if (dispatch_width == 16) {
-         /* R30: interpolated W if not SIMD8. */
-         payload.num_regs++;
-      }
-   }
-
-   /* R31: MSAA position offsets. */
-   if (prog_data->persample_dispatch &&
-       (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_POS)) {
-      /* From the Ivy Bridge PRM documentation for 3DSTATE_PS:
-       *
-       *    "MSDISPMODE_PERSAMPLE is required in order to select
-       *    POSOFFSET_SAMPLE"
-       *
-       * So we can only really get sample positions if we are doing real
-       * per-sample dispatch.  If we need gl_SamplePosition and we don't have
-       * persample dispatch, we hard-code it to 0.5.
-       */
-      prog_data->uses_pos_offset = true;
-      payload.sample_pos_reg[0] = payload.num_regs;
-      payload.num_regs++;
-   }
-
-   /* R32: MSAA input coverage mask */
    prog_data->uses_sample_mask =
       (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_MASK_IN) != 0;
-   if (prog_data->uses_sample_mask) {
-      assert(devinfo->gen >= 7);
-      payload.sample_mask_in_reg[0] = payload.num_regs;
-      payload.num_regs++;
-      if (dispatch_width == 16) {
-         /* R33: input coverage mask if not SIMD8. */
-         payload.num_regs++;
-      }
+
+   /* From the Ivy Bridge PRM documentation for 3DSTATE_PS:
+    *
+    *    "MSDISPMODE_PERSAMPLE is required in order to select
+    *    POSOFFSET_SAMPLE"
+    *
+    * So we can only really get sample positions if we are doing real
+    * per-sample dispatch.  If we need gl_SamplePosition and we don't have
+    * persample dispatch, we hard-code it to 0.5.
+    */
+   prog_data->uses_pos_offset = prog_data->persample_dispatch &&
+      (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_POS);
+
+   /* R0: PS thread payload header. */
+   payload.num_regs++;
+
+   for (unsigned j = 0; j < dispatch_width / payload_width; j++) {
+      /* R1: masks, pixel X/Y coordinates. */
+      payload.subspan_coord_reg[j] = payload.num_regs++;
    }
 
-   /* R34-: bary for 32-pixel. */
-   /* R58-59: interp W for 32-pixel. */
+   for (unsigned j = 0; j < dispatch_width / payload_width; j++) {
+      /* R3-26: barycentric interpolation coordinates.  These appear in the
+       * same order that they appear in the brw_barycentric_mode enum.  Each
+       * set of coordinates occupies 2 registers if dispatch width == 8 and 4
+       * registers if dispatch width == 16.  Coordinates only appear if they
+       * were enabled using the "Barycentric Interpolation Mode" bits in
+       * WM_STATE.
+       */
+      for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
+         if (prog_data->barycentric_interp_modes & (1 << i)) {
+            payload.barycentric_coord_reg[i][j] = payload.num_regs;
+            payload.num_regs += payload_width / 4;
+         }
+      }
+
+      /* R27-28: interpolated depth if uses source depth */
+      if (prog_data->uses_src_depth) {
+         payload.source_depth_reg[j] = payload.num_regs;
+         payload.num_regs += payload_width / 8;
+      }
+
+      /* R29-30: interpolated W set if GEN6_WM_USES_SOURCE_W. */
+      if (prog_data->uses_src_w) {
+         payload.source_w_reg[j] = payload.num_regs;
+         payload.num_regs += payload_width / 8;
+      }
+
+      /* R31: MSAA position offsets. */
+      if (prog_data->uses_pos_offset) {
+         payload.sample_pos_reg[j] = payload.num_regs;
+         payload.num_regs++;
+      }
+
+      /* R32-33: MSAA input coverage mask */
+      if (prog_data->uses_sample_mask) {
+         assert(devinfo->gen >= 7);
+         payload.sample_mask_in_reg[j] = payload.num_regs;
+         payload.num_regs += payload_width / 8;
+      }
+   }
 
    if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
       source_depth_to_render_target = true;
