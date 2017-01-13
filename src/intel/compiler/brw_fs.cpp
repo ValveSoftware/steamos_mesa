@@ -4050,12 +4050,12 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    assert(length == 0 || length == 2);
    header_size = length;
 
-   if (payload.aa_dest_stencil_reg) {
+   if (payload.aa_dest_stencil_reg[0]) {
       assert(inst->group < 16);
       sources[length] = fs_reg(VGRF, bld.shader->alloc.allocate(1));
       bld.group(8, 0).exec_all().annotate("FB write stencil/AA alpha")
          .MOV(sources[length],
-              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
+              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg[0], 0)));
       length++;
    }
 
@@ -6054,7 +6054,7 @@ fs_visitor::setup_fs_payload_gen6()
     */
    for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
       if (prog_data->barycentric_interp_modes & (1 << i)) {
-         payload.barycentric_coord_reg[i] = payload.num_regs;
+         payload.barycentric_coord_reg[i][0] = payload.num_regs;
          payload.num_regs += 2;
          if (dispatch_width == 16) {
             payload.num_regs += 2;
@@ -6066,7 +6066,7 @@ fs_visitor::setup_fs_payload_gen6()
    prog_data->uses_src_depth =
       (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
    if (prog_data->uses_src_depth) {
-      payload.source_depth_reg = payload.num_regs;
+      payload.source_depth_reg[0] = payload.num_regs;
       payload.num_regs++;
       if (dispatch_width == 16) {
          /* R28: interpolated depth if not SIMD8. */
@@ -6078,7 +6078,7 @@ fs_visitor::setup_fs_payload_gen6()
    prog_data->uses_src_w =
       (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
    if (prog_data->uses_src_w) {
-      payload.source_w_reg = payload.num_regs;
+      payload.source_w_reg[0] = payload.num_regs;
       payload.num_regs++;
       if (dispatch_width == 16) {
          /* R30: interpolated W if not SIMD8. */
@@ -6099,7 +6099,7 @@ fs_visitor::setup_fs_payload_gen6()
        * persample dispatch, we hard-code it to 0.5.
        */
       prog_data->uses_pos_offset = true;
-      payload.sample_pos_reg = payload.num_regs;
+      payload.sample_pos_reg[0] = payload.num_regs;
       payload.num_regs++;
    }
 
@@ -6108,7 +6108,7 @@ fs_visitor::setup_fs_payload_gen6()
       (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_MASK_IN) != 0;
    if (prog_data->uses_sample_mask) {
       assert(devinfo->gen >= 7);
-      payload.sample_mask_in_reg = payload.num_regs;
+      payload.sample_mask_in_reg[0] = payload.num_regs;
       payload.num_regs++;
       if (dispatch_width == 16) {
          /* R33: input coverage mask if not SIMD8. */

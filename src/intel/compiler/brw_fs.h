@@ -338,14 +338,15 @@ public:
 
    /** Register numbers for thread payload fields. */
    struct thread_payload {
-      uint8_t source_depth_reg;
-      uint8_t source_w_reg;
-      uint8_t aa_dest_stencil_reg;
-      uint8_t dest_depth_reg;
-      uint8_t sample_pos_reg;
-      uint8_t sample_mask_in_reg;
-      uint8_t barycentric_coord_reg[BRW_BARYCENTRIC_MODE_COUNT];
-      uint8_t local_invocation_id_reg;
+      uint8_t subspan_coord_reg[2];
+      uint8_t source_depth_reg[2];
+      uint8_t source_w_reg[2];
+      uint8_t aa_dest_stencil_reg[2];
+      uint8_t dest_depth_reg[2];
+      uint8_t sample_pos_reg[2];
+      uint8_t sample_mask_in_reg[2];
+      uint8_t barycentric_coord_reg[BRW_BARYCENTRIC_MODE_COUNT][2];
+      uint8_t local_invocation_id_reg[2];
 
       /** The number of thread payload registers the hardware will supply. */
       uint8_t num_regs;
@@ -499,13 +500,32 @@ private:
 
 namespace brw {
    inline fs_reg
-   fetch_payload_reg(const brw::fs_builder &bld, uint8_t reg,
+   fetch_payload_reg(const brw::fs_builder &bld, uint8_t regs[2],
                      brw_reg_type type = BRW_REGISTER_TYPE_F, unsigned n = 1)
    {
-      if (!reg) {
+      if (!regs[0])
          return fs_reg();
+
+      if (bld.dispatch_width() > 16) {
+         const fs_reg tmp = bld.vgrf(type, n);
+         const brw::fs_builder hbld = bld.exec_all().group(16, 0);
+         const unsigned m = bld.dispatch_width() / hbld.dispatch_width();
+         fs_reg *const components = new fs_reg[n * m];
+
+         for (unsigned c = 0; c < n; c++) {
+            for (unsigned g = 0; g < m; g++) {
+               components[c * m + g] =
+                  offset(retype(brw_vec8_grf(regs[g], 0), type), hbld, c);
+            }
+         }
+
+         hbld.LOAD_PAYLOAD(tmp, components, n * m, 0);
+
+         delete[] components;
+         return tmp;
+
       } else {
-         return fs_reg(retype(brw_vec8_grf(reg, 0), type));
+         return fs_reg(retype(brw_vec8_grf(regs[0], 0), type));
       }
    }
 }
