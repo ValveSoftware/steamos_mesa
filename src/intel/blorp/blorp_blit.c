@@ -1622,6 +1622,56 @@ struct blt_coords {
    struct blt_axis x, y;
 };
 
+static enum isl_format
+get_red_format_for_rgb_format(enum isl_format format)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+
+   switch (fmtl->channels.r.bits) {
+   case 8:
+      switch (fmtl->channels.r.type) {
+      case ISL_UNORM:
+         return ISL_FORMAT_R8_UNORM;
+      case ISL_SNORM:
+         return ISL_FORMAT_R8_SNORM;
+      case ISL_UINT:
+         return ISL_FORMAT_R8_UINT;
+      case ISL_SINT:
+         return ISL_FORMAT_R8_SINT;
+      default:
+         unreachable("Invalid 8-bit RGB channel type");
+      }
+   case 16:
+      switch (fmtl->channels.r.type) {
+      case ISL_UNORM:
+         return ISL_FORMAT_R16_UNORM;
+      case ISL_SNORM:
+         return ISL_FORMAT_R16_SNORM;
+      case ISL_SFLOAT:
+         return ISL_FORMAT_R16_FLOAT;
+      case ISL_UINT:
+         return ISL_FORMAT_R16_UINT;
+      case ISL_SINT:
+         return ISL_FORMAT_R16_SINT;
+      default:
+         unreachable("Invalid 8-bit RGB channel type");
+      }
+   case 32:
+      switch (fmtl->channels.r.type) {
+      case ISL_SFLOAT:
+         return ISL_FORMAT_R32_FLOAT;
+      case ISL_UINT:
+         return ISL_FORMAT_R32_UINT;
+      case ISL_SINT:
+         return ISL_FORMAT_R32_SINT;
+      default:
+         unreachable("Invalid 8-bit RGB channel type");
+      }
+   default:
+      unreachable("Invalid number of red channel bits");
+   }
+}
+
 static void
 surf_fake_rgb_with_red(const struct isl_device *isl_dev,
                        struct brw_blorp_surface_info *info)
@@ -1632,26 +1682,9 @@ surf_fake_rgb_with_red(const struct isl_device *isl_dev,
    info->surf.phys_level0_sa.width *= 3;
    info->tile_x_sa *= 3;
 
-   enum isl_format red_format;
-   switch (info->view.format) {
-   case ISL_FORMAT_R8G8B8_UNORM:
-      red_format = ISL_FORMAT_R8_UNORM;
-      break;
-   case ISL_FORMAT_R8G8B8_UINT:
-      red_format = ISL_FORMAT_R8_UINT;
-      break;
-   case ISL_FORMAT_R16G16B16_UNORM:
-      red_format = ISL_FORMAT_R16_UNORM;
-      break;
-   case ISL_FORMAT_R16G16B16_UINT:
-      red_format = ISL_FORMAT_R16_UINT;
-      break;
-   case ISL_FORMAT_R32G32B32_UINT:
-      red_format = ISL_FORMAT_R32_UINT;
-      break;
-   default:
-      unreachable("Invalid RGB copy destination format");
-   }
+   enum isl_format red_format =
+      get_red_format_for_rgb_format(info->view.format);
+
    assert(isl_format_get_layout(red_format)->channels.r.type ==
           isl_format_get_layout(info->view.format)->channels.r.type);
    assert(isl_format_get_layout(red_format)->channels.r.bits ==
