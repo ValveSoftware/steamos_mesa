@@ -193,6 +193,26 @@ blorp_surf_for_miptree(struct brw_context *brw,
    *level -= mt->first_level;
 }
 
+static bool
+brw_blorp_supports_dst_format(struct brw_context *brw, mesa_format format)
+{
+   /* If it's renderable, it's definitely supported. */
+   if (brw->mesa_format_supports_render[format])
+      return true;
+
+   /* BLORP can't compress anything */
+   if (_mesa_is_format_compressed(format))
+      return false;
+
+   /* No exotic formats such as GL_LUMINANCE_ALPHA */
+   if (_mesa_get_format_bits(format, GL_RED_BITS) == 0 &&
+       _mesa_get_format_bits(format, GL_DEPTH_BITS) == 0 &&
+       _mesa_get_format_bits(format, GL_STENCIL_BITS) == 0)
+      return false;
+
+   return true;
+}
+
 static enum isl_format
 brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
                         bool is_render_target)
@@ -210,15 +230,20 @@ brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
       return ISL_FORMAT_R32_FLOAT;
    case MESA_FORMAT_Z_UNORM16:
       return ISL_FORMAT_R16_UNORM;
-   default: {
+   default:
       if (is_render_target) {
-         assert(brw->mesa_format_supports_render[format]);
-         return brw->mesa_to_isl_render_format[format];
+         assert(brw_blorp_supports_dst_format(brw, format));
+         if (brw->mesa_format_supports_render[format]) {
+            return brw->mesa_to_isl_render_format[format];
+         } else {
+            return brw_isl_format_for_mesa_format(format);
+         }
       } else {
+         /* Some destinations (is_render_target == true) are supported by
+          * blorp even though we technically can't render to them.
+          */
          return brw_isl_format_for_mesa_format(format);
       }
-      break;
-   }
    }
 }
 
@@ -562,14 +587,6 @@ try_blorp_blit(struct brw_context *brw,
       src_mt = find_miptree(buffer_bit, src_irb);
       dst_mt = find_miptree(buffer_bit, dst_irb);
 
-      /* We can't handle format conversions between Z24 and other formats
-       * since we have to lie about the surface format. See the comments in
-       * brw_blorp_surface_info::set().
-       */
-      if ((src_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT) !=
-          (dst_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT))
-         return false;
-
       /* We also can't handle any combined depth-stencil formats because we
        * have to reinterpret as a color format.
        */
@@ -638,28 +655,14 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *src_mt = src_irb->mt;
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
-   if (_mesa_get_format_base_format(src_rb->Format) !=
-       _mesa_get_format_base_format(dst_image->TexFormat)) {
-      return false;
-   }
-
-   /* We can't handle format conversions between Z24 and other formats since
-    * we have to lie about the surface format.  See the comments in
-    * brw_blorp_surface_info::set().
-    */
-   if ((src_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT) !=
-       (dst_mt->format == MESA_FORMAT_Z24_UNORM_X8_UINT)) {
-      return false;
-   }
-
-   /* We also can't handle any combined depth-stencil formats because we
-    * have to reinterpret as a color format.
+   /* We can't handle any combined depth-stencil formats because we have to
+    * reinterpret as a color format.
     */
    if (_mesa_get_format_base_format(src_mt->format) == GL_DEPTH_STENCIL ||
        _mesa_get_format_base_format(dst_mt->format) == GL_DEPTH_STENCIL)
       return false;
 
-   if (!brw->mesa_format_supports_render[dst_image->TexFormat])
+   if (!brw_blorp_supports_dst_format(brw, dst_image->TexFormat))
       return false;
 
    /* Source clipping shouldn't be necessary, since copytexsubimage (in
