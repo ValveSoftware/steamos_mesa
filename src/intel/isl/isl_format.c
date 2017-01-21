@@ -774,3 +774,35 @@ isl_format_rgb_to_rgbx(enum isl_format rgb)
       return ISL_FORMAT_UNSUPPORTED;
    }
 }
+
+enum isl_format
+isl_format_rgbx_to_rgba(enum isl_format rgbx)
+{
+   assert(isl_format_is_rgbx(rgbx));
+
+   switch (rgbx) {
+   case ISL_FORMAT_R32G32B32X32_FLOAT:
+      return ISL_FORMAT_R32G32B32A32_FLOAT;
+   case ISL_FORMAT_R16G16B16X16_UNORM:
+      return ISL_FORMAT_R16G16B16A16_UNORM;
+   case ISL_FORMAT_R16G16B16X16_FLOAT:
+      return ISL_FORMAT_R16G16B16A16_FLOAT;
+   case ISL_FORMAT_B8G8R8X8_UNORM:
+      return ISL_FORMAT_B8G8R8A8_UNORM;
+   case ISL_FORMAT_B8G8R8X8_UNORM_SRGB:
+      return ISL_FORMAT_B8G8R8A8_UNORM_SRGB;
+   case ISL_FORMAT_R8G8B8X8_UNORM:
+      return ISL_FORMAT_R8G8B8A8_UNORM;
+   case ISL_FORMAT_R8G8B8X8_UNORM_SRGB:
+      return ISL_FORMAT_R8G8B8A8_UNORM_SRGB;
+   case ISL_FORMAT_B10G10R10X2_UNORM:
+      return ISL_FORMAT_B10G10R10A2_UNORM;
+   case ISL_FORMAT_B5G5R5X1_UNORM:
+      return ISL_FORMAT_B5G5R5A1_UNORM;
+   case ISL_FORMAT_B5G5R5X1_UNORM_SRGB:
+      return ISL_FORMAT_B5G5R5A1_UNORM_SRGB;
+   default:
+      assert(!"Invalid RGBX format");
+      return rgbx;
+   }
+}
