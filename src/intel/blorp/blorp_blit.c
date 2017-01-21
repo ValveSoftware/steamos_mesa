@@ -26,6 +26,7 @@
 
 #include "blorp_priv.h"
 
+#include "util/format_rgb9e5.h"
 /* header-only include needed for _mesa_unorm_to_float and friends. */
 #include "mesa/main/format_utils.h"
 
@@ -949,6 +950,36 @@ swizzle_color(struct nir_builder *b, nir_ssa_def *color,
                    select_color_channel(b, color, data_type, swizzle.a));
 }
 
+static nir_ssa_def *
+convert_color(struct nir_builder *b, nir_ssa_def *color,
+              const struct brw_blorp_blit_prog_key *key)
+{
+   /* All of our color conversions end up generating a single-channel color
+    * value that we need to write out.
+    */
+   nir_ssa_def *value;
+
+   if (key->dst_format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
+      /* The destination image is bound as R32_UNORM but the data needs to be
+       * in R24_UNORM_X8_TYPELESS.  The bottom 24 are the actual data and the
+       * top 8 need to be zero.  We can accomplish this by simply multiplying
+       * by a factor to scale things down.
+       */
+      float factor = (float)((1 << 24) - 1) / (float)UINT32_MAX;
+      value = nir_fmul(b, nir_fsat(b, nir_channel(b, color, 0)),
+                          nir_imm_float(b, factor));
+   } else if (key->dst_format == ISL_FORMAT_L8_UNORM_SRGB) {
+      value = nir_format_linear_to_srgb(b, color);
+   } else if (key->dst_format == ISL_FORMAT_R9G9B9E5_SHAREDEXP) {
+      value = nir_format_pack_r9g9b9e5(b, color);
+   } else {
+      unreachable("Unsupported format conversion");
+   }
+
+   nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
+   return nir_vec4(b, value, u, u, u);
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -1320,6 +1351,9 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       assert(isl_swizzle_is_identity(key->dst_swizzle));
       color = bit_cast_color(&b, color, key);
    }
+
+   if (key->dst_format)
+      color = convert_color(&b, color, key);
 
    if (key->dst_rgb) {
       /* The destination image is bound as a red texture three times as wide
@@ -1862,6 +1896,20 @@ try_blorp_blit(struct blorp_batch *batch,
 
       wm_prog_key->dst_rgb = true;
       wm_prog_key->need_dst_offset = true;
+   } else if (params->dst.view.format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
+      wm_prog_key->dst_format = params->dst.view.format;
+      params->dst.view.format = ISL_FORMAT_R32_UNORM;
+   } else if (params->dst.view.format == ISL_FORMAT_A4B4G4R4_UNORM) {
+      params->dst.view.swizzle =
+         isl_swizzle_compose(params->dst.view.swizzle,
+                             ISL_SWIZZLE(ALPHA, RED, GREEN, BLUE));
+      params->dst.view.format = ISL_FORMAT_B4G4R4A4_UNORM;
+   } else if (params->dst.view.format == ISL_FORMAT_L8_UNORM_SRGB) {
+      wm_prog_key->dst_format = params->dst.view.format;
+      params->dst.view.format = ISL_FORMAT_R8_UNORM;
+   } else if (params->dst.view.format == ISL_FORMAT_R9G9B9E5_SHAREDEXP) {
+      wm_prog_key->dst_format = params->dst.view.format;
+      params->dst.view.format = ISL_FORMAT_R32_UINT;
    }
 
    if (devinfo->gen <= 7 && !devinfo->is_haswell &&

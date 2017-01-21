@@ -272,6 +272,12 @@ struct brw_blorp_blit_prog_key
    /* Number of bits per channel in the destination image. */
    uint8_t dst_bpc;
 
+   /* The format of the destination if format-specific workarounds are needed
+    * and 0 (ISL_FORMAT_R32G32B32A32_FLOAT) if the destination is natively
+    * renderable.
+    */
+   enum isl_format dst_format;
+
    /* Type of the data to be read from the texture (one of
     * nir_type_(int|uint|float)).
     */
