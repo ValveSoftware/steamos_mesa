@@ -1896,6 +1896,10 @@ try_blorp_blit(struct blorp_batch *batch,
 
       wm_prog_key->dst_rgb = true;
       wm_prog_key->need_dst_offset = true;
+   } else if (isl_format_is_rgbx(params->dst.view.format)) {
+      /* We can handle RGBX formats easily enough by treating them as RGBA */
+      params->dst.view.format =
+         isl_format_rgbx_to_rgba(params->dst.view.format);
    } else if (params->dst.view.format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
       wm_prog_key->dst_format = params->dst.view.format;
       params->dst.view.format = ISL_FORMAT_R32_UNORM;
