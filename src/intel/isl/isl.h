@@ -1744,6 +1744,9 @@ bool
 isl_swizzle_supports_rendering(const struct gen_device_info *devinfo,
                                struct isl_swizzle swizzle);
 
+struct isl_swizzle
+isl_swizzle_compose(struct isl_swizzle first, struct isl_swizzle second);
+
 #define isl_surf_init(dev, surf, ...) \
    isl_surf_init_s((dev), (surf), \
                    &(struct isl_surf_init_info) {  __VA_ARGS__ });

@@ -2375,3 +2375,38 @@ isl_swizzle_supports_rendering(const struct gen_device_info *devinfo,
              swizzle.a == ISL_CHANNEL_SELECT_ALPHA;
    }
 }
+
+static enum isl_channel_select
+swizzle_select(enum isl_channel_select chan, struct isl_swizzle swizzle)
+{
+   switch (chan) {
+   case ISL_CHANNEL_SELECT_ZERO:
+   case ISL_CHANNEL_SELECT_ONE:
+      return chan;
+   case ISL_CHANNEL_SELECT_RED:
+      return swizzle.r;
+   case ISL_CHANNEL_SELECT_GREEN:
+      return swizzle.g;
+   case ISL_CHANNEL_SELECT_BLUE:
+      return swizzle.b;
+   case ISL_CHANNEL_SELECT_ALPHA:
+      return swizzle.a;
+   default:
+      unreachable("Invalid swizzle component");
+   }
+}
+
+/**
+ * Returns the single swizzle that is equivalent to applying the two given
+ * swizzles in sequence.
+ */
+struct isl_swizzle
+isl_swizzle_compose(struct isl_swizzle first, struct isl_swizzle second)
+{
+   return (struct isl_swizzle) {
+      .r = swizzle_select(first.r, second),
+      .g = swizzle_select(first.g, second),
+      .b = swizzle_select(first.b, second),
+      .a = swizzle_select(first.a, second),
+   };
+}
