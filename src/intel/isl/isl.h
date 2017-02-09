@@ -1731,6 +1731,19 @@ bool isl_color_value_is_zero(union isl_color_value value,
 bool isl_color_value_is_zero_one(union isl_color_value value,
                                  enum isl_format format);
 
+static inline bool
+isl_swizzle_is_identity(struct isl_swizzle swizzle)
+{
+   return swizzle.r == ISL_CHANNEL_SELECT_RED &&
+          swizzle.g == ISL_CHANNEL_SELECT_GREEN &&
+          swizzle.b == ISL_CHANNEL_SELECT_BLUE &&
+          swizzle.a == ISL_CHANNEL_SELECT_ALPHA;
+}
+
+bool
+isl_swizzle_supports_rendering(const struct gen_device_info *devinfo,
+                               struct isl_swizzle swizzle);
+
 #define isl_surf_init(dev, surf, ...) \
    isl_surf_init_s((dev), (surf), \
                    &(struct isl_surf_init_info) {  __VA_ARGS__ });

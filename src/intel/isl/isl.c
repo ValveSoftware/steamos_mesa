@@ -2322,3 +2322,56 @@ isl_surf_get_depth_format(const struct isl_device *dev,
       return 5; /* D16_UNORM */
    }
 }
+
+bool
+isl_swizzle_supports_rendering(const struct gen_device_info *devinfo,
+                               struct isl_swizzle swizzle)
+{
+   if (devinfo->is_haswell) {
+      /* From the Haswell PRM,
+       * RENDER_SURFACE_STATE::Shader Channel Select Red
+       *
+       *    "The Shader channel selects also define which shader channels are
+       *    written to which surface channel. If the Shader channel select is
+       *    SCS_ZERO or SCS_ONE then it is not written to the surface. If the
+       *    shader channel select is SCS_RED it is written to the surface red
+       *    channel and so on. If more than one shader channel select is set
+       *    to the same surface channel only the first shader channel in RGBA
+       *    order will be written."
+       */
+      return true;
+   } else if (devinfo->gen <= 7) {
+      /* Ivy Bridge and early doesn't have any swizzling */
+      return isl_swizzle_is_identity(swizzle);
+   } else {
+      /* From the Sky Lake PRM Vol. 2d,
+       * RENDER_SURFACE_STATE::Shader Channel Select Red
+       *
+       *    "For Render Target, Red, Green and Blue Shader Channel Selects
+       *    MUST be such that only valid components can be swapped i.e. only
+       *    change the order of components in the pixel. Any other values for
+       *    these Shader Channel Select fields are not valid for Render
+       *    Targets. This also means that there MUST not be multiple shader
+       *    channels mapped to the same RT channel."
+       *
+       * From the Sky Lake PRM Vol. 2d,
+       * RENDER_SURFACE_STATE::Shader Channel Select Alpha
+       *
+       *    "For Render Target, this field MUST be programmed to
+       *    value = SCS_ALPHA."
+       */
+      return (swizzle.r == ISL_CHANNEL_SELECT_RED ||
+              swizzle.r == ISL_CHANNEL_SELECT_GREEN ||
+              swizzle.r == ISL_CHANNEL_SELECT_BLUE) &&
+             (swizzle.g == ISL_CHANNEL_SELECT_RED ||
+              swizzle.g == ISL_CHANNEL_SELECT_GREEN ||
+              swizzle.g == ISL_CHANNEL_SELECT_BLUE) &&
+             (swizzle.b == ISL_CHANNEL_SELECT_RED ||
+              swizzle.b == ISL_CHANNEL_SELECT_GREEN ||
+              swizzle.b == ISL_CHANNEL_SELECT_BLUE) &&
+             swizzle.r != swizzle.g &&
+             swizzle.r != swizzle.b &&
+             swizzle.g != swizzle.b &&
+             swizzle.a == ISL_CHANNEL_SELECT_ALPHA;
+   }
+}
