@@ -2410,3 +2410,33 @@ isl_swizzle_compose(struct isl_swizzle first, struct isl_swizzle second)
       .a = swizzle_select(first.a, second),
    };
 }
+
+/**
+ * Returns a swizzle that is the pseudo-inverse of this swizzle.
+ */
+struct isl_swizzle
+isl_swizzle_invert(struct isl_swizzle swizzle)
+{
+   /* Default to zero for channels which do not show up in the swizzle */
+   enum isl_channel_select chans[4] = {
+      ISL_CHANNEL_SELECT_ZERO,
+      ISL_CHANNEL_SELECT_ZERO,
+      ISL_CHANNEL_SELECT_ZERO,
+      ISL_CHANNEL_SELECT_ZERO,
+   };
+
+   /* We go in ABGR order so that, if there are any duplicates, the first one
+    * is taken if you look at it in RGBA order.  This is what Haswell hardware
+    * does for render target swizzles.
+    */
+   if ((unsigned)(swizzle.a - ISL_CHANNEL_SELECT_RED) < 4)
+      chans[swizzle.a - ISL_CHANNEL_SELECT_RED] = ISL_CHANNEL_SELECT_ALPHA;
+   if ((unsigned)(swizzle.b - ISL_CHANNEL_SELECT_RED) < 4)
+      chans[swizzle.b - ISL_CHANNEL_SELECT_RED] = ISL_CHANNEL_SELECT_BLUE;
+   if ((unsigned)(swizzle.g - ISL_CHANNEL_SELECT_RED) < 4)
+      chans[swizzle.g - ISL_CHANNEL_SELECT_RED] = ISL_CHANNEL_SELECT_GREEN;
+   if ((unsigned)(swizzle.r - ISL_CHANNEL_SELECT_RED) < 4)
+      chans[swizzle.r - ISL_CHANNEL_SELECT_RED] = ISL_CHANNEL_SELECT_RED;
+
+   return (struct isl_swizzle) { chans[0], chans[1], chans[2], chans[3] };
+}
