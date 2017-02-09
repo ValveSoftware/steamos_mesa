@@ -243,6 +243,9 @@ struct brw_blorp_blit_prog_key
    /* Actual MSAA layout used by the source image. */
    enum isl_msaa_layout src_layout;
 
+   /* The swizzle to apply to the source in the shader */
+   struct isl_swizzle src_swizzle;
+
    /* Number of bits per channel in the source image. */
    uint8_t src_bpc;
 
@@ -262,6 +265,9 @@ struct brw_blorp_blit_prog_key
 
    /* Actual MSAA layout used by the destination image. */
    enum isl_msaa_layout dst_layout;
+
+   /* The swizzle to apply to the destination in the shader */
+   struct isl_swizzle dst_swizzle;
 
    /* Number of bits per channel in the destination image. */
    uint8_t dst_bpc;

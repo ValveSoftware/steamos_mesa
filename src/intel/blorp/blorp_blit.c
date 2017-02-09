@@ -933,6 +933,40 @@ bit_cast_color(struct nir_builder *b, nir_ssa_def *color,
    }
 }
 
+static nir_ssa_def *
+select_color_channel(struct nir_builder *b, nir_ssa_def *color,
+                     nir_alu_type data_type,
+                     enum isl_channel_select chan)
+{
+   if (chan == ISL_CHANNEL_SELECT_ZERO) {
+      return nir_imm_int(b, 0);
+   } else if (chan == ISL_CHANNEL_SELECT_ONE) {
+      switch (data_type) {
+      case nir_type_int:
+      case nir_type_uint:
+         return nir_imm_int(b, 1);
+      case nir_type_float:
+         return nir_imm_float(b, 1);
+      default:
+         unreachable("Invalid data type");
+      }
+   } else {
+      assert((unsigned)(chan - ISL_CHANNEL_SELECT_RED) < 4);
+      return nir_channel(b, color, chan - ISL_CHANNEL_SELECT_RED);
+   }
+}
+
+static nir_ssa_def *
+swizzle_color(struct nir_builder *b, nir_ssa_def *color,
+              struct isl_swizzle swizzle, nir_alu_type data_type)
+{
+   return nir_vec4(b,
+                   select_color_channel(b, color, data_type, swizzle.r),
+                   select_color_channel(b, color, data_type, swizzle.g),
+                   select_color_channel(b, color, data_type, swizzle.b),
+                   select_color_channel(b, color, data_type, swizzle.a));
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -1289,8 +1323,21 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
       }
    }
 
-   if (key->dst_bpc != key->src_bpc)
+   if (!isl_swizzle_is_identity(key->src_swizzle)) {
+      color = swizzle_color(&b, color, key->src_swizzle,
+                            key->texture_data_type);
+   }
+
+   if (!isl_swizzle_is_identity(key->dst_swizzle)) {
+      color = swizzle_color(&b, color, isl_swizzle_invert(key->dst_swizzle),
+                            nir_type_int);
+   }
+
+   if (key->dst_bpc != key->src_bpc) {
+      assert(isl_swizzle_is_identity(key->src_swizzle));
+      assert(isl_swizzle_is_identity(key->dst_swizzle));
       color = bit_cast_color(&b, color, key);
+   }
 
    if (key->dst_rgb) {
       /* The destination image is bound as a red texture three times as wide
@@ -1833,6 +1880,21 @@ try_blorp_blit(struct blorp_batch *batch,
 
       wm_prog_key->dst_rgb = true;
       wm_prog_key->need_dst_offset = true;
+   }
+
+   if (devinfo->gen <= 7 && !devinfo->is_haswell &&
+       !isl_swizzle_is_identity(params->src.view.swizzle)) {
+      wm_prog_key->src_swizzle = params->src.view.swizzle;
+      params->src.view.swizzle = ISL_SWIZZLE_IDENTITY;
+   } else {
+      wm_prog_key->src_swizzle = ISL_SWIZZLE_IDENTITY;
+   }
+
+   if (!isl_swizzle_supports_rendering(devinfo, params->dst.view.swizzle)) {
+      wm_prog_key->dst_swizzle = params->dst.view.swizzle;
+      params->dst.view.swizzle = ISL_SWIZZLE_IDENTITY;
+   } else {
+      wm_prog_key->dst_swizzle = ISL_SWIZZLE_IDENTITY;
    }
 
    if (params->src.tile_x_sa || params->src.tile_y_sa) {
