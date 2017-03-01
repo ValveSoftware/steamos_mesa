@@ -253,10 +253,17 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
 
 }
 
-void
-NEON_TAG(vc4_load_lt_image)(void *dst, uint32_t dst_stride,
-                            void *src, uint32_t src_stride,
-                            int cpp, const struct pipe_box *box)
+/**
+ * Helper for loading or storing to an LT image, where the box is aligned
+ * to utiles.
+ *
+ * This just breaks the box down into calls to the fast
+ * vc4_load_utile/vc4_store_utile helpers.
+ */
+static inline void
+vc4_lt_image_helper(void *gpu, uint32_t gpu_stride,
+                    void *cpu, uint32_t cpu_stride,
+                    int cpp, const struct pipe_box *box, bool to_cpu)
 {
         uint32_t utile_w = vc4_utile_width(cpp);
         uint32_t utile_h = vc4_utile_height(cpp);
@@ -264,14 +271,30 @@ NEON_TAG(vc4_load_lt_image)(void *dst, uint32_t dst_stride,
         uint32_t ystart = box->y;
 
         for (uint32_t y = 0; y < box->height; y += utile_h) {
-                for (int x = 0; x < box->width; x += utile_w) {
-                        vc4_load_utile(dst + (dst_stride * y +
-                                              x * cpp),
-                                       src + ((ystart + y) * src_stride +
-                                              (xstart + x) * 64 / utile_w),
-                                       dst_stride, cpp);
+                for (uint32_t x = 0; x < box->width; x += utile_w) {
+                        void *gpu_tile = gpu + ((ystart + y) * gpu_stride +
+                                                (xstart + x) * 64 / utile_w);
+                        if (to_cpu) {
+                                vc4_load_utile(cpu + (cpu_stride * y +
+                                                      x * cpp),
+                                               gpu_tile,
+                                               cpu_stride, cpp);
+                        } else {
+                                vc4_store_utile(gpu_tile,
+                                                cpu + (cpu_stride * y +
+                                                       x * cpp),
+                                                cpu_stride, cpp);
+                        }
                 }
         }
+}
+
+void
+NEON_TAG(vc4_load_lt_image)(void *dst, uint32_t dst_stride,
+                            void *src, uint32_t src_stride,
+                            int cpp, const struct pipe_box *box)
+{
+        vc4_lt_image_helper(src, src_stride, dst, dst_stride, cpp, box, true);
 }
 
 void
@@ -279,18 +302,5 @@ NEON_TAG(vc4_store_lt_image)(void *dst, uint32_t dst_stride,
                              void *src, uint32_t src_stride,
                              int cpp, const struct pipe_box *box)
 {
-        uint32_t utile_w = vc4_utile_width(cpp);
-        uint32_t utile_h = vc4_utile_height(cpp);
-        uint32_t xstart = box->x;
-        uint32_t ystart = box->y;
-
-        for (uint32_t y = 0; y < box->height; y += utile_h) {
-                for (int x = 0; x < box->width; x += utile_w) {
-                        vc4_store_utile(dst + ((ystart + y) * dst_stride +
-                                               (xstart + x) * 64 / utile_w),
-                                        src + (src_stride * y +
-                                               x * cpp),
-                                        src_stride, cpp);
-                }
-        }
+        vc4_lt_image_helper(dst, dst_stride, src, src_stride, cpp, box, false);
 }
