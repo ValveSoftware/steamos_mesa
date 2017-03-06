@@ -71,6 +71,46 @@ build_blit_info(struct pipe_resource *dst_tex,
 
 
 /**
+ * Copy when src texture and dst texture are same with IntraSurfaceCopy
+ * command.
+ */
+static void
+intra_surface_copy(struct svga_context *svga, struct pipe_resource *tex,
+                    unsigned src_x, unsigned src_y, unsigned src_z,
+                    unsigned level, unsigned face,
+                    unsigned dst_x, unsigned dst_y, unsigned dst_z,
+                    unsigned width, unsigned height, unsigned depth)
+{
+   enum pipe_error ret;
+   SVGA3dCopyBox box;
+   struct svga_texture *stex;
+
+   stex = svga_texture(tex);
+
+   box.x = dst_x;
+   box.y = dst_y;
+   box.z = dst_z;
+   box.w = width;
+   box.h = height;
+   box.d = depth;
+   box.srcx = src_x;
+   box.srcy = src_y;
+   box.srcz = src_z;
+
+   ret = SVGA3D_vgpu10_IntraSurfaceCopy(svga->swc,
+                                 stex->handle, level, face,  &box);
+   if (ret != PIPE_OK) {
+      svga_context_flush(svga, NULL);
+   ret = SVGA3D_vgpu10_IntraSurfaceCopy(svga->swc,
+                                 stex->handle, level, face, &box);
+      assert(ret == PIPE_OK);
+   }
+
+   /* Mark the texture subresource as rendered-to. */
+   svga_set_texture_rendered_to(stex, face, level);
+}
+
+/**
  * Copy an image between textures with the vgpu10 CopyRegion command.
  */
 static void
@@ -141,6 +181,18 @@ copy_region_fallback(struct svga_context *svga,
                              dsty, dstz, src_tex, src_level, src_box);
    SVGA_STATS_TIME_POP(sws);
    (void) sws;
+}
+
+
+static bool
+has_face_index_in_z(enum pipe_texture_target target)
+{
+   if (target == PIPE_TEXTURE_CUBE ||
+       target == PIPE_TEXTURE_2D_ARRAY ||
+       target == PIPE_TEXTURE_1D_ARRAY)
+      return true;
+   else
+      return false;
 }
 
 
@@ -299,6 +351,55 @@ can_blit_via_svga_copy_region(struct svga_context *svga,
 }
 
 
+static bool
+can_blit_via_intra_surface_copy(struct svga_context *svga,
+                                const struct pipe_blit_info *blit_info)
+{
+   struct svga_texture *dtex, *stex;
+   struct svga_winsys_screen *sws = svga_screen(svga->pipe.screen)->sws;
+
+   if (!svga_have_vgpu10(svga))
+      return false;
+
+   if (!sws->have_intra_surface_copy)
+      return false;
+
+   stex = svga_texture(blit_info->src.resource);
+   dtex = svga_texture(blit_info->dst.resource);
+
+   if (stex->handle != dtex->handle)
+      return false;
+
+   if (blit_info->src.level != blit_info->dst.level)
+      return false;
+
+   if (has_face_index_in_z(blit_info->src.resource->target)){
+      if (blit_info->src.box.z != blit_info->dst.box.z)
+         return false;
+   }
+
+   /* check that the blit src/dst regions are same size, no flipping, etc. */
+   if (blit_info->src.box.width != blit_info->dst.box.width ||
+       blit_info->src.box.height != blit_info->dst.box.height)
+      return false;
+
+   /* For depth+stencil formats, copy with mask != PIPE_MASK_ZS is not
+    * supported
+    */
+   if (util_format_is_depth_and_stencil(blit_info->src.format) &&
+      blit_info->mask != (PIPE_MASK_ZS))
+     return false;
+
+   if (blit_info->alpha_blend ||
+       (svga->render_condition && blit_info->render_condition_enable) ||
+       blit_info->scissor_enable)
+      return false;
+
+   return !(is_blending_enabled(svga, blit_info) &&
+           util_format_is_srgb(blit_info->src.resource->format));
+}
+
+
 /**
  * The state tracker implements some resource copies with blits (for
  * GL_ARB_copy_image).  This function checks if we should really do the blit
@@ -431,6 +532,17 @@ try_copy_region(struct svga_context *svga,
 
       svga_define_texture_level(dtex, dst_face, blit->dst.level);
       svga_set_texture_rendered_to(dtex, dst_face, blit->dst.level);
+      return true;
+   }
+
+   if (can_blit_via_intra_surface_copy(svga, blit)) {
+      intra_surface_copy(svga,
+                         blit->src.resource,
+                         blit->src.box.x, blit->src.box.y, src_z,
+                         blit->src.level, src_face,
+                         blit->dst.box.x, blit->dst.box.y, dst_z,
+                         blit->src.box.width, blit->src.box.height,
+                         blit->src.box.depth);
       return true;
    }
 
