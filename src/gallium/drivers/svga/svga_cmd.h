@@ -682,4 +682,12 @@ SVGA3D_vgpu10_TransferFromBuffer(struct svga_winsys_context *swc,
                                  unsigned dstSubResource,
                                  SVGA3dBox *dstBox);
 
+/*Cap2 commands*/
+enum pipe_error
+SVGA3D_vgpu10_IntraSurfaceCopy(struct svga_winsys_context *swc,
+                        struct svga_winsys_surface *src,
+                        unsigned level, unsigned face,
+                        const SVGA3dCopyBox *box);
+
+
 #endif /* __SVGA3D_H__ */
