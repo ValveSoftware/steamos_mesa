@@ -763,6 +763,7 @@ struct svga_winsys_screen
    boolean have_set_predication_cmd;
    boolean have_transfer_from_buffer_cmd;
    boolean have_fence_fd;
+   boolean have_intra_surface_copy;
 };
 
 
