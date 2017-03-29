@@ -928,19 +928,11 @@ vmw_ioctl_init(struct vmw_winsys_screen *vws)
    if (vws->base.have_gb_objects && !drm_gb_capable)
       goto out_no_3d;
 
-   memset(&gp_arg, 0, sizeof(gp_arg));
-   gp_arg.param = DRM_VMW_PARAM_HW_CAPS2;
-   ret = drmCommandWriteRead(vws->ioctl.drm_fd, DRM_VMW_GET_PARAM,
-                             &gp_arg, sizeof(gp_arg));
-   if (ret)
-      vws->base.have_intra_surface_copy = FALSE;
-   else {
-      if (gp_arg.value & (uint64_t) SVGA_CAP2_INTRA_SURFACE_COPY)
-         vws->base.have_intra_surface_copy = TRUE;
-      else
-         vws->base.have_intra_surface_copy = FALSE;
-   }
-
+   /*
+    * CAP2 functionality is not yet in vmwgfx. Till then, avoiding 
+    * this code path.
+    */
+   vws->base.have_intra_surface_copy = FALSE;
 
    vws->base.have_vgpu10 = FALSE;
    if (vws->base.have_gb_objects) {
