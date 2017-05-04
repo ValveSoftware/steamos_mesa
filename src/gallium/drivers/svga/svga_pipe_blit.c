@@ -597,8 +597,10 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
     * If format is srgb and blend is enabled then color values need
     * to be converted into linear format.
     */
-   if (is_blending_enabled(svga, &blit))
+   if (is_blending_enabled(svga, &blit)) {
       blit.src.format = util_format_linear(blit.src.format);
+      blit.dst.format = util_format_linear(blit.dst.format);
+   }
 
    /* Check if we can create shader resource view and
     * render target view for the quad blitter to work
