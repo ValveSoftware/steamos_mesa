@@ -5324,6 +5324,50 @@ emit_txl_txb(struct svga_shader_emitter_v10 *emit,
 
 
 /**
+ * Emit code for TGSI_OPCODE_TXL2 (explicit LOD) for cubemap array.
+ */
+static boolean
+emit_txl2(struct svga_shader_emitter_v10 *emit,
+          const struct tgsi_full_instruction *inst)
+{
+   unsigned target = inst->Texture.Texture;
+   unsigned opcode, unit;
+   int offsets[3];
+   struct tgsi_full_src_register coord, lod;
+   struct tex_swizzle_info swz_info;
+
+   assert(inst->Instruction.Opcode == TGSI_OPCODE_TXL2);
+
+   lod = scalar_src(&inst->Src[1], TGSI_SWIZZLE_X);
+   unit = inst->Src[2].Register.Index;
+
+   begin_tex_swizzle(emit, unit, inst, tgsi_is_shadow_target(target),
+                     &swz_info);
+
+   get_texel_offsets(emit, inst, offsets);
+
+   coord = setup_texcoord(emit, unit, &inst->Src[0]);
+
+   /* SAMPLE_L dst, coord(s0), resource, sampler, lod(s3) */
+   begin_emit_instruction(emit);
+   opcode = VGPU10_OPCODE_SAMPLE_L;
+   emit_sample_opcode(emit, opcode, inst->Instruction.Saturate, offsets);
+   emit_dst_register(emit, get_tex_swizzle_dst(&swz_info));
+   emit_src_register(emit, &coord);
+   emit_resource_register(emit, unit);
+   emit_sampler_register(emit, unit);
+   emit_src_register(emit, &lod);
+   end_emit_instruction(emit);
+
+   end_tex_swizzle(emit, &swz_info);
+
+   free_temp_indexes(emit);
+
+   return TRUE;
+}
+
+
+/**
  * Emit code for TGSI_OPCODE_TXQ (texture query) instruction.
  */
 static boolean
@@ -5588,6 +5632,8 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_txd(emit, inst);
    case TGSI_OPCODE_TXF:
       return emit_txf(emit, inst);
+   case TGSI_OPCODE_TXL2:
+      return emit_txl2(emit, inst);
    case TGSI_OPCODE_TXQ:
       return emit_txq(emit, inst);
    case TGSI_OPCODE_UIF:
