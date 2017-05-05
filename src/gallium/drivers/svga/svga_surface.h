@@ -144,6 +144,7 @@ svga_resource_type(enum pipe_texture_target target)
    case PIPE_TEXTURE_2D:
    case PIPE_TEXTURE_2D_ARRAY:
    case PIPE_TEXTURE_CUBE:
+   case PIPE_TEXTURE_CUBE_ARRAY:
       /* drawing to cube map is treated as drawing to 2D array */
       return SVGA3D_RESOURCE_TEXTURE2D;
    case PIPE_TEXTURE_3D:
