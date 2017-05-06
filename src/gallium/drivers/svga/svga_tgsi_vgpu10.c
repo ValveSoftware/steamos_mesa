@@ -2992,6 +2992,7 @@ tgsi_texture_to_resource_dimension(enum tgsi_texture_type target,
    case TGSI_TEXTURE_3D:
       return VGPU10_RESOURCE_DIMENSION_TEXTURE3D;
    case TGSI_TEXTURE_CUBE:
+   case TGSI_TEXTURE_SHADOWCUBE:
       return VGPU10_RESOURCE_DIMENSION_TEXTURECUBE;
    case TGSI_TEXTURE_SHADOW1D:
       return VGPU10_RESOURCE_DIMENSION_TEXTURE1D;
@@ -3006,14 +3007,13 @@ tgsi_texture_to_resource_dimension(enum tgsi_texture_type target,
    case TGSI_TEXTURE_SHADOW2D_ARRAY:
       return is_array ? VGPU10_RESOURCE_DIMENSION_TEXTURE2DARRAY
          : VGPU10_RESOURCE_DIMENSION_TEXTURE2D;
-   case TGSI_TEXTURE_SHADOWCUBE:
-      return VGPU10_RESOURCE_DIMENSION_TEXTURECUBE;
    case TGSI_TEXTURE_2D_MSAA:
       return VGPU10_RESOURCE_DIMENSION_TEXTURE2DMS;
    case TGSI_TEXTURE_2D_ARRAY_MSAA:
       return is_array ? VGPU10_RESOURCE_DIMENSION_TEXTURE2DMSARRAY
          : VGPU10_RESOURCE_DIMENSION_TEXTURE2DMS;
    case TGSI_TEXTURE_CUBE_ARRAY:
+   case TGSI_TEXTURE_SHADOWCUBE_ARRAY:
       return VGPU10_RESOURCE_DIMENSION_TEXTURECUBEARRAY;
    default:
       assert(!"Unexpected resource type");
@@ -5113,6 +5113,49 @@ emit_tex(struct svga_shader_emitter_v10 *emit,
 
 
 /**
+ * Emit code for TGSI_OPCODE_TEX2 (texture lookup for shadow cube map arrays)
+ */
+static boolean
+emit_tex2(struct svga_shader_emitter_v10 *emit,
+         const struct tgsi_full_instruction *inst)
+{
+   const uint unit = inst->Src[2].Register.Index;
+   unsigned target = inst->Texture.Texture;
+   struct tgsi_full_src_register coord, ref;
+   int offsets[3];
+   struct tex_swizzle_info swz_info;
+
+   /* check that the sampler returns a float */
+   if (!is_valid_tex_instruction(emit, inst))
+      return TRUE;
+
+   begin_tex_swizzle(emit, unit, inst, FALSE, &swz_info);
+
+   get_texel_offsets(emit, inst, offsets);
+
+   coord = setup_texcoord(emit, unit, &inst->Src[0]);
+   ref = scalar_src(&inst->Src[1], TGSI_SWIZZLE_X);
+
+   /* SAMPLE_C dst, coord, resource, sampler, ref */
+   begin_emit_instruction(emit);
+   emit_sample_opcode(emit, VGPU10_OPCODE_SAMPLE_C,
+                      inst->Instruction.Saturate, offsets);
+   emit_dst_register(emit, get_tex_swizzle_dst(&swz_info));
+   emit_src_register(emit, &coord);
+   emit_resource_register(emit, unit);
+   emit_sampler_register(emit, unit);
+   emit_tex_compare_refcoord(emit, target, &ref);
+   end_emit_instruction(emit);
+
+   end_tex_swizzle(emit, &swz_info);
+
+   free_temp_indexes(emit);
+
+   return TRUE;
+}
+
+
+/**
  * Emit code for TGSI_OPCODE_TXP (projective texture)
  */
 static boolean
@@ -5622,6 +5665,8 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_issg(emit, inst);
    case TGSI_OPCODE_TEX:
       return emit_tex(emit, inst);
+   case TGSI_OPCODE_TEX2:
+      return emit_tex2(emit, inst);
    case TGSI_OPCODE_TXP:
       return emit_txp(emit, inst);
    case TGSI_OPCODE_TXB:
