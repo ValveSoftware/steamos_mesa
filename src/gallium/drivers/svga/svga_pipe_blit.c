@@ -594,6 +594,19 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
    SVGA_STATS_TIME_PUSH(sws, SVGA_STATS_TIME_BLITBLITTER);
    
    /**
+    * Avoid using util_blitter_blit() for these depth formats on non-vgpu10
+    * devices because these depth formats only support comparison mode
+    * and not ordinary sampling.
+    */
+   if (!svga_have_vgpu10(svga) && (blit.mask & PIPE_MASK_Z) &&
+       (svga_texture(dst)->key.format == SVGA3D_Z_D16 ||
+       svga_texture(dst)->key.format == SVGA3D_Z_D24X8 ||
+       svga_texture(dst)->key.format == SVGA3D_Z_D24S8)) {
+      ret = false;
+      goto done;
+  }
+
+   /**
     * If format is srgb and blend is enabled then color values need
     * to be converted into linear format.
     */
