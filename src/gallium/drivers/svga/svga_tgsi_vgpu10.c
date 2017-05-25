@@ -985,29 +985,31 @@ emit_src_register(struct svga_shader_emitter_v10 *emit,
    VGPU10OperandToken0 operand0;
    VGPU10OperandToken1 operand1;
 
-   if (emit->unit == PIPE_SHADER_FRAGMENT &&
-      file == TGSI_FILE_INPUT) {
-      if (index == emit->fs.face_input_index) {
-         /* Replace INPUT[FACE] with TEMP[FACE] */
-         file = TGSI_FILE_TEMPORARY;
-         index = emit->fs.face_tmp_index;
-      }
-      else if (index == emit->fs.fragcoord_input_index) {
-         /* Replace INPUT[POSITION] with TEMP[POSITION] */
-         file = TGSI_FILE_TEMPORARY;
-         index = emit->fs.fragcoord_tmp_index;
-      }
-      else {
-         /* We remap fragment shader inputs to that FS input indexes
-          * match up with VS/GS output indexes.
-          */
-         index = emit->linkage.input_map[index];
+   if (emit->unit == PIPE_SHADER_FRAGMENT){
+      if (file == TGSI_FILE_INPUT) {
+         if (index == emit->fs.face_input_index) {
+            /* Replace INPUT[FACE] with TEMP[FACE] */
+            file = TGSI_FILE_TEMPORARY;
+            index = emit->fs.face_tmp_index;
+         }
+         else if (index == emit->fs.fragcoord_input_index) {
+            /* Replace INPUT[POSITION] with TEMP[POSITION] */
+            file = TGSI_FILE_TEMPORARY;
+            index = emit->fs.fragcoord_tmp_index;
+         }
+         else {
+            /* We remap fragment shader inputs to that FS input indexes
+             * match up with VS/GS output indexes.
+             */
+            index = emit->linkage.input_map[index];
+         }
       }
    }
-   else if (emit->unit == PIPE_SHADER_GEOMETRY &&
-            file == TGSI_FILE_INPUT) {
-      is_prim_id = (index == emit->gs.prim_id_index);
-      index = emit->linkage.input_map[index];
+   else if (emit->unit == PIPE_SHADER_GEOMETRY) {
+      if (file == TGSI_FILE_INPUT) {
+         is_prim_id = (index == emit->gs.prim_id_index);
+         index = emit->linkage.input_map[index];
+      }
    }
    else if (emit->unit == PIPE_SHADER_VERTEX) {
       if (file == TGSI_FILE_INPUT) {
