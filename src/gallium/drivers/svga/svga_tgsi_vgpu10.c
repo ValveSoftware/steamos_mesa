@@ -98,6 +98,7 @@ struct svga_shader_emitter_v10
    struct svga_compile_key key;
    struct tgsi_shader_info info;
    unsigned unit;
+   unsigned version; /**< Either 40 or 41 at this time */
 
    unsigned inst_start_token;
    boolean discard_instruction; /**< throw away current instruction? */
@@ -6480,8 +6481,8 @@ emit_vgpu10_header(struct svga_shader_emitter_v10 *emit)
    VGPU10ProgramToken ptoken;
 
    /* First token: VGPU10ProgramToken  (version info, program type (VS,GS,PS)) */
-   ptoken.majorVersion = 4;
-   ptoken.minorVersion = 0;
+   ptoken.majorVersion = emit->version / 10;
+   ptoken.minorVersion = emit->version % 10;
    ptoken.programType = translate_shader_type(emit->unit);
    if (!emit_dword(emit, ptoken.value))
       return FALSE;
@@ -6611,6 +6612,8 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
       goto done;
 
    emit->unit = unit;
+   emit->version = svga_have_sm4_1(svga) ? 41 : 40;
+
    emit->key = *key;
 
    emit->vposition.need_prescale = (emit->key.vs.need_prescale ||
