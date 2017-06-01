@@ -170,7 +170,7 @@ vmw_svga_winsys_fence_server_sync(struct svga_winsys_screen *sws,
 
 static struct svga_winsys_surface *
 vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
-                               SVGA3dSurfaceFlags flags,
+                               SVGA3dSurfaceAllFlags allflags,
                                SVGA3dSurfaceFormat format,
                                unsigned usage,
                                SVGA3dSize size,
@@ -183,6 +183,11 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
    struct vmw_buffer_desc desc;
    struct pb_manager *provider;
    uint32_t buffer_size;
+
+   /* Until the kernel supports 64 bits surface flag, the linux driver
+    * only honors the lower 32 bits of the surface flag.
+    */
+   SVGA3dSurface1Flags flags = (SVGA3dSurface1Flags)allflags;
 
    memset(&desc, 0, sizeof(desc));
    surface = CALLOC_STRUCT(vmw_svga_winsys_surface);

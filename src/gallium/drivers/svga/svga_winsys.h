@@ -530,7 +530,7 @@ struct svga_winsys_screen
     */
    struct svga_winsys_surface *
    (*surface_create)(struct svga_winsys_screen *sws,
-                     SVGA3dSurface1Flags flags,
+                     SVGA3dSurfaceAllFlags flags,
                      SVGA3dSurfaceFormat format,
                      unsigned usage,
                      SVGA3dSize size,
