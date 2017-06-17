@@ -122,6 +122,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.ATI_texture_env_combine3 = true;
    ctx->Extensions.MESA_pack_invert = true;
    ctx->Extensions.NV_conditional_render = true;
+   ctx->Extensions.NV_fog_distance = true;
    ctx->Extensions.NV_primitive_restart = true;
    ctx->Extensions.NV_texture_barrier = true;
    ctx->Extensions.NV_texture_env_combine4 = true;
