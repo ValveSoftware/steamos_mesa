@@ -168,14 +168,15 @@ class Format(object):
         self.l = Channel(line[9])
         self.i = Channel(line[10])
         self.p = Channel(line[11])
+        self.order = line[12].strip()
 
         # alpha doesn't have a colorspace of it's own.
-        self.colorspace = line[12].strip().upper()
+        self.colorspace = line[13].strip().upper()
         if self.colorspace in ['', 'ALPHA']:
             self.colorspace = 'NONE'
 
         # This sets it to the line value, or if it's an empty string 'NONE'
-        self.txc = line[13].strip().upper() or 'NONE'
+        self.txc = line[14].strip().upper() or 'NONE'
 
 
 def reader(csvfile):
