@@ -1548,8 +1548,11 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                  vtn_var->mode == vtn_variable_mode_output) {
          is_vertex_input = false;
          location += vtn_var->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0;
-      } else {
-         vtn_warn("Location must be on input or output variable");
+      } else if (vtn_var->mode != vtn_variable_mode_uniform &&
+                 vtn_var->mode != vtn_variable_mode_sampler &&
+                 vtn_var->mode != vtn_variable_mode_image) {
+         vtn_warn("Location must be on input, output, uniform, sampler or "
+                  "image variable");
          return;
       }
 
@@ -1615,7 +1618,9 @@ vtn_storage_class_to_mode(struct vtn_builder *b,
          mode = vtn_variable_mode_ssbo;
          nir_mode = 0;
       } else {
-         vtn_fail("Invalid uniform variable type");
+         /* Default-block uniforms, coming from gl_spirv */
+         mode = vtn_variable_mode_uniform;
+         nir_mode = nir_var_uniform;
       }
       break;
    case SpvStorageClassStorageBuffer:
@@ -1623,15 +1628,13 @@ vtn_storage_class_to_mode(struct vtn_builder *b,
       nir_mode = 0;
       break;
    case SpvStorageClassUniformConstant:
-      if (glsl_type_is_image(interface_type->type)) {
+      if (glsl_type_is_image(interface_type->type))
          mode = vtn_variable_mode_image;
-         nir_mode = nir_var_uniform;
-      } else if (glsl_type_is_sampler(interface_type->type)) {
+      else if (glsl_type_is_sampler(interface_type->type))
          mode = vtn_variable_mode_sampler;
-         nir_mode = nir_var_uniform;
-      } else {
-         vtn_fail("Invalid uniform constant variable type");
-      }
+      else
+         mode = vtn_variable_mode_uniform;
+      nir_mode = nir_var_uniform;
       break;
    case SpvStorageClassPushConstant:
       mode = vtn_variable_mode_push_constant;
@@ -1799,11 +1802,13 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    case vtn_variable_mode_global:
    case vtn_variable_mode_image:
    case vtn_variable_mode_sampler:
+   case vtn_variable_mode_uniform:
       /* For these, we create the variable normally */
       var->var = rzalloc(b->shader, nir_variable);
       var->var->name = ralloc_strdup(var->var, val->name);
       var->var->type = var->type->type;
       var->var->data.mode = nir_mode;
+      var->var->data.location = -1;
 
       switch (var->mode) {
       case vtn_variable_mode_image:

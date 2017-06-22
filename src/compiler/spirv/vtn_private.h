@@ -406,6 +406,7 @@ enum vtn_variable_mode {
    vtn_variable_mode_local,
    vtn_variable_mode_global,
    vtn_variable_mode_param,
+   vtn_variable_mode_uniform,
    vtn_variable_mode_ubo,
    vtn_variable_mode_ssbo,
    vtn_variable_mode_push_constant,
