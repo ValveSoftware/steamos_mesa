@@ -182,7 +182,7 @@ class Format(object):
 
         # alpha doesn't have a colorspace of it's own.
         self.colorspace = line[13].strip().upper()
-        if self.colorspace in ['', 'ALPHA']:
+        if self.colorspace in ['']:
             self.colorspace = 'NONE'
 
         # This sets it to the line value, or if it's an empty string 'NONE'
