@@ -76,7 +76,7 @@ isl_format_layouts[] = {
     % for mask in ['r', 'g', 'b', 'a', 'l', 'i', 'p']:
       <% channel = getattr(format, mask, None) %>\\
       % if channel.type is not None:
-        .${mask} = { ISL_${channel.type}, ${channel.size} },
+        .${mask} = { ISL_${channel.type}, ${channel.start}, ${channel.size} },
       % else:
         .${mask} = {},
       % endif
@@ -147,7 +147,10 @@ class Channel(object):
         else:
             grouped = self._splitter.match(line)
             self.type = self._types[grouped.group('type')].upper()
-            self.size = grouped.group('size')
+            self.size = int(grouped.group('size'))
+
+        # Default the start bit to -1
+        self.start = -1;
 
 
 class Format(object):
@@ -168,7 +171,14 @@ class Format(object):
         self.l = Channel(line[9])
         self.i = Channel(line[10])
         self.p = Channel(line[11])
+
+        # Set the start bit value for each channel
         self.order = line[12].strip()
+        bit = 0
+        for c in self.order:
+            chan = getattr(self, c)
+            chan.start = bit;
+            bit = bit + chan.size
 
         # alpha doesn't have a colorspace of it's own.
         self.colorspace = line[13].strip().upper()

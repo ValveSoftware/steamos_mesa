@@ -1005,6 +1005,7 @@ struct isl_extent4d {
 
 struct isl_channel_layout {
    enum isl_base_type type;
+   uint8_t start_bit; /**< Bit at which this channel starts */
    uint8_t bits; /**< Size in bits */
 };
 
