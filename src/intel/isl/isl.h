@@ -1576,6 +1576,13 @@ enum isl_format isl_format_rgb_to_rgba(enum isl_format rgb) ATTRIBUTE_CONST;
 enum isl_format isl_format_rgb_to_rgbx(enum isl_format rgb) ATTRIBUTE_CONST;
 enum isl_format isl_format_rgbx_to_rgba(enum isl_format rgb) ATTRIBUTE_CONST;
 
+void isl_color_value_pack(const union isl_color_value *value,
+                          enum isl_format format,
+                          uint32_t *data_out);
+void isl_color_value_unpack(union isl_color_value *value,
+                            enum isl_format format,
+                            const uint32_t *data_in);
+
 bool isl_is_storage_image_format(enum isl_format fmt);
 
 enum isl_format
