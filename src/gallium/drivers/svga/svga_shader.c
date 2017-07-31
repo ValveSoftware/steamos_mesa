@@ -223,6 +223,9 @@ svga_init_shader_key_common(const struct svga_context *svga,
             }
          }
 
+         assert(view->texture->nr_samples < (1 << 5)); /* 5-bit field */
+         key->tex[i].num_samples = view->texture->nr_samples;
+
          /* If we have a non-alpha view into an svga3d surface with an
           * alpha channel, then explicitly set the alpha channel to 1
           * when sampling. Note that we need to check the

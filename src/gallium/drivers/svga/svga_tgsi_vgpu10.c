@@ -3067,6 +3067,7 @@ emit_resource_declarations(struct svga_shader_emitter_v10 *emit)
       opcode0.resourceDimension =
          tgsi_texture_to_resource_dimension(emit->sampler_target[i],
                                             emit->key.tex[i].is_array);
+      opcode0.sampleCount = emit->key.tex[i].num_samples;
       operand0.value = 0;
       operand0.numComponents = VGPU10_OPERAND_0_COMPONENT;
       operand0.operandType = VGPU10_OPERAND_TYPE_RESOURCE;

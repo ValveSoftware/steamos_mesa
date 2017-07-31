@@ -267,6 +267,7 @@ typedef union {
    struct {
       unsigned int                     : 11;
       unsigned int resourceDimension   : 5;  /* VGPU10_RESOURCE_DIMENSION */
+      unsigned int sampleCount         : 7;
    };
    struct {
       unsigned int                     : 11;
