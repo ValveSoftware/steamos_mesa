@@ -1958,13 +1958,25 @@ translate_interpolation(const struct svga_shader_emitter_v10 *emit,
    case TGSI_INTERPOLATE_CONSTANT:
       return VGPU10_INTERPOLATION_CONSTANT;
    case TGSI_INTERPOLATE_LINEAR:
-      return interpolate_loc == TGSI_INTERPOLATE_LOC_CENTROID ?
-             VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID :
-             VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE;
+      if (interpolate_loc == TGSI_INTERPOLATE_LOC_CENTROID) {
+         return VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID;
+      } else if (interpolate_loc == TGSI_INTERPOLATE_LOC_SAMPLE &&
+                 emit->version >= 41) {
+         return VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_SAMPLE;
+      } else {
+         return VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE;
+      }
+      break;
    case TGSI_INTERPOLATE_PERSPECTIVE:
-      return interpolate_loc == TGSI_INTERPOLATE_LOC_CENTROID ?
-             VGPU10_INTERPOLATION_LINEAR_CENTROID :
-             VGPU10_INTERPOLATION_LINEAR;
+      if (interpolate_loc == TGSI_INTERPOLATE_LOC_CENTROID) {
+         return VGPU10_INTERPOLATION_LINEAR_CENTROID;
+      } else if (interpolate_loc == TGSI_INTERPOLATE_LOC_SAMPLE &&
+                 emit->version >= 41) {
+         return VGPU10_INTERPOLATION_LINEAR_SAMPLE;
+      } else {
+         return VGPU10_INTERPOLATION_LINEAR;
+      }
+      break;
    default:
       assert(!"Unexpected interpolation mode");
       return VGPU10_INTERPOLATION_CONSTANT;
@@ -2192,7 +2204,9 @@ emit_input_declaration(struct svga_shader_emitter_v10 *emit,
           interpMode == VGPU10_INTERPOLATION_LINEAR ||
           interpMode == VGPU10_INTERPOLATION_LINEAR_CENTROID ||
           interpMode == VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE ||
-          interpMode == VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID);
+          interpMode == VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID ||
+          interpMode == VGPU10_INTERPOLATION_LINEAR_SAMPLE ||
+          interpMode == VGPU10_INTERPOLATION_LINEAR_NOPERSPECTIVE_SAMPLE);
 
    check_register_index(emit, opcodeType, index);
 
