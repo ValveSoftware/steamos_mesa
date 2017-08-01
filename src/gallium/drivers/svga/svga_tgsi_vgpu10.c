@@ -1074,7 +1074,9 @@ emit_src_register(struct svga_shader_emitter_v10 *emit,
          }
       }
       else if (file == TGSI_FILE_SYSTEM_VALUE) {
+         /* Map the TGSI system value to a VGPU10 input register */
          assert(index < ARRAY_SIZE(emit->system_value_indexes));
+         file = TGSI_FILE_INPUT;
          index = emit->system_value_indexes[index];
       }
    }
