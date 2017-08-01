@@ -415,6 +415,9 @@ check_register_index(struct svga_shader_emitter_v10 *emit,
          emit->register_overflow = TRUE;
       }
       break;
+   case VGPU10_OPERAND_TYPE_OUTPUT_COVERAGE_MASK:
+      /* nothing */
+      break;
    default:
       assert(0);
       ; /* nothing */
@@ -916,6 +919,15 @@ emit_dst_register(struct svga_shader_emitter_v10 *emit,
             /* Fragment depth output register */
             operand0.value = 0;
             operand0.operandType = VGPU10_OPERAND_TYPE_OUTPUT_DEPTH;
+            operand0.indexDimension = VGPU10_OPERAND_INDEX_0D;
+            operand0.numComponents = VGPU10_OPERAND_1_COMPONENT;
+            emit_dword(emit, operand0.value);
+            return;
+         }
+         else if (sem_name == TGSI_SEMANTIC_SAMPLEMASK) {
+            /* Fragment sample mask output */
+            operand0.value = 0;
+            operand0.operandType = VGPU10_OPERAND_TYPE_OUTPUT_COVERAGE_MASK;
             operand0.indexDimension = VGPU10_OPERAND_INDEX_0D;
             operand0.numComponents = VGPU10_OPERAND_1_COMPONENT;
             emit_dword(emit, operand0.value);
@@ -2272,6 +2284,31 @@ emit_fragdepth_output_declaration(struct svga_shader_emitter_v10 *emit)
 
 
 /**
+ * Emit the declaration for the fragment sample mask/coverage output.
+ */
+static void
+emit_samplemask_output_declaration(struct svga_shader_emitter_v10 *emit)
+{
+   VGPU10OpcodeToken0 opcode0;
+   VGPU10OperandToken0 operand0;
+   VGPU10NameToken name_token;
+
+   assert(emit->unit == PIPE_SHADER_FRAGMENT);
+   assert(emit->version >= 41);
+
+   opcode0.value = operand0.value = name_token.value = 0;
+
+   opcode0.opcodeType = VGPU10_OPCODE_DCL_OUTPUT;
+   operand0.operandType = VGPU10_OPERAND_TYPE_OUTPUT_COVERAGE_MASK;
+   operand0.numComponents = VGPU10_OPERAND_0_COMPONENT;
+   operand0.indexDimension = VGPU10_OPERAND_INDEX_0D;
+   operand0.mask = VGPU10_OPERAND_4_COMPONENT_MASK_ALL;
+
+   emit_decl_instruction(emit, opcode0, operand0, name_token, 0, 1);
+}
+
+
+/**
  * Emit the declaration for a system value input/output.
  */
 static void
@@ -2670,6 +2707,10 @@ emit_output_declarations(struct svga_shader_emitter_v10 *emit)
          else if (semantic_name == TGSI_SEMANTIC_POSITION) {
             /* Fragment depth output */
             emit_fragdepth_output_declaration(emit);
+         }
+         else if (semantic_name == TGSI_SEMANTIC_SAMPLEMASK) {
+            /* Fragment depth output */
+            emit_samplemask_output_declaration(emit);
          }
          else {
             assert(!"Bad output semantic name");
