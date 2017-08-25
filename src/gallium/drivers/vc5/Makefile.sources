@@ -24,7 +24,7 @@ C_SOURCES := \
 	vc5_uniforms.c \
 	$()
 
-VC5_PER_VERSION_SOURCES = \
+V3D_PER_VERSION_SOURCES = \
 	v3dx_context.h \
 	v3dx_format_table.c \
 	v3dx_job.c \

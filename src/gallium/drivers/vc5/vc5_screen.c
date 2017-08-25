@@ -598,7 +598,7 @@ vc5_screen_get_compiler_options(struct pipe_screen *pscreen,
 }
 
 struct pipe_screen *
-vc5_screen_create(int fd)
+v3d_screen_create(int fd)
 {
         struct vc5_screen *screen = rzalloc(NULL, struct vc5_screen);
         struct pipe_screen *pscreen;
@@ -617,7 +617,7 @@ vc5_screen_create(int fd)
         (void)mtx_init(&screen->bo_handles_mutex, mtx_plain);
         screen->bo_handles = util_hash_table_create(handle_hash, handle_compare);
 
-#if defined(USE_VC5_SIMULATOR)
+#if defined(USE_V3D_SIMULATOR)
         vc5_simulator_init(screen);
 #endif
 

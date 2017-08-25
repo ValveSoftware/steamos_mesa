@@ -31,7 +31,7 @@
  * we support.
  */
 
-#ifdef USE_VC5_SIMULATOR
+#ifdef USE_V3D_SIMULATOR
 
 #include "vc5_screen.h"
 #include "vc5_context.h"
@@ -187,4 +187,4 @@ v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_v3d_submit_cl *submit,
         }
 }
 
-#endif /* USE_VC5_SIMULATOR */
+#endif /* USE_V3D_SIMULATOR */

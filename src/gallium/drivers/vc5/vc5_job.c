@@ -410,7 +410,7 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
         if (!(V3D_DEBUG & V3D_DEBUG_NORAST)) {
                 int ret;
 
-#ifndef USE_VC5_SIMULATOR
+#ifndef USE_V3D_SIMULATOR
                 ret = drmIoctl(vc5->fd, DRM_IOCTL_V3D_SUBMIT_CL, &job->submit);
 #else
                 ret = vc5_simulator_flush(vc5, &job->submit, job);

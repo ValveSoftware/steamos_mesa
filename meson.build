@@ -137,7 +137,7 @@ with_gallium_nouveau = false
 with_gallium_freedreno = false
 with_gallium_softpipe = false
 with_gallium_vc4 = false
-with_gallium_vc5 = false
+with_gallium_v3d = false
 with_gallium_etnaviv = false
 with_gallium_imx = false
 with_gallium_tegra = false
@@ -155,7 +155,7 @@ if _drivers.contains('auto')
       ]
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
       _drivers = [
-        'pl111', 'vc4', 'vc5', 'freedreno', 'etnaviv', 'imx', 'nouveau',
+        'pl111', 'v3d', 'vc4', 'freedreno', 'etnaviv', 'imx', 'nouveau',
         'tegra', 'virgl', 'swrast',
       ]
     else
@@ -175,8 +175,8 @@ if _drivers != ['']
   with_gallium_nouveau = _drivers.contains('nouveau')
   with_gallium_freedreno = _drivers.contains('freedreno')
   with_gallium_softpipe = _drivers.contains('swrast')
+  with_gallium_v3d = _drivers.contains('v3d')
   with_gallium_vc4 = _drivers.contains('vc4')
-  with_gallium_vc5 = _drivers.contains('vc5')
   with_gallium_etnaviv = _drivers.contains('etnaviv')
   with_gallium_imx = _drivers.contains('imx')
   with_gallium_tegra = _drivers.contains('tegra')

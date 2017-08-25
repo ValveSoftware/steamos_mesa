@@ -93,7 +93,7 @@ vc5_screen(struct pipe_screen *screen)
         return (struct vc5_screen *)screen;
 }
 
-struct pipe_screen *vc5_screen_create(int fd);
+struct pipe_screen *v3d_screen_create(int fd);
 
 void
 vc5_fence_init(struct vc5_screen *screen);

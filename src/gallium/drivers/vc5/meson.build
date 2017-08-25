@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-files_libvc5 = files(
+files_libv3d = files(
   'vc5_blit.c',
   'vc5_bufmgr.c',
   'vc5_bufmgr.h',
@@ -55,15 +55,15 @@ files_per_version = files(
 v3dv3_c_args = []
 dep_v3dv3 = dependency('v3dv3')
 if dep_v3dv3.found()
-  v3dv3_c_args = '-DUSE_VC5_SIMULATOR'
+  v3dv3_c_args = '-DUSE_V3D_SIMULATOR'
 endif
 
-vc5_versions = ['33', '41']
+v3d_versions = ['33', '41']
 
 per_version_libs = []
-foreach ver : vc5_versions
+foreach ver : v3d_versions
   per_version_libs += static_library(
-    'vc5-v' + ver,
+    'v3d-v' + ver,
     [files_per_version, v3d_xml_pack, nir_opcodes_h, nir_builder_opcodes_h],
     include_directories : [
       inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_broadcom,
@@ -76,9 +76,9 @@ foreach ver : vc5_versions
 
 endforeach
 
-libvc5 = static_library(
-  'vc5',
-  [files_libvc5, v3d_xml_pack],
+libv3d = static_library(
+  'v3d',
+  [files_libv3d, v3d_xml_pack],
   include_directories : [
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_broadcom,
     inc_gallium_drivers, inc_drm_uapi,
@@ -89,8 +89,8 @@ libvc5 = static_library(
   link_with: per_version_libs,
 )
 
-driver_vc5 = declare_dependency(
-  compile_args : '-DGALLIUM_VC5',
-  link_with : [libvc5, libvc5winsys, libbroadcom_cle, libbroadcom_vc5],
+driver_v3d = declare_dependency(
+  compile_args : '-DGALLIUM_V3D',
+  link_with : [libv3d, libv3dwinsys, libbroadcom_cle, libbroadcom_v3d],
   dependencies : idep_nir,
 )

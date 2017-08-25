@@ -26,6 +26,6 @@
 
 struct pipe_screen;
 
-struct pipe_screen *vc5_drm_screen_create(int drmFD);
+struct pipe_screen *v3d_drm_screen_create(int drmFD);
 
 #endif /* __VC5_DRM_PUBLIC_H__ */

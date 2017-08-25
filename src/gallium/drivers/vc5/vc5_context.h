@@ -47,7 +47,7 @@ void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
 #include "vc5_resource.h"
 #include "vc5_cl.h"
 
-#ifdef USE_VC5_SIMULATOR
+#ifdef USE_V3D_SIMULATOR
 #define using_vc5_simulator true
 #else
 #define using_vc5_simulator false

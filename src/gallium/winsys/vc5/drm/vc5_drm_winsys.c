@@ -29,7 +29,7 @@
 #include "vc5/vc5_screen.h"
 
 struct pipe_screen *
-vc5_drm_screen_create(int fd)
+v3d_drm_screen_create(int fd)
 {
-	return vc5_screen_create(fcntl(fd, F_DUPFD_CLOEXEC, 3));
+	return v3d_screen_create(fcntl(fd, F_DUPFD_CLOEXEC, 3));
 }

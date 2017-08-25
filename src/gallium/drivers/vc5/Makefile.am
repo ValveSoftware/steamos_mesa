@@ -26,31 +26,31 @@ AM_CFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/broadcom \
 	$(LIBDRM_CFLAGS) \
-	$(VC5_SIMULATOR_CFLAGS) \
+	$(V3D_SIMULATOR_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(VALGRIND_CFLAGS) \
 	$()
 
 noinst_LTLIBRARIES = \
-	libvc5.la \
-	libvc5_v33.la \
-	libvc5_v41.la \
+	libv3d.la \
+	libv3d_v33.la \
+	libv3d_v41.la \
 	$()
 
-libvc5_v33_la_SOURCES = $(VC5_PER_VERSION_SOURCES)
-libvc5_v33_la_CFLAGS = $(AM_CFLAGS) -DV3D_VERSION=33
+libv3d_v33_la_SOURCES = $(V3D_PER_VERSION_SOURCES)
+libv3d_v33_la_CFLAGS = $(AM_CFLAGS) -DV3D_VERSION=33
 
-libvc5_v41_la_SOURCES = $(VC5_PER_VERSION_SOURCES)
-libvc5_v41_la_CFLAGS = $(AM_CFLAGS) -DV3D_VERSION=41
+libv3d_v41_la_SOURCES = $(V3D_PER_VERSION_SOURCES)
+libv3d_v41_la_CFLAGS = $(AM_CFLAGS) -DV3D_VERSION=41
 
-libvc5_la_SOURCES = $(C_SOURCES)
+libv3d_la_SOURCES = $(C_SOURCES)
 
-libvc5_la_LDFLAGS = \
-	$(VC5_SIMULATOR_LIBS) \
+libv3d_la_LDFLAGS = \
+	$(V3D_SIMULATOR_LIBS) \
 	$(NULL)
-libvc5_la_LIBADD = \
-	libvc5_v33.la \
-	libvc5_v41.la \
+libv3d_la_LIBADD = \
+	libv3d_v33.la \
+	libv3d_v41.la \
 	$()
 
 EXTRA_DIST = meson.build

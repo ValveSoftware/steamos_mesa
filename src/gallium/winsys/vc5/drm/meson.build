@@ -18,8 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-libvc5winsys = static_library(
-  'vc5winsys',
+libv3dwinsys = static_library(
+  'v3dwinsys',
   files('vc5_drm_winsys.c'),
   include_directories : [
     inc_src, inc_include,

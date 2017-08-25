@@ -348,7 +348,7 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         bo->name = "winsys";
         bo->private = false;
 
-#ifdef USE_VC5_SIMULATOR
+#ifdef USE_V3D_SIMULATOR
         vc5_simulator_open_from_handle(screen->fd, winsys_stride,
                                        bo->handle, bo->size);
         bo->map = malloc(bo->size);

@@ -88,8 +88,8 @@ if HAVE_GALLIUM_VC4
 SUBDIRS += drivers/vc4 winsys/vc4/drm
 endif
 
-## vc5
-if HAVE_GALLIUM_VC5
+## v3d
+if HAVE_GALLIUM_V3D
 SUBDIRS += drivers/vc5 winsys/vc5/drm
 endif
 

@@ -26,8 +26,8 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/gallium/drivers \
 	$(GALLIUM_WINSYS_CFLAGS)
 
-noinst_LTLIBRARIES = libvc5drm.la
+noinst_LTLIBRARIES = libv3ddrm.la
 
-libvc5drm_la_SOURCES = $(C_SOURCES)
+libv3ddrm_la_SOURCES = $(C_SOURCES)
 
 EXTRA_DIST = meson.build

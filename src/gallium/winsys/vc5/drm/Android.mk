@@ -27,7 +27,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(C_SOURCES)
 
-LOCAL_MODULE := libmesa_winsys_vc5
+LOCAL_MODULE := libmesa_winsys_v3d
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)

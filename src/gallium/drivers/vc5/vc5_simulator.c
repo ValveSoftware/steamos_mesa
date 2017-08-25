@@ -46,7 +46,7 @@
  * BOs).
  */
 
-#ifdef USE_VC5_SIMULATOR
+#ifdef USE_V3D_SIMULATOR
 
 #include <sys/mman.h>
 #include "util/hash_table.h"
@@ -657,4 +657,4 @@ vc5_simulator_destroy(struct vc5_screen *screen)
         mtx_unlock(&sim_state.mutex);
 }
 
-#endif /* USE_VC5_SIMULATOR */
+#endif /* USE_V3D_SIMULATOR */

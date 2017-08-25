@@ -27,7 +27,7 @@
  * vc5_simulator.c code to use.
  */
 
-#ifdef USE_VC5_SIMULATOR
+#ifdef USE_V3D_SIMULATOR
 
 #include "vc5_simulator_wrapper.h"
 
@@ -85,4 +85,4 @@ int v3d_hw_get_version(struct v3d_hw *hw)
 
 }
 
-#endif /* USE_VC5_SIMULATOR */
+#endif /* USE_V3D_SIMULATOR */
