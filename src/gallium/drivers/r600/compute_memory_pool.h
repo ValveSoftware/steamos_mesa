@@ -86,12 +86,6 @@ struct compute_memory_pool* compute_memory_pool_new(struct r600_screen *rscreen)
 
 void compute_memory_pool_delete(struct compute_memory_pool* pool);
 
-int64_t compute_memory_prealloc_chunk(struct compute_memory_pool* pool,
-	int64_t size_in_dw);
-
-struct list_head *compute_memory_postalloc_chunk(struct compute_memory_pool* pool,
-	int64_t start_in_dw);
-
 int compute_memory_grow_defrag_pool(struct compute_memory_pool* pool,
 	struct pipe_context *pipe, int new_size_in_dw);
 
@@ -126,10 +120,5 @@ void compute_memory_transfer(struct compute_memory_pool* pool,
 	struct pipe_context * pipe, int device_to_host,
 	struct compute_memory_item* chunk, void* data,
 	int offset_in_chunk, int size);
-
-void compute_memory_transfer_direct(struct compute_memory_pool* pool,
-	int chunk_to_data, struct compute_memory_item* chunk,
-	struct r600_resource* data, int offset_in_chunk,
-	int offset_in_data, int size);
 
 #endif
