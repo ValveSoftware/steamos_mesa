@@ -43,6 +43,29 @@
 #include <inttypes.h>
 
 #define ITEM_ALIGNMENT 1024
+
+/* A few forward declarations of static functions */
+static void compute_memory_shadow(struct compute_memory_pool* pool,
+	struct pipe_context *pipe, int device_to_host);
+
+static void compute_memory_defrag(struct compute_memory_pool *pool,
+	struct pipe_resource *src, struct pipe_resource *dst,
+	struct pipe_context *pipe);
+
+static int compute_memory_promote_item(struct compute_memory_pool *pool,
+	struct compute_memory_item *item, struct pipe_context *pipe,
+	int64_t allocated);
+
+static void compute_memory_move_item(struct compute_memory_pool *pool,
+	struct pipe_resource *src, struct pipe_resource *dst,
+	struct compute_memory_item *item, uint64_t new_start_in_dw,
+	struct pipe_context *pipe);
+
+static void compute_memory_transfer(struct compute_memory_pool* pool,
+	struct pipe_context * pipe, int device_to_host,
+	struct compute_memory_item* chunk, void* data,
+	int offset_in_chunk, int size);
+
 /**
  * Creates a new pool.
  */
@@ -106,7 +129,7 @@ void compute_memory_pool_delete(struct compute_memory_pool* pool)
  * \returns -1 if it fails, 0 otherwise
  * \see compute_memory_finalize_pending
  */
-int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
+static int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
 	struct pipe_context *pipe, int new_size_in_dw)
 {
 	new_size_in_dw = align(new_size_in_dw, ITEM_ALIGNMENT);
@@ -168,7 +191,7 @@ int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
  * \param device_to_host 1 for device->host, 0 for host->device
  * \see compute_memory_grow_defrag_pool
  */
-void compute_memory_shadow(struct compute_memory_pool* pool,
+static void compute_memory_shadow(struct compute_memory_pool* pool,
 	struct pipe_context * pipe, int device_to_host)
 {
 	struct compute_memory_item chunk;
@@ -262,7 +285,7 @@ int compute_memory_finalize_pending(struct compute_memory_pool* pool,
  * \param dst	The destination resource
  * \see compute_memory_grow_defrag_pool and compute_memory_finalize_pending
  */
-void compute_memory_defrag(struct compute_memory_pool *pool,
+static void compute_memory_defrag(struct compute_memory_pool *pool,
 	struct pipe_resource *src, struct pipe_resource *dst,
 	struct pipe_context *pipe)
 {
@@ -292,7 +315,7 @@ void compute_memory_defrag(struct compute_memory_pool *pool,
  * \return -1 if it fails, 0 otherwise
  * \see compute_memory_finalize_pending
  */
-int compute_memory_promote_item(struct compute_memory_pool *pool,
+static int compute_memory_promote_item(struct compute_memory_pool *pool,
 		struct compute_memory_item *item, struct pipe_context *pipe,
 		int64_t start_in_dw)
 {
@@ -397,7 +420,7 @@ void compute_memory_demote_item(struct compute_memory_pool *pool,
  * \param new_start_in_dw	The new position of the item in \a item_list
  * \see compute_memory_defrag
  */
-void compute_memory_move_item(struct compute_memory_pool *pool,
+static void compute_memory_move_item(struct compute_memory_pool *pool,
 	struct pipe_resource *src, struct pipe_resource *dst,
 	struct compute_memory_item *item, uint64_t new_start_in_dw,
 	struct pipe_context *pipe)
@@ -569,7 +592,7 @@ struct compute_memory_item* compute_memory_alloc(
  * \param device_to_host 1 for device->host, 0 for host->device.
  * \see compute_memory_shadow
  */
-void compute_memory_transfer(
+static void compute_memory_transfer(
 	struct compute_memory_pool* pool,
 	struct pipe_context * pipe,
 	int device_to_host,
