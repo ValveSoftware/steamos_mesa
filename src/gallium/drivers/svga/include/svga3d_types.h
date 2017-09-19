@@ -70,6 +70,8 @@
 #endif
 #endif
 
+#define MIN_UINT64 (CONST64U(0))
+#define MAX_UINT64 (CONST64U(0xffffffffffffffff))
 
 /*
  * Generic Types
