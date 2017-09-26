@@ -309,7 +309,8 @@ vmw_svga_winsys_surface_can_create(struct svga_winsys_screen *sws,
                                SVGA3dSurfaceFormat format,
                                SVGA3dSize size,
                                uint32 numLayers,
-                               uint32 numMipLevels)
+                               uint32 numMipLevels,
+                               uint32 numSamples)
 {
    struct vmw_winsys_screen *vws = vmw_winsys_screen(sws);
    uint32_t buffer_size;
@@ -317,6 +318,9 @@ vmw_svga_winsys_surface_can_create(struct svga_winsys_screen *sws,
    buffer_size = svga3dsurface_get_serialized_size(format, size, 
                                                    numMipLevels, 
                                                    numLayers);
+   if (numSamples > 1)
+      buffer_size *= numSamples;
+
    if (buffer_size > vws->ioctl.max_texture_size) {
 	return FALSE;
    }

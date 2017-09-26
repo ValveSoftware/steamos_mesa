@@ -583,7 +583,8 @@ struct svga_winsys_screen
                          SVGA3dSurfaceFormat format,
                          SVGA3dSize size,
                          uint32 numLayers,
-                         uint32 numMipLevels);
+                         uint32 numMipLevels,
+                         uint32 numSamples);
 
    /**
     * Buffer management. Buffer attributes are mostly fixed over its lifetime.
