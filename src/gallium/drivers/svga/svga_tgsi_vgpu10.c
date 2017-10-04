@@ -4254,6 +4254,30 @@ emit_lit(struct svga_shader_emitter_v10 *emit,
 
 
 /**
+ * Emit Level Of Detail Query (LODQ) instruction.
+ */
+static boolean
+emit_lodq(struct svga_shader_emitter_v10 *emit,
+          const struct tgsi_full_instruction *inst)
+{
+   const uint unit = inst->Src[1].Register.Index;
+
+   assert(emit->version >= 41);
+
+   /* LOD dst, coord, resource, sampler */
+   begin_emit_instruction(emit);
+   emit_opcode(emit, VGPU10_OPCODE_LOD, FALSE);
+   emit_dst_register(emit, &inst->Dst[0]);
+   emit_src_register(emit, &inst->Src[0]); /* coord */
+   emit_resource_register(emit, unit);
+   emit_sampler_register(emit, unit);
+   end_emit_instruction(emit);
+
+   return TRUE;
+}
+
+
+/**
  * Emit code for TGSI_OPCODE_LOG instruction.
  */
 static boolean
@@ -5862,6 +5886,8 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_lg2(emit, inst);
    case TGSI_OPCODE_LIT:
       return emit_lit(emit, inst);
+   case TGSI_OPCODE_LODQ:
+      return emit_lodq(emit, inst);
    case TGSI_OPCODE_LOG:
       return emit_log(emit, inst);
    case TGSI_OPCODE_LRP:
