@@ -1890,7 +1890,7 @@ alloc_immediate_int4(struct svga_shader_emitter_v10 *emit,
 static unsigned
 alloc_system_value_index(struct svga_shader_emitter_v10 *emit, unsigned index)
 {
-   const unsigned n = emit->info.file_max[TGSI_FILE_INPUT] + 1 + index;
+   const unsigned n = emit->linkage.input_map_max + 1 + index;
    assert(index < ARRAY_SIZE(emit->system_value_indexes));
    emit->system_value_indexes[index] = n;
    return n;
@@ -2377,8 +2377,8 @@ emit_system_value_declaration(struct svga_shader_emitter_v10 *emit,
        * index as the argument.  See emit_sample_position_instructions().
        */
       assert(emit->version >= 41);
-      index = alloc_system_value_index(emit, index);
       emit->fs.sample_pos_sys_index = index;
+      index = alloc_system_value_index(emit, index);
       break;
    default:
       debug_printf("unexpected sytem value semantic index %u\n",
@@ -6991,6 +6991,13 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
       assert(vs);
       svga_link_shaders(&vs->base.info, &emit->info, &emit->linkage);
    }
+
+   /* Since vertex shader does not need to go through the linker to
+    * establish the input map, we need to make sure the highest index
+    * of input registers is set properly here.
+    */
+   emit->linkage.input_map_max = MAX2((int)emit->linkage.input_map_max,
+                                      emit->info.file_max[TGSI_FILE_INPUT]);
 
    determine_clipping_mode(emit);
 
