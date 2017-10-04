@@ -718,6 +718,12 @@ svga_have_vgpu10(const struct svga_context *svga)
 }
 
 static inline boolean
+svga_have_sm4_1(const struct svga_context *svga)
+{
+   return svga_screen(svga->pipe.screen)->sws->have_sm4_1;
+}
+
+static inline boolean
 svga_need_to_rebind_resources(const struct svga_context *svga)
 {
    return svga_screen(svga->pipe.screen)->sws->need_to_rebind_resources;
