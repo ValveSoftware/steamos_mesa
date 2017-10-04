@@ -343,6 +343,9 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
       return 1;
 
+   case PIPE_CAP_CUBE_MAP_ARRAY:
+      return sws->have_sm4_1;
+
    /* Unsupported features */
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP_TO_EDGE:
@@ -354,7 +357,6 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
    case PIPE_CAP_COMPUTE:
    case PIPE_CAP_START_INSTANCE:
-   case PIPE_CAP_CUBE_MAP_ARRAY:
    case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
    case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
    case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:

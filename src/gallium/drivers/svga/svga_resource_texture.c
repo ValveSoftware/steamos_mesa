@@ -262,18 +262,22 @@ static inline boolean
 was_tex_rendered_to(struct pipe_resource *resource,
                     const struct pipe_transfer *transfer)
 {
-   unsigned face;
+   unsigned layer_face;
 
-   if (resource->target == PIPE_TEXTURE_CUBE) {
+   switch (resource->target) {
+   case PIPE_TEXTURE_CUBE:
       assert(transfer->box.depth == 1);
-      face = transfer->box.z;
-   }
-   else {
-      face = 0;
+   case PIPE_TEXTURE_1D_ARRAY:
+   case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_CUBE_ARRAY:
+      layer_face = transfer->box.z;
+      break;
+   default:
+      layer_face = 0;
    }
 
    return svga_was_texture_rendered_to(svga_texture(resource),
-                                       face, transfer->level);
+                                       layer_face, transfer->level);
 }
 
 
@@ -505,7 +509,8 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
       baseLevelSize.depth = tex->b.b.depth0;
 
       if ((tex->b.b.target == PIPE_TEXTURE_1D_ARRAY) ||
-          (tex->b.b.target == PIPE_TEXTURE_2D_ARRAY)) {
+          (tex->b.b.target == PIPE_TEXTURE_2D_ARRAY) ||
+          (tex->b.b.target == PIPE_TEXTURE_CUBE_ARRAY)) {
          st->base.layer_stride =
             svga3dsurface_get_image_offset(tex->key.format, baseLevelSize,
                                            tex->b.b.last_level + 1, 1, 0);
@@ -526,6 +531,7 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
                                                st->base.box.x,
                                                st->base.box.y,
                                                st->base.box.z);
+
       return (void *) (map + offset);
    }
 }
@@ -578,8 +584,9 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       st->slice = st->base.box.z;
       st->base.box.z = 0;   /* so we don't apply double offsets below */
       break;
-   case PIPE_TEXTURE_2D_ARRAY:
    case PIPE_TEXTURE_1D_ARRAY:
+   case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_CUBE_ARRAY:
       st->slice = st->base.box.z;
       st->base.box.z = 0;   /* so we don't apply double offsets below */
 
@@ -727,6 +734,7 @@ update_image_vgpu10(struct svga_context *svga,
    unsigned subResource;
 
    subResource = slice * numMipLevels + level;
+
    ret = SVGA3D_vgpu10_UpdateSubResource(svga->swc, surf, box, subResource);
    if (ret != PIPE_OK) {
       svga_context_flush(svga, NULL);
@@ -801,6 +809,7 @@ svga_texture_transfer_unmap_direct(struct svga_context *svga,
          box.z = 0;
          break;
       case PIPE_TEXTURE_2D_ARRAY:
+      case PIPE_TEXTURE_CUBE_ARRAY:
          nlayers = box.d;
          box.z = 0;
          box.d = 1;
@@ -823,6 +832,7 @@ svga_texture_transfer_unmap_direct(struct svga_context *svga,
 
       if (svga_have_vgpu10(svga)) {
          unsigned i;
+
          for (i = 0; i < nlayers; i++) {
             ret = update_image_vgpu10(svga, surf, &box,
                                       st->slice + i, transfer->level,
@@ -1013,6 +1023,12 @@ svga_texture_create(struct pipe_screen *screen,
       case PIPE_TEXTURE_CUBE:
          tex->key.flags |= (SVGA3D_SURFACE_CUBEMAP | SVGA3D_SURFACE_ARRAY);
          tex->key.numFaces = 6;
+         break;
+      case PIPE_TEXTURE_CUBE_ARRAY:
+         assert(svgascreen->sws->have_sm4_1);
+         tex->key.flags |= (SVGA3D_SURFACE_CUBEMAP | SVGA3D_SURFACE_ARRAY);
+         tex->key.numFaces = 1;  // arraySize already includes the 6 faces
+         tex->key.arraySize = template->array_size;
          break;
       default:
          break;
@@ -1408,6 +1424,7 @@ svga_texture_transfer_map_upload(struct svga_context *svga,
       st->upload.box.z = 0;
       break;
    case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_CUBE_ARRAY:
       st->upload.nlayers = st->base.box.depth;
       st->upload.box.z = 0;
       st->upload.box.d = 1;

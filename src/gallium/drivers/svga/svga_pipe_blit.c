@@ -191,8 +191,9 @@ static bool
 has_layer_face_index_in_z(enum pipe_texture_target target)
 {
    if (target == PIPE_TEXTURE_CUBE ||
+       target == PIPE_TEXTURE_1D_ARRAY ||
        target == PIPE_TEXTURE_2D_ARRAY ||
-       target == PIPE_TEXTURE_1D_ARRAY)
+       target == PIPE_TEXTURE_CUBE_ARRAY)
       return true;
    else
       return false;
@@ -209,8 +210,9 @@ adjust_z_layer(enum pipe_texture_target target,
                int z_in, unsigned *layer_out, unsigned *z_out)
 {
    if (target == PIPE_TEXTURE_CUBE ||
+       target == PIPE_TEXTURE_1D_ARRAY ||
        target == PIPE_TEXTURE_2D_ARRAY ||
-       target == PIPE_TEXTURE_1D_ARRAY) {
+       target == PIPE_TEXTURE_CUBE_ARRAY) {
       *layer_out = z_in;
       *z_out = 0;
    }

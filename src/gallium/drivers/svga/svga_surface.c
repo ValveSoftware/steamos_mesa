@@ -276,7 +276,8 @@ svga_create_surface_view(struct pipe_context *pipe,
       zslice = 0;
    }
    else if (pt->target == PIPE_TEXTURE_1D_ARRAY ||
-            pt->target == PIPE_TEXTURE_2D_ARRAY) {
+            pt->target == PIPE_TEXTURE_2D_ARRAY ||
+            pt->target == PIPE_TEXTURE_CUBE_ARRAY) {
       layer = surf_tmpl->u.tex.first_layer;
       zslice = 0;
       nlayers = surf_tmpl->u.tex.last_layer - surf_tmpl->u.tex.first_layer + 1;
@@ -347,6 +348,9 @@ svga_create_surface_view(struct pipe_context *pipe,
             if (nlayers == 6)
                flags |= SVGA3D_SURFACE_CUBEMAP;
             break;
+         case PIPE_TEXTURE_CUBE_ARRAY:
+            flags |= SVGA3D_SURFACE_CUBEMAP | SVGA3D_SURFACE_ARRAY;
+            break;   
          default:
             break;
          }
