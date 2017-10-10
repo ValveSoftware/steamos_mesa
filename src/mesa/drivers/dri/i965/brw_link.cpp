@@ -25,11 +25,13 @@
 #include "compiler/brw_nir.h"
 #include "brw_program.h"
 #include "compiler/glsl/gl_nir.h"
+#include "compiler/glsl/gl_nir_linker.h"
 #include "compiler/glsl/ir.h"
 #include "compiler/glsl/ir_optimization.h"
 #include "compiler/glsl/program.h"
 #include "compiler/nir/nir_serialize.h"
 #include "program/program.h"
+#include "main/glspirv.h"
 #include "main/mtypes.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
@@ -364,7 +366,11 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    if (brw->precompile && !brw_shader_precompile(ctx, shProg))
       return false;
 
-   build_program_resource_list(ctx, shProg);
+   /* SPIR-V programs build its resource list from linked NIR shaders. */
+   if (!shProg->data->spirv)
+      build_program_resource_list(ctx, shProg);
+   else
+      nir_build_program_resource_list(ctx, shProg);
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
