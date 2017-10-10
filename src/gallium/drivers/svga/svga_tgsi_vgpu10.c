@@ -5327,9 +5327,8 @@ emit_tg4(struct svga_shader_emitter_v10 *emit,
 {
    const uint unit = inst->Src[2].Register.Index;
    unsigned target = inst->Texture.Texture;
-   struct tgsi_full_src_register coord;
+   struct tgsi_full_src_register src;
    int offsets[3];
-   struct tex_swizzle_info swz_info;
 
    /* check that the sampler returns a float */
    if (!is_valid_tex_instruction(emit, inst))
@@ -5340,25 +5339,39 @@ emit_tg4(struct svga_shader_emitter_v10 *emit,
       return TRUE;
    }
 
-   begin_tex_swizzle(emit, unit, inst, FALSE, &swz_info);
+   /* Only single channel is supported in SM4_1.
+    * Only the 0th component will be gathered.
+    */
+   switch (emit->key.tex[unit].swizzle_r) {
+   case PIPE_SWIZZLE_X:
+      get_texel_offsets(emit, inst, offsets);
+      src = setup_texcoord(emit, unit, &inst->Src[0]);
 
-   get_texel_offsets(emit, inst, offsets);
-
-   coord = setup_texcoord(emit, unit, &inst->Src[0]);
-
-   /* Gather dst, coord, resource, sampler */
-   begin_emit_instruction(emit);
-   emit_sample_opcode(emit, VGPU10_OPCODE_GATHER4,
-                      inst->Instruction.Saturate, offsets);
-   emit_dst_register(emit, get_tex_swizzle_dst(&swz_info));
-   emit_src_register(emit, &coord);
-   emit_resource_register(emit, unit);
-   emit_sampler_register(emit, unit);
-   end_emit_instruction(emit);
-
-   end_tex_swizzle(emit, &swz_info);
-
-   free_temp_indexes(emit);
+      /* Gather dst, coord, resource, sampler */
+      begin_emit_instruction(emit);
+      emit_sample_opcode(emit, VGPU10_OPCODE_GATHER4,
+                         inst->Instruction.Saturate, offsets);
+      emit_dst_register(emit, &inst->Dst[0]);
+      emit_src_register(emit, &src);
+      emit_resource_register(emit, unit);
+      emit_sampler_register(emit, unit);
+      end_emit_instruction(emit);
+      break;
+   case PIPE_SWIZZLE_W:
+   case PIPE_SWIZZLE_1:
+      src = make_immediate_reg_float(emit, 1.0);
+      emit_instruction_op1(emit, VGPU10_OPCODE_MOV,
+                           &inst->Dst[0], &src, FALSE);
+      break;
+   case PIPE_SWIZZLE_Y:
+   case PIPE_SWIZZLE_Z:
+   case PIPE_SWIZZLE_0:
+   default:
+      src = make_immediate_reg_float(emit, 0.0);
+      emit_instruction_op1(emit, VGPU10_OPCODE_MOV,
+                           &inst->Dst[0], &src, FALSE);
+      break;
+   }
 
    return TRUE;
 }
