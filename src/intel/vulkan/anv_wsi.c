@@ -120,6 +120,18 @@ VkResult anv_GetPhysicalDeviceSurfaceCapabilities2KHR(
                                                pSurfaceCapabilities);
 }
 
+VkResult anv_GetPhysicalDeviceSurfaceCapabilities2EXT(
+ 	VkPhysicalDevice                            physicalDevice,
+	VkSurfaceKHR                                surface,
+	VkSurfaceCapabilities2EXT*                  pSurfaceCapabilities)
+{
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
+   return wsi_common_get_surface_capabilities2ext(&device->wsi_device,
+                                                  surface,
+                                                  pSurfaceCapabilities);
+}
+
 VkResult anv_GetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice                            physicalDevice,
     VkSurfaceKHR                                surface,
