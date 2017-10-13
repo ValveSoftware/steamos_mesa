@@ -1,5 +1,5 @@
 /**********************************************************
- * Copyright 1998-2015 VMware, Inc.  All rights reserved.
+ * Copyright 1998-2017 VMware, Inc.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -289,7 +289,12 @@ typedef enum {
 
    SVGA_3D_CMD_DEFINE_GB_SURFACE_V3                       = 1239,
 
-   SVGA_3D_CMD_MAX                                        = 1240,
+   SVGA_3D_CMD_DX_RESOLVE_COPY                            = 1240,
+   SVGA_3D_CMD_DX_PRED_RESOLVE_COPY                       = 1241,
+   SVGA_3D_CMD_DX_PRED_CONVERT_REGION                     = 1242,
+   SVGA_3D_CMD_DX_PRED_CONVERT                            = 1243,
+
+   SVGA_3D_CMD_MAX                                        = 1244,
    SVGA_3D_CMD_FUTURE_MAX                                 = 3000
 } SVGAFifo3dCmdId;
 
@@ -1347,7 +1352,9 @@ struct {
    uint32 arraySize;
    uint32 mobPitch;
    SVGA3dSurface2Flags surface2Flags;
-   uint32 pad[4];
+   uint8 multisamplePattern;
+   uint8  pad0[3];
+   uint32 pad1[3];
 }
 #include "vmware_pack_end.h"
 SVGAOTableSurfaceEntry;
@@ -1687,6 +1694,7 @@ struct SVGA3dCmdDefineGBSurface_v3 {
    SVGA3dSurfaceFormat format;
    uint32 numMipLevels;
    uint32 multisampleCount;
+   SVGA3dMSPattern multisamplePattern;
    SVGA3dTextureFilter autogenFilter;
    SVGA3dSize size;
    uint32 arraySize;

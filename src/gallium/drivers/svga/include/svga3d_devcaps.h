@@ -224,7 +224,7 @@ typedef enum {
    SVGA3D_DEVCAP_DEAD2                             = 94,
 
    /*
-    * Does the device support the DXContexts?  (ie DX10 era rendering)
+    * Does the device support DXContexts?  (ie DX10 era rendering)
     */
    SVGA3D_DEVCAP_DXCONTEXT                         = 95,
 

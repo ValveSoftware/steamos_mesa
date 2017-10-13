@@ -1,5 +1,5 @@
 /**********************************************************
- * Copyright 2007-2015 VMware, Inc.  All rights reserved.
+ * Copyright 2007-2017 VMware, Inc.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -105,8 +105,21 @@ typedef uint8 SVGA3dCullMode;
 #define SVGA3D_COMPARISON_MAX             9
 typedef uint8 SVGA3dComparisonFunc;
 
+/*
+ * SVGA3D_MULTISAMPLE_DISABLE disables MSAA for all primitives.
+ * SVGA3D_MULTISAMPLE_DISABLE_LINE, which is supported in DX10.1,
+ * disables MSAA for lines only.
+ */
+#define SVGA3D_MULTISAMPLE_DISABLE        0
+#define SVGA3D_MULTISAMPLE_ENABLE         1
+#define SVGA3D_MULTISAMPLE_DX_MAX         1
+#define SVGA3D_MULTISAMPLE_DISABLE_LINE   2
+#define SVGA3D_MULTISAMPLE_MAX            2
+typedef uint8 SVGA3dMultisampleEnable;
+
 #define SVGA3D_DX_MAX_VERTEXBUFFERS 32
 #define SVGA3D_DX_MAX_VERTEXINPUTREGISTERS 16
+#define SVGA3D_DX_SM41_MAX_VERTEXINPUTREGISTERS 32
 #define SVGA3D_DX_MAX_SOTARGETS 4
 #define SVGA3D_DX_MAX_SRVIEWS 128
 #define SVGA3D_DX_MAX_CONSTBUFFERS 16
@@ -626,6 +639,27 @@ SVGA3dCmdDXPredCopy; /* SVGA_3D_CMD_DX_PRED_COPY */
 
 typedef
 #include "vmware_pack_begin.h"
+struct SVGA3dCmdDXPredConvertRegion {
+   SVGA3dSurfaceId dstSid;
+   uint32 dstSubResource;
+   SVGA3dSurfaceId srcSid;
+   uint32 srcSubResource;
+   SVGA3dCopyBox box;
+}
+#include "vmware_pack_end.h"
+SVGA3dCmdDXPredConvertRegion; /* SVGA_3D_CMD_DX_PRED_CONVERT_REGION */
+
+typedef
+#include "vmware_pack_begin.h"
+struct SVGA3dCmdDXPredConvert {
+   SVGA3dSurfaceId dstSid;
+   SVGA3dSurfaceId srcSid;
+}
+#include "vmware_pack_end.h"
+SVGA3dCmdDXPredConvert; /* SVGA_3D_CMD_DX_PRED_CONVERT */
+
+typedef
+#include "vmware_pack_begin.h"
 struct SVGA3dCmdDXBufferCopy {
    SVGA3dSurfaceId dest;
    SVGA3dSurfaceId src;
@@ -636,6 +670,38 @@ struct SVGA3dCmdDXBufferCopy {
 #include "vmware_pack_end.h"
 SVGA3dCmdDXBufferCopy;
 /* SVGA_3D_CMD_DX_BUFFER_COPY */
+
+/*
+ * Perform a surface copy between a multisample, and a non-multisampled
+ * surface.
+ */
+typedef
+#include "vmware_pack_begin.h"
+struct {
+   SVGA3dSurfaceId dstSid;
+   uint32 dstSubResource;
+   SVGA3dSurfaceId srcSid;
+   uint32 srcSubResource;
+   SVGA3dSurfaceFormat copyFormat;
+}
+#include "vmware_pack_end.h"
+SVGA3dCmdDXResolveCopy;               /* SVGA_3D_CMD_DX_RESOLVE_COPY */
+
+/*
+ * Perform a predicated surface copy between a multisample, and a
+ * non-multisampled surface.
+ */
+typedef
+#include "vmware_pack_begin.h"
+struct {
+   SVGA3dSurfaceId dstSid;
+   uint32 dstSubResource;
+   SVGA3dSurfaceId srcSid;
+   uint32 srcSubResource;
+   SVGA3dSurfaceFormat copyFormat;
+}
+#include "vmware_pack_end.h"
+SVGA3dCmdDXPredResolveCopy;           /* SVGA_3D_CMD_DX_PRED_RESOLVE_COPY */
 
 typedef uint32 SVGA3dDXStretchBltMode;
 #define SVGADX_STRETCHBLT_LINEAR         (1 << 0)
@@ -707,7 +773,8 @@ SVGA3dCmdDXInvalidateSubResource;   /* SVGA_3D_CMD_DX_INVALIDATE_SUBRESOURCE */
 
 /*
  * Raw byte wise transfer from a buffer surface into another surface
- * of the requested box.
+ * of the requested box.  Supported if 3d is enabled and SVGA_CAP_DX
+ * is set.  This command does not take a context.
  */
 typedef
 #include "vmware_pack_begin.h"
@@ -861,7 +928,7 @@ struct {
          uint32 arraySize;
       } tex;
       struct {
-         uint32 firstElement;
+         uint32 firstElement;  // D3D11DDIARG_BUFFEREX_SHADERRESOURCEVIEW
          uint32 numElements;
          uint32 flags;
          uint32 pad0;
@@ -967,6 +1034,8 @@ SVGA3dCmdDXDestroyRenderTargetView;
 /* SVGA_3D_CMD_DX_DESTROY_RENDERTARGET_VIEW */
 
 /*
+ * Create Depth-stencil view flags
+ * http://msdn.microsoft.com/en-us/library/windows/hardware/ff542167(v=vs.85).aspx
  */
 #define SVGA3D_DXDSVIEW_CREATE_READ_ONLY_DEPTH   0x01
 #define SVGA3D_DXDSVIEW_CREATE_READ_ONLY_STENCIL 0x02
@@ -1001,7 +1070,7 @@ struct SVGA3dCmdDXDefineDepthStencilView {
    uint32 mipSlice;
    uint32 firstArraySlice;
    uint32 arraySize;
-   SVGA3DCreateDSViewFlags flags;
+   SVGA3DCreateDSViewFlags flags;  /* D3D11DDIARG_CREATEDEPTHSTENCILVIEW */
    uint8 pad0;
    uint16 pad1;
 }
@@ -1034,12 +1103,9 @@ SVGA3dInputElementDesc;
 typedef
 #include "vmware_pack_begin.h"
 struct {
-   /*
-    * XXX: How many of these can there be?
-    */
    uint32 elid;
    uint32 numDescs;
-   SVGA3dInputElementDesc desc[32];
+   SVGA3dInputElementDesc descs[32];
    uint32 pad[62];
 }
 #include "vmware_pack_end.h"
@@ -1098,6 +1164,9 @@ struct {
 SVGACOTableDXBlendStateEntry;
 
 /*
+ * XXX - DX10 style (not 10.1 at this point)
+ * XXX - For more information see
+ *    http://msdn.microsoft.com/en-us/library/ff541919%28v=VS.85%29.aspx
  */
 typedef
 #include "vmware_pack_begin.h"
@@ -1145,6 +1214,8 @@ struct {
 SVGACOTableDXDepthStencilEntry;
 
 /*
+ * XXX - For more information see
+ *    http://msdn.microsoft.com/en-us/library/ff541944%28v=VS.85%29.aspx
  */
 typedef
 #include "vmware_pack_begin.h"
@@ -1195,7 +1266,7 @@ struct {
    float slopeScaledDepthBias;
    uint8 depthClipEnable;
    uint8 scissorEnable;
-   uint8 multisampleEnable;
+   SVGA3dMultisampleEnable multisampleEnable;
    uint8 antialiasedLineEnable;
    float lineWidth;
    uint8 lineStippleEnable;
@@ -1207,6 +1278,8 @@ struct {
 SVGACOTableDXRasterizerStateEntry;
 
 /*
+ * XXX - For more information see
+ *    http://msdn.microsoft.com/en-us/library/ff541988%28v=VS.85%29.aspx
  */
 typedef
 #include "vmware_pack_begin.h"
@@ -1222,7 +1295,7 @@ struct SVGA3dCmdDXDefineRasterizerState {
    float slopeScaledDepthBias;
    uint8 depthClipEnable;
    uint8 scissorEnable;
-   uint8 multisampleEnable;
+   SVGA3dMultisampleEnable multisampleEnable;
    uint8 antialiasedLineEnable;
    float lineWidth;
    uint8 lineStippleEnable;
@@ -1263,6 +1336,8 @@ struct {
 SVGACOTableDXSamplerEntry;
 
 /*
+ * XXX - For more information see
+ *    http://msdn.microsoft.com/en-us/library/ff542011%28v=VS.85%29.aspx
  */
 typedef
 #include "vmware_pack_begin.h"
@@ -1425,7 +1500,6 @@ SVGA3dCmdDXMobFence64;  /* SVGA_3D_CMD_DX_MOB_FENCE_64 */
  *
  * This command allows the guest to bind a mob to a context-object table.
  */
-
 typedef
 #include "vmware_pack_begin.h"
 struct SVGA3dCmdDXSetCOTable {
@@ -1565,4 +1639,4 @@ struct SVGADXContextMobFormat {
 #include "vmware_pack_end.h"
 SVGADXContextMobFormat;
 
-#endif /* _SVGA3D_DX_H_ */
+#endif // _SVGA3D_DX_H_
