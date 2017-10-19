@@ -45,6 +45,44 @@
 static void svga_mark_surface_dirty(struct pipe_surface *surf);
 
 void
+svga_texture_copy_region(struct svga_context *svga,
+                         struct svga_winsys_surface *src_handle,
+                         unsigned srcSubResource,
+                         unsigned src_x, unsigned src_y, unsigned src_z,
+                         struct svga_winsys_surface *dst_handle,
+                         unsigned dstSubResource,
+                         unsigned dst_x, unsigned dst_y, unsigned dst_z,
+                         unsigned width, unsigned height, unsigned depth)
+{
+   enum pipe_error ret;
+   SVGA3dCopyBox box;
+
+   assert(svga_have_vgpu10(svga));
+
+   box.x = dst_x;
+   box.y = dst_y;
+   box.z = dst_z;
+   box.w = width;
+   box.h = height;
+   box.d = depth;
+   box.srcx = src_x;
+   box.srcy = src_y;
+   box.srcz = src_z;
+
+   ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
+                                      dst_handle, dstSubResource,
+                                      src_handle, srcSubResource, &box);
+   if (ret != PIPE_OK) {
+      svga_context_flush(svga, NULL);
+      ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
+                                         dst_handle, dstSubResource,
+                                         src_handle, srcSubResource, &box);
+      assert(ret = PIPE_OK);
+   }
+}
+
+
+void
 svga_texture_copy_handle(struct svga_context *svga,
                          struct svga_winsys_surface *src_handle,
                          unsigned src_x, unsigned src_y, unsigned src_z,
@@ -350,7 +388,8 @@ svga_create_surface_view(struct pipe_context *pipe,
                flags |= SVGA3D_SURFACE_CUBEMAP;
             break;
          case PIPE_TEXTURE_CUBE_ARRAY:
-            flags |= SVGA3D_SURFACE_CUBEMAP | SVGA3D_SURFACE_ARRAY;
+            if (nlayers % 6 == 0)
+               flags |= SVGA3D_SURFACE_CUBEMAP | SVGA3D_SURFACE_ARRAY;
             break;   
          default:
             break;
@@ -467,6 +506,7 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
 
       switch (tex->b.b.target) {
       case PIPE_TEXTURE_CUBE:
+      case PIPE_TEXTURE_CUBE_ARRAY:
       case PIPE_TEXTURE_1D_ARRAY:
       case PIPE_TEXTURE_2D_ARRAY:
          layer = s->base.u.tex.first_layer;
@@ -756,13 +796,19 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf,
       unsigned zslice, layer;
       unsigned nlayers = 1;
       unsigned i;
+      unsigned numMipLevels = tex->b.b.last_level + 1;
+      unsigned srcLevel = s->real_level;
+      unsigned dstLevel = surf->u.tex.level;
+      unsigned width = u_minify(tex->b.b.width0, dstLevel);
+      unsigned height = u_minify(tex->b.b.height0, dstLevel);
 
       if (surf->texture->target == PIPE_TEXTURE_CUBE) {
          zslice = 0;
          layer = surf->u.tex.first_layer;
       }
       else if (surf->texture->target == PIPE_TEXTURE_1D_ARRAY ||
-               surf->texture->target == PIPE_TEXTURE_2D_ARRAY) {
+               surf->texture->target == PIPE_TEXTURE_2D_ARRAY ||
+               surf->texture->target == PIPE_TEXTURE_CUBE_ARRAY) {
          zslice = 0;
          layer = surf->u.tex.first_layer;
          nlayers = surf->u.tex.last_layer - surf->u.tex.first_layer + 1;
@@ -775,16 +821,32 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf,
       SVGA_DBG(DEBUG_VIEWS,
                "Propagate surface %p to resource %p, level %u\n",
                surf, tex, surf->u.tex.level);
-      for (i = 0; i < nlayers; i++) {
-         svga_texture_copy_handle(svga,
-                                  s->handle, 0, 0, 0, s->real_level,
-                                  s->real_layer + i,
-                                  tex->handle, 0, 0, zslice, surf->u.tex.level,
-                                  layer + i,
-                                  u_minify(tex->b.b.width0, surf->u.tex.level),
-                                  u_minify(tex->b.b.height0, surf->u.tex.level),
-                                  1);
-         svga_define_texture_level(tex, layer + i, surf->u.tex.level);
+
+      if (svga_have_vgpu10(svga)) {
+         unsigned srcSubResource, dstSubResource;
+
+         for (i = 0; i < nlayers; i++) {
+            srcSubResource = (s->real_layer + i) * numMipLevels + srcLevel;
+            dstSubResource = (layer + i) * numMipLevels + dstLevel;
+
+            svga_texture_copy_region(svga,
+                                     s->handle, srcSubResource, 0, 0, 0,
+                                     tex->handle, dstSubResource, 0, 0, zslice,
+                                     width, height, 1);
+            svga_define_texture_level(tex, layer + i, dstLevel);
+         }
+      }
+      else {
+         for (i = 0; i < nlayers; i++) {
+            svga_texture_copy_handle(svga,
+                                     s->handle, 0, 0, 0, srcLevel,
+                                     s->real_layer + i,
+                                     tex->handle, 0, 0, zslice, dstLevel,
+                                     layer + i,
+                                     width, height, 1);
+        
+            svga_define_texture_level(tex, layer + i, dstLevel);
+         }
       }
 
       /* Sync the surface view age with the texture age */

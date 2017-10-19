@@ -105,6 +105,15 @@ svga_texture_view_surface(struct svga_context *svga,
                           boolean cacheable,
                           struct svga_host_surface_cache_key *key); /* OUT */
 
+void
+svga_texture_copy_region(struct svga_context *svga,
+                         struct svga_winsys_surface *src_handle,
+                         unsigned srcSubResource,
+                         unsigned src_x, unsigned src_y, unsigned src_z,
+                         struct svga_winsys_surface *dst_handle,
+                         unsigned dstSubResource,
+                         unsigned dst_x, unsigned dst_y, unsigned dst_z,
+                         unsigned width, unsigned height, unsigned depth);
 
 void
 svga_texture_copy_handle(struct svga_context *svga,
