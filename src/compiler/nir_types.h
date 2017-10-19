@@ -73,6 +73,7 @@ unsigned glsl_get_aoa_size(const struct glsl_type *type);
 
 unsigned glsl_count_attribute_slots(const struct glsl_type *type,
                                     bool is_vertex_input);
+unsigned glsl_get_component_slots(const struct glsl_type *type);
 
 const char *glsl_get_struct_elem_name(const struct glsl_type *type,
                                       unsigned index);
