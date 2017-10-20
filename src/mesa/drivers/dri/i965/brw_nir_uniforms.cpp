@@ -202,7 +202,7 @@ brw_nir_setup_glsl_uniforms(void *mem_ctx, nir_shader *shader,
       if (var->interface_type != NULL || var->type->contains_atomic())
          continue;
 
-      if (strncmp(var->name, "gl_", 3) == 0) {
+      if (var->num_state_slots > 0) {
          brw_nir_setup_glsl_builtin_uniform(var, prog, stage_prog_data,
                                             is_scalar);
       } else {
