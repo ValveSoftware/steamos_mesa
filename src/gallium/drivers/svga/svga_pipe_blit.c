@@ -125,36 +125,20 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
    enum pipe_error ret;
    uint32 srcSubResource, dstSubResource;
    struct svga_texture *dtex, *stex;
-   SVGA3dCopyBox box;
 
    stex = svga_texture(src_tex);
    dtex = svga_texture(dst_tex);
 
    svga_surfaces_flush(svga);
 
-   box.x = dst_x;
-   box.y = dst_y;
-   box.z = dst_z;
-   box.w = width;
-   box.h = height;
-   box.d = depth;
-   box.srcx = src_x;
-   box.srcy = src_y;
-   box.srcz = src_z;
-
    srcSubResource = src_layer_face * (src_tex->last_level + 1) + src_level;
    dstSubResource = dst_layer_face * (dst_tex->last_level + 1) + dst_level;
 
-   ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
-                                      dtex->handle, dstSubResource,
-                                      stex->handle, srcSubResource, &box);
-   if (ret != PIPE_OK) {
-      svga_context_flush(svga, NULL);
-      ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
-                                         dtex->handle, dstSubResource,
-                                         stex->handle, srcSubResource, &box);
-      assert(ret == PIPE_OK);
-   }
+   svga_texture_copy_region(svga, stex->handle, srcSubResource,
+                            src_x, src_y, src_z,
+                            dtex->handle, dstSubResource,
+                            dst_x, dst_y, dst_z,
+                            width, height, depth);
 
    /* Mark the texture subresource as defined. */
    svga_define_texture_level(dtex, dst_layer_face, dst_level);
