@@ -77,7 +77,7 @@ svga_texture_copy_region(struct svga_context *svga,
       ret = SVGA3D_vgpu10_PredCopyRegion(svga->swc,
                                          dst_handle, dstSubResource,
                                          src_handle, srcSubResource, &box);
-      assert(ret = PIPE_OK);
+      assert(ret == PIPE_OK);
    }
 }
 
