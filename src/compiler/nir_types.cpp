@@ -151,6 +151,13 @@ glsl_get_sampler_result_type(const struct glsl_type *type)
 }
 
 unsigned
+glsl_get_sampler_target(const struct glsl_type *type)
+{
+   assert(glsl_type_is_sampler(type));
+   return type->sampler_index();
+}
+
+unsigned
 glsl_get_record_location_offset(const struct glsl_type *type,
                                 unsigned length)
 {
