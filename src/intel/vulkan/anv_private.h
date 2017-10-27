@@ -2476,7 +2476,7 @@ VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkComputePipelineCreateInfo *info,
-                        struct anv_shader_module *module,
+                        const struct anv_shader_module *module,
                         const char *entrypoint,
                         const VkSpecializationInfo *spec_info);
 
