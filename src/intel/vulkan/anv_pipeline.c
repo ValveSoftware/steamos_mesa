@@ -308,6 +308,27 @@ populate_vs_prog_key(const struct gen_device_info *devinfo,
 }
 
 static void
+populate_tcs_prog_key(const struct gen_device_info *devinfo,
+                      unsigned input_vertices,
+                      struct brw_tcs_prog_key *key)
+{
+   memset(key, 0, sizeof(*key));
+
+   populate_sampler_prog_key(devinfo, &key->tex);
+
+   key->input_vertices = input_vertices;
+}
+
+static void
+populate_tes_prog_key(const struct gen_device_info *devinfo,
+                      struct brw_tes_prog_key *key)
+{
+   memset(key, 0, sizeof(*key));
+
+   populate_sampler_prog_key(devinfo, &key->tex);
+}
+
+static void
 populate_gs_prog_key(const struct gen_device_info *devinfo,
                      struct brw_gs_prog_key *key)
 {
@@ -629,9 +650,10 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    struct anv_shader_bin *tcs_bin = NULL;
    struct anv_shader_bin *tes_bin = NULL;
 
-   populate_sampler_prog_key(&pipeline->device->info, &tcs_key.tex);
-   populate_sampler_prog_key(&pipeline->device->info, &tes_key.tex);
-   tcs_key.input_vertices = info->pTessellationState->patchControlPoints;
+   populate_tcs_prog_key(&pipeline->device->info,
+                         info->pTessellationState->patchControlPoints,
+                         &tcs_key);
+   populate_tes_prog_key(&pipeline->device->info, &tes_key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
