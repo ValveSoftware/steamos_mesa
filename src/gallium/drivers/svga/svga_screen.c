@@ -1001,6 +1001,9 @@ svga_screen_create(struct svga_winsys_screen *sws)
                 sws->have_sm4_1 ? "SM4_1" : "VGPU10",
                 sws->have_sm4_1 ? 1 : sws->have_vgpu10);
 
+   debug_printf("Mesa: %s %s (%s)\n", svga_get_name(screen),
+                PACKAGE_VERSION, MESA_GIT_SHA1);
+
    /*
     * The D16, D24X8, and D24S8 formats always do an implicit shadow compare
     * when sampled from, where as the DF16, DF24, and D24S8_INT do not.  So
