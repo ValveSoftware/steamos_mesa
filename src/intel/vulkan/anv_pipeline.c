@@ -317,21 +317,19 @@ populate_gs_prog_key(const struct gen_device_info *devinfo,
 }
 
 static void
-populate_wm_prog_key(const struct anv_pipeline *pipeline,
-                     const VkGraphicsPipelineCreateInfo *info,
+populate_wm_prog_key(const struct gen_device_info *devinfo,
+                     const struct anv_subpass *subpass,
+                     const VkPipelineMultisampleStateCreateInfo *ms_info,
                      struct brw_wm_prog_key *key)
 {
-   const struct gen_device_info *devinfo = &pipeline->device->info;
-
    memset(key, 0, sizeof(*key));
 
    populate_sampler_prog_key(devinfo, &key->tex);
 
-   /* TODO: we could set this to 0 based on the information in nir_shader, but
-    * this function is called before spirv_to_nir. */
-   const struct brw_vue_map *vue_map =
-      &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
-   key->input_slots_valid = vue_map->slots_valid;
+   /* We set this to 0 here and set to the actual value before we call
+    * brw_compile_fs.
+    */
+   key->input_slots_valid = 0;
 
    /* Vulkan doesn't specify a default */
    key->high_quality_derivatives = false;
@@ -339,32 +337,28 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   assert(pipeline->subpass->color_count <= MAX_RTS);
-   for (uint32_t i = 0; i < pipeline->subpass->color_count; i++) {
-      if (pipeline->subpass->color_attachments[i].attachment !=
-          VK_ATTACHMENT_UNUSED)
+   assert(subpass->color_count <= MAX_RTS);
+   for (uint32_t i = 0; i < subpass->color_count; i++) {
+      if (subpass->color_attachments[i].attachment != VK_ATTACHMENT_UNUSED)
          key->color_outputs_valid |= (1 << i);
    }
 
    key->nr_color_regions = _mesa_bitcount(key->color_outputs_valid);
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
-                          info->pMultisampleState &&
-                          info->pMultisampleState->alphaToCoverageEnable;
+                          ms_info && ms_info->alphaToCoverageEnable;
 
-   if (info->pMultisampleState) {
+   if (ms_info) {
       /* We should probably pull this out of the shader, but it's fairly
        * harmless to compute it and then let dead-code take care of it.
        */
-      if (info->pMultisampleState->rasterizationSamples > 1) {
+      if (ms_info->rasterizationSamples > 1) {
          key->persample_interp =
-            (info->pMultisampleState->minSampleShading *
-             info->pMultisampleState->rasterizationSamples) > 1;
+            (ms_info->minSampleShading * ms_info->rasterizationSamples) > 1;
          key->multisample_fbo = true;
       }
 
-      key->frag_coord_adds_sample_pos =
-         info->pMultisampleState->sampleShadingEnable;
+      key->frag_coord_adds_sample_pos = ms_info->sampleShadingEnable;
    }
 }
 
@@ -865,7 +859,15 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    struct brw_wm_prog_key key;
    struct anv_shader_bin *bin = NULL;
 
-   populate_wm_prog_key(pipeline, info, &key);
+   populate_wm_prog_key(&pipeline->device->info, pipeline->subpass,
+                        info->pMultisampleState, &key);
+
+   /* TODO: we could set this to 0 based on the information in nir_shader, but
+    * we need this before we call spirv_to_nir.
+    */
+   const struct brw_vue_map *vue_map =
+      &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
+   key.input_slots_valid = vue_map->slots_valid;
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
