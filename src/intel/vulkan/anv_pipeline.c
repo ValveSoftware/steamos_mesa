@@ -1421,35 +1421,39 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
          anv_pipeline_add_compiled_stage(pipeline, s, bin);
    }
 
-   if (stages[MESA_SHADER_VERTEX].entrypoint &&
-       !pipeline->shaders[MESA_SHADER_VERTEX]) {
-      result = anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
-                                       &stages[MESA_SHADER_VERTEX]);
-      if (result != VK_SUCCESS)
-         goto compile_fail;
-   }
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      if (!stages[s].entrypoint)
+         continue;
 
-   if (stages[MESA_SHADER_TESS_EVAL].entrypoint &&
-       !pipeline->shaders[MESA_SHADER_TESS_EVAL]) {
-      result = anv_pipeline_compile_tcs_tes(pipeline, cache, pCreateInfo,
-                                            &stages[MESA_SHADER_TESS_CTRL],
-                                            &stages[MESA_SHADER_TESS_EVAL]);
-      if (result != VK_SUCCESS)
-         goto compile_fail;
-   }
+      assert(stages[s].stage == s);
 
-   if (stages[MESA_SHADER_GEOMETRY].entrypoint &&
-       !pipeline->shaders[MESA_SHADER_GEOMETRY]) {
-      result = anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
-                                       &stages[MESA_SHADER_GEOMETRY]);
-      if (result != VK_SUCCESS)
-         goto compile_fail;
-   }
+      if (pipeline->shaders[s])
+         continue;
 
-   if (stages[MESA_SHADER_FRAGMENT].entrypoint &&
-       !pipeline->shaders[MESA_SHADER_FRAGMENT]) {
-      result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo,
-                                       &stages[MESA_SHADER_FRAGMENT]);
+      switch (s) {
+      case MESA_SHADER_VERTEX:
+         result = anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
+                                          &stages[s]);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+         /* Handled with TESS_EVAL */
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         result = anv_pipeline_compile_tcs_tes(pipeline, cache, pCreateInfo,
+                                               &stages[MESA_SHADER_TESS_CTRL],
+                                               &stages[MESA_SHADER_TESS_EVAL]);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         result = anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
+                                          &stages[s]);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo,
+                                          &stages[s]);
+         break;
+      default:
+         unreachable("Invalid graphics shader stage");
+      }
       if (result != VK_SUCCESS)
          goto compile_fail;
    }
