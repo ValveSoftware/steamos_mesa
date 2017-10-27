@@ -561,52 +561,18 @@ anv_pipeline_link_vs(const struct brw_compiler *compiler,
    anv_fill_binding_table(&vs_stage->prog_data.vs.base.base, 0);
 }
 
-static VkResult
-anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
-                        struct anv_pipeline_cache *cache,
-                        struct anv_pipeline_stage *stage)
+static const unsigned *
+anv_pipeline_compile_vs(const struct brw_compiler *compiler,
+                        void *mem_ctx,
+                        struct anv_pipeline_stage *vs_stage)
 {
-   const struct brw_compiler *compiler =
-      pipeline->device->instance->physicalDevice.compiler;
-   struct anv_shader_bin *bin = NULL;
+   brw_compute_vue_map(compiler->devinfo,
+                       &vs_stage->prog_data.vs.base.vue_map,
+                       vs_stage->nir->info.outputs_written,
+                       vs_stage->nir->info.separate_shader);
 
-   if (bin == NULL) {
-      void *mem_ctx = ralloc_context(NULL);
-
-      brw_compute_vue_map(&pipeline->device->info,
-                          &stage->prog_data.vs.base.vue_map,
-                          stage->nir->info.outputs_written,
-                          stage->nir->info.separate_shader);
-
-      const unsigned *shader_code =
-         brw_compile_vs(compiler, NULL, mem_ctx, &stage->key.vs,
-                        &stage->prog_data.vs, stage->nir, -1, NULL);
-      if (shader_code == NULL) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      unsigned code_size = stage->prog_data.vs.base.base.program_size;
-      bin = anv_device_upload_kernel(pipeline->device, cache,
-                                     &stage->cache_key,
-                                     sizeof(stage->cache_key),
-                                     shader_code, code_size,
-                                     stage->nir->constant_data,
-                                     stage->nir->constant_data_size,
-                                     &stage->prog_data.base,
-                                     sizeof(stage->prog_data.vs),
-                                     &stage->bind_map);
-      if (!bin) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      ralloc_free(mem_ctx);
-   }
-
-   pipeline->shaders[MESA_SHADER_VERTEX] = bin;
-
-   return VK_SUCCESS;
+   return brw_compile_vs(compiler, NULL, mem_ctx, &vs_stage->key.vs,
+                         &vs_stage->prog_data.vs, vs_stage->nir, -1, NULL);
 }
 
 static void
@@ -688,6 +654,17 @@ anv_pipeline_link_tcs(const struct brw_compiler *compiler,
       tcs_stage->nir->info.patch_outputs_written;
 }
 
+static const unsigned *
+anv_pipeline_compile_tcs(const struct brw_compiler *compiler,
+                         void *mem_ctx,
+                         struct anv_pipeline_stage *tcs_stage,
+                         struct anv_pipeline_stage *prev_stage)
+{
+   return brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_stage->key.tcs,
+                          &tcs_stage->prog_data.tcs, tcs_stage->nir,
+                          -1, NULL);
+}
+
 static void
 anv_pipeline_link_tes(const struct brw_compiler *compiler,
                       struct anv_pipeline_stage *tes_stage,
@@ -696,79 +673,16 @@ anv_pipeline_link_tes(const struct brw_compiler *compiler,
    anv_fill_binding_table(&tes_stage->prog_data.tes.base.base, 0);
 }
 
-static VkResult
-anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
-                             struct anv_pipeline_cache *cache,
-                             struct anv_pipeline_stage *tcs_stage,
-                             struct anv_pipeline_stage *tes_stage)
+static const unsigned *
+anv_pipeline_compile_tes(const struct brw_compiler *compiler,
+                         void *mem_ctx,
+                         struct anv_pipeline_stage *tes_stage,
+                         struct anv_pipeline_stage *tcs_stage)
 {
-   const struct brw_compiler *compiler =
-      pipeline->device->instance->physicalDevice.compiler;
-   struct anv_shader_bin *tcs_bin = NULL;
-   struct anv_shader_bin *tes_bin = NULL;
-
-   if (tcs_bin == NULL || tes_bin == NULL) {
-      void *mem_ctx = ralloc_context(NULL);
-
-      const int shader_time_index = -1;
-      const unsigned *shader_code;
-
-      shader_code =
-         brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_stage->key.tcs,
-                         &tcs_stage->prog_data.tcs, tcs_stage->nir,
-                         shader_time_index, NULL);
-      if (shader_code == NULL) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      unsigned code_size = tcs_stage->prog_data.base.program_size;
-      tcs_bin = anv_device_upload_kernel(pipeline->device, cache,
-                                         &tcs_stage->cache_key,
-                                         sizeof(tcs_stage->cache_key),
-                                         shader_code, code_size,
-                                         tcs_stage->nir->constant_data,
-                                         tcs_stage->nir->constant_data_size,
-                                         &tcs_stage->prog_data.base,
-                                         sizeof(tcs_stage->prog_data.tcs),
-                                         &tcs_stage->bind_map);
-      if (!tcs_bin) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      shader_code =
-         brw_compile_tes(compiler, NULL, mem_ctx, &tes_stage->key.tes,
-                         &tcs_stage->prog_data.tcs.base.vue_map,
-                         &tes_stage->prog_data.tes, tes_stage->nir,
-                         NULL, shader_time_index, NULL);
-      if (shader_code == NULL) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      code_size = tes_stage->prog_data.base.program_size;
-      tes_bin = anv_device_upload_kernel(pipeline->device, cache,
-                                         &tes_stage->cache_key,
-                                         sizeof(tes_stage->cache_key),
-                                         shader_code, code_size,
-                                         tes_stage->nir->constant_data,
-                                         tes_stage->nir->constant_data_size,
-                                         &tes_stage->prog_data.base,
-                                         sizeof(tes_stage->prog_data.tes),
-                                         &tes_stage->bind_map);
-      if (!tes_bin) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      ralloc_free(mem_ctx);
-   }
-
-   pipeline->shaders[MESA_SHADER_TESS_CTRL] = tcs_bin;
-   pipeline->shaders[MESA_SHADER_TESS_EVAL] = tes_bin;
-
-   return VK_SUCCESS;
+   return brw_compile_tes(compiler, NULL, mem_ctx, &tes_stage->key.tes,
+                          &tcs_stage->prog_data.tcs.base.vue_map,
+                          &tes_stage->prog_data.tes, tes_stage->nir,
+                          NULL, -1, NULL);
 }
 
 static void
@@ -779,54 +693,20 @@ anv_pipeline_link_gs(const struct brw_compiler *compiler,
    anv_fill_binding_table(&gs_stage->prog_data.gs.base.base, 0);
 }
 
-static VkResult
-anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
-                        struct anv_pipeline_cache *cache,
-                        struct anv_pipeline_stage *stage)
+static const unsigned *
+anv_pipeline_compile_gs(const struct brw_compiler *compiler,
+                        void *mem_ctx,
+                        struct anv_pipeline_stage *gs_stage,
+                        struct anv_pipeline_stage *prev_stage)
 {
-   const struct brw_compiler *compiler =
-      pipeline->device->instance->physicalDevice.compiler;
-   struct anv_shader_bin *bin = NULL;
+   brw_compute_vue_map(compiler->devinfo,
+                       &gs_stage->prog_data.gs.base.vue_map,
+                       gs_stage->nir->info.outputs_written,
+                       gs_stage->nir->info.separate_shader);
 
-   if (bin == NULL) {
-      void *mem_ctx = ralloc_context(NULL);
-
-      brw_compute_vue_map(&pipeline->device->info,
-                          &stage->prog_data.gs.base.vue_map,
-                          stage->nir->info.outputs_written,
-                          stage->nir->info.separate_shader);
-
-      const unsigned *shader_code =
-         brw_compile_gs(compiler, NULL, mem_ctx, &stage->key.gs,
-                        &stage->prog_data.gs, stage->nir,
-                        NULL, -1, NULL);
-      if (shader_code == NULL) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      /* TODO: SIMD8 GS */
-      const unsigned code_size = stage->prog_data.base.program_size;
-      bin = anv_device_upload_kernel(pipeline->device, cache,
-                                     &stage->cache_key,
-                                     sizeof(stage->cache_key),
-                                     shader_code, code_size,
-                                     stage->nir->constant_data,
-                                     stage->nir->constant_data_size,
-                                     &stage->prog_data.base,
-                                     sizeof(stage->prog_data.gs),
-                                     &stage->bind_map);
-      if (!bin) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      ralloc_free(mem_ctx);
-   }
-
-   pipeline->shaders[MESA_SHADER_GEOMETRY] = bin;
-
-   return VK_SUCCESS;
+   return brw_compile_gs(compiler, NULL, mem_ctx, &gs_stage->key.gs,
+                         &gs_stage->prog_data.gs, gs_stage->nir,
+                         NULL, -1, NULL);
 }
 
 static void
@@ -927,55 +807,22 @@ anv_pipeline_link_fs(const struct brw_compiler *compiler,
    anv_fill_binding_table(&stage->prog_data.wm.base, num_rts);
 }
 
-static VkResult
-anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
-                        struct anv_pipeline_cache *cache,
-                        struct anv_pipeline_stage *stage)
+static const unsigned *
+anv_pipeline_compile_fs(const struct brw_compiler *compiler,
+                        void *mem_ctx,
+                        struct anv_pipeline_stage *fs_stage,
+                        struct anv_pipeline_stage *prev_stage)
 {
-   const struct brw_compiler *compiler =
-      pipeline->device->instance->physicalDevice.compiler;
-   struct anv_shader_bin *bin = NULL;
-
    /* TODO: we could set this to 0 based on the information in nir_shader, but
     * we need this before we call spirv_to_nir.
     */
-   const struct brw_vue_map *vue_map =
-      &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
-   stage->key.wm.input_slots_valid = vue_map->slots_valid;
+   assert(prev_stage);
+   fs_stage->key.wm.input_slots_valid =
+      prev_stage->prog_data.vue.vue_map.slots_valid;
 
-   if (bin == NULL) {
-      void *mem_ctx = ralloc_context(NULL);
-
-      const unsigned *shader_code =
-         brw_compile_fs(compiler, NULL, mem_ctx, &stage->key.wm,
-                        &stage->prog_data.wm, stage->nir,
-                        NULL, -1, -1, -1, true, false, NULL, NULL);
-      if (shader_code == NULL) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      unsigned code_size = stage->prog_data.base.program_size;
-      bin = anv_device_upload_kernel(pipeline->device, cache,
-                                     &stage->cache_key,
-                                     sizeof(stage->cache_key),
-                                     shader_code, code_size,
-                                     stage->nir->constant_data,
-                                     stage->nir->constant_data_size,
-                                     &stage->prog_data.base,
-                                     sizeof(stage->prog_data.wm),
-                                     &stage->bind_map);
-      if (!bin) {
-         ralloc_free(mem_ctx);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
-
-      ralloc_free(mem_ctx);
-   }
-
-   pipeline->shaders[MESA_SHADER_FRAGMENT] = bin;
-
-   return VK_SUCCESS;
+   return brw_compile_fs(compiler, NULL, mem_ctx, &fs_stage->key.wm,
+                         &fs_stage->prog_data.wm, fs_stage->nir,
+                         NULL, -1, -1, -1, true, false, NULL, NULL);
 }
 
 static VkResult
@@ -1138,33 +985,63 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
       next_stage = &stages[s];
    }
 
+   struct anv_pipeline_stage *prev_stage = NULL;
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
       if (!stages[s].entrypoint)
          continue;
 
+      void *stage_ctx = ralloc_context(NULL);
+
+      const unsigned *code;
       switch (s) {
       case MESA_SHADER_VERTEX:
-         result = anv_pipeline_compile_vs(pipeline, cache, &stages[s]);
+         code = anv_pipeline_compile_vs(compiler, stage_ctx, &stages[s]);
          break;
       case MESA_SHADER_TESS_CTRL:
-         /* Handled with TESS_EVAL */
+         code = anv_pipeline_compile_tcs(compiler, stage_ctx,
+                                         &stages[s], prev_stage);
          break;
       case MESA_SHADER_TESS_EVAL:
-         result = anv_pipeline_compile_tcs_tes(pipeline, cache,
-                                               &stages[MESA_SHADER_TESS_CTRL],
-                                               &stages[MESA_SHADER_TESS_EVAL]);
+         code = anv_pipeline_compile_tes(compiler, stage_ctx,
+                                         &stages[s], prev_stage);
          break;
       case MESA_SHADER_GEOMETRY:
-         result = anv_pipeline_compile_gs(pipeline, cache, &stages[s]);
+         code = anv_pipeline_compile_gs(compiler, stage_ctx,
+                                        &stages[s], prev_stage);
          break;
       case MESA_SHADER_FRAGMENT:
-         result = anv_pipeline_compile_fs(pipeline, cache, &stages[s]);
+         code = anv_pipeline_compile_fs(compiler, stage_ctx,
+                                        &stages[s], prev_stage);
          break;
       default:
          unreachable("Invalid graphics shader stage");
       }
-      if (result != VK_SUCCESS)
+      if (code == NULL) {
+         ralloc_free(stage_ctx);
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
          goto fail;
+      }
+
+      struct anv_shader_bin *bin =
+         anv_device_upload_kernel(pipeline->device, cache,
+                                  &stages[s].cache_key,
+                                  sizeof(stages[s].cache_key),
+                                  code, stages[s].prog_data.base.program_size,
+                                  stages[s].nir->constant_data,
+                                  stages[s].nir->constant_data_size,
+                                  &stages[s].prog_data.base,
+                                  brw_prog_data_size(s),
+                                  &stages[s].bind_map);
+      if (!bin) {
+         ralloc_free(stage_ctx);
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+         goto fail;
+      }
+
+      pipeline->shaders[s] = bin;
+      ralloc_free(stage_ctx);
+
+      prev_stage = &stages[s];
    }
 
    ralloc_free(pipeline_ctx);
