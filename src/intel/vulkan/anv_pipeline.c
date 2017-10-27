@@ -1066,6 +1066,7 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
    unsigned char sha1[20];
    anv_pipeline_hash_graphics(pipeline, layout, stages, sha1);
 
+   unsigned found = 0;
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
       if (!stages[s].entrypoint)
          continue;
@@ -1077,8 +1078,42 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
          anv_device_search_for_kernel(pipeline->device, cache,
                                       &stages[s].cache_key,
                                       sizeof(stages[s].cache_key));
-      if (bin)
+      if (bin) {
+         found++;
          pipeline->shaders[s] = bin;
+      }
+   }
+
+   if (found == __builtin_popcount(pipeline->active_stages)) {
+      /* We found all our shaders in the cache.  We're done. */
+      return VK_SUCCESS;
+   } else if (found > 0) {
+      /* We found some but not all of our shaders.  This shouldn't happen
+       * most of the time but it can if we have a partially populated
+       * pipeline cache.
+       */
+      assert(found < __builtin_popcount(pipeline->active_stages));
+
+      vk_debug_report(&pipeline->device->instance->debug_report_callbacks,
+                      VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                      VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                      VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT,
+                      (uint64_t)(uintptr_t)cache,
+                      0, 0, "anv",
+                      "Found a partial pipeline in the cache.  This is "
+                      "most likely caused by an incomplete pipeline cache "
+                      "import or export");
+
+      /* We're going to have to recompile anyway, so just throw away our
+       * references to the shaders in the cache.  We'll get them out of the
+       * cache again as part of the compilation process.
+       */
+      for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+         if (pipeline->shaders[s]) {
+            anv_shader_bin_unref(pipeline->device, pipeline->shaders[s]);
+            pipeline->shaders[s] = NULL;
+         }
+      }
    }
 
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
@@ -1086,9 +1121,7 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
          continue;
 
       assert(stages[s].stage == s);
-
-      if (pipeline->shaders[s])
-         continue;
+      assert(pipeline->shaders[s] == NULL);
 
       switch (s) {
       case MESA_SHADER_VERTEX:
