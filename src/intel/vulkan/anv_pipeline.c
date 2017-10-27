@@ -398,13 +398,14 @@ struct anv_pipeline_stage {
    const struct anv_shader_module *module;
    const char *entrypoint;
    const VkSpecializationInfo *spec_info;
+
+   union brw_any_prog_key key;
 };
 
 static void
 anv_pipeline_hash_shader(struct anv_pipeline *pipeline,
                          struct anv_pipeline_layout *layout,
                          struct anv_pipeline_stage *stage,
-                         const void *key, size_t key_size,
                          unsigned char *sha1_out)
 {
    struct mesa_sha1 ctx;
@@ -426,7 +427,7 @@ anv_pipeline_hash_shader(struct anv_pipeline *pipeline,
       _mesa_sha1_update(&ctx, stage->spec_info->pData,
                         stage->spec_info->dataSize);
    }
-   _mesa_sha1_update(&ctx, key, key_size);
+   _mesa_sha1_update(&ctx, &stage->key, brw_prog_key_size(stage->stage));
    _mesa_sha1_final(&ctx, sha1_out);
 }
 
@@ -527,16 +528,12 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct brw_vs_prog_key key;
    struct anv_shader_bin *bin = NULL;
-
-   populate_vs_prog_key(&pipeline->device->info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
    unsigned char sha1[20];
-   anv_pipeline_hash_shader(pipeline, layout, stage,
-                            &key, sizeof(key), sha1);
+   anv_pipeline_hash_shader(pipeline, layout, stage, sha1);
    bin = anv_device_search_for_kernel(pipeline->device, cache, sha1, 20);
 
    if (bin == NULL) {
@@ -566,8 +563,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                           nir->info.separate_shader);
 
       const unsigned *shader_code =
-         brw_compile_vs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        -1, NULL);
+         brw_compile_vs(compiler, NULL, mem_ctx, &stage->key.vs,
+                        &prog_data, nir, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -642,24 +639,15 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    const struct gen_device_info *devinfo = &pipeline->device->info;
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct brw_tcs_prog_key tcs_key = {};
-   struct brw_tes_prog_key tes_key = {};
    struct anv_shader_bin *tcs_bin = NULL;
    struct anv_shader_bin *tes_bin = NULL;
-
-   populate_tcs_prog_key(&pipeline->device->info,
-                         info->pTessellationState->patchControlPoints,
-                         &tcs_key);
-   populate_tes_prog_key(&pipeline->device->info, &tes_key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
    unsigned char tcs_sha1[40];
    unsigned char tes_sha1[40];
-   anv_pipeline_hash_shader(pipeline, layout, tcs_stage,
-                            &tcs_key, sizeof(tcs_key), tcs_sha1);
-   anv_pipeline_hash_shader(pipeline, layout, tes_stage,
-                            &tes_key, sizeof(tes_key), tes_sha1);
+   anv_pipeline_hash_shader(pipeline, layout, tcs_stage, tcs_sha1);
+   anv_pipeline_hash_shader(pipeline, layout, tes_stage, tes_sha1);
    memcpy(&tcs_sha1[20], tes_sha1, 20);
    memcpy(&tes_sha1[20], tcs_sha1, 20);
 
@@ -711,23 +699,25 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
        * this comes from the SPIR-V, which is part of the hash used for the
        * pipeline cache.  So it should be safe.
        */
-      tcs_key.tes_primitive_mode = tes_nir->info.tess.primitive_mode;
-      tcs_key.outputs_written = tcs_nir->info.outputs_written;
-      tcs_key.patch_outputs_written = tcs_nir->info.patch_outputs_written;
-      tcs_key.quads_workaround =
+      tcs_stage->key.tcs.tes_primitive_mode = tes_nir->info.tess.primitive_mode;
+      tcs_stage->key.tcs.outputs_written = tcs_nir->info.outputs_written;
+      tcs_stage->key.tcs.patch_outputs_written =
+         tcs_nir->info.patch_outputs_written;
+      tcs_stage->key.tcs.quads_workaround =
          devinfo->gen < 9 &&
          tes_nir->info.tess.primitive_mode == 7 /* GL_QUADS */ &&
          tes_nir->info.tess.spacing == TESS_SPACING_EQUAL;
 
-      tes_key.inputs_read = tcs_key.outputs_written;
-      tes_key.patch_inputs_read = tcs_key.patch_outputs_written;
+      tes_stage->key.tes.inputs_read = tcs_nir->info.outputs_written;
+      tes_stage->key.tes.patch_inputs_read =
+         tcs_nir->info.patch_outputs_written;
 
       const int shader_time_index = -1;
       const unsigned *shader_code;
 
       shader_code =
-         brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_key, &tcs_prog_data,
-                         tcs_nir, shader_time_index, NULL);
+         brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_stage->key.tcs,
+                         &tcs_prog_data, tcs_nir, shader_time_index, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -748,7 +738,7 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       }
 
       shader_code =
-         brw_compile_tes(compiler, NULL, mem_ctx, &tes_key,
+         brw_compile_tes(compiler, NULL, mem_ctx, &tes_stage->key.tes,
                          &tcs_prog_data.base.vue_map, &tes_prog_data, tes_nir,
                          NULL, shader_time_index, NULL);
       if (shader_code == NULL) {
@@ -787,16 +777,12 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct brw_gs_prog_key key;
    struct anv_shader_bin *bin = NULL;
-
-   populate_gs_prog_key(&pipeline->device->info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
    unsigned char sha1[20];
-   anv_pipeline_hash_shader(pipeline, layout, stage,
-                            &key, sizeof(key), sha1);
+   anv_pipeline_hash_shader(pipeline, layout, stage, sha1);
    bin = anv_device_search_for_kernel(pipeline->device, cache, sha1, 20);
 
    if (bin == NULL) {
@@ -826,8 +812,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                           nir->info.separate_shader);
 
       const unsigned *shader_code =
-         brw_compile_gs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, NULL);
+         brw_compile_gs(compiler, NULL, mem_ctx, &stage->key.gs,
+                        &prog_data, nir, NULL, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -862,24 +848,19 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct brw_wm_prog_key key;
    struct anv_shader_bin *bin = NULL;
-
-   populate_wm_prog_key(&pipeline->device->info, pipeline->subpass,
-                        info->pMultisampleState, &key);
 
    /* TODO: we could set this to 0 based on the information in nir_shader, but
     * we need this before we call spirv_to_nir.
     */
    const struct brw_vue_map *vue_map =
       &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
-   key.input_slots_valid = vue_map->slots_valid;
+   stage->key.wm.input_slots_valid = vue_map->slots_valid;
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
    unsigned char sha1[20];
-   anv_pipeline_hash_shader(pipeline, layout, stage,
-                            &key, sizeof(key), sha1);
+   anv_pipeline_hash_shader(pipeline, layout, stage, sha1);
    bin = anv_device_search_for_kernel(pipeline->device, cache, sha1, 20);
 
    if (bin == NULL) {
@@ -917,7 +898,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
          const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
          /* Unused or out-of-bounds */
-         if (rt >= MAX_RTS || !(key.color_outputs_valid & (1 << rt)))
+         if (rt >= MAX_RTS || !(stage->key.wm.color_outputs_valid & (1 << rt)))
             continue;
 
          const unsigned array_len =
@@ -948,7 +929,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
             continue;
 
          const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
-         if (rt >= MAX_RTS || !(key.color_outputs_valid & (1 << rt))) {
+         if (rt >= MAX_RTS ||
+             !(stage->key.wm.color_outputs_valid & (1 << rt))) {
             /* Unused or out-of-bounds, throw it away */
             deleted_output = true;
             var->data.mode = nir_var_local;
@@ -978,8 +960,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       /* Now that we've determined the actual number of render targets, adjust
        * the key accordingly.
        */
-      key.nr_color_regions = num_rts;
-      key.color_outputs_valid = (1 << num_rts) - 1;
+      stage->key.wm.nr_color_regions = num_rts;
+      stage->key.wm.color_outputs_valid = (1 << num_rts) - 1;
 
       assert(num_rts <= max_rt);
       map.surface_to_descriptor -= num_rts;
@@ -991,8 +973,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       anv_fill_binding_table(&prog_data.base, num_rts);
 
       const unsigned *shader_code =
-         brw_compile_fs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, -1, -1, true, false, NULL, NULL);
+         brw_compile_fs(compiler, NULL, mem_ctx, &stage->key.wm, &prog_data,
+                        nir, NULL, -1, -1, -1, true, false, NULL, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1036,16 +1018,14 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       .spec_info = spec_info,
    };
 
-   struct brw_cs_prog_key key;
    struct anv_shader_bin *bin = NULL;
 
-   populate_cs_prog_key(&pipeline->device->info, &key);
+   populate_cs_prog_key(&pipeline->device->info, &stage.key.cs);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
    unsigned char sha1[20];
-   anv_pipeline_hash_shader(pipeline, layout, &stage,
-                            &key, sizeof(key), sha1);
+   anv_pipeline_hash_shader(pipeline, layout, &stage, sha1);
    bin = anv_device_search_for_kernel(pipeline->device, cache, sha1, 20);
 
    if (bin == NULL) {
@@ -1072,8 +1052,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       anv_fill_binding_table(&prog_data.base, 1);
 
       const unsigned *shader_code =
-         brw_compile_cs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        -1, NULL);
+         brw_compile_cs(compiler, NULL, mem_ctx, &stage.key.cs,
+                        &prog_data, nir, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1372,6 +1352,31 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       stages[stage].module = anv_shader_module_from_handle(sinfo->module);
       stages[stage].entrypoint = sinfo->pName;
       stages[stage].spec_info = sinfo->pSpecializationInfo;
+
+      const struct gen_device_info *devinfo = &device->info;
+      switch (stage) {
+      case MESA_SHADER_VERTEX:
+         populate_vs_prog_key(devinfo, &stages[stage].key.vs);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+         populate_tcs_prog_key(devinfo,
+                               pCreateInfo->pTessellationState->patchControlPoints,
+                               &stages[stage].key.tcs);
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         populate_tes_prog_key(devinfo, &stages[stage].key.tes);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         populate_gs_prog_key(devinfo, &stages[stage].key.gs);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         populate_wm_prog_key(devinfo, pipeline->subpass,
+                              pCreateInfo->pMultisampleState,
+                              &stages[stage].key.wm);
+         break;
+      default:
+         unreachable("Invalid graphics shader stage");
+      }
    }
 
    if (pipeline->active_stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
