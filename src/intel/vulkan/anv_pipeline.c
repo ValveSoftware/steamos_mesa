@@ -1017,6 +1017,122 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    return VK_SUCCESS;
 }
 
+static VkResult
+anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
+                              struct anv_pipeline_cache *cache,
+                              const VkGraphicsPipelineCreateInfo *info)
+{
+   struct anv_pipeline_stage stages[MESA_SHADER_STAGES] = {};
+
+   VkResult result;
+   for (uint32_t i = 0; i < info->stageCount; i++) {
+      const VkPipelineShaderStageCreateInfo *sinfo = &info->pStages[i];
+      gl_shader_stage stage = vk_to_mesa_shader_stage(sinfo->stage);
+
+      pipeline->active_stages |= sinfo->stage;
+
+      stages[stage].stage = stage;
+      stages[stage].module = anv_shader_module_from_handle(sinfo->module);
+      stages[stage].entrypoint = sinfo->pName;
+      stages[stage].spec_info = sinfo->pSpecializationInfo;
+
+      const struct gen_device_info *devinfo = &pipeline->device->info;
+      switch (stage) {
+      case MESA_SHADER_VERTEX:
+         populate_vs_prog_key(devinfo, &stages[stage].key.vs);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+         populate_tcs_prog_key(devinfo,
+                               info->pTessellationState->patchControlPoints,
+                               &stages[stage].key.tcs);
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         populate_tes_prog_key(devinfo, &stages[stage].key.tes);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         populate_gs_prog_key(devinfo, &stages[stage].key.gs);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         populate_wm_prog_key(devinfo, pipeline->subpass,
+                              info->pMultisampleState,
+                              &stages[stage].key.wm);
+         break;
+      default:
+         unreachable("Invalid graphics shader stage");
+      }
+   }
+
+   if (pipeline->active_stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+      pipeline->active_stages |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+   assert(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT);
+
+   ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
+
+   unsigned char sha1[20];
+   anv_pipeline_hash_graphics(pipeline, layout, stages, sha1);
+
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      if (!stages[s].entrypoint)
+         continue;
+
+      stages[s].cache_key.stage = s;
+      memcpy(stages[s].cache_key.sha1, sha1, sizeof(sha1));
+
+      struct anv_shader_bin *bin =
+         anv_device_search_for_kernel(pipeline->device, cache,
+                                      &stages[s].cache_key,
+                                      sizeof(stages[s].cache_key));
+      if (bin)
+         anv_pipeline_add_compiled_stage(pipeline, s, bin);
+   }
+
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      if (!stages[s].entrypoint)
+         continue;
+
+      assert(stages[s].stage == s);
+
+      if (pipeline->shaders[s])
+         continue;
+
+      switch (s) {
+      case MESA_SHADER_VERTEX:
+         result = anv_pipeline_compile_vs(pipeline, cache, info,
+                                          &stages[s]);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+         /* Handled with TESS_EVAL */
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         result = anv_pipeline_compile_tcs_tes(pipeline, cache, info,
+                                               &stages[MESA_SHADER_TESS_CTRL],
+                                               &stages[MESA_SHADER_TESS_EVAL]);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         result = anv_pipeline_compile_gs(pipeline, cache, info, &stages[s]);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         result = anv_pipeline_compile_fs(pipeline, cache, info, &stages[s]);
+         break;
+      default:
+         unreachable("Invalid graphics shader stage");
+      }
+      if (result != VK_SUCCESS)
+         goto fail;
+   }
+
+   return VK_SUCCESS;
+
+fail:
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      if (pipeline->shaders[s])
+         anv_shader_bin_unref(pipeline->device, pipeline->shaders[s]);
+   }
+
+   return result;
+}
+
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
@@ -1358,104 +1474,10 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 
    pipeline->active_stages = 0;
 
-   struct anv_pipeline_stage stages[MESA_SHADER_STAGES] = {};
-   for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-      const VkPipelineShaderStageCreateInfo *sinfo = &pCreateInfo->pStages[i];
-      gl_shader_stage stage = vk_to_mesa_shader_stage(sinfo->stage);
-
-      pipeline->active_stages |= sinfo->stage;
-
-      stages[stage].stage = stage;
-      stages[stage].module = anv_shader_module_from_handle(sinfo->module);
-      stages[stage].entrypoint = sinfo->pName;
-      stages[stage].spec_info = sinfo->pSpecializationInfo;
-
-      const struct gen_device_info *devinfo = &device->info;
-      switch (stage) {
-      case MESA_SHADER_VERTEX:
-         populate_vs_prog_key(devinfo, &stages[stage].key.vs);
-         break;
-      case MESA_SHADER_TESS_CTRL:
-         populate_tcs_prog_key(devinfo,
-                               pCreateInfo->pTessellationState->patchControlPoints,
-                               &stages[stage].key.tcs);
-         break;
-      case MESA_SHADER_TESS_EVAL:
-         populate_tes_prog_key(devinfo, &stages[stage].key.tes);
-         break;
-      case MESA_SHADER_GEOMETRY:
-         populate_gs_prog_key(devinfo, &stages[stage].key.gs);
-         break;
-      case MESA_SHADER_FRAGMENT:
-         populate_wm_prog_key(devinfo, pipeline->subpass,
-                              pCreateInfo->pMultisampleState,
-                              &stages[stage].key.wm);
-         break;
-      default:
-         unreachable("Invalid graphics shader stage");
-      }
-   }
-
-   if (pipeline->active_stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
-      pipeline->active_stages |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-
-   assert(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT);
-
-   ANV_FROM_HANDLE(anv_pipeline_layout, layout, pCreateInfo->layout);
-
-   unsigned char sha1[20];
-   anv_pipeline_hash_graphics(pipeline, layout, stages, sha1);
-
-   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
-      if (!stages[s].entrypoint)
-         continue;
-
-      stages[s].cache_key.stage = s;
-      memcpy(stages[s].cache_key.sha1, sha1, sizeof(sha1));
-
-      struct anv_shader_bin *bin =
-         anv_device_search_for_kernel(pipeline->device, cache,
-                                      &stages[s].cache_key,
-                                      sizeof(stages[s].cache_key));
-      if (bin)
-         anv_pipeline_add_compiled_stage(pipeline, s, bin);
-   }
-
-   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
-      if (!stages[s].entrypoint)
-         continue;
-
-      assert(stages[s].stage == s);
-
-      if (pipeline->shaders[s])
-         continue;
-
-      switch (s) {
-      case MESA_SHADER_VERTEX:
-         result = anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
-                                          &stages[s]);
-         break;
-      case MESA_SHADER_TESS_CTRL:
-         /* Handled with TESS_EVAL */
-         break;
-      case MESA_SHADER_TESS_EVAL:
-         result = anv_pipeline_compile_tcs_tes(pipeline, cache, pCreateInfo,
-                                               &stages[MESA_SHADER_TESS_CTRL],
-                                               &stages[MESA_SHADER_TESS_EVAL]);
-         break;
-      case MESA_SHADER_GEOMETRY:
-         result = anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
-                                          &stages[s]);
-         break;
-      case MESA_SHADER_FRAGMENT:
-         result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo,
-                                          &stages[s]);
-         break;
-      default:
-         unreachable("Invalid graphics shader stage");
-      }
-      if (result != VK_SUCCESS)
-         goto compile_fail;
+   result = anv_pipeline_compile_graphics(pipeline, cache, pCreateInfo);
+   if (result != VK_SUCCESS) {
+      anv_reloc_list_finish(&pipeline->batch_relocs, alloc);
+      return result;
    }
 
    assert(pipeline->shaders[MESA_SHADER_VERTEX]);
@@ -1535,14 +1557,4 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       pipeline->topology = vk_to_gen_primitive_type[ia_info->topology];
 
    return VK_SUCCESS;
-
-compile_fail:
-   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
-      if (pipeline->shaders[s])
-         anv_shader_bin_unref(device, pipeline->shaders[s]);
-   }
-
-   anv_reloc_list_finish(&pipeline->batch_relocs, alloc);
-
-   return result;
 }
