@@ -553,6 +553,14 @@ anv_fill_binding_table(struct brw_stage_prog_data *prog_data, unsigned bias)
    prog_data->binding_table.image_start = bias;
 }
 
+static void
+anv_pipeline_link_vs(const struct brw_compiler *compiler,
+                     struct anv_pipeline_stage *vs_stage,
+                     struct anv_pipeline_stage *next_stage)
+{
+   anv_fill_binding_table(&vs_stage->prog_data.vs.base.base, 0);
+}
+
 static VkResult
 anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
@@ -564,8 +572,6 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
    if (bin == NULL) {
       void *mem_ctx = ralloc_context(NULL);
-
-      anv_fill_binding_table(&stage->prog_data.vs.base.base, 0);
 
       brw_compute_vue_map(&pipeline->device->info,
                           &stage->prog_data.vs.base.vue_map,
@@ -642,13 +648,60 @@ merge_tess_info(struct shader_info *tes_info,
    tes_info->tess.point_mode |= tcs_info->tess.point_mode;
 }
 
+static void
+anv_pipeline_link_tcs(const struct brw_compiler *compiler,
+                      struct anv_pipeline_stage *tcs_stage,
+                      struct anv_pipeline_stage *tes_stage)
+{
+   assert(tes_stage && tes_stage->stage == MESA_SHADER_TESS_EVAL);
+
+   anv_fill_binding_table(&tcs_stage->prog_data.tcs.base.base, 0);
+
+   nir_lower_patch_vertices(tes_stage->nir,
+                            tcs_stage->nir->info.tess.tcs_vertices_out,
+                            NULL);
+
+   /* Copy TCS info into the TES info */
+   merge_tess_info(&tes_stage->nir->info, &tcs_stage->nir->info);
+
+   anv_fill_binding_table(&tcs_stage->prog_data.tcs.base.base, 0);
+   anv_fill_binding_table(&tes_stage->prog_data.tes.base.base, 0);
+
+   /* Whacking the key after cache lookup is a bit sketchy, but all of
+    * this comes from the SPIR-V, which is part of the hash used for the
+    * pipeline cache.  So it should be safe.
+    */
+   tcs_stage->key.tcs.tes_primitive_mode =
+      tes_stage->nir->info.tess.primitive_mode;
+   tcs_stage->key.tcs.outputs_written =
+      tcs_stage->nir->info.outputs_written;
+   tcs_stage->key.tcs.patch_outputs_written =
+      tcs_stage->nir->info.patch_outputs_written;
+   tcs_stage->key.tcs.quads_workaround =
+      compiler->devinfo->gen < 9 &&
+      tes_stage->nir->info.tess.primitive_mode == 7 /* GL_QUADS */ &&
+      tes_stage->nir->info.tess.spacing == TESS_SPACING_EQUAL;
+
+   tes_stage->key.tes.inputs_read =
+      tcs_stage->nir->info.outputs_written;
+   tes_stage->key.tes.patch_inputs_read =
+      tcs_stage->nir->info.patch_outputs_written;
+}
+
+static void
+anv_pipeline_link_tes(const struct brw_compiler *compiler,
+                      struct anv_pipeline_stage *tes_stage,
+                      struct anv_pipeline_stage *next_stage)
+{
+   anv_fill_binding_table(&tes_stage->prog_data.tes.base.base, 0);
+}
+
 static VkResult
 anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
                              struct anv_pipeline_cache *cache,
                              struct anv_pipeline_stage *tcs_stage,
                              struct anv_pipeline_stage *tes_stage)
 {
-   const struct gen_device_info *devinfo = &pipeline->device->info;
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
    struct anv_shader_bin *tcs_bin = NULL;
@@ -656,36 +709,6 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
 
    if (tcs_bin == NULL || tes_bin == NULL) {
       void *mem_ctx = ralloc_context(NULL);
-
-      nir_lower_patch_vertices(tes_stage->nir,
-                               tcs_stage->nir->info.tess.tcs_vertices_out,
-                               NULL);
-
-      /* Copy TCS info into the TES info */
-      merge_tess_info(&tes_stage->nir->info, &tcs_stage->nir->info);
-
-      anv_fill_binding_table(&tcs_stage->prog_data.tcs.base.base, 0);
-      anv_fill_binding_table(&tes_stage->prog_data.tes.base.base, 0);
-
-      /* Whacking the key after cache lookup is a bit sketchy, but all of
-       * this comes from the SPIR-V, which is part of the hash used for the
-       * pipeline cache.  So it should be safe.
-       */
-      tcs_stage->key.tcs.tes_primitive_mode =
-         tes_stage->nir->info.tess.primitive_mode;
-      tcs_stage->key.tcs.outputs_written =
-         tcs_stage->nir->info.outputs_written;
-      tcs_stage->key.tcs.patch_outputs_written =
-         tcs_stage->nir->info.patch_outputs_written;
-      tcs_stage->key.tcs.quads_workaround =
-         devinfo->gen < 9 &&
-         tes_stage->nir->info.tess.primitive_mode == 7 /* GL_QUADS */ &&
-         tes_stage->nir->info.tess.spacing == TESS_SPACING_EQUAL;
-
-      tes_stage->key.tes.inputs_read =
-         tcs_stage->nir->info.outputs_written;
-      tes_stage->key.tes.patch_inputs_read =
-         tcs_stage->nir->info.patch_outputs_written;
 
       const int shader_time_index = -1;
       const unsigned *shader_code;
@@ -748,6 +771,14 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    return VK_SUCCESS;
 }
 
+static void
+anv_pipeline_link_gs(const struct brw_compiler *compiler,
+                     struct anv_pipeline_stage *gs_stage,
+                     struct anv_pipeline_stage *next_stage)
+{
+   anv_fill_binding_table(&gs_stage->prog_data.gs.base.base, 0);
+}
+
 static VkResult
 anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
@@ -759,8 +790,6 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    if (bin == NULL) {
       void *mem_ctx = ralloc_context(NULL);
-
-      anv_fill_binding_table(&stage->prog_data.gs.base.base, 0);
 
       brw_compute_vue_map(&pipeline->device->info,
                           &stage->prog_data.gs.base.vue_map,
@@ -800,6 +829,104 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    return VK_SUCCESS;
 }
 
+static void
+anv_pipeline_link_fs(const struct brw_compiler *compiler,
+                     struct anv_pipeline_stage *stage)
+{
+   unsigned num_rts = 0;
+   const int max_rt = FRAG_RESULT_DATA7 - FRAG_RESULT_DATA0 + 1;
+   struct anv_pipeline_binding rt_bindings[max_rt];
+   nir_function_impl *impl = nir_shader_get_entrypoint(stage->nir);
+   int rt_to_bindings[max_rt];
+   memset(rt_to_bindings, -1, sizeof(rt_to_bindings));
+   bool rt_used[max_rt];
+   memset(rt_used, 0, sizeof(rt_used));
+
+   /* Flag used render targets */
+   nir_foreach_variable_safe(var, &stage->nir->outputs) {
+      if (var->data.location < FRAG_RESULT_DATA0)
+         continue;
+
+      const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
+      /* Unused or out-of-bounds */
+      if (rt >= MAX_RTS || !(stage->key.wm.color_outputs_valid & (1 << rt)))
+         continue;
+
+      const unsigned array_len =
+         glsl_type_is_array(var->type) ? glsl_get_length(var->type) : 1;
+      assert(rt + array_len <= max_rt);
+
+      for (unsigned i = 0; i < array_len; i++)
+         rt_used[rt + i] = true;
+   }
+
+   /* Set new, compacted, location */
+   for (unsigned i = 0; i < max_rt; i++) {
+      if (!rt_used[i])
+         continue;
+
+      rt_to_bindings[i] = num_rts;
+      rt_bindings[rt_to_bindings[i]] = (struct anv_pipeline_binding) {
+         .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
+         .binding = 0,
+         .index = i,
+      };
+      num_rts++;
+   }
+
+   bool deleted_output = false;
+   nir_foreach_variable_safe(var, &stage->nir->outputs) {
+      if (var->data.location < FRAG_RESULT_DATA0)
+         continue;
+
+      const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
+      if (rt >= MAX_RTS ||
+          !(stage->key.wm.color_outputs_valid & (1 << rt))) {
+         /* Unused or out-of-bounds, throw it away */
+         deleted_output = true;
+         var->data.mode = nir_var_local;
+         exec_node_remove(&var->node);
+         exec_list_push_tail(&impl->locals, &var->node);
+         continue;
+      }
+
+      /* Give it the new location */
+      assert(rt_to_bindings[rt] != -1);
+      var->data.location = rt_to_bindings[rt] + FRAG_RESULT_DATA0;
+   }
+
+   if (deleted_output)
+      nir_fixup_deref_modes(stage->nir);
+
+   if (num_rts == 0) {
+      /* If we have no render targets, we need a null render target */
+      rt_bindings[0] = (struct anv_pipeline_binding) {
+         .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
+         .binding = 0,
+         .index = UINT32_MAX,
+      };
+      num_rts = 1;
+   }
+
+   /* Now that we've determined the actual number of render targets, adjust
+    * the key accordingly.
+    */
+   stage->key.wm.nr_color_regions = num_rts;
+   stage->key.wm.color_outputs_valid = (1 << num_rts) - 1;
+
+   assert(num_rts <= max_rt);
+   assert(stage->bind_map.surface_count + num_rts <= 256);
+   memmove(stage->bind_map.surface_to_descriptor + num_rts,
+           stage->bind_map.surface_to_descriptor,
+           stage->bind_map.surface_count *
+           sizeof(*stage->bind_map.surface_to_descriptor));
+   typed_memcpy(stage->bind_map.surface_to_descriptor,
+                rt_bindings, num_rts);
+   stage->bind_map.surface_count += num_rts;
+
+   anv_fill_binding_table(&stage->prog_data.wm.base, num_rts);
+}
+
 static VkResult
 anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
@@ -818,99 +945,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    if (bin == NULL) {
       void *mem_ctx = ralloc_context(NULL);
-
-      unsigned num_rts = 0;
-      const int max_rt = FRAG_RESULT_DATA7 - FRAG_RESULT_DATA0 + 1;
-      struct anv_pipeline_binding rt_bindings[max_rt];
-      nir_function_impl *impl = nir_shader_get_entrypoint(stage->nir);
-      int rt_to_bindings[max_rt];
-      memset(rt_to_bindings, -1, sizeof(rt_to_bindings));
-      bool rt_used[max_rt];
-      memset(rt_used, 0, sizeof(rt_used));
-
-      /* Flag used render targets */
-      nir_foreach_variable_safe(var, &stage->nir->outputs) {
-         if (var->data.location < FRAG_RESULT_DATA0)
-            continue;
-
-         const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
-         /* Unused or out-of-bounds */
-         if (rt >= MAX_RTS || !(stage->key.wm.color_outputs_valid & (1 << rt)))
-            continue;
-
-         const unsigned array_len =
-            glsl_type_is_array(var->type) ? glsl_get_length(var->type) : 1;
-         assert(rt + array_len <= max_rt);
-
-         for (unsigned i = 0; i < array_len; i++)
-            rt_used[rt + i] = true;
-      }
-
-      /* Set new, compacted, location */
-      for (unsigned i = 0; i < max_rt; i++) {
-         if (!rt_used[i])
-            continue;
-
-         rt_to_bindings[i] = num_rts;
-         rt_bindings[rt_to_bindings[i]] = (struct anv_pipeline_binding) {
-            .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
-            .binding = 0,
-            .index = i,
-         };
-         num_rts++;
-      }
-
-      bool deleted_output = false;
-      nir_foreach_variable_safe(var, &stage->nir->outputs) {
-         if (var->data.location < FRAG_RESULT_DATA0)
-            continue;
-
-         const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
-         if (rt >= MAX_RTS ||
-             !(stage->key.wm.color_outputs_valid & (1 << rt))) {
-            /* Unused or out-of-bounds, throw it away */
-            deleted_output = true;
-            var->data.mode = nir_var_local;
-            exec_node_remove(&var->node);
-            exec_list_push_tail(&impl->locals, &var->node);
-            continue;
-         }
-
-         /* Give it the new location */
-         assert(rt_to_bindings[rt] != -1);
-         var->data.location = rt_to_bindings[rt] + FRAG_RESULT_DATA0;
-      }
-
-      if (deleted_output)
-         nir_fixup_deref_modes(stage->nir);
-
-      if (num_rts == 0) {
-         /* If we have no render targets, we need a null render target */
-         rt_bindings[0] = (struct anv_pipeline_binding) {
-            .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
-            .binding = 0,
-            .index = UINT32_MAX,
-         };
-         num_rts = 1;
-      }
-
-      /* Now that we've determined the actual number of render targets, adjust
-       * the key accordingly.
-       */
-      stage->key.wm.nr_color_regions = num_rts;
-      stage->key.wm.color_outputs_valid = (1 << num_rts) - 1;
-
-      assert(num_rts <= max_rt);
-      assert(stage->bind_map.surface_count + num_rts <= 256);
-      memmove(stage->bind_map.surface_to_descriptor + num_rts,
-              stage->bind_map.surface_to_descriptor,
-              stage->bind_map.surface_count *
-              sizeof(*stage->bind_map.surface_to_descriptor));
-      typed_memcpy(stage->bind_map.surface_to_descriptor,
-                   rt_bindings, num_rts);
-      stage->bind_map.surface_count += num_rts;
-
-      anv_fill_binding_table(&stage->prog_data.wm.base, num_rts);
 
       const unsigned *shader_code =
          brw_compile_fs(compiler, NULL, mem_ctx, &stage->key.wm,
@@ -949,6 +983,8 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
                               struct anv_pipeline_cache *cache,
                               const VkGraphicsPipelineCreateInfo *info)
 {
+   const struct brw_compiler *compiler =
+      pipeline->device->instance->physicalDevice.compiler;
    struct anv_pipeline_stage stages[MESA_SHADER_STAGES] = {};
 
    pipeline->active_stages = 0;
@@ -1071,6 +1107,35 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
                                            &stages[s].bind_map);
       if (stages[s].nir == NULL)
          goto fail;
+   }
+
+   /* Walk backwards to link */
+   struct anv_pipeline_stage *next_stage = NULL;
+   for (int s = MESA_SHADER_STAGES - 1; s >= 0; s--) {
+      if (!stages[s].entrypoint)
+         continue;
+
+      switch (s) {
+      case MESA_SHADER_VERTEX:
+         anv_pipeline_link_vs(compiler, &stages[s], next_stage);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+         anv_pipeline_link_tcs(compiler, &stages[s], next_stage);
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         anv_pipeline_link_tes(compiler, &stages[s], next_stage);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         anv_pipeline_link_gs(compiler, &stages[s], next_stage);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         anv_pipeline_link_fs(compiler, &stages[s]);
+         break;
+      default:
+         unreachable("Invalid graphics shader stage");
+      }
+
+      next_stage = &stages[s];
    }
 
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
