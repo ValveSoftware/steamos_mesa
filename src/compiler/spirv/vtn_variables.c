@@ -1481,9 +1481,12 @@ vtn_storage_class_to_mode(struct vtn_builder *b,
       mode = vtn_variable_mode_workgroup;
       nir_mode = nir_var_shared;
       break;
+   case SpvStorageClassAtomicCounter:
+      mode = vtn_variable_mode_uniform;
+      nir_mode = nir_var_uniform;
+      break;
    case SpvStorageClassCrossWorkgroup:
    case SpvStorageClassGeneric:
-   case SpvStorageClassAtomicCounter:
    default:
       vtn_fail("Unhandled variable storage class");
    }
