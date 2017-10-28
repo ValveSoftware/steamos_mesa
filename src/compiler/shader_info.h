@@ -57,6 +57,7 @@ struct spirv_supported_capabilities {
    bool descriptor_array_dynamic_indexing;
    bool runtime_descriptor_array;
    bool stencil_export;
+   bool atomic_storage;
 };
 
 typedef struct shader_info {
