@@ -79,10 +79,20 @@
 
 #define SVGA3D_INVALID_ID         ((uint32)-1)
 
+typedef uint8 SVGABool8;   /* 8-bit Bool definition */
 typedef uint32 SVGA3dBool; /* 32-bit Bool definition */
 typedef uint32 SVGA3dColor; /* a, r, g, b */
 
 typedef uint32 SVGA3dSurfaceId;
+
+typedef
+#include "vmware_pack_begin.h"
+struct {
+   uint32 numerator;
+   uint32 denominator;
+}
+#include "vmware_pack_end.h"
+SVGA3dFraction64;
 
 typedef
 #include "vmware_pack_begin.h"
@@ -351,7 +361,7 @@ typedef uint32 SVGA3dSurfaceFlags;
 #define SVGA3D_SURFACE_HINT_RENDERTARGET      (CONST64U(1) << 6)
 #define SVGA3D_SURFACE_HINT_DEPTHSTENCIL      (CONST64U(1) << 7)
 #define SVGA3D_SURFACE_HINT_WRITEONLY         (CONST64U(1) << 8)
-#define SVGA3D_SURFACE_MASKABLE_ANTIALIAS     (CONST64U(1) << 9)
+#define SVGA3D_SURFACE_DEAD2                  (CONST64U(1) << 9)
 #define SVGA3D_SURFACE_AUTOGENMIPMAPS         (CONST64U(1) << 10)
 
 #define SVGA3D_SURFACE_DEAD1                  (CONST64U(1) << 11)
@@ -459,7 +469,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
 
 #define SVGA3D_SURFACE_2D_DISALLOWED_MASK           \
         (  SVGA3D_SURFACE_CUBEMAP |                 \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |      \
+           SVGA3D_SURFACE_DEAD2 |                   \
            SVGA3D_SURFACE_AUTOGENMIPMAPS |          \
            SVGA3D_SURFACE_VOLUME |                  \
            SVGA3D_SURFACE_1D |                      \
@@ -506,7 +516,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
            SVGA3D_SURFACE_AUTOGENMIPMAPS |          \
            SVGA3D_SURFACE_VOLUME |                  \
            SVGA3D_SURFACE_1D |                      \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |      \
+           SVGA3D_SURFACE_DEAD2 |                   \
            SVGA3D_SURFACE_ARRAY |                   \
            SVGA3D_SURFACE_MULTISAMPLE |             \
            SVGA3D_SURFACE_MOB_PITCH                 \
@@ -516,7 +526,6 @@ typedef uint64 SVGA3dSurfaceAllFlags;
         (  SVGA3D_SURFACE_AUTOGENMIPMAPS |          \
            SVGA3D_SURFACE_VOLUME |                  \
            SVGA3D_SURFACE_1D |                      \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |      \
            SVGA3D_SURFACE_SCREENTARGET |            \
            SVGA3D_SURFACE_MOB_PITCH                 \
         )
@@ -553,7 +562,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
            SVGA3D_SURFACE_HINT_RENDERTARGET |       \
            SVGA3D_SURFACE_HINT_DEPTHSTENCIL |       \
            SVGA3D_SURFACE_HINT_WRITEONLY |          \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |      \
+           SVGA3D_SURFACE_DEAD2 |                   \
            SVGA3D_SURFACE_AUTOGENMIPMAPS |          \
            SVGA3D_SURFACE_HINT_RT_LOCKABLE |        \
            SVGA3D_SURFACE_VOLUME |                  \
@@ -578,7 +587,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
         (  SVGA3D_SURFACE_HINT_INDEXBUFFER |                     \
            SVGA3D_SURFACE_HINT_VERTEXBUFFER |                    \
            SVGA3D_SURFACE_HINT_DEPTHSTENCIL |                    \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |                   \
+           SVGA3D_SURFACE_DEAD2 |                                \
            SVGA3D_SURFACE_VOLUME |                               \
            SVGA3D_SURFACE_1D |                                   \
            SVGA3D_SURFACE_BIND_VERTEX_BUFFER |                   \
@@ -599,7 +608,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
           SVGA3D_SURFACE_HINT_INDEXBUFFER |                     \
           SVGA3D_SURFACE_HINT_VERTEXBUFFER |                    \
           SVGA3D_SURFACE_HINT_DEPTHSTENCIL |                    \
-          SVGA3D_SURFACE_MASKABLE_ANTIALIAS |                   \
+          SVGA3D_SURFACE_DEAD2 |                                \
           SVGA3D_SURFACE_VOLUME |                               \
           SVGA3D_SURFACE_SCREENTARGET |                         \
           SVGA3D_SURFACE_1D |                                   \
@@ -616,7 +625,7 @@ typedef uint64 SVGA3dSurfaceAllFlags;
 
 #define SVGA3D_SURFACE_LOGICOPS_DISALLOWED_MASK     \
         (  SVGA3D_SURFACE_CUBEMAP |                 \
-           SVGA3D_SURFACE_MASKABLE_ANTIALIAS |      \
+           SVGA3D_SURFACE_DEAD2 |                   \
            SVGA3D_SURFACE_AUTOGENMIPMAPS |          \
            SVGA3D_SURFACE_VOLUME |                  \
            SVGA3D_SURFACE_1D |                      \
@@ -1778,7 +1787,18 @@ typedef enum {
    SVGA_OTABLE_DX9_MAX         = 5,
 
    SVGA_OTABLE_DXCONTEXT       = 5,
-   SVGA_OTABLE_MAX             = 6
+   SVGA_OTABLE_DX_MAX          = 6,
+
+   SVGA_OTABLE_VADECODER       = 6,
+   SVGA_OTABLE_VAPROCESSOR     = 7,
+   SVGA_OTABLE_BUG_1952836_MAX = 8,
+
+   /*
+    * Additions to this table need to be tied to HW-version features and
+    * checkpointed accordingly.  (See SVGACheckpointGuestBackedObjects.)
+    */
+   SVGA_OTABLE_DEVEL_MAX       = 8,
+   SVGA_OTABLE_MAX             = 8
 } SVGAOTableType;
 
 /*
@@ -1826,12 +1846,27 @@ typedef enum SVGAMobFormat {
 
 #define SVGA3D_MOB_EMPTY_BASE 1
 
+/*
+ * Multisample pattern types.
+ */
+
 typedef enum SVGA3dMSPattern {
-   SVGA3D_MS_PATTERN_MIN      = 0,
    SVGA3D_MS_PATTERN_NONE     = 0,
+   SVGA3D_MS_PATTERN_MIN      = 0,
    SVGA3D_MS_PATTERN_STANDARD = 1,
    SVGA3D_MS_PATTERN_CENTER   = 2,
    SVGA3D_MS_PATTERN_MAX      = 3,
 } SVGA3dMSPattern;
+
+/*
+ * Precision settings for each sample.
+ */
+
+typedef enum SVGA3dMSQualityLevel {
+   SVGA3D_MS_QUALITY_NONE = 0,
+   SVGA3D_MS_QUALITY_MIN  = 0,
+   SVGA3D_MS_QUALITY_FULL = 1,
+   SVGA3D_MS_QUALITY_MAX  = 2,
+} SVGA3dMSQualityLevel;
 
 #endif // _SVGA3D_TYPES_H_
