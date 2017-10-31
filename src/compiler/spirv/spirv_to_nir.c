@@ -2511,6 +2511,35 @@ get_ssbo_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 }
 
 static nir_intrinsic_op
+get_uniform_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
+{
+   switch (opcode) {
+#define OP(S, N) case SpvOp##S: return nir_intrinsic_atomic_counter_ ##N;
+   OP(AtomicLoad,             read_deref)
+   OP(AtomicExchange,         exchange)
+   OP(AtomicCompareExchange,  comp_swap)
+   OP(AtomicIIncrement,       inc_deref)
+   OP(AtomicIDecrement,       dec_deref)
+   OP(AtomicIAdd,             add_deref)
+   OP(AtomicISub,             add_deref)
+   OP(AtomicUMin,             min_deref)
+   OP(AtomicUMax,             max_deref)
+   OP(AtomicAnd,              and_deref)
+   OP(AtomicOr,               or_deref)
+   OP(AtomicXor,              xor_deref)
+#undef OP
+   default:
+      /* We left the following out: AtomicStore, AtomicSMin and
+       * AtomicSmax. Right now there are not nir intrinsics for them. At this
+       * moment Atomic Counter support is needed for ARB_spirv support, so is
+       * only need to support GLSL Atomic Counters that are uints and don't
+       * allow direct storage.
+       */
+      unreachable("Invalid uniform atomic");
+   }
+}
+
+static nir_intrinsic_op
 get_shared_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 {
    switch (opcode) {
@@ -2562,9 +2591,12 @@ get_deref_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
    }
 }
 
+/*
+ * Handles shared atomics, ssbo atomics and atomic counters.
+ */
 static void
-vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
-                                 const uint32_t *w, unsigned count)
+vtn_handle_atomics(struct vtn_builder *b, SpvOp opcode,
+                   const uint32_t *w, unsigned count)
 {
    struct vtn_pointer *ptr;
    nir_intrinsic_instr *atomic;
@@ -2601,8 +2633,54 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    SpvMemorySemanticsMask semantics = w[5];
    */
 
-   if (ptr->mode == vtn_variable_mode_workgroup &&
-       !b->options->lower_workgroup_access_to_offsets) {
+   /* uniform as "atomic counter uniform" */
+   if (ptr->mode == vtn_variable_mode_uniform) {
+      nir_deref_instr *deref = vtn_pointer_to_deref(b, ptr);
+      const struct glsl_type *deref_type = deref->type;
+      nir_intrinsic_op op = get_uniform_nir_atomic_op(b, opcode);
+      atomic = nir_intrinsic_instr_create(b->nb.shader, op);
+      atomic->src[0] = nir_src_for_ssa(&deref->dest.ssa);
+
+      /* SSBO needs to initialize index/offset. In this case we don't need to,
+       * as that info is already stored on the ptr->var->var nir_variable (see
+       * vtn_create_variable)
+       */
+
+      switch (opcode) {
+      case SpvOpAtomicLoad:
+         atomic->num_components = glsl_get_vector_elements(deref_type);
+         break;
+
+      case SpvOpAtomicStore:
+         atomic->num_components = glsl_get_vector_elements(deref_type);
+         nir_intrinsic_set_write_mask(atomic, (1 << atomic->num_components) - 1);
+         break;
+
+      case SpvOpAtomicExchange:
+      case SpvOpAtomicCompareExchange:
+      case SpvOpAtomicCompareExchangeWeak:
+      case SpvOpAtomicIIncrement:
+      case SpvOpAtomicIDecrement:
+      case SpvOpAtomicIAdd:
+      case SpvOpAtomicISub:
+      case SpvOpAtomicSMin:
+      case SpvOpAtomicUMin:
+      case SpvOpAtomicSMax:
+      case SpvOpAtomicUMax:
+      case SpvOpAtomicAnd:
+      case SpvOpAtomicOr:
+      case SpvOpAtomicXor:
+         /* Nothing: we don't need to call fill_common_atomic_sources here, as
+          * atomic counter uniforms doesn't have sources
+          */
+         break;
+
+      default:
+         unreachable("Invalid SPIR-V atomic");
+
+      }
+   } else if (ptr->mode == vtn_variable_mode_workgroup &&
+              !b->options->lower_workgroup_access_to_offsets) {
       nir_deref_instr *deref = vtn_pointer_to_deref(b, ptr);
       const struct glsl_type *deref_type = deref->type;
       nir_intrinsic_op op = get_deref_nir_atomic_op(b, opcode);
@@ -3790,7 +3868,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_handle_image(b, opcode, w, count);
       } else {
          vtn_assert(pointer->value_type == vtn_value_type_pointer);
-         vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
+         vtn_handle_atomics(b, opcode, w, count);
       }
       break;
    }
@@ -3801,7 +3879,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_handle_image(b, opcode, w, count);
       } else {
          vtn_assert(pointer->value_type == vtn_value_type_pointer);
-         vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
+         vtn_handle_atomics(b, opcode, w, count);
       }
       break;
    }
