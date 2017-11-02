@@ -185,6 +185,7 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
    uint32_t buffer_size;
    uint32_t num_samples = 1;
    SVGA3dMSPattern multisample_pattern = SVGA3D_MS_PATTERN_NONE;
+   SVGA3dMSQualityLevel quality_level = SVGA3D_MS_QUALITY_NONE;
 
    memset(&desc, 0, sizeof(desc));
    surface = CALLOC_STRUCT(vmw_svga_winsys_surface);
@@ -207,6 +208,7 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
          goto no_sid;
       num_samples = sampleCount;
       multisample_pattern = SVGA3D_MS_PATTERN_STANDARD;
+      quality_level = SVGA3D_MS_QUALITY_FULL;
    }
 
    /*
@@ -249,8 +251,9 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
                                                  numMipLevels, sampleCount,
                                                  ptr.gmrId,
                                                  multisample_pattern,
+                                                 quality_level,
                                                  surface->buf ? NULL :
-						 &desc.region);
+                                                 &desc.region);
 
       if (surface->sid == SVGA3D_INVALID_ID) {
          if (surface->buf == NULL) {
@@ -268,6 +271,7 @@ vmw_svga_winsys_surface_create(struct svga_winsys_screen *sws,
                                                        size, numLayers,
                                                        numMipLevels, sampleCount,
                                                        0, multisample_pattern,
+                                                       quality_level,
                                                        &desc.region);
             if (surface->sid == SVGA3D_INVALID_ID)
                goto no_sid;

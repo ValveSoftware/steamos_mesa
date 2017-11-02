@@ -1132,6 +1132,7 @@ enum drm_vmw_surface_version {
  * @version: Version of surface create ioctl.
  * @svga3d_flags_upper_32_bits: Upper 32 bits of svga3d flags.
  * @multisample_pattern: Multisampling pattern when msaa is supported.
+ * @quality_level: Precision settings for each sample.
  * @must_be_zero: Reserved for future usage.
  *
  * Input argument to the  DRM_VMW_GB_SURFACE_CREATE_EXT Ioctl.
@@ -1142,7 +1143,7 @@ struct drm_vmw_gb_surface_create_ext_req {
 	enum drm_vmw_surface_version version;
 	uint32_t svga3d_flags_upper_32_bits;
 	SVGA3dMSPattern multisample_pattern;
-	uint32_t pad64;
+	SVGA3dMSQualityLevel quality_level;
 	uint64_t must_be_zero;
 };
 

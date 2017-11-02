@@ -207,6 +207,7 @@ vmw_ioctl_gb_surface_create(struct vmw_winsys_screen *vws,
                             unsigned sampleCount,
                             uint32_t buffer_handle,
                             SVGA3dMSPattern multisamplePattern,
+                            SVGA3dMSQualityLevel qualityLevel,
                             struct vmw_region **p_region)
 {
    struct drm_vmw_gb_surface_create_rep *rep;
@@ -230,6 +231,7 @@ vmw_ioctl_gb_surface_create(struct vmw_winsys_screen *vws,
 
       req->version = drm_vmw_gb_surface_v1;
       req->multisample_pattern = multisamplePattern;
+      req->quality_level = qualityLevel;
       req->must_be_zero = 0;
       req->base.svga3d_flags = SVGA3D_FLAGS_LOWER_32(flags);
       req->svga3d_flags_upper_32_bits = SVGA3D_FLAGS_UPPER_32(flags);

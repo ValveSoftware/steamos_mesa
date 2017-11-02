@@ -138,16 +138,17 @@ vmw_ioctl_surface_create(struct vmw_winsys_screen *vws,
                          unsigned sampleCount);
 uint32
 vmw_ioctl_gb_surface_create(struct vmw_winsys_screen *vws,
-			    SVGA3dSurfaceAllFlags flags,
-			    SVGA3dSurfaceFormat format,
+                            SVGA3dSurfaceAllFlags flags,
+                            SVGA3dSurfaceFormat format,
                             unsigned usage,
-			    SVGA3dSize size,
-			    uint32 numFaces,
-			    uint32 numMipLevels,
+                            SVGA3dSize size,
+                            uint32 numFaces,
+                            uint32 numMipLevels,
                             unsigned sampleCount,
                             uint32 buffer_handle,
                             SVGA3dMSPattern multisamplePattern,
-			    struct vmw_region **p_region);
+                            SVGA3dMSQualityLevel qualityLevel,
+                            struct vmw_region **p_region);
 
 int
 vmw_ioctl_gb_surface_ref(struct vmw_winsys_screen *vws,
