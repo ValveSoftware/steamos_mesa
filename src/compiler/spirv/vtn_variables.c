@@ -1788,6 +1788,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       var->var->data.explicit_binding = var->explicit_binding;
       var->var->data.descriptor_set = var->descriptor_set;
       var->var->data.index = var->input_attachment_index;
+      var->var->data.offset = var->offset;
 
       if (glsl_type_is_image(without_array->type))
          var->var->data.image.format = without_array->image_format;
