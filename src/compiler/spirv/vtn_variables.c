@@ -1346,6 +1346,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationPatch:
       vtn_var->patch = true;
       break;
+   case SpvDecorationOffset:
+      vtn_var->offset = dec->literals[0];
+      break;
    default:
       break;
    }
