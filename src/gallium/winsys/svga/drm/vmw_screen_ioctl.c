@@ -1070,7 +1070,7 @@ vmw_ioctl_init(struct vmw_winsys_screen *vws)
          }
       }
 
-      if (vws->ioctl.have_drm_2_15) {
+      if (vws->ioctl.have_drm_2_15 && vws->base.have_vgpu10) {
          memset(&gp_arg, 0, sizeof(gp_arg));
          gp_arg.param = DRM_VMW_PARAM_HW_CAPS2;
          ret = drmCommandWriteRead(vws->ioctl.drm_fd, DRM_VMW_GET_PARAM,
