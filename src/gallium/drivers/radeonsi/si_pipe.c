@@ -892,7 +892,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	unsigned max_offchip_buffers_per_se;
 
 	/* Only certain chips can use the maximum value. */
-	if (sscreen->info.family == CHIP_VEGA12)
+	if (sscreen->info.family == CHIP_VEGA12 ||
+	    sscreen->info.family == CHIP_VEGA20)
 		max_offchip_buffers_per_se = double_offchip_buffers ? 128 : 64;
 	else
 		max_offchip_buffers_per_se = double_offchip_buffers ? 127 : 63;

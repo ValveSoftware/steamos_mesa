@@ -128,6 +128,8 @@ const char *ac_get_llvm_processor_name(enum radeon_family family)
 		return "gfx902";
 	case CHIP_VEGA12:
 		return HAVE_LLVM >= 0x0700 ? "gfx904" : "gfx902";
+	case CHIP_VEGA20:
+		return HAVE_LLVM >= 0x0700 ? "gfx906" : "gfx902";
 	default:
 		return "";
 	}
@@ -141,7 +143,7 @@ static LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
 	char features[256];
 	const char *triple = (tm_options & AC_TM_SUPPORTS_SPILL) ? "amdgcn-mesa-mesa3d" : "amdgcn--";
 	LLVMTargetRef target = ac_get_llvm_target(triple);
-	bool barrier_does_waitcnt = true; /* TODO: not for Vega20 */
+	bool barrier_does_waitcnt = family != CHIP_VEGA20;
 
 	snprintf(features, sizeof(features),
 		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s%s%s",

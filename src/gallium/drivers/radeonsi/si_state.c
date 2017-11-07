@@ -4992,6 +4992,7 @@ static void si_init_config(struct si_context *sctx)
 		switch (sctx->family) {
 		case CHIP_VEGA10:
 		case CHIP_VEGA12:
+		case CHIP_VEGA20:
 			pc_lines = 4096;
 			break;
 		case CHIP_RAVEN:
