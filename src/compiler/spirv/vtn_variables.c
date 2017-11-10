@@ -1643,7 +1643,17 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       /* For these, we create the variable normally */
       var->var = rzalloc(b->shader, nir_variable);
       var->var->name = ralloc_strdup(var->var, val->name);
-      var->var->type = var->type->type;
+
+      /* Need to tweak the nir type here as at vtn_handle_type we don't have
+       * the access to storage_class, that is the one that points us that is
+       * an atomic uint.
+       */
+      if (glsl_get_base_type(var->type->type) == GLSL_TYPE_UINT &&
+          storage_class == SpvStorageClassAtomicCounter) {
+         var->var->type = glsl_atomic_uint_type();
+      } else {
+         var->var->type = var->type->type;
+      }
       var->var->data.mode = nir_mode;
       var->var->data.location = -1;
       var->var->interface_type = NULL;
