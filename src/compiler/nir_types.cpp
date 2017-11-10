@@ -533,3 +533,9 @@ glsl_get_natural_size_align_bytes(const struct glsl_type *type,
       unreachable("type does not have a natural size");
    }
 }
+
+const glsl_type *
+glsl_atomic_uint_type(void)
+{
+   return glsl_type::atomic_uint_type;
+}

@@ -190,6 +190,8 @@ typedef void (*glsl_type_size_align_func)(const struct glsl_type *type,
 void glsl_get_natural_size_align_bytes(const struct glsl_type *type,
                                        unsigned *size, unsigned *align);
 
+const struct glsl_type *glsl_atomic_uint_type(void);
+
 #ifdef __cplusplus
 }
 #endif
