@@ -208,15 +208,19 @@ svga_init_shader_key_common(const struct svga_context *svga,
          assert(view->texture);
          assert(view->texture->target < (1 << 4)); /* texture_target:4 */
 
-         /* 1D/2D array textures with one slice are treated as non-arrays
-          * by the SVGA3D device.  Set the is_array flag only if we know that
-          * we have more than 1 element.  This will be used to select shader
-          * instruction/resource types during shader translation.
+         /* 1D/2D array textures with one slice and cube map array textures
+          * with one cube are treated as non-arrays by the SVGA3D device.
+          * Set the is_array flag only if we know that we have more than 1
+          * element.  This will be used to select shader instruction/resource
+          * types during shader translation.
           */
          switch (view->texture->target) {
          case PIPE_TEXTURE_1D_ARRAY:
          case PIPE_TEXTURE_2D_ARRAY:
             key->tex[i].is_array = view->texture->array_size > 1;
+            break;
+         case PIPE_TEXTURE_CUBE_ARRAY:
+            key->tex[i].is_array = view->texture->array_size > 6;
             break;
          default:
             ; /* nothing / silence compiler warning */

@@ -3197,7 +3197,8 @@ tgsi_texture_to_resource_dimension(enum tgsi_texture_type target,
          : VGPU10_RESOURCE_DIMENSION_TEXTURE2DMS;
    case TGSI_TEXTURE_CUBE_ARRAY:
    case TGSI_TEXTURE_SHADOWCUBE_ARRAY:
-      return VGPU10_RESOURCE_DIMENSION_TEXTURECUBEARRAY;
+      return is_array ? VGPU10_RESOURCE_DIMENSION_TEXTURECUBEARRAY
+         : VGPU10_RESOURCE_DIMENSION_TEXTURECUBE;
    default:
       assert(!"Unexpected resource type");
       return VGPU10_RESOURCE_DIMENSION_TEXTURE2D;
