@@ -71,6 +71,7 @@ files_libglsl = files(
   'gl_nir_lower_samplers_as_deref.c',
   'gl_nir_link_uniform_initializers.c',
   'gl_nir_link_uniforms.c',
+  'gl_nir_linker.c',
   'gl_nir_linker.h',
   'gl_nir.h',
   'glsl_parser_extras.cpp',
