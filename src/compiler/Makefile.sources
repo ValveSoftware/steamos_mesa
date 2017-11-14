@@ -28,6 +28,8 @@ LIBGLSL_FILES = \
 	glsl/gl_nir_lower_atomics.c \
 	glsl/gl_nir_lower_samplers.c \
 	glsl/gl_nir_lower_samplers_as_deref.c \
+	glsl/gl_nir_link_uniforms.c \
+	glsl/gl_nir_linker.h \
 	glsl/gl_nir.h \
 	glsl/glsl_parser_extras.cpp \
 	glsl/glsl_parser_extras.h \
