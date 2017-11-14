@@ -209,18 +209,17 @@ svga_init_shader_key_common(const struct svga_context *svga,
          assert(view->texture->target < (1 << 4)); /* texture_target:4 */
 
          /* 1D/2D array textures with one slice are treated as non-arrays
-          * by the SVGA3D device.  Convert the texture type here so that
-          * we emit the right TEX/SAMPLE instruction in the shader.
+          * by the SVGA3D device.  Set the is_array flag only if we know that
+          * we have more than 1 element.  This will be used to select shader
+          * instruction/resource types during shader translation.
           */
-         if (view->texture->target == PIPE_TEXTURE_1D_ARRAY ||
-             view->texture->target == PIPE_TEXTURE_2D_ARRAY) {
-            if (view->texture->array_size == 1) {
-               key->tex[i].is_array = 0;
-            }
-            else {
-               assert(view->texture->array_size > 1);
-               key->tex[i].is_array = 1;
-            }
+         switch (view->texture->target) {
+         case PIPE_TEXTURE_1D_ARRAY:
+         case PIPE_TEXTURE_2D_ARRAY:
+            key->tex[i].is_array = view->texture->array_size > 1;
+            break;
+         default:
+            ; /* nothing / silence compiler warning */
          }
 
          assert(view->texture->nr_samples < (1 << 5)); /* 5-bit field */
