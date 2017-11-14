@@ -261,6 +261,12 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                                  compiler->scalar_stage[stage]);
    }
 
+   /* SPIR-V programs use a NIR linker */
+   if (shProg->data->spirv) {
+      if (!gl_nir_link_uniforms(ctx, shProg))
+         return false;
+   }
+
    /* Determine first and last stage. */
    unsigned first = MESA_SHADER_STAGES;
    unsigned last = 0;
