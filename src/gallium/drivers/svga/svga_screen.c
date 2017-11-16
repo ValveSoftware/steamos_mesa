@@ -1058,6 +1058,14 @@ svga_screen_create(struct svga_winsys_screen *sws)
       svgascreen->maxPointSize = 80.0F;
       svgascreen->max_color_buffers = SVGA3D_DX_MAX_RENDER_TARGETS;
 
+      /* Multisample samples per pixel */
+      if (sws->have_sm4_1 && debug_get_bool_option("SVGA_MSAA", TRUE)) {
+         if (get_bool_cap(sws, SVGA3D_DEVCAP_MULTISAMPLE_2X, FALSE))
+            svgascreen->ms_samples |= 1 << 1;
+         if (get_bool_cap(sws, SVGA3D_DEVCAP_MULTISAMPLE_4X, FALSE))
+            svgascreen->ms_samples |= 1 << 3;
+      }
+
       /* Maximum number of constant buffers */
       svgascreen->max_const_buffers =
          get_uint_cap(sws, SVGA3D_DEVCAP_DX_MAX_CONSTANT_BUFFERS, 1);
