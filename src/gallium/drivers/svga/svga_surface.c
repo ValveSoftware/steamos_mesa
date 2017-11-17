@@ -918,6 +918,10 @@ svga_get_sample_position(struct pipe_context *context,
    static const float pos1[1][2] = {
       { 0.5, 0.5 }
    };
+   static const float pos2[2][2] = {
+      { 0.75, 0.75 },
+      { 0.25, 0.25 }
+   };
    static const float pos4[4][2] = {
       { 0.375000, 0.125000 },
       { 0.875000, 0.375000 },
@@ -955,6 +959,9 @@ svga_get_sample_position(struct pipe_context *context,
    const float (*positions)[2];
 
    switch (sample_count) {
+   case 2:
+      positions = pos2;
+      break;
    case 4:
       positions = pos4;
       break;
