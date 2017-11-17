@@ -5329,7 +5329,6 @@ emit_tg4(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[2].Register.Index;
-   unsigned target = inst->Texture.Texture;
    struct tgsi_full_src_register src;
    int offsets[3];
 
@@ -5337,12 +5336,8 @@ emit_tg4(struct svga_shader_emitter_v10 *emit,
    if (!is_valid_tex_instruction(emit, inst))
       return TRUE;
 
-   if (target == TGSI_TEXTURE_CUBE_ARRAY) {
-      debug_printf("TGSI_TEXTURE_CUBE_ARRAY is not supported\n");
-      return TRUE;
-   }
-
-   /* Only single channel is supported in SM4_1.
+   /* Only a single channel is supported in SM4_1 and we report
+    * PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS = 1.
     * Only the 0th component will be gathered.
     */
    switch (emit->key.tex[unit].swizzle_r) {
