@@ -2122,7 +2122,9 @@ emit_decl_instruction(struct svga_shader_emitter_v10 *emit,
                       unsigned index, unsigned size)
 {
    assert(opcode0.opcodeType);
-   assert(operand0.mask);
+   assert(operand0.mask ||
+          (operand0.operandType == VGPU10_OPERAND_TYPE_OUTPUT_DEPTH) ||
+          (operand0.operandType == VGPU10_OPERAND_TYPE_OUTPUT_COVERAGE_MASK));
 
    begin_emit_instruction(emit);
    emit_dword(emit, opcode0.value);
@@ -2293,7 +2295,7 @@ emit_fragdepth_output_declaration(struct svga_shader_emitter_v10 *emit)
    operand0.operandType = VGPU10_OPERAND_TYPE_OUTPUT_DEPTH;
    operand0.numComponents = VGPU10_OPERAND_1_COMPONENT;
    operand0.indexDimension = VGPU10_OPERAND_INDEX_0D;
-   operand0.mask = VGPU10_OPERAND_4_COMPONENT_MASK_ALL;
+   operand0.mask = 0;
 
    emit_decl_instruction(emit, opcode0, operand0, name_token, 0, 1);
 }
@@ -2318,7 +2320,7 @@ emit_samplemask_output_declaration(struct svga_shader_emitter_v10 *emit)
    operand0.operandType = VGPU10_OPERAND_TYPE_OUTPUT_COVERAGE_MASK;
    operand0.numComponents = VGPU10_OPERAND_0_COMPONENT;
    operand0.indexDimension = VGPU10_OPERAND_INDEX_0D;
-   operand0.mask = VGPU10_OPERAND_4_COMPONENT_MASK_ALL;
+   operand0.mask = 0;
 
    emit_decl_instruction(emit, opcode0, operand0, name_token, 0, 1);
 }
