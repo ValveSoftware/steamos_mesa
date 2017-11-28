@@ -539,3 +539,15 @@ glsl_atomic_uint_type(void)
 {
    return glsl_type::atomic_uint_type;
 }
+
+unsigned
+glsl_atomic_size(const struct glsl_type *type)
+{
+   return type->atomic_size();
+}
+
+bool
+glsl_contains_atomic(const struct glsl_type *type)
+{
+   return type->contains_atomic();
+}
