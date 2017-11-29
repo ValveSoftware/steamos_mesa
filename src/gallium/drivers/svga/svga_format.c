@@ -1287,6 +1287,7 @@ static const struct format_cap format_cap_table[] = {
    {
       "SVGA3D_BC3_UNORM_SRGB",
       SVGA3D_BC3_UNORM_SRGB,
+      SVGA3D_DEVCAP_DXFMT_BC3_UNORM_SRGB,
       4, 4, 16, 0
    },
    {
