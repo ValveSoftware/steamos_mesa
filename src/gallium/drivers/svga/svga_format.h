@@ -131,4 +131,12 @@ svga_is_format_supported(struct pipe_screen *screen,
                          unsigned bindings);
 
 
+boolean
+svga_is_dx_format_supported(struct pipe_screen *screen,
+                            enum pipe_format format,
+                            enum pipe_texture_target target,
+                            unsigned sample_count,
+                            unsigned storage_sample_count,
+                            unsigned bindings);
+
 #endif /* SVGA_FORMAT_H_ */

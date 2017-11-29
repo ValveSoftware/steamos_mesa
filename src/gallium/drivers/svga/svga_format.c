@@ -2284,6 +2284,104 @@ svga_is_format_supported(struct pipe_screen *screen,
    SVGA3dSurfaceFormatCaps mask;
 
    assert(bindings);
+   assert(!ss->sws->have_vgpu10);
+
+   svga_format = svga_translate_format(ss, format, bindings);
+   if (svga_format == SVGA3D_FORMAT_INVALID) {
+      return FALSE;
+   }
+
+   if (util_format_is_srgb(format) &&
+       (bindings & PIPE_BIND_DISPLAY_TARGET)) {
+       /* We only support sRGB rendering with vgpu10 */
+      return FALSE;
+   }
+
+   /*
+    * Override host capabilities, so that we end up with the same
+    * visuals for all virtual hardware implementations.
+    */
+   if (bindings & PIPE_BIND_DISPLAY_TARGET) {
+      switch (svga_format) {
+      case SVGA3D_A8R8G8B8:
+      case SVGA3D_X8R8G8B8:
+      case SVGA3D_R5G6B5:
+         break;
+
+      /* VGPU10 formats */
+      case SVGA3D_B8G8R8A8_UNORM:
+      case SVGA3D_B8G8R8X8_UNORM:
+      case SVGA3D_B5G6R5_UNORM:
+      case SVGA3D_B8G8R8X8_UNORM_SRGB:
+      case SVGA3D_B8G8R8A8_UNORM_SRGB:
+      case SVGA3D_R8G8B8A8_UNORM_SRGB:
+         break;
+
+      /* Often unsupported/problematic. This means we end up with the same
+       * visuals for all virtual hardware implementations.
+       */
+      case SVGA3D_A4R4G4B4:
+      case SVGA3D_A1R5G5B5:
+         return FALSE;
+
+      default:
+         return FALSE;
+      }
+   }
+
+   /*
+    * Query the host capabilities.
+    */
+   svga_get_format_cap(ss, svga_format, &caps);
+
+   if (bindings & PIPE_BIND_RENDER_TARGET) {
+      /* Check that the color surface is blendable, unless it's an
+       * integer format.
+       */
+      if (!svga_format_is_integer(svga_format) &&
+          (caps.value & SVGA3DFORMAT_OP_NOALPHABLEND)) {
+         return FALSE;
+      }
+   }
+
+   mask.value = 0;
+   if (bindings & PIPE_BIND_RENDER_TARGET)
+      mask.value |= SVGA3DFORMAT_OP_OFFSCREEN_RENDERTARGET;
+
+   if (bindings & PIPE_BIND_DEPTH_STENCIL)
+      mask.value |= SVGA3DFORMAT_OP_ZSTENCIL;
+
+   if (bindings & PIPE_BIND_SAMPLER_VIEW)
+      mask.value |= SVGA3DFORMAT_OP_TEXTURE;
+
+   if (target == PIPE_TEXTURE_CUBE)
+      mask.value |= SVGA3DFORMAT_OP_CUBETEXTURE;
+   else if (target == PIPE_TEXTURE_3D)
+      mask.value |= SVGA3DFORMAT_OP_VOLUMETEXTURE;
+
+   return (caps.value & mask.value) == mask.value;
+}
+
+
+/**
+ * Implement pipe_screen::is_format_supported() for VGPU10 device.
+ * \param bindings  bitmask of PIPE_BIND_x flags
+ */
+boolean
+svga_is_dx_format_supported(struct pipe_screen *screen,
+                            enum pipe_format format,
+                            enum pipe_texture_target target,
+                            unsigned sample_count,
+                            unsigned storage_sample_count,
+                            unsigned bindings)
+{
+   struct svga_screen *ss = svga_screen(screen);
+   SVGA3dSurfaceFormat svga_format;
+   SVGA3dSurfaceFormatCaps caps;
+   SVGA3dSurfaceFormatCaps mask;
+
+   assert(bindings);
+   assert(ss->sws->have_vgpu10);
 
    if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
       return false;
@@ -2302,18 +2400,11 @@ svga_is_format_supported(struct pipe_screen *screen,
       return FALSE;
    }
 
-   if (!ss->sws->have_vgpu10 &&
-       util_format_is_srgb(format) &&
-       (bindings & (PIPE_BIND_DISPLAY_TARGET | PIPE_BIND_RENDER_TARGET))) {
-       /* We only support sRGB rendering with vgpu10 */
-      return FALSE;
-   }
-
    /*
     * For VGPU10 vertex formats, skip querying host capabilities
     */
 
-   if (ss->sws->have_vgpu10 && (bindings & PIPE_BIND_VERTEX_BUFFER)) {
+   if (bindings & PIPE_BIND_VERTEX_BUFFER) {
       SVGA3dSurfaceFormat svga_format;
       unsigned flags;
       svga_translate_vertex_format_vgpu10(format, &svga_format, &flags);
@@ -2368,22 +2459,19 @@ svga_is_format_supported(struct pipe_screen *screen,
    }
 
    mask.value = 0;
-   if (bindings & PIPE_BIND_RENDER_TARGET) {
+   if (bindings & PIPE_BIND_RENDER_TARGET)
       mask.value |= SVGA3DFORMAT_OP_OFFSCREEN_RENDERTARGET;
-   }
-   if (bindings & PIPE_BIND_DEPTH_STENCIL) {
-      mask.value |= SVGA3DFORMAT_OP_ZSTENCIL;
-   }
-   if (bindings & PIPE_BIND_SAMPLER_VIEW) {
-      mask.value |= SVGA3DFORMAT_OP_TEXTURE;
-   }
 
-   if (target == PIPE_TEXTURE_CUBE) {
+   if (bindings & PIPE_BIND_DEPTH_STENCIL)
+      mask.value |= SVGA3DFORMAT_OP_ZSTENCIL;
+
+   if (bindings & PIPE_BIND_SAMPLER_VIEW)
+      mask.value |= SVGA3DFORMAT_OP_TEXTURE;
+
+   if (target == PIPE_TEXTURE_CUBE)
       mask.value |= SVGA3DFORMAT_OP_CUBETEXTURE;
-   }
-   else if (target == PIPE_TEXTURE_3D) {
+   else if (target == PIPE_TEXTURE_3D)
       mask.value |= SVGA3DFORMAT_OP_VOLUMETEXTURE;
-   }
 
    return (caps.value & mask.value) == mask.value;
 }
