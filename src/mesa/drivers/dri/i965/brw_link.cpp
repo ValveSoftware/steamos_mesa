@@ -265,6 +265,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    if (shProg->data->spirv) {
       if (!gl_nir_link_uniforms(ctx, shProg))
          return false;
+
+      gl_nir_link_assign_atomic_counter_resources(ctx, shProg);
    }
 
    /* Determine first and last stage. */
