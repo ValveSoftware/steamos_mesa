@@ -1021,28 +1021,16 @@ static const struct format_cap format_cap_table[] = {
       1, 1, 8, 0
    },
    {
-      /* Special case: no devcap / report sampler and depth/stencil ability
-       */
       "SVGA3D_D32_FLOAT_S8X24_UINT",
       SVGA3D_D32_FLOAT_S8X24_UINT,
-      0, /*SVGA3D_DEVCAP_DXFMT_D32_FLOAT_S8X24_UINT*/
-      1, 1, 8,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_D32_FLOAT_S8X24_UINT,
+      1, 1, 8, 0
    },
    {
-      /* Special case: no devcap / report sampler and depth/stencil ability
-       */
       "SVGA3D_R32_FLOAT_X8X24",
       SVGA3D_R32_FLOAT_X8X24,
-      0, /*SVGA3D_DEVCAP_DXFMT_R32_FLOAT_X8X24_TYPELESS*/
-      1, 1, 8,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_R32_FLOAT_X8X24_TYPELESS,
+      1, 1, 8, 0
    },
    {
       "SVGA3D_X32_G8X24_UINT",
@@ -1123,16 +1111,10 @@ static const struct format_cap format_cap_table[] = {
       1, 1, 4, 0
    },
    {
-      /* Special case: no devcap / report sampler and depth/stencil ability
-       */
       "SVGA3D_D32_FLOAT",
       SVGA3D_D32_FLOAT,
-      0, /*SVGA3D_DEVCAP_DXFMT_D32_FLOAT*/
-      1, 1, 4,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_D32_FLOAT,
+      1, 1, 4, 0
    },
    {
       "SVGA3D_R32_UINT",
@@ -1153,28 +1135,16 @@ static const struct format_cap format_cap_table[] = {
       1, 1, 4, 0
    },
    {
-      /* Special case: no devcap / report sampler and depth/stencil ability
-       */
       "SVGA3D_D24_UNORM_S8_UINT",
       SVGA3D_D24_UNORM_S8_UINT,
-      0, /*SVGA3D_DEVCAP_DXFMT_D24_UNORM_S8_UINT*/
-      1, 1, 4,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_D24_UNORM_S8_UINT,
+      1, 1, 4, 0
    },
    {
-      /* Special case: no devcap / report sampler and depth/stencil ability
-       */
       "SVGA3D_R24_UNORM_X8",
       SVGA3D_R24_UNORM_X8,
-      0, /*SVGA3D_DEVCAP_DXFMT_R24_UNORM_X8_TYPELESS*/
-      1, 1, 4,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_R24_UNORM_X8_TYPELESS,
+      1, 1, 4, 0
    },
    {
       "SVGA3D_X24_G8_UINT",
@@ -1476,12 +1446,8 @@ static const struct format_cap format_cap_table[] = {
    {
       "SVGA3D_D16_UNORM",
       SVGA3D_D16_UNORM,
-      0, /*SVGA3D_DEVCAP_DXFMT_D16_UNORM*/
-      1, 1, 2,
-      SVGA3DFORMAT_OP_TEXTURE |
-      SVGA3DFORMAT_OP_CUBETEXTURE |
-      SVGA3DFORMAT_OP_VOLUMETEXTURE |
-      SVGA3DFORMAT_OP_ZSTENCIL
+      SVGA3D_DEVCAP_DXFMT_D16_UNORM,
+      1, 1, 2, 0
    },
    {
       "SVGA3D_A8_UNORM",
@@ -1805,40 +1771,57 @@ svga_get_format_cap(struct svga_screen *ss,
 
    if (entry->devcap && sws->get_cap(sws, entry->devcap, &result)) {
       assert(format < SVGA3D_UYVY || entry->defaultOperations == 0);
-
-      /* Explicitly advertised format */
-      if (entry->devcap > SVGA3D_DEVCAP_DXCONTEXT) {
-         /* Translate DX/VGPU10 format cap to VGPU9 cap */
-
-         if (0) {
-            debug_printf("format %s, devcap %s, value 0x%x (%s)\n",
-                         svga_format_name(format),
-                         svga_devcap_name(entry->devcap),
-                         result.u,
-                         svga_devcap_format_flags(result.u));
-         }
-
-         caps->value = 0;
-         if (result.u & SVGA3D_DXFMT_COLOR_RENDERTARGET)
-            caps->value |= SVGA3DFORMAT_OP_OFFSCREEN_RENDERTARGET;
-         if (!(result.u & SVGA3D_DXFMT_BLENDABLE))
-            caps->value |= SVGA3DFORMAT_OP_NOALPHABLEND;
-         if (result.u & SVGA3D_DXFMT_DEPTH_RENDERTARGET)
-            caps->value |= SVGA3DFORMAT_OP_ZSTENCIL;
-         if (result.u & SVGA3D_DXFMT_SHADER_SAMPLE)
-            caps->value |= (SVGA3DFORMAT_OP_TEXTURE |
-                            SVGA3DFORMAT_OP_CUBETEXTURE);
-         if (result.u & SVGA3D_DXFMT_VOLUME)
-            caps->value |= SVGA3DFORMAT_OP_VOLUMETEXTURE;
-      }
-      else {
-         /* Return VGPU9 format cap as-is */
-         caps->value = result.u;
-      }
-
+      caps->value = result.u;
    } else {
       /* Implicitly advertised format -- use default caps */
       caps->value = entry->defaultOperations;
+   }
+}
+
+
+/*
+ * Get DX format capabilities from VGPU10 device.
+ */
+static void
+svga_get_dx_format_cap(struct svga_screen *ss,
+                       SVGA3dSurfaceFormat format,
+                       SVGA3dDevCapResult *caps)
+{
+   struct svga_winsys_screen *sws = ss->sws;
+   const struct format_cap *entry;
+
+#ifdef DEBUG
+   check_format_tables();
+#else
+   (void) check_format_tables;
+#endif
+
+   assert(ss->sws->have_vgpu10);
+   assert(format < ARRAY_SIZE(format_cap_table));
+   entry = &format_cap_table[format];
+   assert(entry->format == format);
+   assert(entry->devcap > SVGA3D_DEVCAP_DXCONTEXT);
+
+   caps->u = 0;
+   if (entry->devcap) {
+      sws->get_cap(sws, entry->devcap, caps);
+
+      /* svga device supports SHADER_SAMPLE capability for these
+       * formats but does not advertise the devcap.
+       * So enable this bit here.
+       */
+      if (format == SVGA3D_R32_FLOAT_X8X24 ||
+          format == SVGA3D_R24_UNORM_X8) {
+         caps->u |= SVGA3D_DXFMT_SHADER_SAMPLE;
+      }
+   }
+
+   if (0) {
+      debug_printf("Format %s, devcap %s = 0x%x (%s)\n",
+                   svga_format_name(format),
+                   svga_devcap_name(entry->devcap),
+                   caps->u,
+                   svga_devcap_format_flags(caps->u));
    }
 }
 
@@ -2377,8 +2360,8 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
 {
    struct svga_screen *ss = svga_screen(screen);
    SVGA3dSurfaceFormat svga_format;
-   SVGA3dSurfaceFormatCaps caps;
-   SVGA3dSurfaceFormatCaps mask;
+   SVGA3dDevCapResult caps;
+   unsigned int mask = 0;
 
    assert(bindings);
    assert(ss->sws->have_vgpu10);
@@ -2395,11 +2378,6 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
       }
    }
 
-   svga_format = svga_translate_format(ss, format, bindings);
-   if (svga_format == SVGA3D_FORMAT_INVALID) {
-      return FALSE;
-   }
-
    /*
     * For VGPU10 vertex formats, skip querying host capabilities
     */
@@ -2409,6 +2387,11 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
       unsigned flags;
       svga_translate_vertex_format_vgpu10(format, &svga_format, &flags);
       return svga_format != SVGA3D_FORMAT_INVALID;
+   }
+
+   svga_format = svga_translate_format(ss, format, bindings);
+   if (svga_format == SVGA3D_FORMAT_INVALID) {
+      return FALSE;
    }
 
    /*
@@ -2446,32 +2429,43 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
    /*
     * Query the host capabilities.
     */
-   svga_get_format_cap(ss, svga_format, &caps);
+   svga_get_dx_format_cap(ss, svga_format, &caps);
 
    if (bindings & PIPE_BIND_RENDER_TARGET) {
       /* Check that the color surface is blendable, unless it's an
        * integer format.
        */
-      if (!svga_format_is_integer(svga_format) &&
-          (caps.value & SVGA3DFORMAT_OP_NOALPHABLEND)) {
+      if (!(svga_format_is_integer(svga_format) ||
+            (caps.u & SVGA3D_DXFMT_BLENDABLE))) {
          return FALSE;
+      }
+      mask |= SVGA3D_DXFMT_COLOR_RENDERTARGET;
+   }
+
+   if (bindings & PIPE_BIND_DEPTH_STENCIL)
+      mask |= SVGA3D_DXFMT_DEPTH_RENDERTARGET;
+
+   if (target == PIPE_TEXTURE_3D)
+      mask |= SVGA3D_DXFMT_VOLUME;
+
+   /* Is the format supported for rendering */
+   if ((caps.u & mask) != mask)
+      return FALSE;
+
+   if (bindings & PIPE_BIND_SAMPLER_VIEW) {
+      SVGA3dSurfaceFormat sampler_format;
+
+      /* Get the sampler view format */
+      sampler_format = svga_sampler_format(svga_format);
+      if (sampler_format != svga_format) {
+         caps.u = 0;
+         svga_get_dx_format_cap(ss, sampler_format, &caps);
+         mask &= (SVGA3D_DXFMT_VOLUME | SVGA3D_DXFMT_MULTISAMPLE);
+         mask |= SVGA3D_DXFMT_SHADER_SAMPLE;
+         if ((caps.u & mask) != mask)
+            return FALSE;
       }
    }
 
-   mask.value = 0;
-   if (bindings & PIPE_BIND_RENDER_TARGET)
-      mask.value |= SVGA3DFORMAT_OP_OFFSCREEN_RENDERTARGET;
-
-   if (bindings & PIPE_BIND_DEPTH_STENCIL)
-      mask.value |= SVGA3DFORMAT_OP_ZSTENCIL;
-
-   if (bindings & PIPE_BIND_SAMPLER_VIEW)
-      mask.value |= SVGA3DFORMAT_OP_TEXTURE;
-
-   if (target == PIPE_TEXTURE_CUBE)
-      mask.value |= SVGA3DFORMAT_OP_CUBETEXTURE;
-   else if (target == PIPE_TEXTURE_3D)
-      mask.value |= SVGA3DFORMAT_OP_VOLUMETEXTURE;
-
-   return (caps.value & mask.value) == mask.value;
+   return TRUE;
 }
