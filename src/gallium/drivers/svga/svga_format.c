@@ -2270,6 +2270,10 @@ svga_is_format_supported(struct pipe_screen *screen,
    assert(bindings);
    assert(!ss->sws->have_vgpu10);
 
+   /* Multisamples is not supported in VGPU9 device */
+   if (sample_count > 1)
+      return FALSE;
+
    svga_format = svga_translate_format(ss, format, bindings);
    if (svga_format == SVGA3D_FORMAT_INVALID) {
       return FALSE;
