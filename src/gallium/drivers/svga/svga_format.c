@@ -2381,6 +2381,7 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
       if ((ss->ms_samples & (1 << (sample_count - 1))) == 0) {
          return FALSE;
       }
+      mask |= SVGA3D_DXFMT_MULTISAMPLE;
    }
 
    /*
