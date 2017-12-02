@@ -350,6 +350,10 @@ can_blit_via_intra_surface_copy(struct svga_context *svga,
    if (!svga_have_vgpu10(svga))
       return false;
 
+   /* src surface cannot be multisample */
+   if (blit_info->src.resource->nr_samples > 1)
+      return false;
+
    if (!sws->have_intra_surface_copy)
       return false;
 
