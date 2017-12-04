@@ -600,6 +600,13 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       break;
    }
 
+   /* Force direct map for multisample surface */
+   if (texture->nr_samples > 1) {
+      assert(svga_have_gb_objects(svga));
+      assert(sws->have_sm4_1);
+      use_direct_map = TRUE;
+   }
+
    st->use_direct_map = use_direct_map;
    pipe_resource_reference(&st->base.resource, texture);
 
