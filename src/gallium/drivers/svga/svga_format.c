@@ -534,16 +534,6 @@ struct format_cap {
  * Format capability description table.
  *
  * Ordered by increasing SVGA3dSurfaceFormat value, but with gaps.
- *
- * Note: there are some special cases below where we set devcap=0 and
- * avoid querying the host.  In particular, depth/stencil formats which
- * can be rendered to and sampled from.  For example, the gallium format
- * PIPE_FORMAT_Z24_UNORM_S8_UINT is converted to SVGA3D_D24_UNORM_S8_UINT
- * for rendering but converted to SVGA3D_R24_UNORM_X8 for sampling.
- * If we want to query if a format supports both rendering and sampling the
- * host will tell us no for SVGA3D_D24_UNORM_S8_UINT, SVGA3D_D16_UNORM and
- * SVGA3D_R24_UNORM_X8.  So we override the host query for those
- * formats and report that both can do rendering and sampling.
  */
 static const struct format_cap format_cap_table[] = {
    {
