@@ -2457,7 +2457,7 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
       if (sampler_format != svga_format) {
          caps.u = 0;
          svga_get_dx_format_cap(ss, sampler_format, &caps);
-         mask &= (SVGA3D_DXFMT_VOLUME | SVGA3D_DXFMT_MULTISAMPLE);
+         mask &= SVGA3D_DXFMT_VOLUME;
          mask |= SVGA3D_DXFMT_SHADER_SAMPLE;
          if ((caps.u & mask) != mask)
             return FALSE;
