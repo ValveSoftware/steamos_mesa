@@ -3160,12 +3160,20 @@ emit_sampler_declarations(struct svga_shader_emitter_v10 *emit)
 
 
 /**
- * Translate TGSI_TEXTURE_x to VGAPU10_RESOURCE_DIMENSION_x.
+ * Translate TGSI_TEXTURE_x to VGPU10_RESOURCE_DIMENSION_x.
  */
 static unsigned
 tgsi_texture_to_resource_dimension(enum tgsi_texture_type target,
+                                   unsigned num_samples,
                                    boolean is_array)
 {
+   if (target == TGSI_TEXTURE_2D_MSAA && num_samples < 2) {
+      target = TGSI_TEXTURE_2D;
+   }
+   else if (target == TGSI_TEXTURE_2D_ARRAY_MSAA && num_samples < 2) {
+      target = TGSI_TEXTURE_2D_ARRAY;
+   }
+
    switch (target) {
    case TGSI_TEXTURE_BUFFER:
       return VGPU10_RESOURCE_DIMENSION_BUFFER;
@@ -3252,6 +3260,7 @@ emit_resource_declarations(struct svga_shader_emitter_v10 *emit)
       opcode0.opcodeType = VGPU10_OPCODE_DCL_RESOURCE;
       opcode0.resourceDimension =
          tgsi_texture_to_resource_dimension(emit->sampler_target[i],
+                                            emit->key.tex[i].num_samples,
                                             emit->key.tex[i].is_array);
       opcode0.sampleCount = emit->key.tex[i].num_samples;
       operand0.value = 0;
@@ -5529,7 +5538,8 @@ emit_txf(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[1].Register.Index;
-   const boolean msaa = tgsi_is_msaa_target(inst->Texture.Texture);
+   const boolean msaa = tgsi_is_msaa_target(inst->Texture.Texture)
+      && emit->key.tex[unit].num_samples > 1;
    int offsets[3];
    struct tex_swizzle_info swz_info;
 
@@ -5538,6 +5548,8 @@ emit_txf(struct svga_shader_emitter_v10 *emit,
    get_texel_offsets(emit, inst, offsets);
 
    if (msaa) {
+      assert(emit->key.tex[unit].num_samples > 1);
+
       /* Fetch one sample from an MSAA texture */
       struct tgsi_full_src_register sampleIndex =
          scalar_src(&inst->Src[0], TGSI_SWIZZLE_W);
