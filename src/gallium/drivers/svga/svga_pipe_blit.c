@@ -122,7 +122,6 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
                     unsigned dst_level, unsigned dst_layer_face,
                     unsigned width, unsigned height, unsigned depth)
 {
-   enum pipe_error ret;
    uint32 srcSubResource, dstSubResource;
    struct svga_texture *dtex, *stex;
 
