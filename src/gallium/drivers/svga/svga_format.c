@@ -1787,7 +1787,7 @@ svga_get_dx_format_cap(struct svga_screen *ss,
    (void) check_format_tables;
 #endif
 
-   assert(ss->sws->have_vgpu10);
+   assert(sws->have_vgpu10);
    assert(format < ARRAY_SIZE(format_cap_table));
    entry = &format_cap_table[format];
    assert(entry->format == format);
@@ -1797,12 +1797,13 @@ svga_get_dx_format_cap(struct svga_screen *ss,
    if (entry->devcap) {
       sws->get_cap(sws, entry->devcap, caps);
 
-      /* svga device supports SHADER_SAMPLE capability for these
-       * formats but does not advertise the devcap.
+      /* pre-SM41 capabable svga device supports SHADER_SAMPLE capability for
+       * these formats but does not advertise the devcap.
        * So enable this bit here.
        */
-      if (format == SVGA3D_R32_FLOAT_X8X24 ||
-          format == SVGA3D_R24_UNORM_X8) {
+      if (!sws->have_sm4_1 &&
+          (format == SVGA3D_R32_FLOAT_X8X24 ||
+           format == SVGA3D_R24_UNORM_X8)) {
          caps->u |= SVGA3D_DXFMT_SHADER_SAMPLE;
       }
    }
