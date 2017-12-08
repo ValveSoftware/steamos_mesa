@@ -2442,8 +2442,18 @@ svga_is_dx_format_supported(struct pipe_screen *screen,
    if (bindings & PIPE_BIND_DEPTH_STENCIL)
       mask |= SVGA3D_DXFMT_DEPTH_RENDERTARGET;
 
-   if (target == PIPE_TEXTURE_3D)
+   switch (target) {
+   case PIPE_TEXTURE_3D:
       mask |= SVGA3D_DXFMT_VOLUME;
+      break;
+   case PIPE_TEXTURE_1D_ARRAY:
+   case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_CUBE_ARRAY:
+      mask |= SVGA3D_DXFMT_ARRAY;
+      break;
+   default:
+      break;
+   }
 
    /* Is the format supported for rendering */
    if ((caps.u & mask) != mask)
