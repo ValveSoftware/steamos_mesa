@@ -267,6 +267,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
          return false;
 
       gl_nir_link_assign_atomic_counter_resources(ctx, shProg);
+      gl_nir_link_assign_xfb_resources(ctx, shProg);
    }
 
    /* Determine first and last stage. */
