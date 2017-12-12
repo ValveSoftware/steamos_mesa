@@ -1299,7 +1299,6 @@ apply_var_decoration(struct vtn_builder *b,
    case SpvDecorationAliased:
    case SpvDecorationUniform:
    case SpvDecorationStream:
-   case SpvDecorationOffset:
    case SpvDecorationLinkageAttributes:
       break; /* Do nothing with these here */
 
@@ -1326,9 +1325,16 @@ apply_var_decoration(struct vtn_builder *b,
       break;
 
    case SpvDecorationXfbBuffer:
+      var_data->explicit_xfb_buffer = true;
+      var_data->xfb_buffer = dec->literals[0];
+      break;
    case SpvDecorationXfbStride:
-      vtn_warn("Vulkan does not have transform feedback: %s",
-               spirv_decoration_to_string(dec->decoration));
+      var_data->explicit_xfb_stride = true;
+      var_data->xfb_stride = dec->literals[0];
+      break;
+   case SpvDecorationOffset:
+      var_data->explicit_offset = true;
+      var_data->offset = dec->literals[0];
       break;
 
    case SpvDecorationCPacked:
