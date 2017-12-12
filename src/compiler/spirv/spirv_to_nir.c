@@ -3721,7 +3721,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break;
 
    case SpvExecutionModeXfb:
-      vtn_fail("Unhandled execution mode");
+      b->shader->info.has_transform_feedback_varyings = true;
       break;
 
    case SpvExecutionModeVecTypeHint:
