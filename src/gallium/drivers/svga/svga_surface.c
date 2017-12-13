@@ -170,15 +170,24 @@ svga_texture_copy_handle_resource(struct svga_context *svga,
             unsigned depth = (zslice_pick < 0 ?
                               u_minify(src_tex->b.b.depth0, miplevel) : 1);
 
-            svga_texture_copy_handle(svga,
-                                     src_tex->handle,
-                                     0, 0, zoffset,
-                                     miplevel,
-                                     j + layeroffset,
-                                     dst, 0, 0, 0, i, j,
-                                     u_minify(src_tex->b.b.width0, miplevel),
-                                     u_minify(src_tex->b.b.height0, miplevel),
-                                     depth);
+            if (src_tex->b.b.nr_samples > 1) {
+               unsigned subResource = j * numMipLevels + i;
+               svga_texture_copy_region(svga, src_tex->handle,
+                                        subResource, 0, 0, zoffset,
+                                        dst, subResource, 0, 0, 0,
+                                        src_tex->b.b.width0, src_tex->b.b.height0, depth);
+            }
+            else {
+               svga_texture_copy_handle(svga,
+                                        src_tex->handle,
+                                        0, 0, zoffset,
+                                        miplevel,
+                                        j + layeroffset,
+                                        dst, 0, 0, 0, i, j,
+                                        u_minify(src_tex->b.b.width0, miplevel),
+                                        u_minify(src_tex->b.b.height0, miplevel),
+                                        depth);
+            }
          }
       }
    }
