@@ -989,22 +989,21 @@ brwCreateContext(gl_api api,
 
    intel_batchbuffer_init(brw);
 
-   if (devinfo->gen >= 6) {
-      /* Create a new hardware context.  Using a hardware context means that
-       * our GPU state will be saved/restored on context switch, allowing us
-       * to assume that the GPU is in the same state we left it in.
-       *
-       * This is required for transform feedback buffer offsets, query objects,
-       * and also allows us to reduce how much state we have to emit.
-       */
-      brw->hw_ctx = brw_create_hw_context(brw->bufmgr);
+   /* Create a new hardware context.  Using a hardware context means that
+    * our GPU state will be saved/restored on context switch, allowing us
+    * to assume that the GPU is in the same state we left it in.
+    *
+    * This is required for transform feedback buffer offsets, query objects,
+    * and also allows us to reduce how much state we have to emit.
+    */
+   brw->hw_ctx = brw_create_hw_context(brw->bufmgr);
+   if (!brw->hw_ctx && devinfo->gen >= 6) {
+      fprintf(stderr, "Failed to create hardware context.\n");
+      intelDestroyContext(driContextPriv);
+      return false;
+   }
 
-      if (!brw->hw_ctx) {
-         fprintf(stderr, "Failed to create hardware context.\n");
-         intelDestroyContext(driContextPriv);
-         return false;
-      }
-
+   if (brw->hw_ctx) {
       int hw_priority = GEN_CONTEXT_MEDIUM_PRIORITY;
       if (ctx_config->attribute_mask & __DRIVER_CONTEXT_ATTRIB_PRIORITY) {
          switch (ctx_config->priority) {
