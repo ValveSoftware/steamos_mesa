@@ -173,6 +173,13 @@ _mesa_spirv_link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       prog->_LinkedShaders[shader_type] = linked;
       prog->data->linked_stages |= 1 << shader_type;
    }
+
+   int last_vert_stage =
+      util_last_bit(prog->data->linked_stages &
+                    ((1 << (MESA_SHADER_GEOMETRY + 1)) - 1));
+
+   if (last_vert_stage)
+      prog->last_vert_prog = prog->_LinkedShaders[last_vert_stage - 1]->Program;
 }
 
 nir_shader *
