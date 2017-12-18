@@ -234,7 +234,8 @@ is_blending_enabled(struct svga_context *svga,
    if (svga->curr.blend) {
       if (svga->curr.blend->independent_blend_enable) {
          for (i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {
-            if (svga->curr.framebuffer.cbufs[i]->texture == blit->dst.resource) {
+            struct pipe_surface *cbuf = svga->curr.framebuffer.cbufs[i];
+            if (cbuf && (cbuf->texture == blit->dst.resource)) {
                if (svga->curr.blend->rt[i].blend_enable) {
                   blend_enable = true;
                }
