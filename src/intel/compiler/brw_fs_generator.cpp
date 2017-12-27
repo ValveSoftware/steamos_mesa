@@ -1530,17 +1530,15 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
     * gen7, so the fact that it's a send message is hidden at the IR level.
     */
    assert(inst->header_size == 0);
-   assert(!inst->mlen);
+   assert(inst->mlen);
    assert(index.type == BRW_REGISTER_TYPE_UD);
 
-   uint32_t simd_mode, rlen, mlen;
+   uint32_t simd_mode, rlen;
    if (inst->exec_size == 16) {
-      mlen = 2;
       rlen = 8;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
    } else {
       assert(inst->exec_size == 8);
-      mlen = 1;
       rlen = 4;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
    }
@@ -1554,7 +1552,7 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
       brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UW));
       brw_set_src0(p, send, offset);
       brw_set_desc(p, send,
-                   brw_message_desc(devinfo, mlen, rlen, false) |
+                   brw_message_desc(devinfo, inst->mlen, rlen, false) |
                    brw_sampler_desc(devinfo, surf_index,
                                     0, /* LD message ignores sampler unit */
                                     GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
@@ -1580,7 +1578,7 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
       brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, retype(dst, BRW_REGISTER_TYPE_UW),
          offset, addr,
-         brw_message_desc(devinfo, mlen, rlen, false) |
+         brw_message_desc(devinfo, inst->mlen, rlen, false) |
          brw_sampler_desc(devinfo,
                           0 /* surface */,
                           0 /* sampler */,

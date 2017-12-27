@@ -4824,7 +4824,7 @@ lower_varying_pull_constant_logical_send(const fs_builder &bld, fs_inst *inst)
       inst->src[1] = tmp;
 
       inst->opcode = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_GEN7;
-
+      inst->mlen = inst->exec_size / 8;
    } else {
       const fs_reg payload(MRF, FIRST_PULL_LOAD_MRF(devinfo->gen),
                            BRW_REGISTER_TYPE_UD);
