@@ -7107,6 +7107,8 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
 
    variant->fs_shadow_compare_units = emit->fs.shadow_compare_units;
 
+   variant->fs_shadow_compare_units = emit->fs.shadow_compare_units;
+
    if (tokens != shader->tokens) {
       tgsi_free_tokens(tokens);
    }
