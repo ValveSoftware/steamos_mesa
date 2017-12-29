@@ -1222,22 +1222,22 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 	rctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
-static uint32_t sample_locs_2x[] = {
+static const uint32_t sample_locs_2x[] = {
 	FILL_SREG(-4, 4, 4, -4, -4, 4, 4, -4),
 	FILL_SREG(-4, 4, 4, -4, -4, 4, 4, -4),
 };
-static unsigned max_dist_2x = 4;
+static const unsigned max_dist_2x = 4;
 
-static uint32_t sample_locs_4x[] = {
+static const uint32_t sample_locs_4x[] = {
 	FILL_SREG(-2, -2, 2, 2, -6, 6, 6, -6),
 	FILL_SREG(-2, -2, 2, 2, -6, 6, 6, -6),
 };
-static unsigned max_dist_4x = 6;
-static uint32_t sample_locs_8x[] = {
+static const unsigned max_dist_4x = 6;
+static const uint32_t sample_locs_8x[] = {
 	FILL_SREG(-1,  1,  1,  5,  3, -5,  5,  3),
 	FILL_SREG(-7, -1, -3, -7,  7, -3, -5,  7),
 };
-static unsigned max_dist_8x = 7;
+static const unsigned max_dist_8x = 7;
 
 static void r600_get_sample_position(struct pipe_context *ctx,
 				     unsigned sample_count,

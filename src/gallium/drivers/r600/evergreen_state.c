@@ -1599,7 +1599,7 @@ static void evergreen_set_min_samples(struct pipe_context *ctx, unsigned min_sam
 }
 
 /* 8xMSAA */
-static uint32_t sample_locs_8x[] = {
+static const uint32_t sample_locs_8x[] = {
 	FILL_SREG(-1,  1,  1,  5,  3, -5,  5,  3),
 	FILL_SREG(-7, -1, -3, -7,  7, -3, -5,  7),
 	FILL_SREG(-1,  1,  1,  5,  3, -5,  5,  3),

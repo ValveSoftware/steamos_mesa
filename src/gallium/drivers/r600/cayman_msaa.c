@@ -225,7 +225,7 @@ void cayman_emit_msaa_state(struct radeon_cmdbuf *cs, int nr_samples,
 
 	if (setup_samples > 1) {
 		/* indexed by log2(nr_samples) */
-		unsigned max_dist[] = {
+		const unsigned max_dist[] = {
 			0,
 			eg_max_dist_2x,
 			eg_max_dist_4x,
