@@ -1,4 +1,5 @@
 MESA_UTIL_FILES := \
+	bigmath.h \
 	bitscan.c \
 	bitscan.h \
 	bitset.h \
