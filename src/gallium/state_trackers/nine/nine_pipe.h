@@ -201,7 +201,7 @@ compressed_format( D3DFORMAT fmt )
 static inline boolean
 depth_stencil_format( D3DFORMAT fmt )
 {
-    static D3DFORMAT allowed[] = {
+    static const D3DFORMAT allowed[] = {
         D3DFMT_D16_LOCKABLE,
         D3DFMT_D32,
         D3DFMT_D15S1,
