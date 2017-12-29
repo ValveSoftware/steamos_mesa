@@ -3970,7 +3970,7 @@ static void evergreen_set_hw_atomic_buffers(struct pipe_context *ctx,
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_atomic_buffer_state *astate;
-	int i, idx;
+	unsigned i, idx;
 
 	astate = &rctx->atomic_buffer_state;
 
@@ -4006,7 +4006,7 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 	struct r600_tex_color_info color;
 	struct eg_buf_res_params buf_params;
 	struct r600_resource *resource;
-	int i, idx;
+	unsigned i, idx;
 	unsigned old_mask;
 
 	if (shader != PIPE_SHADER_FRAGMENT &&
@@ -4100,7 +4100,7 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 					const struct pipe_image_view *images)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-	int i;
+	unsigned i;
 	struct r600_image_view *rview;
 	struct pipe_resource *image;
 	struct r600_resource *resource;

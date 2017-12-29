@@ -579,7 +579,7 @@ struct r600_context {
 	bool                            gs_tri_strip_adj_fix;
 	boolean				dual_src_blend;
 	unsigned			zwritemask;
-	int					ps_iter_samples;
+	unsigned			ps_iter_samples;
 
 	/* The list of all texture buffer objects in this context.
 	 * This list is walked when a buffer is invalidated/reallocated and
