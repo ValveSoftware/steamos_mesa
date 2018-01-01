@@ -1794,6 +1794,16 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
 			continue;
 
+		/* Use a slow clear for small surfaces where the cost of
+		 * the eliminate pass can be higher than the benefit of fast
+		 * clear. AMDGPU-pro does this, but the numbers may differ.
+		 *
+		 * This helps on both dGPUs and APUs, even small ones.
+		 */
+		if (tex->resource.b.b.nr_samples <= 1 &&
+		    tex->resource.b.b.width0 * tex->resource.b.b.height0 <= 300 * 300)
+			continue;
+
 		{
 			/* 128-bit formats are unusupported */
 			if (tex->surface.bpe > 8) {
