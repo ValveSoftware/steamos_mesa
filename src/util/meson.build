@@ -81,6 +81,8 @@ files_mesa_util = files(
   'u_thread.h',
   'u_vector.c',
   'u_vector.h',
+  'vma.c',
+  'vma.h',
 )
 
 install_data('drirc', install_dir : get_option('sysconfdir'))
