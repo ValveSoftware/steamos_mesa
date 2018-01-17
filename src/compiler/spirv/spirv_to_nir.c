@@ -847,7 +847,6 @@ type_decoration_cb(struct vtn_builder *b,
    case SpvDecorationNonWritable:
    case SpvDecorationNonReadable:
    case SpvDecorationUniform:
-   case SpvDecorationStream:
    case SpvDecorationLocation:
    case SpvDecorationComponent:
    case SpvDecorationOffset:
@@ -855,6 +854,14 @@ type_decoration_cb(struct vtn_builder *b,
    case SpvDecorationXfbStride:
       vtn_warn("Decoration only allowed for struct members: %s",
                spirv_decoration_to_string(dec->decoration));
+      break;
+
+   case SpvDecorationStream:
+      /* We don't need to do anything here, as stream is filled up when
+       * aplying the decoration to a variable, just check that if it is not a
+       * struct member, it should be a struct.
+       */
+      vtn_assert(type->base_type == vtn_base_type_struct);
       break;
 
    case SpvDecorationRelaxedPrecision:
