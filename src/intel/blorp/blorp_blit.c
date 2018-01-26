@@ -22,6 +22,7 @@
  */
 
 #include "blorp_nir_builder.h"
+#include "compiler/nir/nir_format_convert.h"
 
 #include "blorp_priv.h"
 
@@ -280,25 +281,6 @@ blorp_blit_txf_ms_mcs(nir_builder *b, struct brw_blorp_blit_vars *v,
    nir_builder_instr_insert(b, &tex->instr);
 
    return &tex->dest.ssa;
-}
-
-static nir_ssa_def *
-nir_mask_shift_or(struct nir_builder *b, nir_ssa_def *dst, nir_ssa_def *src,
-                  uint32_t src_mask, int src_left_shift)
-{
-   nir_ssa_def *masked = nir_iand(b, src, nir_imm_int(b, src_mask));
-
-   nir_ssa_def *shifted;
-   if (src_left_shift > 0) {
-      shifted = nir_ishl(b, masked, nir_imm_int(b, src_left_shift));
-   } else if (src_left_shift < 0) {
-      shifted = nir_ushr(b, masked, nir_imm_int(b, -src_left_shift));
-   } else {
-      assert(src_left_shift == 0);
-      shifted = masked;
-   }
-
-   return nir_ior(b, dst, shifted);
 }
 
 /**
