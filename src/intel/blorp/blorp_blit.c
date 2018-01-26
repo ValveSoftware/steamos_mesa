@@ -871,17 +871,71 @@ bit_cast_color(struct nir_builder *b, nir_ssa_def *color,
 {
    assert(key->texture_data_type == nir_type_uint);
 
-   /* We don't actually know how many source channels we have and NIR will
-    * assert if the number of destination channels ends up being more than 4.
-    * Choose the largest number of source channels that won't over-fill a
-    * destination vec4.
-    */
-   const unsigned src_channels =
-      MIN2(4, (4 * key->dst_bpc) / key->src_bpc);
-   color = nir_channels(b, color, (1 << src_channels) - 1);
+   if (key->src_format == key->dst_format)
+      return color;
 
-   color = nir_format_bitcast_uint_vec_unmasked(b, color, key->src_bpc,
-                                                key->dst_bpc);
+   const struct isl_format_layout *src_fmtl =
+      isl_format_get_layout(key->src_format);
+   const struct isl_format_layout *dst_fmtl =
+      isl_format_get_layout(key->dst_format);
+
+   /* They must be uint formats with the same bit size */
+   assert(src_fmtl->bpb == dst_fmtl->bpb);
+   assert(src_fmtl->channels.r.type == ISL_UINT);
+   assert(dst_fmtl->channels.r.type == ISL_UINT);
+
+   /* They must be in regular color formats (no luminance or alpha) */
+   assert(src_fmtl->channels.r.bits > 0);
+   assert(dst_fmtl->channels.r.bits > 0);
+
+   /* They must be in RGBA order (possibly with channels missing) */
+   assert(src_fmtl->channels.r.start_bit == 0);
+   assert(dst_fmtl->channels.r.start_bit == 0);
+
+   if (src_fmtl->bpb <= 32) {
+      const unsigned src_channels =
+         isl_format_get_num_channels(key->src_format);
+      const unsigned src_bits[4] = {
+         src_fmtl->channels.r.bits,
+         src_fmtl->channels.g.bits,
+         src_fmtl->channels.b.bits,
+         src_fmtl->channels.a.bits,
+      };
+      const unsigned dst_channels =
+         isl_format_get_num_channels(key->dst_format);
+      const unsigned dst_bits[4] = {
+         dst_fmtl->channels.r.bits,
+         dst_fmtl->channels.g.bits,
+         dst_fmtl->channels.b.bits,
+         dst_fmtl->channels.a.bits,
+      };
+      nir_ssa_def *packed =
+         nir_format_pack_uint_unmasked(b, color, src_bits, src_channels);
+      color = nir_format_unpack_uint(b, packed, dst_bits, dst_channels);
+   } else {
+      const unsigned src_bpc = src_fmtl->channels.r.bits;
+      const unsigned dst_bpc = dst_fmtl->channels.r.bits;
+
+      assert(src_fmtl->channels.g.bits == 0 ||
+             src_fmtl->channels.g.bits == src_fmtl->channels.r.bits);
+      assert(src_fmtl->channels.b.bits == 0 ||
+             src_fmtl->channels.b.bits == src_fmtl->channels.r.bits);
+      assert(src_fmtl->channels.a.bits == 0 ||
+             src_fmtl->channels.a.bits == src_fmtl->channels.r.bits);
+      assert(dst_fmtl->channels.g.bits == 0 ||
+             dst_fmtl->channels.g.bits == dst_fmtl->channels.r.bits);
+      assert(dst_fmtl->channels.b.bits == 0 ||
+             dst_fmtl->channels.b.bits == dst_fmtl->channels.r.bits);
+      assert(dst_fmtl->channels.a.bits == 0 ||
+             dst_fmtl->channels.a.bits == dst_fmtl->channels.r.bits);
+
+      /* Restrict to only the channels we actually have */
+      const unsigned src_channels =
+         isl_format_get_num_channels(key->src_format);
+      color = nir_channels(b, color, (1 << src_channels) - 1);
+
+      color = nir_format_bitcast_uint_vec_unmasked(b, color, src_bpc, dst_bpc);
+   }
 
    /* Blorp likes to assume that colors are vec4s */
    nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
@@ -1321,14 +1375,13 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
                             nir_type_int);
    }
 
-   if (key->dst_bpc != key->src_bpc) {
+   if (key->format_bit_cast) {
       assert(isl_swizzle_is_identity(key->src_swizzle));
       assert(isl_swizzle_is_identity(key->dst_swizzle));
       color = bit_cast_color(&b, color, key);
-   }
-
-   if (key->dst_format)
+   } else if (key->dst_format) {
       color = convert_color(&b, color, key);
+   }
 
    if (key->dst_rgb) {
       /* The destination image is bound as a red texture three times as wide
@@ -2522,10 +2575,26 @@ blorp_copy(struct blorp_batch *batch,
                              params.dst.view.format, packed);
    }
 
-   wm_prog_key.src_bpc =
-      isl_format_get_layout(params.src.view.format)->channels.r.bits;
-   wm_prog_key.dst_bpc =
-      isl_format_get_layout(params.dst.view.format)->channels.r.bits;
+   if (params.src.view.format != params.dst.view.format) {
+      enum isl_format src_cast_format = params.src.view.format;
+      enum isl_format dst_cast_format = params.dst.view.format;
+
+      /* The BLORP bitcast code gets confused by RGB formats.  Just treat them
+       * as RGBA and then everything will be happy.  This is perfectly safe
+       * because BLORP likes to treat things as if they have vec4 colors all
+       * the time anyway.
+       */
+      if (isl_format_is_rgb(src_cast_format))
+         src_cast_format = isl_format_rgb_to_rgba(src_cast_format);
+      if (isl_format_is_rgb(dst_cast_format))
+         dst_cast_format = isl_format_rgb_to_rgba(dst_cast_format);
+
+      if (src_cast_format != dst_cast_format) {
+         wm_prog_key.format_bit_cast = true;
+         wm_prog_key.src_format = src_cast_format;
+         wm_prog_key.dst_format = dst_cast_format;
+      }
+   }
 
    if (src_fmtl->bw > 1 || src_fmtl->bh > 1) {
       blorp_surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
