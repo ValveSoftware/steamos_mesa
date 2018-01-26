@@ -108,6 +108,59 @@ nir_format_pack_uint(nir_builder *b, nir_ssa_def *color,
 }
 
 static inline nir_ssa_def *
+nir_format_bitcast_uint_vec_unmasked(nir_builder *b, nir_ssa_def *src,
+                                     unsigned src_bits, unsigned dst_bits)
+{
+   assert(src_bits == 8 || src_bits == 16 || src_bits == 32);
+   assert(dst_bits == 8 || dst_bits == 16 || dst_bits == 32);
+
+   if (src_bits == dst_bits)
+      return src;
+
+   const unsigned dst_components =
+      DIV_ROUND_UP(src->num_components * src_bits, dst_bits);
+   assert(dst_components <= 4);
+
+   nir_ssa_def *dst_chan[4] = { };
+   if (dst_bits > src_bits) {
+      unsigned shift = 0;
+      unsigned dst_idx = 0;
+      for (unsigned i = 0; i < src->num_components; i++) {
+         nir_ssa_def *shifted = nir_ishl(b, nir_channel(b, src, i),
+                                            nir_imm_int(b, shift));
+         if (shift == 0) {
+            dst_chan[dst_idx] = shifted;
+         } else {
+            dst_chan[dst_idx] = nir_ior(b, dst_chan[dst_idx], shifted);
+         }
+
+         shift += src_bits;
+         if (shift >= dst_bits) {
+            dst_idx++;
+            shift = 0;
+         }
+      }
+   } else {
+      nir_ssa_def *mask = nir_imm_int(b, ~0u >> (32 - dst_bits));
+
+      unsigned src_idx = 0;
+      unsigned shift = 0;
+      for (unsigned i = 0; i < dst_components; i++) {
+         dst_chan[i] = nir_iand(b, nir_ushr(b, nir_channel(b, src, src_idx),
+                                               nir_imm_int(b, shift)),
+                                   mask);
+         shift += dst_bits;
+         if (shift >= src_bits) {
+            src_idx++;
+            shift = 0;
+         }
+      }
+   }
+
+   return nir_vec(b, dst_chan, dst_components);
+}
+
+static inline nir_ssa_def *
 nir_format_linear_to_srgb(nir_builder *b, nir_ssa_def *c)
 {
    nir_ssa_def *linear = nir_fmul(b, c, nir_imm_float(b, 12.92f));
