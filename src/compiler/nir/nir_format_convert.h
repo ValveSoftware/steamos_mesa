@@ -104,3 +104,29 @@ nir_format_pack_uint(nir_builder *b, nir_ssa_def *color,
    return nir_format_pack_uint_unmasked(b, nir_iand(b, color, mask_imm),
                                         bits, num_components);
 }
+
+static inline nir_ssa_def *
+nir_format_linear_to_srgb(nir_builder *b, nir_ssa_def *c)
+{
+   nir_ssa_def *linear = nir_fmul(b, c, nir_imm_float(b, 12.92f));
+   nir_ssa_def *curved =
+      nir_fsub(b, nir_fmul(b, nir_imm_float(b, 1.055f),
+                              nir_fpow(b, c, nir_imm_float(b, 1.0 / 2.4))),
+                  nir_imm_float(b, 0.055f));
+
+   return nir_fsat(b, nir_bcsel(b, nir_flt(b, c, nir_imm_float(b, 0.0031308f)),
+                                   linear, curved));
+}
+
+static inline nir_ssa_def *
+nir_format_srgb_to_linear(nir_builder *b, nir_ssa_def *c)
+{
+   nir_ssa_def *linear = nir_fdiv(b, c, nir_imm_float(b, 12.92f));
+   nir_ssa_def *curved =
+      nir_fpow(b, nir_fdiv(b, nir_fadd(b, c, nir_imm_float(b, 0.055f)),
+                              nir_imm_float(b, 1.055f)),
+                  nir_imm_float(b, 2.4f));
+
+   return nir_fsat(b, nir_bcsel(b, nir_fge(b, nir_imm_float(b, 0.04045f), c),
+                                   linear, curved));
+}
