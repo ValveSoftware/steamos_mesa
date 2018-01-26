@@ -871,49 +871,24 @@ bit_cast_color(struct nir_builder *b, nir_ssa_def *color,
 {
    assert(key->texture_data_type == nir_type_uint);
 
-   if (key->dst_bpc > key->src_bpc) {
-      nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
-      nir_ssa_def *dst_chan[2] = { u, u };
-      unsigned shift = 0;
-      unsigned dst_idx = 0;
-      for (unsigned i = 0; i < 4; i++) {
-         nir_ssa_def *shifted = nir_ishl(b, nir_channel(b, color, i),
-                                            nir_imm_int(b, shift));
-         if (shift == 0) {
-            dst_chan[dst_idx] = shifted;
-         } else {
-            dst_chan[dst_idx] = nir_ior(b, dst_chan[dst_idx], shifted);
-         }
+   /* We don't actually know how many source channels we have and NIR will
+    * assert if the number of destination channels ends up being more than 4.
+    * Choose the largest number of source channels that won't over-fill a
+    * destination vec4.
+    */
+   const unsigned src_channels =
+      MIN2(4, (4 * key->dst_bpc) / key->src_bpc);
+   color = nir_channels(b, color, (1 << src_channels) - 1);
 
-         shift += key->src_bpc;
-         if (shift >= key->dst_bpc) {
-            dst_idx++;
-            shift = 0;
-         }
-      }
+   color = nir_format_bitcast_uint_vec_unmasked(b, color, key->src_bpc,
+                                                key->dst_bpc);
 
-      return nir_vec4(b, dst_chan[0], dst_chan[1], u, u);
-   } else {
-      assert(key->dst_bpc < key->src_bpc);
-
-      nir_ssa_def *mask = nir_imm_int(b, ~0u >> (32 - key->dst_bpc));
-
-      nir_ssa_def *dst_chan[4];
-      unsigned src_idx = 0;
-      unsigned shift = 0;
-      for (unsigned i = 0; i < 4; i++) {
-         dst_chan[i] = nir_iand(b, nir_ushr(b, nir_channel(b, color, src_idx),
-                                               nir_imm_int(b, shift)),
-                                   mask);
-         shift += key->dst_bpc;
-         if (shift >= key->src_bpc) {
-            src_idx++;
-            shift = 0;
-         }
-      }
-
-      return nir_vec4(b, dst_chan[0], dst_chan[1], dst_chan[2], dst_chan[3]);
-   }
+   /* Blorp likes to assume that colors are vec4s */
+   nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
+   nir_ssa_def *chans[4] = { u, u, u, u };
+   for (unsigned i = 0; i < color->num_components; i++)
+      chans[i] = nir_channel(b, color, i);
+   return nir_vec4(b, chans[0], chans[1], chans[2], chans[3]);
 }
 
 static nir_ssa_def *
