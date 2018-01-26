@@ -130,3 +130,41 @@ nir_format_srgb_to_linear(nir_builder *b, nir_ssa_def *c)
    return nir_fsat(b, nir_bcsel(b, nir_fge(b, nir_imm_float(b, 0.04045f), c),
                                    linear, curved));
 }
+
+static inline nir_ssa_def *
+nir_format_unpack_11f11f10f(nir_builder *b, nir_ssa_def *packed)
+{
+   nir_ssa_def *chans[3];
+   chans[0] = nir_mask_shift(b, packed, 0x000007ff, 4);
+   chans[1] = nir_mask_shift(b, packed, 0x003ff100, -7);
+   chans[2] = nir_mask_shift(b, packed, 0xffc00000, -17);
+
+   for (unsigned i = 0; i < 3; i++)
+      chans[i] = nir_unpack_half_2x16_split_x(b, chans[i]);
+
+   return nir_vec(b, chans, 3);
+}
+
+static inline nir_ssa_def *
+nir_format_pack_r11g11b10f(nir_builder *b, nir_ssa_def *color)
+{
+   /* 10 and 11-bit floats are unsigned.  Clamp to non-negative */
+   nir_ssa_def *clamped = nir_fmax(b, color, nir_imm_float(b, 0));
+
+   nir_ssa_def *undef = nir_ssa_undef(b, 1, color->bit_size);
+   nir_ssa_def *p1 = nir_pack_half_2x16_split(b, nir_channel(b, clamped, 0),
+                                                 nir_channel(b, clamped, 1));
+   nir_ssa_def *p2 = nir_pack_half_2x16_split(b, nir_channel(b, clamped, 2),
+                                                 undef);
+
+   /* A 10 or 11-bit float has the same exponent as a 16-bit float but with
+    * fewer mantissa bits and no sign bit.  All we have to do is throw away
+    * the sign bit and the bottom mantissa bits and shift it into place.
+    */
+   nir_ssa_def *packed = nir_imm_int(b, 0);
+   packed = nir_mask_shift_or(b, packed, p1, 0x00007ff0, -4);
+   packed = nir_mask_shift_or(b, packed, p1, 0x7ff00000, -9);
+   packed = nir_mask_shift_or(b, packed, p2, 0x00007fe0, 17);
+
+   return packed;
+}
