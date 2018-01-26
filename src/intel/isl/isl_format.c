@@ -558,17 +558,6 @@ isl_format_supports_ccs_e(const struct gen_device_info *devinfo,
    if (format == ISL_FORMAT_R11G11B10_FLOAT)
       return false;
 
-   /* blorp_copy currently doesn't support formats with different bit-widths
-    * per-channel. Until that support is added, report that these formats don't
-    * support CCS_E. FIXME: Add support for these formats.
-    */
-   if (format == ISL_FORMAT_B10G10R10A2_UNORM ||
-       format == ISL_FORMAT_B10G10R10A2_UNORM_SRGB ||
-       format == ISL_FORMAT_R10G10B10A2_UNORM ||
-       format == ISL_FORMAT_R10G10B10A2_UINT) {
-      return false;
-   }
-
    return format_gen(devinfo) >= format_info[format].ccs_e;
 }
 
