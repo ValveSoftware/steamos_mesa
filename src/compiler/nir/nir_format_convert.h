@@ -23,6 +23,8 @@
 
 #include "nir_builder.h"
 
+#include "util/format_rgb9e5.h"
+
 static inline nir_ssa_def *
 nir_shift(nir_builder *b, nir_ssa_def *value, int left_shift)
 {
@@ -165,6 +167,68 @@ nir_format_pack_r11g11b10f(nir_builder *b, nir_ssa_def *color)
    packed = nir_mask_shift_or(b, packed, p1, 0x00007ff0, -4);
    packed = nir_mask_shift_or(b, packed, p1, 0x7ff00000, -9);
    packed = nir_mask_shift_or(b, packed, p2, 0x00007fe0, 17);
+
+   return packed;
+}
+
+static inline nir_ssa_def *
+nir_format_pack_r9g9b9e5(nir_builder *b, nir_ssa_def *color)
+{
+   /* See also float3_to_rgb9e5 */
+
+   /* First, we need to clamp it to range. */
+   nir_ssa_def *clamped = nir_fmin(b, color, nir_imm_float(b, MAX_RGB9E5));
+
+   /* Get rid of negatives and NaN */
+   clamped = nir_bcsel(b, nir_ult(b, nir_imm_int(b, 0x7f800000), color),
+                          nir_imm_float(b, 0), clamped);
+
+   /* maxrgb.u = MAX3(rc.u, gc.u, bc.u); */
+   nir_ssa_def *maxu = nir_umax(b, nir_channel(b, clamped, 0),
+                       nir_umax(b, nir_channel(b, clamped, 1),
+                                   nir_channel(b, clamped, 2)));
+
+   /* maxrgb.u += maxrgb.u & (1 << (23-9)); */
+   maxu = nir_iadd(b, maxu, nir_iand(b, maxu, nir_imm_int(b, 1 << 14)));
+
+   /* exp_shared = MAX2((maxrgb.u >> 23), -RGB9E5_EXP_BIAS - 1 + 127) +
+    *              1 + RGB9E5_EXP_BIAS - 127;
+    */
+   nir_ssa_def *exp_shared =
+      nir_iadd(b, nir_umax(b, nir_ushr(b, maxu, nir_imm_int(b, 23)),
+                              nir_imm_int(b, -RGB9E5_EXP_BIAS - 1 + 127)),
+                  nir_imm_int(b, 1 + RGB9E5_EXP_BIAS - 127));
+
+   /* revdenom_biasedexp = 127 - (exp_shared - RGB9E5_EXP_BIAS -
+    *                             RGB9E5_MANTISSA_BITS) + 1;
+    */
+   nir_ssa_def *revdenom_biasedexp =
+      nir_isub(b, nir_imm_int(b, 127 + RGB9E5_EXP_BIAS +
+                                 RGB9E5_MANTISSA_BITS + 1),
+                  exp_shared);
+
+   /* revdenom.u = revdenom_biasedexp << 23; */
+   nir_ssa_def *revdenom =
+      nir_ishl(b, revdenom_biasedexp, nir_imm_int(b, 23));
+
+   /* rm = (int) (rc.f * revdenom.f);
+    * gm = (int) (gc.f * revdenom.f);
+    * bm = (int) (bc.f * revdenom.f);
+    */
+   nir_ssa_def *mantissa =
+      nir_f2i32(b, nir_fmul(b, clamped, revdenom));
+
+   /* rm = (rm & 1) + (rm >> 1);
+    * gm = (gm & 1) + (gm >> 1);
+    * bm = (bm & 1) + (bm >> 1);
+    */
+   mantissa = nir_iadd(b, nir_iand(b, mantissa, nir_imm_int(b, 1)),
+                          nir_ushr(b, mantissa, nir_imm_int(b, 1)));
+
+   nir_ssa_def *packed = nir_channel(b, mantissa, 0);
+   packed = nir_mask_shift_or(b, packed, nir_channel(b, mantissa, 1), ~0, 9);
+   packed = nir_mask_shift_or(b, packed, nir_channel(b, mantissa, 2), ~0, 18);
+   packed = nir_mask_shift_or(b, packed, exp_shared, ~0, 27);
 
    return packed;
 }
