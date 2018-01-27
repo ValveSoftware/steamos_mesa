@@ -102,6 +102,8 @@ brw_create_nir(struct brw_context *brw,
 
    nir = brw_preprocess_nir(brw->screen->compiler, nir);
 
+   NIR_PASS_V(nir, brw_nir_lower_image_load_store, devinfo);
+
    if (stage == MESA_SHADER_TESS_CTRL) {
       /* Lower gl_PatchVerticesIn from a sys. value to a uniform on Gen8+. */
       static const gl_state_index16 tokens[STATE_LENGTH] =

@@ -312,6 +312,15 @@ intrinsic("image_deref_atomic_fadd",  src_comp=[1, 4, 1, 1], dest_comp=1)
 intrinsic("image_deref_size",    src_comp=[1], dest_comp=0, flags=[CAN_ELIMINATE, CAN_REORDER])
 intrinsic("image_deref_samples", src_comp=[1], dest_comp=1, flags=[CAN_ELIMINATE, CAN_REORDER])
 
+# Intel-specific query for loading from the brw_image_param struct passed
+# into the shader as a uniform.  The variable is a deref to the image
+# variable. The const index specifies which of the six parameters to load.
+intrinsic("image_deref_load_param_intel", src_comp=[1], dest_comp=0,
+          indices=[BASE], flags=[CAN_ELIMINATE, CAN_REORDER])
+intrinsic("image_deref_load_raw_intel", src_comp=[1, 1], dest_comp=0,
+          flags=[CAN_ELIMINATE])
+intrinsic("image_deref_store_raw_intel", src_comp=[1, 1, 0])
+
 # Vulkan descriptor set intrinsics
 #
 # The Vulkan API uses a different binding model from GL.  In the Vulkan

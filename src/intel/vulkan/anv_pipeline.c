@@ -532,6 +532,8 @@ anv_pipeline_lower_nir(struct anv_pipeline *pipeline,
    if (nir->info.stage != MESA_SHADER_COMPUTE)
       brw_nir_analyze_ubo_ranges(compiler, nir, NULL, prog_data->ubo_ranges);
 
+   NIR_PASS_V(nir, brw_nir_lower_image_load_store, compiler->devinfo);
+
    assert(nir->num_uniforms == prog_data->nr_params * 4);
 
    stage->nir = nir;
