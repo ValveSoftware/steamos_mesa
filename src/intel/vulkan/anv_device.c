@@ -610,12 +610,25 @@ VkResult anv_CreateInstance(
    else
       instance->alloc = default_alloc;
 
-   if (pCreateInfo->pApplicationInfo &&
-       pCreateInfo->pApplicationInfo->apiVersion != 0) {
-      instance->apiVersion = pCreateInfo->pApplicationInfo->apiVersion;
-   } else {
-      anv_EnumerateInstanceVersion(&instance->apiVersion);
+   instance->app_info = (struct anv_app_info) { .api_version = 0 };
+   if (pCreateInfo->pApplicationInfo) {
+      const VkApplicationInfo *app = pCreateInfo->pApplicationInfo;
+
+      instance->app_info.app_name =
+         vk_strdup(&instance->alloc, app->pApplicationName,
+                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+      instance->app_info.app_version = app->applicationVersion;
+
+      instance->app_info.engine_name =
+         vk_strdup(&instance->alloc, app->pEngineName,
+                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+      instance->app_info.engine_version = app->engineVersion;
+
+      instance->app_info.api_version = app->apiVersion;
    }
+
+   if (instance->app_info.api_version == 0)
+      anv_EnumerateInstanceVersion(&instance->app_info.api_version);
 
    instance->enabled_extensions = enabled_extensions;
 
@@ -623,7 +636,7 @@ VkResult anv_CreateInstance(
       /* Vulkan requires that entrypoints for extensions which have not been
        * enabled must not be advertised.
        */
-      if (!anv_entrypoint_is_enabled(i, instance->apiVersion,
+      if (!anv_entrypoint_is_enabled(i, instance->app_info.api_version,
                                      &instance->enabled_extensions, NULL)) {
          instance->dispatch.entrypoints[i] = NULL;
       } else if (anv_dispatch_table.entrypoints[i] != NULL) {
@@ -1503,7 +1516,7 @@ anv_device_init_dispatch(struct anv_device *device)
       /* Vulkan requires that entrypoints for extensions which have not been
        * enabled must not be advertised.
        */
-      if (!anv_entrypoint_is_enabled(i, device->instance->apiVersion,
+      if (!anv_entrypoint_is_enabled(i, device->instance->app_info.api_version,
                                      &device->instance->enabled_extensions,
                                      &device->enabled_extensions)) {
          device->dispatch.entrypoints[i] = NULL;
