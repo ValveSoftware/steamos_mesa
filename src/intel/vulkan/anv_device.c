@@ -854,6 +854,15 @@ void anv_GetPhysicalDeviceFeatures(
    pFeatures->vertexPipelineStoresAndAtomics =
       pdevice->compiler->scalar_stage[MESA_SHADER_VERTEX] &&
       pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
+
+   struct anv_app_info *app_info = &pdevice->instance->app_info;
+
+   /* The new DOOM and Wolfenstein games require depthBounds without
+    * checking for it.  They seem to run fine without it so just claim it's
+    * there and accept the consequences.
+    */
+   if (app_info->engine_name && strcmp(app_info->engine_name, "idTech") == 0)
+      pFeatures->depthBounds = true;
 }
 
 void anv_GetPhysicalDeviceFeatures2(
