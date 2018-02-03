@@ -175,6 +175,8 @@ ac_get_type_size(LLVMTypeRef type)
 	switch (kind) {
 	case LLVMIntegerTypeKind:
 		return LLVMGetIntTypeWidth(type) / 8;
+	case LLVMHalfTypeKind:
+		return 2;
 	case LLVMFloatTypeKind:
 		return 4;
 	case LLVMDoubleTypeKind:
@@ -319,6 +321,9 @@ void ac_build_type_name_for_intr(LLVMTypeRef type, char *buf, unsigned bufsize)
 	default: break;
 	case LLVMIntegerTypeKind:
 		snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
+		break;
+	case LLVMHalfTypeKind:
+		snprintf(buf, bufsize, "f16");
 		break;
 	case LLVMFloatTypeKind:
 		snprintf(buf, bufsize, "f32");
@@ -1819,11 +1824,9 @@ LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 {
 	LLVMTypeRef v2f16 =
 		LLVMVectorType(LLVMHalfTypeInContext(ctx->context), 2);
-	LLVMValueRef res =
-		ac_build_intrinsic(ctx, "llvm.amdgcn.cvt.pkrtz",
-				   v2f16, args, 2,
-				   AC_FUNC_ATTR_READNONE);
-	return LLVMBuildBitCast(ctx->builder, res, ctx->i32, "");
+
+	return ac_build_intrinsic(ctx, "llvm.amdgcn.cvt.pkrtz", v2f16,
+				  args, 2, AC_FUNC_ATTR_READNONE);
 }
 
 /* Upper 16 bits must be zero. */
