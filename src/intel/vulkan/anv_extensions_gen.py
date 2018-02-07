@@ -103,7 +103,7 @@ _TEMPLATE_C = Template(COPYRIGHT + """
 #include "vk_util.h"
 
 /* Convert the VK_USE_PLATFORM_* defines to booleans */
-%for platform in ['ANDROID', 'WAYLAND', 'XCB', 'XLIB']:
+%for platform in ['ANDROID', 'WAYLAND', 'XCB', 'XLIB', 'DISPLAY']:
 #ifdef VK_USE_PLATFORM_${platform}_KHR
 #   undef VK_USE_PLATFORM_${platform}_KHR
 #   define VK_USE_PLATFORM_${platform}_KHR true
@@ -122,7 +122,8 @@ _TEMPLATE_C = Template(COPYRIGHT + """
 
 #define ANV_HAS_SURFACE (VK_USE_PLATFORM_WAYLAND_KHR || \\
                          VK_USE_PLATFORM_XCB_KHR || \\
-                         VK_USE_PLATFORM_XLIB_KHR)
+                         VK_USE_PLATFORM_XLIB_KHR || \\
+                         VK_USE_PLATFORM_DISPLAY_KHR)
 
 static const uint32_t MAX_API_VERSION = ${MAX_API_VERSION.c_vk_version()};
 

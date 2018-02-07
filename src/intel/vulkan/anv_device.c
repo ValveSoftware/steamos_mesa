@@ -274,6 +274,7 @@ anv_physical_device_init_uuids(struct anv_physical_device *device)
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
+                         const char *primary_path,
                          const char *path)
 {
    VkResult result;
@@ -440,6 +441,20 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (result != VK_SUCCESS)
       goto fail;
 
+   if (instance->enabled_extensions.KHR_display) {
+      master_fd = open(primary_path, O_RDWR | O_CLOEXEC);
+      if (master_fd >= 0) {
+         /* prod the device with a GETPARAM call which will fail if
+          * we don't have permission to even render on this device
+          */
+         if (anv_gem_get_param(master_fd, I915_PARAM_CHIPSET_ID) == 0) {
+            close(master_fd);
+            master_fd = -1;
+         }
+      }
+   }
+   device->master_fd = master_fd;
+
    result = anv_init_wsi(device);
    if (result != VK_SUCCESS) {
       ralloc_free(device->compiler);
@@ -449,8 +464,9 @@ anv_physical_device_init(struct anv_physical_device *device,
    anv_physical_device_get_supported_extensions(device,
                                                 &device->supported_extensions);
 
+
    device->local_fd = fd;
-   device->master_fd = master_fd;
+
    return VK_SUCCESS;
 
 fail:
@@ -466,6 +482,8 @@ anv_physical_device_finish(struct anv_physical_device *device)
    anv_finish_wsi(device);
    ralloc_free(device->compiler);
    close(device->local_fd);
+   if (device->master_fd >= 0)
+      close(device->master_fd);
 }
 
 static void *
@@ -639,6 +657,7 @@ anv_enumerate_devices(struct anv_instance *instance)
 
          result = anv_physical_device_init(&instance->physicalDevice,
                         instance,
+                        devices[i]->nodes[DRM_NODE_PRIMARY],
                         devices[i]->nodes[DRM_NODE_RENDER]);
          if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
             break;

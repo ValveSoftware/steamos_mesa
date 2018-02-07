@@ -164,6 +164,11 @@ if with_platform_wayland
   libanv_files += files('anv_wsi_wayland.c')
 endif
 
+if with_platform_drm
+  anv_flags += '-DVK_USE_PLATFORM_DISPLAY_KHR'
+  libanv_files += files('anv_wsi_display.c')
+endif
+
 libanv_common = static_library(
   'anv_common',
   [libanv_files, anv_entrypoints, anv_extensions_c, anv_extensions_h],
