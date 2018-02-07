@@ -246,7 +246,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       _mesa_copy_linked_program_data(shProg, shader);
 
       prog->ShadowSamplers = shader->shadow_samplers;
-      _mesa_update_shader_textures_used(shProg, prog);
 
       bool debug_enabled =
          (INTEL_DEBUG & intel_debug_flag_for_shader_stage(shader->Stage));
@@ -300,6 +299,9 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
          continue;
 
       struct gl_program *prog = shader->Program;
+
+      _mesa_update_shader_textures_used(shProg, prog);
+
       brw_shader_gather_info(prog->nir, prog);
 
       NIR_PASS_V(prog->nir, gl_nir_lower_samplers, shProg);
