@@ -876,6 +876,7 @@ struct anv_physical_device {
 
     struct wsi_device                       wsi_device;
     int                                         local_fd;
+    int                                         master_fd;
 };
 
 struct anv_instance {

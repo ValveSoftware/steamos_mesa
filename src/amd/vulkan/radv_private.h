@@ -285,6 +285,7 @@ struct radv_physical_device {
 	uint8_t                                     cache_uuid[VK_UUID_SIZE];
 
 	int local_fd;
+	int master_fd;
 	struct wsi_device                       wsi_device;
 
 	bool has_rbplus; /* if RB+ register exist */

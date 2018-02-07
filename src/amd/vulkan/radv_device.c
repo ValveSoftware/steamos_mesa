@@ -225,6 +225,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 	VkResult result;
 	drmVersionPtr version;
 	int fd;
+	int master_fd = -1;
 
 	fd = open(path, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
@@ -247,6 +248,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	if (strcmp(version->name, "amdgpu")) {
 		drmFreeVersion(version);
+		if (master_fd != -1)
+			close(master_fd);
 		close(fd);
 
 		if (instance->debug_flags & RADV_DEBUG_STARTUP)
@@ -271,6 +274,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
+	device->master_fd = master_fd;
 	device->local_fd = fd;
 	device->ws->query_info(device->ws, &device->rad_info);
 
@@ -349,6 +353,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 fail:
 	close(fd);
+	if (master_fd != -1)
+		close(master_fd);
 	return result;
 }
 
@@ -359,6 +365,8 @@ radv_physical_device_finish(struct radv_physical_device *device)
 	device->ws->destroy(device->ws);
 	disk_cache_destroy(device->disk_cache);
 	close(device->local_fd);
+	if (device->master_fd != -1)
+		close(device->master_fd);
 }
 
 static void *
