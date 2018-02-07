@@ -274,6 +274,23 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
+	if (instance->enabled_extensions.KHR_display) {
+		master_fd = open(drm_device->nodes[DRM_NODE_PRIMARY], O_RDWR | O_CLOEXEC);
+		if (master_fd >= 0) {
+			uint32_t accel_working = 0;
+			struct drm_amdgpu_info request = {
+				.return_pointer = (uintptr_t)&accel_working,
+				.return_size = sizeof(accel_working),
+				.query = AMDGPU_INFO_ACCEL_WORKING
+			};
+
+			if (drmCommandWrite(master_fd, DRM_AMDGPU_INFO, &request, sizeof (struct drm_amdgpu_info)) < 0 || !accel_working) {
+				close(master_fd);
+				master_fd = -1;
+			}
+		}
+	}
+
 	device->master_fd = master_fd;
 	device->local_fd = fd;
 	device->ws->query_info(device->ws, &device->rad_info);
