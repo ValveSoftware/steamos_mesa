@@ -1677,9 +1677,24 @@ static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
 	if (instr->dest.ssa.bit_size == 64)
 		num_components *= 2;
 
-	ret = ac_build_buffer_load(&ctx->ac, rsrc, num_components, NULL, offset,
-				   NULL, 0, false, false, true, true);
-	ret = ac_trim_vector(&ctx->ac, ret, num_components);
+	if (instr->dest.ssa.bit_size == 16) {
+		LLVMValueRef results[num_components];
+		for (unsigned i = 0; i < num_components; ++i) {
+			results[i] = ac_build_tbuffer_load_short(&ctx->ac,
+								 rsrc,
+								 ctx->ac.i32_0,
+								 offset,
+								 ctx->ac.i32_0,
+								 LLVMConstInt(ctx->ac.i32, 2 * i, 0));
+		}
+		ret = ac_build_gather_values(&ctx->ac, results, num_components);
+	} else {
+		ret = ac_build_buffer_load(&ctx->ac, rsrc, num_components, NULL, offset,
+					   NULL, 0, false, false, true, true);
+
+		ret = ac_trim_vector(&ctx->ac, ret, num_components);
+	}
+
 	return LLVMBuildBitCast(ctx->ac.builder, ret,
 	                        get_def_type(ctx, &instr->dest.ssa), "");
 }

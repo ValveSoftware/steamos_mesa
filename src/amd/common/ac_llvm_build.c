@@ -1103,6 +1103,31 @@ LLVMValueRef ac_build_buffer_load_format_gfx9_safe(struct ac_llvm_context *ctx,
 	                                   can_speculate, true);
 }
 
+LLVMValueRef
+ac_build_tbuffer_load_short(struct ac_llvm_context *ctx,
+			    LLVMValueRef rsrc,
+			    LLVMValueRef vindex,
+			    LLVMValueRef voffset,
+				LLVMValueRef soffset,
+				LLVMValueRef immoffset)
+{
+	const char *name = "llvm.amdgcn.tbuffer.load.i32";
+	LLVMTypeRef type = ctx->i32;
+	LLVMValueRef params[] = {
+				rsrc,
+				vindex,
+				voffset,
+				soffset,
+				immoffset,
+				LLVMConstInt(ctx->i32, V_008F0C_BUF_DATA_FORMAT_16, false),
+				LLVMConstInt(ctx->i32, V_008F0C_BUF_NUM_FORMAT_UINT, false),
+				ctx->i1false,
+				ctx->i1false,
+	};
+	LLVMValueRef res = ac_build_intrinsic(ctx, name, type, params, 9, 0);
+	return LLVMBuildTrunc(ctx->builder, res, ctx->i16, "");
+}
+
 /**
  * Set range metadata on an instruction.  This can only be used on load and
  * call instructions.  If you know an instruction can only produce the values
