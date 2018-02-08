@@ -761,7 +761,7 @@ void anv_GetPhysicalDeviceFeatures(
                                                   pdevice->info.has_64bit_types,
       .shaderInt16                              = false,
       .shaderResourceMinLod                     = false,
-      .variableMultisampleRate                  = false,
+      .variableMultisampleRate                  = true,
       .inheritedQueries                         = true,
    };
 
