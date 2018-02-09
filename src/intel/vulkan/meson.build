@@ -169,6 +169,11 @@ if with_platform_drm
   libanv_files += files('anv_wsi_display.c')
 endif
 
+if with_xlib_lease
+  anv_deps += dep_xcb_xrandr
+  anv_flags += '-DVK_USE_PLATFORM_XLIB_XRANDR_EXT'
+endif
+
 libanv_common = static_library(
   'anv_common',
   [libanv_files, anv_entrypoints, anv_extensions_c, anv_extensions_h],

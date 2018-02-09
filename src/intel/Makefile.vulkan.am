@@ -199,6 +199,13 @@ VULKAN_CPPFLAGS += \
 VULKAN_SOURCES += $(VULKAN_WSI_DISPLAY_FILES)
 endif
 
+if HAVE_XLIB_LEASE
+VULKAN_CPPFLAGS += \
+	-DVK_USE_PLATFORM_XLIB_XRANDR_EXT \
+	$(XCB_RANDR_CFLAGS)
+VULKAN_LIB_DEPS += $(XCB_RANDR_LIBS)
+endif
+
 noinst_LTLIBRARIES += vulkan/libvulkan_common.la
 vulkan_libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
 vulkan_libvulkan_common_la_CFLAGS = $(VULKAN_CFLAGS)

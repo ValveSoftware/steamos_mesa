@@ -144,3 +144,33 @@ anv_ReleaseDisplayEXT(VkPhysicalDevice physical_device,
                               &pdevice->wsi_device,
                               display);
 }
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+VkResult
+anv_AcquireXlibDisplayEXT(VkPhysicalDevice     physical_device,
+                           Display              *dpy,
+                           VkDisplayKHR         display)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physical_device);
+
+   return wsi_acquire_xlib_display(physical_device,
+                                   &pdevice->wsi_device,
+                                   dpy,
+                                   display);
+}
+
+VkResult
+anv_GetRandROutputDisplayEXT(VkPhysicalDevice  physical_device,
+                              Display           *dpy,
+                              RROutput          output,
+                              VkDisplayKHR      *display)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physical_device);
+
+   return wsi_get_randr_output_display(physical_device,
+                                       &pdevice->wsi_device,
+                                       dpy,
+                                       output,
+                                       display);
+}
+#endif /* VK_USE_PLATFORM_XLIB_XRANDR_EXT */

@@ -103,12 +103,12 @@ _TEMPLATE_C = Template(COPYRIGHT + """
 #include "vk_util.h"
 
 /* Convert the VK_USE_PLATFORM_* defines to booleans */
-%for platform in ['ANDROID', 'WAYLAND', 'XCB', 'XLIB', 'DISPLAY']:
-#ifdef VK_USE_PLATFORM_${platform}_KHR
-#   undef VK_USE_PLATFORM_${platform}_KHR
-#   define VK_USE_PLATFORM_${platform}_KHR true
+%for platform in ['ANDROID_KHR', 'WAYLAND_KHR', 'XCB_KHR', 'XLIB_KHR', 'DISPLAY_KHR', 'XLIB_XRANDR_EXT']:
+#ifdef VK_USE_PLATFORM_${platform}
+#   undef VK_USE_PLATFORM_${platform}
+#   define VK_USE_PLATFORM_${platform} true
 #else
-#   define VK_USE_PLATFORM_${platform}_KHR false
+#   define VK_USE_PLATFORM_${platform} false
 #endif
 %endfor
 
