@@ -82,4 +82,9 @@ wsi_create_display_surface(VkInstance instance,
                            const VkDisplaySurfaceCreateInfoKHR *pCreateInfo,
                            VkSurfaceKHR *pSurface);
 
+VkResult
+wsi_release_display(VkPhysicalDevice            physical_device,
+                    struct wsi_device           *wsi_device,
+                    VkDisplayKHR                display);
+
 #endif

@@ -1475,3 +1475,21 @@ wsi_display_finish_wsi(struct wsi_device *wsi_device,
       vk_free(alloc, wsi);
    }
 }
+
+/*
+ * Implement vkReleaseDisplay
+ */
+VkResult
+wsi_release_display(VkPhysicalDevice            physical_device,
+                    struct wsi_device           *wsi_device,
+                    VkDisplayKHR                display)
+{
+   struct wsi_display *wsi =
+      (struct wsi_display *) wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY];
+
+   if (wsi->fd >= 0) {
+      close(wsi->fd);
+      wsi->fd = -1;
+   }
+   return VK_SUCCESS;
+}
