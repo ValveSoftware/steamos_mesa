@@ -87,4 +87,21 @@ wsi_release_display(VkPhysicalDevice            physical_device,
                     struct wsi_device           *wsi_device,
                     VkDisplayKHR                display);
 
+
+#if VK_USE_PLATFORM_XLIB_XRANDR_EXT
+VkResult
+wsi_acquire_xlib_display(VkPhysicalDevice       physical_device,
+                         struct wsi_device      *wsi_device,
+                         Display                *dpy,
+                         VkDisplayKHR           display);
+
+VkResult
+wsi_get_randr_output_display(VkPhysicalDevice   physical_device,
+                             struct wsi_device  *wsi_device,
+                             Display            *dpy,
+                             RROutput           output,
+                             VkDisplayKHR       *display);
+
+#endif /* VK_USE_PLATFORM_XLIB_XRANDR_EXT */
+
 #endif

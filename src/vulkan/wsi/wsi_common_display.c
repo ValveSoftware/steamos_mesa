@@ -33,6 +33,10 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+#include <xcb/randr.h>
+#include <X11/Xlib-xcb.h>
+#endif
 #include "util/hash_table.h"
 #include "util/list.h"
 
@@ -75,6 +79,9 @@ typedef struct wsi_display_connector {
    struct list_head             display_modes;
    wsi_display_mode             *current_mode;
    drmModeModeInfo              current_drm_mode;
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+   xcb_randr_output_t           output;
+#endif
 } wsi_display_connector;
 
 struct wsi_display {
@@ -1491,5 +1498,486 @@ wsi_release_display(VkPhysicalDevice            physical_device,
       close(wsi->fd);
       wsi->fd = -1;
    }
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+   wsi_display_connector_from_handle(display)->output = None;
+#endif
+
    return VK_SUCCESS;
 }
+
+#ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
+
+static struct wsi_display_connector *
+wsi_display_find_output(struct wsi_device *wsi_device,
+                        xcb_randr_output_t output)
+{
+   struct wsi_display *wsi =
+      (struct wsi_display *) wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY];
+
+   wsi_for_each_connector(connector, wsi) {
+      if (connector->output == output)
+         return connector;
+   }
+
+   return NULL;
+}
+
+/*
+ * Given a RandR output, find the associated kernel connector_id by
+ * looking at the CONNECTOR_ID property provided by the X server
+ */
+
+static uint32_t
+wsi_display_output_to_connector_id(xcb_connection_t *connection,
+                                   xcb_atom_t *connector_id_atom_p,
+                                   xcb_randr_output_t output)
+{
+   uint32_t connector_id = 0;
+   xcb_atom_t connector_id_atom = *connector_id_atom_p;
+
+   if (connector_id_atom == 0) {
+   /* Go dig out the CONNECTOR_ID property */
+      xcb_intern_atom_cookie_t ia_c = xcb_intern_atom(connection,
+                                                          true,
+                                                          12,
+                                                          "CONNECTOR_ID");
+      xcb_intern_atom_reply_t *ia_r = xcb_intern_atom_reply(connection,
+                                                                 ia_c,
+                                                                 NULL);
+      if (ia_r) {
+         *connector_id_atom_p = connector_id_atom = ia_r->atom;
+         free(ia_r);
+      }
+   }
+
+   /* If there's an CONNECTOR_ID atom in the server, then there may be a
+    * CONNECTOR_ID property. Otherwise, there will not be and we don't even
+    * need to bother.
+    */
+   if (connector_id_atom) {
+
+      xcb_randr_query_version_cookie_t qv_c =
+         xcb_randr_query_version(connection, 1, 6);
+      xcb_randr_get_output_property_cookie_t gop_c =
+         xcb_randr_get_output_property(connection,
+                                       output,
+                                       connector_id_atom,
+                                       0,
+                                       0,
+                                       0xffffffffUL,
+                                       0,
+                                       0);
+      xcb_randr_query_version_reply_t *qv_r =
+         xcb_randr_query_version_reply(connection, qv_c, NULL);
+      free(qv_r);
+      xcb_randr_get_output_property_reply_t *gop_r =
+         xcb_randr_get_output_property_reply(connection, gop_c, NULL);
+      if (gop_r) {
+         if (gop_r->num_items == 1 && gop_r->format == 32)
+            memcpy(&connector_id, xcb_randr_get_output_property_data(gop_r), 4);
+         free(gop_r);
+      }
+   }
+   return connector_id;
+}
+
+static bool
+wsi_display_check_randr_version(xcb_connection_t *connection)
+{
+   xcb_randr_query_version_cookie_t qv_c =
+      xcb_randr_query_version(connection, 1, 6);
+   xcb_randr_query_version_reply_t *qv_r =
+      xcb_randr_query_version_reply(connection, qv_c, NULL);
+   bool ret = false;
+
+   if (!qv_r)
+      return false;
+
+   /* Check for version 1.6 or newer */
+   ret = (qv_r->major_version > 1 ||
+          (qv_r->major_version == 1 && qv_r->minor_version >= 6));
+
+   free(qv_r);
+   return ret;
+}
+
+/*
+ * Given a kernel connector id, find the associated RandR output using the
+ * CONNECTOR_ID property
+ */
+
+static xcb_randr_output_t
+wsi_display_connector_id_to_output(xcb_connection_t *connection,
+                                   uint32_t connector_id)
+{
+   if (!wsi_display_check_randr_version(connection))
+      return 0;
+
+   const xcb_setup_t *setup = xcb_get_setup(connection);
+
+   xcb_atom_t connector_id_atom = 0;
+   xcb_randr_output_t output = 0;
+
+   /* Search all of the screens for the provided output */
+   xcb_screen_iterator_t iter;
+   for (iter = xcb_setup_roots_iterator(setup);
+        output == 0 && iter.rem;
+        xcb_screen_next(&iter))
+   {
+      xcb_randr_get_screen_resources_cookie_t gsr_c =
+         xcb_randr_get_screen_resources(connection, iter.data->root);
+      xcb_randr_get_screen_resources_reply_t *gsr_r =
+         xcb_randr_get_screen_resources_reply(connection, gsr_c, NULL);
+
+      if (!gsr_r)
+         return 0;
+
+      xcb_randr_output_t *ro = xcb_randr_get_screen_resources_outputs(gsr_r);
+      int o;
+
+      for (o = 0; o < gsr_r->num_outputs; o++) {
+         if (wsi_display_output_to_connector_id(connection,
+                                                &connector_id_atom, ro[o])
+             == connector_id)
+         {
+            output = ro[o];
+            break;
+         }
+      }
+      free(gsr_r);
+   }
+   return output;
+}
+
+/*
+ * Given a RandR output, find out which screen it's associated with
+ */
+static xcb_window_t
+wsi_display_output_to_root(xcb_connection_t *connection,
+                           xcb_randr_output_t output)
+{
+   if (!wsi_display_check_randr_version(connection))
+      return 0;
+
+   const xcb_setup_t *setup = xcb_get_setup(connection);
+   xcb_window_t root = 0;
+
+   /* Search all of the screens for the provided output */
+   for (xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
+        root == 0 && iter.rem;
+        xcb_screen_next(&iter))
+   {
+      xcb_randr_get_screen_resources_cookie_t gsr_c =
+         xcb_randr_get_screen_resources(connection, iter.data->root);
+      xcb_randr_get_screen_resources_reply_t *gsr_r =
+         xcb_randr_get_screen_resources_reply(connection, gsr_c, NULL);
+
+      if (!gsr_r)
+         return 0;
+
+      xcb_randr_output_t *ro = xcb_randr_get_screen_resources_outputs(gsr_r);
+
+      for (int o = 0; o < gsr_r->num_outputs; o++) {
+         if (ro[o] == output) {
+            root = iter.data->root;
+            break;
+         }
+      }
+      free(gsr_r);
+   }
+   return root;
+}
+
+static bool
+wsi_display_mode_matches_x(struct wsi_display_mode *wsi,
+                           xcb_randr_mode_info_t *xcb)
+{
+   return wsi->clock == (xcb->dot_clock + 500) / 1000 &&
+      wsi->hdisplay == xcb->width &&
+      wsi->hsync_start == xcb->hsync_start &&
+      wsi->hsync_end == xcb->hsync_end &&
+      wsi->htotal == xcb->htotal &&
+      wsi->hskew == xcb->hskew &&
+      wsi->vdisplay == xcb->height &&
+      wsi->vsync_start == xcb->vsync_start &&
+      wsi->vsync_end == xcb->vsync_end &&
+      wsi->vtotal == xcb->vtotal &&
+      wsi->vscan <= 1 &&
+      wsi->flags == xcb->mode_flags;
+}
+
+static struct wsi_display_mode *
+wsi_display_find_x_mode(struct wsi_device *wsi_device,
+                        struct wsi_display_connector *connector,
+                        xcb_randr_mode_info_t *mode)
+{
+   wsi_for_each_display_mode(display_mode, connector) {
+      if (wsi_display_mode_matches_x(display_mode, mode))
+         return display_mode;
+   }
+   return NULL;
+}
+
+static VkResult
+wsi_display_register_x_mode(struct wsi_device *wsi_device,
+                            struct wsi_display_connector *connector,
+                            xcb_randr_mode_info_t *x_mode,
+                            bool preferred)
+{
+   struct wsi_display *wsi =
+      (struct wsi_display *) wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY];
+   struct wsi_display_mode *display_mode =
+      wsi_display_find_x_mode(wsi_device, connector, x_mode);
+
+   if (display_mode) {
+      display_mode->valid = true;
+      return VK_SUCCESS;
+   }
+
+   display_mode = vk_zalloc(wsi->alloc, sizeof (struct wsi_display_mode),
+                            8, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+   if (!display_mode)
+      return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+   display_mode->connector = connector;
+   display_mode->valid = true;
+   display_mode->preferred = preferred;
+   display_mode->clock = (x_mode->dot_clock + 500) / 1000; /* kHz */
+   display_mode->hdisplay = x_mode->width;
+   display_mode->hsync_start = x_mode->hsync_start;
+   display_mode->hsync_end = x_mode->hsync_end;
+   display_mode->htotal = x_mode->htotal;
+   display_mode->hskew = x_mode->hskew;
+   display_mode->vdisplay = x_mode->height;
+   display_mode->vsync_start = x_mode->vsync_start;
+   display_mode->vsync_end = x_mode->vsync_end;
+   display_mode->vtotal = x_mode->vtotal;
+   display_mode->vscan = 0;
+   display_mode->flags = x_mode->mode_flags;
+
+   list_addtail(&display_mode->list, &connector->display_modes);
+   return VK_SUCCESS;
+}
+
+static struct wsi_display_connector *
+wsi_display_get_output(struct wsi_device *wsi_device,
+                       xcb_connection_t *connection,
+                       xcb_randr_output_t output)
+{
+   struct wsi_display *wsi =
+      (struct wsi_display *) wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY];
+   struct wsi_display_connector *connector;
+   uint32_t connector_id;
+
+   xcb_window_t root = wsi_display_output_to_root(connection, output);
+   if (!root)
+      return NULL;
+
+   /* See if we already have a connector for this output */
+   connector = wsi_display_find_output(wsi_device, output);
+
+   if (!connector) {
+      xcb_atom_t connector_id_atom = 0;
+
+      /*
+       * Go get the kernel connector ID for this X output
+       */
+      connector_id = wsi_display_output_to_connector_id(connection,
+                                                        &connector_id_atom,
+                                                        output);
+
+      /* Any X server with lease support will have this atom */
+      if (!connector_id) {
+         return NULL;
+      }
+
+      /* See if we already have a connector for this id */
+      connector = wsi_display_find_connector(wsi_device, connector_id);
+
+      if (connector == NULL) {
+         connector = wsi_display_alloc_connector(wsi, connector_id);
+         if (!connector) {
+            return NULL;
+         }
+         list_addtail(&connector->list, &wsi->connectors);
+      }
+      connector->output = output;
+   }
+
+   xcb_randr_get_screen_resources_cookie_t src =
+      xcb_randr_get_screen_resources(connection, root);
+   xcb_randr_get_output_info_cookie_t oic =
+      xcb_randr_get_output_info(connection, output, XCB_CURRENT_TIME);
+   xcb_randr_get_screen_resources_reply_t *srr =
+      xcb_randr_get_screen_resources_reply(connection, src, NULL);
+   xcb_randr_get_output_info_reply_t *oir =
+      xcb_randr_get_output_info_reply(connection, oic, NULL);
+
+   if (oir && srr) {
+      /* Get X modes and add them */
+
+      connector->connected =
+         oir->connection != XCB_RANDR_CONNECTION_DISCONNECTED;
+
+      wsi_display_invalidate_connector_modes(wsi_device, connector);
+
+      xcb_randr_mode_t *x_modes = xcb_randr_get_output_info_modes(oir);
+      for (int m = 0; m < oir->num_modes; m++) {
+         xcb_randr_mode_info_iterator_t i =
+            xcb_randr_get_screen_resources_modes_iterator(srr);
+         while (i.rem) {
+            xcb_randr_mode_info_t *mi = i.data;
+            if (mi->id == x_modes[m]) {
+               VkResult result = wsi_display_register_x_mode(
+                  wsi_device, connector, mi, m < oir->num_preferred);
+               if (result != VK_SUCCESS) {
+                  free(oir);
+                  free(srr);
+                  return NULL;
+               }
+               break;
+            }
+            xcb_randr_mode_info_next(&i);
+         }
+      }
+   }
+
+   free(oir);
+   free(srr);
+   return connector;
+}
+
+static xcb_randr_crtc_t
+wsi_display_find_crtc_for_output(xcb_connection_t *connection,
+                                 xcb_window_t root,
+                                 xcb_randr_output_t output)
+{
+   xcb_randr_get_screen_resources_cookie_t gsr_c =
+      xcb_randr_get_screen_resources(connection, root);
+   xcb_randr_get_screen_resources_reply_t *gsr_r =
+      xcb_randr_get_screen_resources_reply(connection, gsr_c, NULL);
+
+   if (!gsr_r)
+      return 0;
+
+   xcb_randr_crtc_t *rc = xcb_randr_get_screen_resources_crtcs(gsr_r);
+   xcb_randr_crtc_t idle_crtc = 0;
+   xcb_randr_crtc_t active_crtc = 0;
+
+   /* Find either a crtc already connected to the desired output or idle */
+   for (int c = 0; active_crtc == 0 && c < gsr_r->num_crtcs; c++) {
+      xcb_randr_get_crtc_info_cookie_t gci_c =
+         xcb_randr_get_crtc_info(connection, rc[c], gsr_r->config_timestamp);
+      xcb_randr_get_crtc_info_reply_t *gci_r =
+         xcb_randr_get_crtc_info_reply(connection, gci_c, NULL);
+
+      if (gci_r) {
+         if (gci_r->mode) {
+            int num_outputs = xcb_randr_get_crtc_info_outputs_length(gci_r);
+            xcb_randr_output_t *outputs =
+               xcb_randr_get_crtc_info_outputs(gci_r);
+
+            if (num_outputs == 1 && outputs[0] == output)
+               active_crtc = rc[c];
+
+         } else if (idle_crtc == 0) {
+            int num_possible = xcb_randr_get_crtc_info_possible_length(gci_r);
+            xcb_randr_output_t *possible =
+               xcb_randr_get_crtc_info_possible(gci_r);
+
+            for (int p = 0; p < num_possible; p++)
+               if (possible[p] == output) {
+                  idle_crtc = rc[c];
+                  break;
+               }
+         }
+         free(gci_r);
+      }
+   }
+   free(gsr_r);
+
+   if (active_crtc)
+      return active_crtc;
+   return idle_crtc;
+}
+
+VkResult
+wsi_acquire_xlib_display(VkPhysicalDevice physical_device,
+                         struct wsi_device *wsi_device,
+                         Display *dpy,
+                         VkDisplayKHR display)
+{
+   struct wsi_display *wsi =
+      (struct wsi_display *) wsi_device->wsi[VK_ICD_WSI_PLATFORM_DISPLAY];
+   xcb_connection_t *connection = XGetXCBConnection(dpy);
+   struct wsi_display_connector *connector =
+      wsi_display_connector_from_handle(display);
+   xcb_window_t root;
+
+   /* XXX no support for multiple leases yet */
+   if (wsi->fd >= 0)
+      return VK_ERROR_INITIALIZATION_FAILED;
+
+   if (!connector->output) {
+      connector->output = wsi_display_connector_id_to_output(connection,
+                                                             connector->id);
+
+      /* Check and see if we found the output */
+      if (!connector->output)
+         return VK_ERROR_INITIALIZATION_FAILED;
+   }
+
+   root = wsi_display_output_to_root(connection, connector->output);
+   if (!root)
+      return VK_ERROR_INITIALIZATION_FAILED;
+
+   xcb_randr_crtc_t crtc = wsi_display_find_crtc_for_output(connection,
+                                                            root,
+                                                            connector->output);
+
+   if (!crtc)
+      return VK_ERROR_INITIALIZATION_FAILED;
+
+   xcb_randr_lease_t lease = xcb_generate_id(connection);
+   xcb_randr_create_lease_cookie_t cl_c =
+      xcb_randr_create_lease(connection, root, lease, 1, 1,
+                             &crtc, &connector->output);
+   xcb_randr_create_lease_reply_t *cl_r =
+      xcb_randr_create_lease_reply(connection, cl_c, NULL);
+   if (!cl_r)
+      return VK_ERROR_INITIALIZATION_FAILED;
+
+   int fd = -1;
+   if (cl_r->nfd > 0) {
+      int *rcl_f = xcb_randr_create_lease_reply_fds(connection, cl_r);
+
+      fd = rcl_f[0];
+   }
+   free (cl_r);
+   if (fd < 0)
+      return VK_ERROR_INITIALIZATION_FAILED;
+
+   wsi->fd = fd;
+
+   return VK_SUCCESS;
+}
+
+VkResult
+wsi_get_randr_output_display(VkPhysicalDevice physical_device,
+                             struct wsi_device *wsi_device,
+                             Display *dpy,
+                             RROutput output,
+                             VkDisplayKHR *display)
+{
+   xcb_connection_t *connection = XGetXCBConnection(dpy);
+   struct wsi_display_connector *connector =
+      wsi_display_get_output(wsi_device, connection, (xcb_randr_output_t) output);
+
+   if (connector)
+      *display = wsi_display_connector_to_handle(connector);
+   else
+      *display = NULL;
+   return VK_SUCCESS;
+}
+
+#endif
