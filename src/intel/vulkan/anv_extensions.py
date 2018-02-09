@@ -111,6 +111,7 @@ EXTENSIONS = [
     Extension('VK_KHR_multiview',                         1, True),
     Extension('VK_KHR_display',                          23, 'VK_USE_PLATFORM_DISPLAY_KHR'),
     Extension('VK_EXT_debug_report',                      8, True),
+    Extension('VK_EXT_direct_mode_display',               1, 'VK_USE_PLATFORM_DISPLAY_KHR'),
     Extension('VK_EXT_external_memory_dma_buf',           1, True),
     Extension('VK_EXT_global_priority',                   1,
               'device->has_context_priority'),

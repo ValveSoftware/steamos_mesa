@@ -133,3 +133,14 @@ anv_CreateDisplayPlaneSurfaceKHR(
 
    return wsi_create_display_surface(_instance, alloc, create_info, surface);
 }
+
+VkResult
+anv_ReleaseDisplayEXT(VkPhysicalDevice physical_device,
+                       VkDisplayKHR     display)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physical_device);
+
+   return wsi_release_display(physical_device,
+                              &pdevice->wsi_device,
+                              display);
+}
