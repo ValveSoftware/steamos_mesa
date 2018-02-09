@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "brw_defines.h"
 #include "brw_performance_query.h"
 
 /**
@@ -97,6 +98,20 @@ struct mdapi_gen9_metrics {
    uint64_t UserCntr[GTDI_MAX_READ_REGS];
    uint32_t UserCntrCfgId;
    uint32_t Reserved4;
+};
+
+struct mdapi_pipeline_metrics {
+   uint64_t IAVertices;
+   uint64_t IAPrimitives;
+   uint64_t VSInvocations;
+   uint64_t GSInvocations;
+   uint64_t GSPrimitives;
+   uint64_t CInvocations;
+   uint64_t CPrimitives;
+   uint64_t PSInvocations;
+   uint64_t HSInvocations;
+   uint64_t DSInvocations;
+   uint64_t CSInvocations;
 };
 
 int
@@ -375,4 +390,55 @@ brw_perf_query_register_mdapi_oa_query(struct brw_context *brw)
       query->b_offset = copy_query->b_offset;
       query->c_offset = copy_query->c_offset;
    }
+}
+
+void
+brw_perf_query_register_mdapi_statistic_query(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (!(devinfo->gen >= 7 && devinfo->gen <= 9))
+      return;
+
+   struct brw_perf_query_info *query = brw_perf_query_append_query_info(brw);
+
+   query->kind = PIPELINE_STATS;
+   query->name = "Intel_Raw_Pipeline_Statistics_Query";
+   query->n_counters = 0;
+   query->counters =
+      rzalloc_array(brw, struct brw_perf_query_counter, MAX_STAT_COUNTERS);
+
+   /* The order has to match mdapi_pipeline_metrics. */
+   brw_perf_query_info_add_basic_stat_reg(query, IA_VERTICES_COUNT,
+                                          "N vertices submitted");
+   brw_perf_query_info_add_basic_stat_reg(query, IA_PRIMITIVES_COUNT,
+                                          "N primitives submitted");
+   brw_perf_query_info_add_basic_stat_reg(query, VS_INVOCATION_COUNT,
+                                          "N vertex shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, GS_INVOCATION_COUNT,
+                                          "N geometry shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, GS_PRIMITIVES_COUNT,
+                                          "N geometry shader primitives emitted");
+   brw_perf_query_info_add_basic_stat_reg(query, CL_INVOCATION_COUNT,
+                                          "N primitives entering clipping");
+   brw_perf_query_info_add_basic_stat_reg(query, CL_PRIMITIVES_COUNT,
+                                          "N primitives leaving clipping");
+   if (devinfo->is_haswell || devinfo->gen == 8) {
+      brw_perf_query_info_add_stat_reg(query, PS_INVOCATION_COUNT, 1, 4,
+                                       "N fragment shader invocations",
+                                       "N fragment shader invocations");
+   } else {
+      brw_perf_query_info_add_basic_stat_reg(query, PS_INVOCATION_COUNT,
+                                             "N fragment shader invocations");
+   }
+   brw_perf_query_info_add_basic_stat_reg(query, HS_INVOCATION_COUNT,
+                                          "N TCS shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, DS_INVOCATION_COUNT,
+                                          "N TES shader invocations");
+   if (devinfo->gen >= 7) {
+      brw_perf_query_info_add_basic_stat_reg(query, CS_INVOCATION_COUNT,
+                                             "N compute shader invocations");
+   }
+
+   query->data_size = sizeof(uint64_t) * query->n_counters;
 }

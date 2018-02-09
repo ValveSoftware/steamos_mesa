@@ -2165,6 +2165,7 @@ brw_init_perf_query_info(struct gl_context *ctx)
       return brw->perfquery.n_queries;
 
    init_pipeline_statistic_query_registers(brw);
+   brw_perf_query_register_mdapi_statistic_query(brw);
 
    oa_register = get_register_queries_function(devinfo);
 
