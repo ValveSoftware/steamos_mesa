@@ -52,6 +52,7 @@
 #include "st_cb_texture.h"
 #include "st_context.h"
 #include "st_format.h"
+#include "st_texture.h"
 
 
 /**
@@ -1046,10 +1047,7 @@ test_format_conversion(struct st_context *st)
    for (i = 1; i < MESA_FORMAT_COUNT; i++) {
       enum pipe_format pf;
 
-      /* ETC formats are translated differently, skip them. */
-      if (_mesa_is_format_etc2(i))
-         continue;
-      if (i == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1)
+      if (st_compressed_format_fallback(st, i))
          continue;
 
       pf = st_mesa_format_to_pipe_format(st, i);
@@ -1061,12 +1059,8 @@ test_format_conversion(struct st_context *st)
 
    /* Test all Gallium formats */
    for (i = 1; i < PIPE_FORMAT_COUNT; i++) {
-      /* ETC formats are translated differently, skip them. */
-      if (i == PIPE_FORMAT_ETC1_RGB8 && !st->has_etc1)
-         continue;
-
       mesa_format mf = st_pipe_format_to_mesa_format(i);
-      if (_mesa_is_format_etc2(mf) && !st->has_etc2)
+      if (st_compressed_format_fallback(st, mf))
          continue;
 
       if (mf != MESA_FORMAT_NONE) {
@@ -2347,10 +2341,8 @@ st_ChooseTextureFormat(struct gl_context *ctx, GLenum target,
    }
 
    if (pFormat == PIPE_FORMAT_NONE) {
-      /* lie about using etc1/etc2 natively if we do decoding tricks */
       mFormat = _mesa_glenum_to_compressed_format(internalFormat);
-      if ((mFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1) ||
-          (_mesa_is_format_etc2(mFormat) && !st->has_etc2))
+      if (st_compressed_format_fallback(st, mFormat))
           return mFormat;
 
       /* no luck at all */
