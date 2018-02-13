@@ -1967,6 +1967,23 @@ st_GetTexSubImage(struct gl_context * ctx,
       case PIPE_FORMAT_RGTC1_UNORM:
       case PIPE_FORMAT_RGTC2_UNORM:
       case PIPE_FORMAT_ETC1_RGB8:
+      case PIPE_FORMAT_ETC2_RGB8:
+      case PIPE_FORMAT_ETC2_RGB8A1:
+      case PIPE_FORMAT_ETC2_RGBA8:
+      case PIPE_FORMAT_ASTC_4x4:
+      case PIPE_FORMAT_ASTC_5x4:
+      case PIPE_FORMAT_ASTC_5x5:
+      case PIPE_FORMAT_ASTC_6x5:
+      case PIPE_FORMAT_ASTC_6x6:
+      case PIPE_FORMAT_ASTC_8x5:
+      case PIPE_FORMAT_ASTC_8x6:
+      case PIPE_FORMAT_ASTC_8x8:
+      case PIPE_FORMAT_ASTC_10x5:
+      case PIPE_FORMAT_ASTC_10x6:
+      case PIPE_FORMAT_ASTC_10x8:
+      case PIPE_FORMAT_ASTC_10x10:
+      case PIPE_FORMAT_ASTC_12x10:
+      case PIPE_FORMAT_ASTC_12x12:
       case PIPE_FORMAT_BPTC_RGBA_UNORM:
          dst_glformat = GL_RGBA8;
          break;
@@ -1981,6 +1998,30 @@ st_GetTexSubImage(struct gl_context * ctx,
          if (!ctx->Extensions.ARB_texture_float)
             goto fallback;
          dst_glformat = GL_RGBA32F;
+         break;
+      case PIPE_FORMAT_ETC2_R11_UNORM:
+         if (!screen->is_format_supported(screen, PIPE_FORMAT_R16_UNORM,
+                                          pipe_target, 0, bind))
+            goto fallback;
+         dst_glformat = GL_R16;
+         break;
+      case PIPE_FORMAT_ETC2_R11_SNORM:
+         if (!screen->is_format_supported(screen, PIPE_FORMAT_R16_SNORM,
+                                          pipe_target, 0, bind))
+            goto fallback;
+         dst_glformat = GL_R16_SNORM;
+         break;
+      case PIPE_FORMAT_ETC2_RG11_UNORM:
+         if (!screen->is_format_supported(screen, PIPE_FORMAT_R16G16_UNORM,
+                                          pipe_target, 0, bind))
+            goto fallback;
+         dst_glformat = GL_RG16;
+         break;
+      case PIPE_FORMAT_ETC2_RG11_SNORM:
+         if (!screen->is_format_supported(screen, PIPE_FORMAT_R16G16_SNORM,
+                                          pipe_target, 0, bind))
+            goto fallback;
+         dst_glformat = GL_RG16_SNORM;
          break;
       default:
          assert(0);
