@@ -207,9 +207,9 @@ st_FreeTextureImageBuffer(struct gl_context *ctx,
    stImage->transfer = NULL;
    stImage->num_transfers = 0;
 
-   if (stImage->etc_data) {
-      free(stImage->etc_data);
-      stImage->etc_data = NULL;
+   if (stImage->compressed_data) {
+      free(stImage->compressed_data);
+      stImage->compressed_data = NULL;
    }
 
    /* if the texture image is being deallocated, the structure of the
@@ -231,22 +231,23 @@ st_compressed_format_fallback(struct st_context *st, mesa_format format)
 }
 
 static void
-etc_fallback_allocate(struct st_context *st, struct st_texture_image *stImage)
+compressed_tex_fallback_allocate(struct st_context *st,
+                                 struct st_texture_image *stImage)
 {
    struct gl_texture_image *texImage = &stImage->base;
 
    if (!st_compressed_format_fallback(st, texImage->TexFormat))
       return;
 
-   if (stImage->etc_data)
-      free(stImage->etc_data);
+   if (stImage->compressed_data)
+      free(stImage->compressed_data);
 
    unsigned data_size = _mesa_format_image_size(texImage->TexFormat,
                                                 texImage->Width2,
                                                 texImage->Height2,
                                                 texImage->Depth2);
 
-   stImage->etc_data =
+   stImage->compressed_data =
       malloc(data_size * _mesa_num_tex_faces(texImage->TexObject->Target));
 }
 
@@ -275,22 +276,28 @@ st_MapTextureImage(struct gl_context *ctx,
                               &transfer);
    if (map) {
       if (st_compressed_format_fallback(st, texImage->TexFormat)) {
-         /* ETC isn't supported by all gallium drivers, where it's represented
-          * by uncompressed formats. We store the compressed data (as it's
-          * needed for image copies in OES_copy_image), and decompress as
-          * necessary in Unmap.
+         /* Some compressed formats don't have to be supported by drivers,
+          * and st/mesa transparently handles decompression on upload (Unmap),
+          * so that drivers don't see the compressed formats.
           *
-          * Note: all ETC1/ETC2 formats have 4x4 block sizes.
+          * We store the compressed data (it's needed for glGetCompressedTex-
+          * Image and image copies in OES_copy_image).
           */
          unsigned z = transfer->box.z;
          struct st_texture_image_transfer *itransfer = &stImage->transfer[z];
 
-         unsigned bytes = _mesa_get_format_bytes(texImage->TexFormat);
+         unsigned blk_w, blk_h;
+         _mesa_get_format_block_size(texImage->TexFormat, &blk_w, &blk_h);
+
+         unsigned y_blocks = DIV_ROUND_UP(texImage->Height2, blk_h);
          unsigned stride = *rowStrideOut = itransfer->temp_stride =
             _mesa_format_row_stride(texImage->TexFormat, texImage->Width2);
+         unsigned block_size = _mesa_get_format_bytes(texImage->TexFormat);
+
          *mapOut = itransfer->temp_data =
-            stImage->etc_data + ((x / 4) * bytes + (y / 4) * stride) +
-            z * stride * texImage->Height2 / 4;
+            stImage->compressed_data +
+            (z * y_blocks + (y / blk_h)) * stride +
+            (x / blk_w) * block_size;
          itransfer->map = map;
       }
       else {
@@ -631,7 +638,7 @@ st_AllocTextureImageBuffer(struct gl_context *ctx,
 
    stObj->needs_validation = true;
 
-   etc_fallback_allocate(st, stImage);
+   compressed_tex_fallback_allocate(st, stImage);
 
    /* Look if the parent texture object has space for this image */
    if (stObj->pt &&
@@ -2840,7 +2847,7 @@ st_texture_storage(struct gl_context *ctx,
             st_texture_image(texObj->Image[face][level]);
          pipe_resource_reference(&stImage->pt, stObj->pt);
 
-         etc_fallback_allocate(st, stImage);
+         compressed_tex_fallback_allocate(st, stImage);
       }
    }
 
