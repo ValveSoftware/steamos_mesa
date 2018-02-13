@@ -219,10 +219,15 @@ st_FreeTextureImageBuffer(struct gl_context *ctx,
 }
 
 bool
-st_etc_fallback(struct st_context *st, struct gl_texture_image *texImage)
+st_compressed_format_fallback(struct st_context *st, mesa_format format)
 {
-   return (_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
-          (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1);
+   if (format == MESA_FORMAT_ETC1_RGB8)
+      return !st->has_etc1;
+
+   if (_mesa_is_format_etc2(format))
+      return !st->has_etc2;
+
+   return false;
 }
 
 static void
@@ -230,7 +235,7 @@ etc_fallback_allocate(struct st_context *st, struct st_texture_image *stImage)
 {
    struct gl_texture_image *texImage = &stImage->base;
 
-   if (!st_etc_fallback(st, texImage))
+   if (!st_compressed_format_fallback(st, texImage->TexFormat))
       return;
 
    if (stImage->etc_data)
@@ -269,7 +274,7 @@ st_MapTextureImage(struct gl_context *ctx,
    map = st_texture_image_map(st, stImage, transfer_flags, x, y, slice, w, h, 1,
                               &transfer);
    if (map) {
-      if (st_etc_fallback(st, texImage)) {
+      if (st_compressed_format_fallback(st, texImage->TexFormat)) {
          /* ETC isn't supported by all gallium drivers, where it's represented
           * by uncompressed formats. We store the compressed data (as it's
           * needed for image copies in OES_copy_image), and decompress as
@@ -310,8 +315,9 @@ st_UnmapTextureImage(struct gl_context *ctx,
    struct st_context *st = st_context(ctx);
    struct st_texture_image *stImage  = st_texture_image(texImage);
 
-   if (st_etc_fallback(st, texImage)) {
-      /* Decompress the ETC texture to the mapped one. */
+   if (st_compressed_format_fallback(st, texImage->TexFormat)) {
+      /* Decompress the compressed image on upload if the driver doesn't
+       * support the compressed format. */
       unsigned z = slice + stImage->base.Face;
       struct st_texture_image_transfer *itransfer = &stImage->transfer[z];
       struct pipe_transfer *transfer = itransfer->transfer;
@@ -1686,10 +1692,8 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    if (!_mesa_is_bufferobj(ctx->Unpack.BufferObj))
       goto fallback;
 
-   if (st_etc_fallback(st, texImage)) {
-      /* ETC isn't supported and is represented by uncompressed formats. */
+   if (st_compressed_format_fallback(st, texImage->TexFormat))
       goto fallback;
-   }
 
    if (!dst) {
       goto fallback;

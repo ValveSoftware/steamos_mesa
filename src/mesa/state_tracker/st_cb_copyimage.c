@@ -668,8 +668,8 @@ st_CopyImageSubData(struct gl_context *ctx,
 
    u_box_2d_zslice(src_x, src_y, src_z, src_width, src_height, &box);
 
-   if ((src_image && st_etc_fallback(st, src_image)) ||
-       (dst_image && st_etc_fallback(st, dst_image))) {
+   if ((src_image && st_compressed_format_fallback(st, src_image->TexFormat)) ||
+       (dst_image && st_compressed_format_fallback(st, dst_image->TexFormat))) {
       fallback_copy_image(st, dst_image, dst_res, dst_x, dst_y, orig_dst_z,
                           src_image, src_res, src_x, src_y, orig_src_z,
                           src_width, src_height);

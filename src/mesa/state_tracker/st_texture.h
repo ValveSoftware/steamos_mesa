@@ -315,7 +315,7 @@ void
 st_destroy_bound_image_handles(struct st_context *st);
 
 bool
-st_etc_fallback(struct st_context *st, struct gl_texture_image *texImage);
+st_compressed_format_fallback(struct st_context *st, mesa_format format);
 
 void
 st_convert_image(const struct st_context *st, const struct gl_image_unit *u,
