@@ -487,61 +487,117 @@ st_mesa_format_to_pipe_format(const struct st_context *st,
 	 has_bgra_srgb ? PIPE_FORMAT_B8G8R8A8_SRGB : PIPE_FORMAT_R8G8B8A8_SRGB;
 
    case MESA_FORMAT_RGBA_ASTC_4x4:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_4x4;
    case MESA_FORMAT_RGBA_ASTC_5x4:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_5x4;
    case MESA_FORMAT_RGBA_ASTC_5x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_5x5;
    case MESA_FORMAT_RGBA_ASTC_6x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_6x5;
    case MESA_FORMAT_RGBA_ASTC_6x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_6x6;
    case MESA_FORMAT_RGBA_ASTC_8x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_8x5;
    case MESA_FORMAT_RGBA_ASTC_8x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_8x6;
    case MESA_FORMAT_RGBA_ASTC_8x8:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_8x8;
    case MESA_FORMAT_RGBA_ASTC_10x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_10x5;
    case MESA_FORMAT_RGBA_ASTC_10x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_10x6;
    case MESA_FORMAT_RGBA_ASTC_10x8:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_10x8;
    case MESA_FORMAT_RGBA_ASTC_10x10:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_10x10;
    case MESA_FORMAT_RGBA_ASTC_12x10:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_12x10;
    case MESA_FORMAT_RGBA_ASTC_12x12:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_UNORM;
       return PIPE_FORMAT_ASTC_12x12;
 
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_4x4:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_4x4_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x4:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_5x4_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_5x5_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_6x5_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_6x6_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_8x5_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_8x6_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x8:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_8x8_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x5:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_10x5_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x6:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_10x6_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x8:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_10x8_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x10:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_10x10_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x10:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_12x10_SRGB;
    case MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x12:
+      if (!st->has_astc_2d_ldr)
+         return PIPE_FORMAT_R8G8B8A8_SRGB;
       return PIPE_FORMAT_ASTC_12x12_SRGB;
 
    default:

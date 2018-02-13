@@ -41,6 +41,7 @@
 #include "main/pbo.h"
 #include "main/pixeltransfer.h"
 #include "main/texcompress.h"
+#include "main/texcompress_astc.h"
 #include "main/texcompress_etc.h"
 #include "main/texgetimage.h"
 #include "main/teximage.h"
@@ -227,6 +228,9 @@ st_compressed_format_fallback(struct st_context *st, mesa_format format)
    if (_mesa_is_format_etc2(format))
       return !st->has_etc2;
 
+   if (_mesa_is_format_astc_2d(format))
+      return !st->has_astc_2d_ldr;
+
    return false;
 }
 
@@ -337,14 +341,20 @@ st_UnmapTextureImage(struct gl_context *ctx,
                                        itransfer->temp_data,
                                        itransfer->temp_stride,
                                        transfer->box.width, transfer->box.height);
-         }
-         else {
+         } else if (_mesa_is_format_etc2(texImage->TexFormat)) {
 	    bool bgra = stImage->pt->format == PIPE_FORMAT_B8G8R8A8_SRGB;
             _mesa_unpack_etc2_format(itransfer->map, transfer->stride,
                                      itransfer->temp_data, itransfer->temp_stride,
                                      transfer->box.width, transfer->box.height,
 				     texImage->TexFormat,
 				     bgra);
+         } else if (_mesa_is_format_astc_2d(texImage->TexFormat)) {
+            _mesa_unpack_astc_2d_ldr(itransfer->map, transfer->stride,
+                                     itransfer->temp_data, itransfer->temp_stride,
+                                     transfer->box.width, transfer->box.height,
+                                     texImage->TexFormat);
+         } else {
+            unreachable("unexpected format for a compressed format fallback");
          }
       }
 
@@ -1415,6 +1425,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
       dst_level = texImage->TexObject->MinLevel + texImage->Level;
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
+          !_mesa_is_format_astc_2d(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
 
    if (!dst)
@@ -1875,6 +1886,7 @@ st_GetTexSubImage(struct gl_context * ctx,
    boolean done = FALSE;
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
+          !_mesa_is_format_astc_2d(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
 
    st_flush_bitmap_cache(st);
@@ -2392,6 +2404,7 @@ st_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
    st_invalidate_readpix_cache(st);
 
    assert(!_mesa_is_format_etc2(texImage->TexFormat) &&
+          !_mesa_is_format_astc_2d(texImage->TexFormat) &&
           texImage->TexFormat != MESA_FORMAT_ETC1_RGB8);
 
    if (!strb || !strb->surface || !stImage->pt) {
