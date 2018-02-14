@@ -532,7 +532,6 @@ copy_image(struct pipe_context *pipe,
                  src_box);
 }
 
-/* Note, the only allowable compressed format for this function is ETC */
 static void
 fallback_copy_image(struct st_context *st,
                     struct gl_texture_image *dst_image,
@@ -551,19 +550,25 @@ fallback_copy_image(struct st_context *st,
    bool dst_is_compressed = dst_image && _mesa_is_format_compressed(dst_image->TexFormat);
    bool src_is_compressed = src_image && _mesa_is_format_compressed(src_image->TexFormat);
 
+   unsigned dst_blk_w = 1, dst_blk_h = 1, src_blk_w = 1, src_blk_h = 1;
+   if (dst_image)
+      _mesa_get_format_block_size(dst_image->TexFormat, &dst_blk_w, &dst_blk_h);
+   if (src_image)
+      _mesa_get_format_block_size(src_image->TexFormat, &src_blk_w, &src_blk_h);
+
    unsigned dst_w = src_w;
    unsigned dst_h = src_h;
    unsigned lines = src_h;
 
    if (src_is_compressed && !dst_is_compressed) {
-      dst_w = DIV_ROUND_UP(dst_w, 4);
-      dst_h = DIV_ROUND_UP(dst_h, 4);
+      dst_w = DIV_ROUND_UP(dst_w, src_blk_w);
+      dst_h = DIV_ROUND_UP(dst_h, src_blk_h);
    } else if (!src_is_compressed && dst_is_compressed) {
-      dst_w *= 4;
-      dst_h *= 4;
+      dst_w *= dst_blk_w;
+      dst_h *= dst_blk_h;
    }
    if (src_is_compressed) {
-      lines = DIV_ROUND_UP(lines, 4);
+      lines = DIV_ROUND_UP(lines, src_blk_h);
    }
 
    if (src_image)
