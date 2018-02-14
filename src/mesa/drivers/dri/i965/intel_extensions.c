@@ -224,8 +224,10 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_conservative_depth = true;
       ctx->Extensions.ARB_derivative_control = true;
       ctx->Extensions.ARB_framebuffer_no_attachments = true;
-      ctx->Extensions.ARB_gpu_shader5 = true;
-      ctx->Extensions.ARB_gpu_shader_fp64 = devinfo->has_64bit_types;
+      if (ctx->API != API_OPENGL_COMPAT) {
+         ctx->Extensions.ARB_gpu_shader5 = true;
+         ctx->Extensions.ARB_gpu_shader_fp64 = devinfo->has_64bit_types;
+      }
       ctx->Extensions.ARB_shader_atomic_counters = true;
       ctx->Extensions.ARB_shader_atomic_counter_ops = true;
       ctx->Extensions.ARB_shader_clock = true;
