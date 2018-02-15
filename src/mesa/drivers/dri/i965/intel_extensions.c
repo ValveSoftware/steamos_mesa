@@ -196,7 +196,8 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_multisample = true;
       ctx->Extensions.ARB_uniform_buffer_object = true;
 
-      ctx->Extensions.AMD_vertex_shader_layer = true;
+      if (ctx->API != API_OPENGL_COMPAT)
+         ctx->Extensions.AMD_vertex_shader_layer = true;
       ctx->Extensions.EXT_framebuffer_multisample = true;
       ctx->Extensions.EXT_framebuffer_multisample_blit_scaled = true;
       ctx->Extensions.EXT_transform_feedback = true;
