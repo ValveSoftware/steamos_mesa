@@ -183,6 +183,8 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 7;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return 330;
+   case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
+      return 140;
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
       return 16;
    case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:

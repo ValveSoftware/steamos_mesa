@@ -120,6 +120,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
             return 16;
 
         case PIPE_CAP_GLSL_FEATURE_LEVEL:
+        case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
             return 120;
 
         /* r300 cannot do swizzling of compressed textures. Supported otherwise. */

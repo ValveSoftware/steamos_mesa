@@ -164,6 +164,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
                 return 256;
 
         case PIPE_CAP_GLSL_FEATURE_LEVEL:
+	case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
                 return 120;
 
         case PIPE_CAP_MAX_VIEWPORTS:

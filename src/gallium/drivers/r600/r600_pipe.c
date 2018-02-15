@@ -343,6 +343,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		   return 330;
 		return 140;
 
+	case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
+		return 140;
+
 	/* Supported except the original R600. */
 	case PIPE_CAP_INDEP_BLEND_ENABLE:
 	case PIPE_CAP_INDEP_BLEND_FUNC:

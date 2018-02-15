@@ -278,6 +278,9 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return sws->have_vgpu10 ? 330 : 120;
 
+   case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
+      return sws->have_vgpu10 ? 140 : 120;
+
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
       return 0;
 

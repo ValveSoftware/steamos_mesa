@@ -342,6 +342,7 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
       return 64;
 
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
+   case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
       return 120;
 
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:

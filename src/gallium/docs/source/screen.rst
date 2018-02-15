@@ -93,6 +93,12 @@ The integer capabilities:
   shader.
 * ``PIPE_CAP_GLSL_FEATURE_LEVEL``: Whether the driver supports features
   equivalent to a specific GLSL version. E.g. for GLSL 1.3, report 130.
+* ``PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY``: Whether the driver supports
+  features equivalent to a specific GLSL version including all legacy OpenGL
+  features only present in the OpenGL compatibility profile.
+  The only legacy features that Gallium drivers must implement are
+  the legacy shader inputs and outputs (colors, texcoords, fog, clipvertex,
+  edgeflag).
 * ``PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION``: Whether quads adhere to
   the flatshade_first setting in ``pipe_rasterizer_state``.
 * ``PIPE_CAP_USER_VERTEX_BUFFERS``: Whether the driver supports user vertex

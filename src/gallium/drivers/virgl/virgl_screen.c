@@ -133,6 +133,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return vscreen->caps.caps.v1.glsl_level;
+   case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
+      return MIN2(vscreen->caps.caps.v1.glsl_level, 140);
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
       return 0;
    case PIPE_CAP_COMPUTE:

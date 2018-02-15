@@ -214,6 +214,9 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 			return 450;
 		return 420;
 
+	case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
+		return 140;
+
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->info.max_alloc_size, INT_MAX);
 
