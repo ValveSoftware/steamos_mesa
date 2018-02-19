@@ -118,34 +118,58 @@ brw_setup_image_uniform_values(gl_shader_stage stage,
    }
 }
 
+static unsigned
+count_uniform_storage_slots(const struct glsl_type *type)
+{
+   /* gl_uniform_storage can cope with one level of array, so if the
+    * type is a composite type or an array where each element occupies
+    * more than one slot than we need to recursively process it.
+    */
+   if (glsl_type_is_struct(type)) {
+      unsigned location_count = 0;
+
+      for (unsigned i = 0; i < glsl_get_length(type); i++) {
+         const struct glsl_type *field_type = glsl_get_struct_field(type, i);
+
+         location_count += count_uniform_storage_slots(field_type);
+      }
+
+      return location_count;
+   }
+
+   if (glsl_type_is_array(type)) {
+      const struct glsl_type *element_type = glsl_get_array_element(type);
+
+      if (glsl_type_is_array(element_type) ||
+          glsl_type_is_struct(element_type)) {
+         unsigned element_count = count_uniform_storage_slots(element_type);
+         return element_count * glsl_get_length(type);
+      }
+   }
+
+   return 1;
+}
+
 static void
 brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
                            const struct gl_program *prog,
                            struct brw_stage_prog_data *stage_prog_data,
                            bool is_scalar)
 {
-   int namelen = strlen(var->name);
-
    /* The data for our (non-builtin) uniforms is stored in a series of
     * gl_uniform_storage structs for each subcomponent that
     * glGetUniformLocation() could name.  We know it's been set up in the same
-    * order we'd walk the type, so walk the list of storage and find anything
-    * with our name, or the prefix of a component that starts with our name.
+    * order we'd walk the type, so walk the list of storage that matches the
+    * range of slots covered by this variable.
     */
    unsigned uniform_index = var->data.driver_location / 4;
-   for (unsigned u = 0; u < prog->sh.data->NumUniformStorage; u++) {
+   unsigned num_slots = count_uniform_storage_slots(var->type);
+   for (unsigned u = 0; u < num_slots; u++) {
       struct gl_uniform_storage *storage =
-         &prog->sh.data->UniformStorage[u];
+         &prog->sh.data->UniformStorage[var->data.location + u];
 
       if (storage->builtin || storage->type->is_sampler())
          continue;
-
-      if (strncmp(var->name, storage->name, namelen) != 0 ||
-          (storage->name[namelen] != 0 &&
-           storage->name[namelen] != '.' &&
-           storage->name[namelen] != '[')) {
-         continue;
-      }
 
       if (storage->type->is_image()) {
          brw_setup_image_uniform_values(stage, stage_prog_data,
