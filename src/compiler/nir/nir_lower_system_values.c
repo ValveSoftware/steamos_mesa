@@ -171,6 +171,13 @@ convert_block(nir_block *block, nir_builder *b)
             sysval = nir_imm_int(b, 0);
          break;
 
+      case SYSTEM_VALUE_GLOBAL_GROUP_SIZE: {
+         nir_ssa_def *group_size = build_local_group_size(b);
+         nir_ssa_def *num_work_groups = nir_load_num_work_groups(b);
+         sysval = nir_imul(b, group_size, num_work_groups);
+         break;
+      }
+
       default:
          break;
       }
