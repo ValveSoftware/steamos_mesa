@@ -1524,6 +1524,9 @@ AC_ARG_ENABLE([mangling],
   [enable_mangling=no]
 )
 if test "x${enable_mangling}" = "xyes" ; then
+  if test "x$enable_libglvnd" = xyes; then
+    AC_MSG_ERROR([Conflicting options --enable-mangling and --enable-libglvnd.])
+  fi
   DEFINES="${DEFINES} -DUSE_MGL_NAMESPACE"
   GL_LIB="Mangled${GL_LIB}"
   OSMESA_LIB="Mangled${OSMESA_LIB}"
