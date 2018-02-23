@@ -203,6 +203,7 @@ endif # USE_LIBGLVND
 
 include $(top_srcdir)/install-lib-links.mk
 
+# TODO: When building with glvnd, glvnd itself should be providing egl.pc and the headers
 pkgconfigdir = $(libdir)/pkgconfig
 
 pkgconfig_DATA = main/egl.pc
