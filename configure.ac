@@ -1534,6 +1534,15 @@ fi
 AC_SUBST([GL_LIB])
 AC_SUBST([OSMESA_LIB])
 
+dnl HACK when building glx + glvnd we ship gl.pc, despite that glvnd should do it
+dnl Thus we need to use GL as a DSO name.
+if test "x$enable_libglvnd" = xyes -a "x$enable_glx" != xno; then
+  GL_PKGCONF_LIB="GL"
+else
+  GL_PKGCONF_LIB="$GL_LIB"
+fi
+AC_SUBST([GL_PKGCONF_LIB])
+
 # Check for libdrm
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
                   [have_libdrm=yes], [have_libdrm=no])
