@@ -344,11 +344,7 @@ endif
 pre_args += '-DGLX_USE_TLS'
 if with_glx != 'disabled'
   if not (with_platform_x11 and with_any_opengl)
-    if with_glx == 'auto'
-      with_glx = 'disabled'
-    else
-      error('Cannot build GLX support without X11 platform support and at least one OpenGL API')
-    endif
+    error('Cannot build GLX support without X11 platform support and at least one OpenGL API')
   elif with_glx == 'gallium-xlib' 
     if not with_gallium
       error('Gallium-xlib based GLX requires at least one gallium driver')
