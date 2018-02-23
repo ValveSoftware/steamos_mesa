@@ -1659,6 +1659,8 @@ xxlib | xgallium-xlib)
 xdri)
     # DRI-based GLX
 
+    require_dri_shared_libs_and_glapi "GLX"
+
     # find the DRI deps for libGL
     dri_modules="x11 xext xdamage >= $XDAMAGE_REQUIRED xfixes x11-xcb xcb xcb-glx >= $XCBGLX_REQUIRED"
 
