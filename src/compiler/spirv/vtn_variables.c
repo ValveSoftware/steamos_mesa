@@ -1507,6 +1507,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    switch (dec->decoration) {
    case SpvDecorationBinding:
       vtn_var->binding = dec->literals[0];
+      vtn_var->explicit_binding = true;
       return;
    case SpvDecorationDescriptorSet:
       vtn_var->descriptor_set = dec->literals[0];
@@ -1930,6 +1931,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
        * for these. We should fix that.
        */
       var->var->data.binding = var->binding;
+      var->var->data.explicit_binding = var->explicit_binding;
       var->var->data.descriptor_set = var->descriptor_set;
       var->var->data.index = var->input_attachment_index;
 

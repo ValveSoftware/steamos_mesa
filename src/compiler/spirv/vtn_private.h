@@ -456,6 +456,7 @@ struct vtn_variable {
 
    unsigned descriptor_set;
    unsigned binding;
+   bool explicit_binding;
    unsigned input_attachment_index;
    bool patch;
 
