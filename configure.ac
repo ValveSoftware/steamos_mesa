@@ -1504,15 +1504,15 @@ fi
 AC_ARG_WITH([gl-lib-name],
   [AS_HELP_STRING([--with-gl-lib-name@<:@=NAME@:>@],
     [specify GL library name @<:@default=GL@:>@])],
-  [GL_LIB=$withval],
-  [GL_LIB="$DEFAULT_GL_LIB_NAME"])
+  [AC_MSG_ERROR([--with-gl-lib-name is no longer supported. Rename the library manually if needed.])],
+  [])
 AC_ARG_WITH([osmesa-lib-name],
   [AS_HELP_STRING([--with-osmesa-lib-name@<:@=NAME@:>@],
     [specify OSMesa library name @<:@default=OSMesa@:>@])],
-  [OSMESA_LIB=$withval],
-  [OSMESA_LIB=OSMesa])
-AS_IF([test "x$GL_LIB" = xyes], [GL_LIB="$DEFAULT_GL_LIB_NAME"])
-AS_IF([test "x$OSMESA_LIB" = xyes], [OSMESA_LIB=OSMesa])
+  [AC_MSG_ERROR([--with-osmesa-lib-name is no longer supported. Rename the library manually if needed.])],
+  [])
+GL_LIB="$DEFAULT_GL_LIB_NAME"
+OSMESA_LIB=OSMesa
 
 dnl
 dnl Mangled Mesa support
