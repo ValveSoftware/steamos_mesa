@@ -246,7 +246,7 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
    if (unlikely(debug_enabled_for_stage(stage))) {
       fprintf(stderr, "NIR for %s program %d loaded from disk shader cache:\n",
               _mesa_shader_stage_to_abbrev(stage), brw_program(prog)->id);
-      brw_program_deserialize_nir(&brw->ctx, prog, stage);
+      brw_program_deserialize_driver_blob(&brw->ctx, prog, stage);
       nir_shader *nir = prog->nir;
       nir_print_shader(nir, stderr);
       fprintf(stderr, "Native code for %s %s shader %s from disk cache:\n",
@@ -299,7 +299,7 @@ fail:
               _mesa_shader_stage_to_abbrev(prog->info.stage));
    }
 
-   brw_program_deserialize_nir(&brw->ctx, prog, stage);
+   brw_program_deserialize_driver_blob(&brw->ctx, prog, stage);
 
    return false;
 }

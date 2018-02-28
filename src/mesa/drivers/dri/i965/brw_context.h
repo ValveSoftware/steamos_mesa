@@ -1644,8 +1644,9 @@ brw_deserialize_program_binary(struct gl_context *ctx,
 void
 brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog);
 void
-brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
-                            gl_shader_stage stage);
+brw_program_deserialize_driver_blob(struct gl_context *ctx,
+                                    struct gl_program *prog,
+                                    gl_shader_stage stage);
 
 /*======================================================================
  * Inline conversion functions.  These are better-typed than the

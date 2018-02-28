@@ -61,6 +61,11 @@ brw_get_program_binary_driver_sha1(struct gl_context *ctx, uint8_t *sha1)
    memcpy(sha1, driver_sha1, sizeof(uint8_t) * 20);
 }
 
+enum driver_cache_blob_part {
+   END_PART,
+   NIR_PART,
+};
+
 void
 brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 {
@@ -69,7 +74,12 @@ brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 
    struct blob writer;
    blob_init(&writer);
+   blob_write_uint32(&writer, NIR_PART);
+   intptr_t size_offset = blob_reserve_uint32(&writer);
+   size_t nir_start = writer.size;
    nir_serialize(&writer, prog->nir);
+   blob_overwrite_uint32(&writer, size_offset, writer.size - nir_start);
+   blob_write_uint32(&writer, END_PART);
    prog->driver_cache_blob = ralloc_size(NULL, writer.size);
    memcpy(prog->driver_cache_blob, writer.data, writer.size);
    prog->driver_cache_blob_size = writer.size;
@@ -77,24 +87,40 @@ brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 }
 
 void
-brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
-                            gl_shader_stage stage)
+brw_program_deserialize_driver_blob(struct gl_context *ctx,
+                                    struct gl_program *prog,
+                                    gl_shader_stage stage)
 {
-   if (!prog->nir) {
-      assert(prog->driver_cache_blob && prog->driver_cache_blob_size > 0);
-      const struct nir_shader_compiler_options *options =
-         ctx->Const.ShaderCompilerOptions[stage].NirOptions;
-      struct blob_reader reader;
-      blob_reader_init(&reader, prog->driver_cache_blob,
-                       prog->driver_cache_blob_size);
-      prog->nir = nir_deserialize(NULL, options, &reader);
-   }
+   if (!prog->driver_cache_blob)
+      return;
 
-   if (prog->driver_cache_blob) {
-      ralloc_free(prog->driver_cache_blob);
-      prog->driver_cache_blob = NULL;
-      prog->driver_cache_blob_size = 0;
-   }
+   struct blob_reader reader;
+   blob_reader_init(&reader, prog->driver_cache_blob,
+                    prog->driver_cache_blob_size);
+
+   do {
+      uint32_t part_type = blob_read_uint32(&reader);
+      if ((enum driver_cache_blob_part)part_type == END_PART)
+         break;
+      switch ((enum driver_cache_blob_part)part_type) {
+      case NIR_PART: {
+         uint32_t nir_size = blob_read_uint32(&reader);
+         assert(!reader.overrun &&
+                (uintptr_t)(reader.end - reader.current) > nir_size);
+         const struct nir_shader_compiler_options *options =
+            ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+         prog->nir = nir_deserialize(NULL, options, &reader);
+         break;
+      }
+      default:
+         unreachable("Unsupported blob part type!");
+         break;
+      }
+   } while (true);
+
+   ralloc_free(prog->driver_cache_blob);
+   prog->driver_cache_blob = NULL;
+   prog->driver_cache_blob_size = 0;
 }
 
 /* This is just a wrapper around brw_program_deserialize_nir() as i965
@@ -105,5 +131,5 @@ brw_deserialize_program_binary(struct gl_context *ctx,
                                struct gl_shader_program *shProg,
                                struct gl_program *prog)
 {
-   brw_program_deserialize_nir(ctx, prog, prog->info.stage);
+   brw_program_deserialize_driver_blob(ctx, prog, prog->info.stage);
 }
