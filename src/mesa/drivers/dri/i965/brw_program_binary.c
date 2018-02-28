@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 
+#include "compiler/nir/nir_serialize.h"
 #include "util/build_id.h"
 #include "util/mesa-sha1.h"
 
@@ -58,6 +59,42 @@ void
 brw_get_program_binary_driver_sha1(struct gl_context *ctx, uint8_t *sha1)
 {
    memcpy(sha1, driver_sha1, sizeof(uint8_t) * 20);
+}
+
+void
+brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
+{
+   if (prog->driver_cache_blob)
+      return;
+
+   struct blob writer;
+   blob_init(&writer);
+   nir_serialize(&writer, prog->nir);
+   prog->driver_cache_blob = ralloc_size(NULL, writer.size);
+   memcpy(prog->driver_cache_blob, writer.data, writer.size);
+   prog->driver_cache_blob_size = writer.size;
+   blob_finish(&writer);
+}
+
+void
+brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
+                            gl_shader_stage stage)
+{
+   if (!prog->nir) {
+      assert(prog->driver_cache_blob && prog->driver_cache_blob_size > 0);
+      const struct nir_shader_compiler_options *options =
+         ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+      struct blob_reader reader;
+      blob_reader_init(&reader, prog->driver_cache_blob,
+                       prog->driver_cache_blob_size);
+      prog->nir = nir_deserialize(NULL, options, &reader);
+   }
+
+   if (prog->driver_cache_blob) {
+      ralloc_free(prog->driver_cache_blob);
+      prog->driver_cache_blob = NULL;
+      prog->driver_cache_blob_size = 0;
+   }
 }
 
 /* This is just a wrapper around brw_program_deserialize_nir() as i965
