@@ -32,6 +32,8 @@ extern "C" {
 #endif
 
 struct brw_context;
+struct blob;
+struct blob_reader;
 
 enum brw_param_domain {
    BRW_PARAM_DOMAIN_BUILTIN = 0,
@@ -106,6 +108,14 @@ void brw_tcs_populate_key(struct brw_context *brw,
 void brw_upload_tes_prog(struct brw_context *brw);
 void brw_tes_populate_key(struct brw_context *brw,
                           struct brw_tes_prog_key *key);
+
+void brw_write_blob_program_data(struct blob *binary, gl_shader_stage stage,
+                                 const void *program,
+                                 struct brw_stage_prog_data *prog_data);
+bool brw_read_blob_program_data(struct blob_reader *binary,
+                                struct gl_program *prog, gl_shader_stage stage,
+                                const uint8_t **program,
+                                struct brw_stage_prog_data *prog_data);
 
 #ifdef __cplusplus
 } /* extern "C" */

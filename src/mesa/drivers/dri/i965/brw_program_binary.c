@@ -133,3 +133,50 @@ brw_deserialize_program_binary(struct gl_context *ctx,
 {
    brw_program_deserialize_driver_blob(ctx, prog, prog->info.stage);
 }
+
+void
+brw_write_blob_program_data(struct blob *binary, gl_shader_stage stage,
+                            const void *program,
+                            struct brw_stage_prog_data *prog_data)
+{
+   /* Write prog_data to blob. */
+   blob_write_bytes(binary, prog_data, brw_prog_data_size(stage));
+
+   /* Write program to blob. */
+   blob_write_bytes(binary, program, prog_data->program_size);
+
+   /* Write push params */
+   blob_write_bytes(binary, prog_data->param,
+                    sizeof(uint32_t) * prog_data->nr_params);
+
+   /* Write pull params */
+   blob_write_bytes(binary, prog_data->pull_param,
+                    sizeof(uint32_t) * prog_data->nr_pull_params);
+}
+
+bool
+brw_read_blob_program_data(struct blob_reader *binary, struct gl_program *prog,
+                           gl_shader_stage stage, const uint8_t **program,
+                           struct brw_stage_prog_data *prog_data)
+{
+   /* Read shader prog_data from blob. */
+   blob_copy_bytes(binary, prog_data, brw_prog_data_size(stage));
+   if (binary->overrun)
+      return false;
+
+   /* Read shader program from blob. */
+   *program = blob_read_bytes(binary, prog_data->program_size);
+
+   /* Read push params */
+   prog_data->param = rzalloc_array(NULL, uint32_t, prog_data->nr_params);
+   blob_copy_bytes(binary, prog_data->param,
+                   sizeof(uint32_t) * prog_data->nr_params);
+
+   /* Read pull params */
+   prog_data->pull_param = rzalloc_array(NULL, uint32_t,
+                                         prog_data->nr_pull_params);
+   blob_copy_bytes(binary, prog_data->pull_param,
+                   sizeof(uint32_t) * prog_data->nr_pull_params);
+
+   return !binary->overrun;
+}

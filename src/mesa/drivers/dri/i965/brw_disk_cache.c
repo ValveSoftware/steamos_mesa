@@ -73,51 +73,14 @@ gen_shader_sha1(struct brw_context *brw, struct gl_program *prog,
    _mesa_sha1_compute(manifest, strlen(manifest), out_sha1);
 }
 
-static void
-write_blob_program_data(struct blob *binary, gl_shader_stage stage,
-                        const void *program,
-                        struct brw_stage_prog_data *prog_data)
-{
-   /* Write prog_data to blob. */
-   blob_write_bytes(binary, prog_data, brw_prog_data_size(stage));
-
-   /* Write program to blob. */
-   blob_write_bytes(binary, program, prog_data->program_size);
-
-   /* Write push params */
-   blob_write_bytes(binary, prog_data->param,
-                    sizeof(uint32_t) * prog_data->nr_params);
-
-   /* Write pull params */
-   blob_write_bytes(binary, prog_data->pull_param,
-                    sizeof(uint32_t) * prog_data->nr_pull_params);
-}
-
 static bool
 read_blob_program_data(struct blob_reader *binary, struct gl_program *prog,
                        gl_shader_stage stage, const uint8_t **program,
                        struct brw_stage_prog_data *prog_data)
 {
-   /* Read shader prog_data from blob. */
-   blob_copy_bytes(binary, prog_data, brw_prog_data_size(stage));
-   if (binary->overrun)
-      return false;
-
-   /* Read shader program from blob. */
-   *program = blob_read_bytes(binary, prog_data->program_size);
-
-   /* Read push params */
-   prog_data->param = rzalloc_array(NULL, uint32_t, prog_data->nr_params);
-   blob_copy_bytes(binary, prog_data->param,
-                   sizeof(uint32_t) * prog_data->nr_params);
-
-   /* Read pull params */
-   prog_data->pull_param = rzalloc_array(NULL, uint32_t,
-                                         prog_data->nr_pull_params);
-   blob_copy_bytes(binary, prog_data->pull_param,
-                   sizeof(uint32_t) * prog_data->nr_pull_params);
-
-   return (binary->current == binary->end && !binary->overrun);
+   return
+      brw_read_blob_program_data(binary, prog, stage, program, prog_data) &&
+      (binary->current == binary->end);
 }
 
 static bool
@@ -318,7 +281,7 @@ write_program_data(struct brw_context *brw, struct gl_program *prog,
     * generation time when the program is in normal memory accessible with
     * cache to the CPU. Another easier change would be to use
     * _mesa_streaming_load_memcpy to read from the program mapped memory. */
-   write_blob_program_data(&binary, stage, program_map, prog_data);
+   brw_write_blob_program_data(&binary, stage, program_map, prog_data);
 
    unsigned char sha1[20];
    char buf[41];
