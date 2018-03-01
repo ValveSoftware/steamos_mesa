@@ -239,7 +239,7 @@ brw_tes_precompile(struct gl_context *ctx,
       key.patch_inputs_read |= tcp->nir->info.patch_outputs_written;
    }
 
-   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
 
    success = brw_codegen_tes_prog(brw, btep, &key);
 

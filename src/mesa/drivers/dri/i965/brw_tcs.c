@@ -374,7 +374,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    memset(&key, 0, sizeof(key));
 
    key.program_string_id = btcp->id;
-   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
 
    /* Guess that the input and output patches have the same dimensionality. */
    if (devinfo->gen < 8)

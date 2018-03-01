@@ -221,7 +221,7 @@ brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    memset(&key, 0, sizeof(key));
 
-   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
    key.program_string_id = bgp->id;
 
    success = brw_codegen_gs_prog(brw, bgp, &key);

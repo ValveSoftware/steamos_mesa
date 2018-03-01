@@ -66,7 +66,7 @@ struct nir_shader *brw_create_nir(struct brw_context *brw,
 
 void brw_shader_gather_info(nir_shader *nir, struct gl_program *prog);
 
-void brw_setup_tex_for_precompile(struct brw_context *brw,
+void brw_setup_tex_for_precompile(const struct gen_device_info *devinfo,
                                   struct brw_sampler_prog_key_data *tex,
                                   struct gl_program *prog);
 

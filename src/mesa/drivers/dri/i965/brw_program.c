@@ -739,11 +739,10 @@ brw_dump_arb_asm(const char *stage, struct gl_program *prog)
 }
 
 void
-brw_setup_tex_for_precompile(struct brw_context *brw,
+brw_setup_tex_for_precompile(const struct gen_device_info *devinfo,
                              struct brw_sampler_prog_key_data *tex,
                              struct gl_program *prog)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const bool has_shader_channel_select = devinfo->is_haswell || devinfo->gen >= 8;
    unsigned sampler_count = util_last_bit(prog->SamplersUsed);
    for (unsigned i = 0; i < sampler_count; i++) {

@@ -637,7 +637,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
       key.input_slots_valid = prog->info.inputs_read | VARYING_BIT_POS;
    }
 
-   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
 
    key.nr_color_regions = _mesa_bitcount_64(outputs_written &
          ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
