@@ -126,6 +126,16 @@ driver_blob_is_ready(void *blob, uint32_t size, bool with_gen_program)
    }
 }
 
+static void
+serialize_nir_part(struct blob *writer, struct gl_program *prog)
+{
+   blob_write_uint32(writer, NIR_PART);
+   intptr_t size_offset = blob_reserve_uint32(writer);
+   size_t nir_start = writer->size;
+   nir_serialize(writer, prog->nir);
+   blob_overwrite_uint32(writer, size_offset, writer->size - nir_start);
+}
+
 void
 brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 {
@@ -138,11 +148,7 @@ brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 
    struct blob writer;
    blob_init(&writer);
-   blob_write_uint32(&writer, NIR_PART);
-   intptr_t size_offset = blob_reserve_uint32(&writer);
-   size_t nir_start = writer.size;
-   nir_serialize(&writer, prog->nir);
-   blob_overwrite_uint32(&writer, size_offset, writer.size - nir_start);
+   serialize_nir_part(&writer, prog);
    blob_write_uint32(&writer, END_PART);
    prog->driver_cache_blob = ralloc_size(NULL, writer.size);
    memcpy(prog->driver_cache_blob, writer.data, writer.size);
@@ -237,12 +243,66 @@ brw_deserialize_program_binary(struct gl_context *ctx,
    brw_program_deserialize_driver_blob(ctx, prog, prog->info.stage);
 }
 
+static void
+serialize_gen_part(struct blob *writer, struct gl_context *ctx,
+                   struct gl_shader_program *sh_prog,
+                   struct gl_program *prog)
+{
+   struct brw_context *brw = brw_context(ctx);
+
+   union brw_any_prog_key key;
+   brw_populate_default_key(&brw->screen->devinfo, &key, sh_prog, prog);
+
+   const gl_shader_stage stage = prog->info.stage;
+   uint32_t offset = 0;
+   void *prog_data = NULL;
+   if (brw_search_cache(&brw->cache, brw_stage_cache_id(stage), &key,
+                        brw_prog_key_size(stage), &offset, &prog_data,
+                        false)) {
+      const void *program_map = brw->cache.map + offset;
+      /* TODO: Improve perf for non-LLC. It would be best to save it at
+       * program generation time when the program is in normal memory
+       * accessible with cache to the CPU. Another easier change would be to
+       * use _mesa_streaming_load_memcpy to read from the program mapped
+       * memory.
+       */
+      blob_write_uint32(writer, GEN_PART);
+      intptr_t size_offset = blob_reserve_uint32(writer);
+      size_t gen_start = writer->size;
+      blob_write_bytes(writer, &key, brw_prog_key_size(stage));
+      brw_write_blob_program_data(writer, stage, program_map, prog_data);
+      blob_overwrite_uint32(writer, size_offset, writer->size - gen_start);
+   }
+}
+
 void
 brw_serialize_program_binary(struct gl_context *ctx,
                              struct gl_shader_program *sh_prog,
                              struct gl_program *prog)
 {
-   brw_program_serialize_nir(ctx, prog);
+   if (driver_blob_is_ready(prog->driver_cache_blob,
+                            prog->driver_cache_blob_size, true))
+      return;
+
+   if (prog->driver_cache_blob) {
+      if (!prog->nir) {
+         /* If we loaded from the disk shader cache, then the nir might not
+          * have been deserialized yet.
+          */
+         brw_program_deserialize_driver_blob(ctx, prog, prog->info.stage);
+      }
+      ralloc_free(prog->driver_cache_blob);
+   }
+
+   struct blob writer;
+   blob_init(&writer);
+   serialize_nir_part(&writer, prog);
+   serialize_gen_part(&writer, ctx, sh_prog, prog);
+   blob_write_uint32(&writer, END_PART);
+   prog->driver_cache_blob = ralloc_size(NULL, writer.size);
+   memcpy(prog->driver_cache_blob, writer.data, writer.size);
+   prog->driver_cache_blob_size = writer.size;
+   blob_finish(&writer);
 }
 
 void
