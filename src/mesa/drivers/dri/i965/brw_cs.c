@@ -168,10 +168,9 @@ brw_upload_cs_prog(struct brw_context *brw)
 
    brw_cs_populate_key(brw, &key);
 
-   if (brw_search_cache(&brw->cache, BRW_CACHE_CS_PROG,
-                        &key, sizeof(key),
-                        &brw->cs.base.prog_offset,
-                        &brw->cs.base.prog_data))
+   if (brw_search_cache(&brw->cache, BRW_CACHE_CS_PROG, &key, sizeof(key),
+                        &brw->cs.base.prog_offset, &brw->cs.base.prog_data,
+                        true))
       return;
 
    if (brw_disk_cache_upload_program(brw, MESA_SHADER_COMPUTE))

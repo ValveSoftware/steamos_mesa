@@ -590,10 +590,9 @@ brw_upload_wm_prog(struct brw_context *brw)
 
    brw_wm_populate_key(brw, &key);
 
-   if (brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
-                        &key, sizeof(key),
-                        &brw->wm.base.prog_offset,
-                        &brw->wm.base.prog_data))
+   if (brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG, &key, sizeof(key),
+                        &brw->wm.base.prog_offset, &brw->wm.base.prog_data,
+                        true))
       return;
 
    if (brw_disk_cache_upload_program(brw, MESA_SHADER_FRAGMENT))

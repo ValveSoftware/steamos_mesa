@@ -194,12 +194,10 @@ rehash(struct brw_cache *cache)
  * Returns the buffer object matching cache_id and key, or NULL.
  */
 bool
-brw_search_cache(struct brw_cache *cache,
-                 enum brw_cache_id cache_id,
-                 const void *key, GLuint key_size,
-                 uint32_t *inout_offset, void *inout_prog_data)
+brw_search_cache(struct brw_cache *cache, enum brw_cache_id cache_id,
+                 const void *key, GLuint key_size, uint32_t *inout_offset,
+                 void *inout_prog_data, bool flag_state)
 {
-   struct brw_context *brw = cache->brw;
    struct brw_cache_item *item;
    struct brw_cache_item lookup;
    GLuint hash;
@@ -219,7 +217,8 @@ brw_search_cache(struct brw_cache *cache,
 
    if (item->offset != *inout_offset ||
        prog_data != *((void **) inout_prog_data)) {
-      brw->ctx.NewDriverState |= (1 << cache_id);
+      if (likely(flag_state))
+         cache->brw->ctx.NewDriverState |= (1 << cache_id);
       *inout_offset = item->offset;
       *((void **) inout_prog_data) = prog_data;
    }

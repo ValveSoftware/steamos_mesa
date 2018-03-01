@@ -341,9 +341,9 @@ brw_upload_vs_prog(struct brw_context *brw)
 
    brw_vs_populate_key(brw, &key);
 
-   if (brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
-                        &key, sizeof(key),
-                        &brw->vs.base.prog_offset, &brw->vs.base.prog_data))
+   if (brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG, &key, sizeof(key),
+                        &brw->vs.base.prog_offset, &brw->vs.base.prog_data,
+                        true))
       return;
 
    if (brw_disk_cache_upload_program(brw, MESA_SHADER_VERTEX))

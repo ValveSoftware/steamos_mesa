@@ -195,10 +195,9 @@ brw_upload_tes_prog(struct brw_context *brw)
 
    brw_tes_populate_key(brw, &key);
 
-   if (brw_search_cache(&brw->cache, BRW_CACHE_TES_PROG,
-                        &key, sizeof(key),
-                        &stage_state->prog_offset,
-                        &brw->tes.base.prog_data))
+   if (brw_search_cache(&brw->cache, BRW_CACHE_TES_PROG, &key, sizeof(key),
+                        &stage_state->prog_offset, &brw->tes.base.prog_data,
+                        true))
       return;
 
    if (brw_disk_cache_upload_program(brw, MESA_SHADER_TESS_EVAL))

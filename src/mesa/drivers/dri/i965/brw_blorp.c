@@ -48,8 +48,8 @@ brw_blorp_lookup_shader(struct blorp_context *blorp,
                         uint32_t *kernel_out, void *prog_data_out)
 {
    struct brw_context *brw = blorp->driver_ctx;
-   return brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                           key, key_size, kernel_out, prog_data_out);
+   return brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG, key, key_size,
+                           kernel_out, prog_data_out, true);
 }
 
 static bool
