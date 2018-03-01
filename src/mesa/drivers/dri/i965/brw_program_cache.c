@@ -78,6 +78,21 @@ struct brw_cache_item {
    struct brw_cache_item *next;
 };
 
+enum brw_cache_id
+brw_stage_cache_id(gl_shader_stage stage)
+{
+   static const enum brw_cache_id stage_ids[] = {
+      BRW_CACHE_VS_PROG,
+      BRW_CACHE_TCS_PROG,
+      BRW_CACHE_TES_PROG,
+      BRW_CACHE_GS_PROG,
+      BRW_CACHE_FS_PROG,
+      BRW_CACHE_CS_PROG,
+   };
+   assert((int)stage >= 0 && stage < ARRAY_SIZE(stage_ids));
+   return stage_ids[stage];
+}
+
 static unsigned
 get_program_string_id(enum brw_cache_id cache_id, const void *key)
 {
