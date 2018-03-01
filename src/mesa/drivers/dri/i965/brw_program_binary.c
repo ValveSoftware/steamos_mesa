@@ -29,6 +29,7 @@
 
 #include "brw_context.h"
 #include "brw_program.h"
+#include "brw_state.h"
 
 static uint8_t driver_sha1[20];
 
@@ -63,6 +64,7 @@ brw_get_program_binary_driver_sha1(struct gl_context *ctx, uint8_t *sha1)
 
 enum driver_cache_blob_part {
    END_PART,
+   GEN_PART,
    NIR_PART,
 };
 
@@ -86,6 +88,38 @@ brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
    blob_finish(&writer);
 }
 
+static bool
+deserialize_gen_program(struct blob_reader *reader, struct gl_context *ctx,
+                        struct gl_program *prog, gl_shader_stage stage)
+{
+   struct brw_context *brw = brw_context(ctx);
+
+   union brw_any_prog_key prog_key;
+   blob_copy_bytes(reader, &prog_key, brw_prog_key_size(stage));
+   brw_prog_key_set_id(&prog_key, stage, brw_program(prog)->id);
+
+   enum brw_cache_id cache_id = brw_stage_cache_id(stage);
+
+   const uint8_t *program;
+   struct brw_stage_prog_data *prog_data =
+      ralloc_size(NULL, sizeof(union brw_any_prog_data));
+
+   if (!brw_read_blob_program_data(reader, prog, stage, &program, prog_data)) {
+      ralloc_free(prog_data);
+      return false;
+   }
+
+   uint32_t offset;
+   void *out_prog_data;
+   brw_upload_cache(&brw->cache, cache_id, &prog_key, brw_prog_key_size(stage),
+                    program, prog_data->program_size, prog_data,
+                    brw_prog_data_size(stage), &offset, &out_prog_data);
+
+   ralloc_free(prog_data);
+
+   return true;
+}
+
 void
 brw_program_deserialize_driver_blob(struct gl_context *ctx,
                                     struct gl_program *prog,
@@ -103,6 +137,13 @@ brw_program_deserialize_driver_blob(struct gl_context *ctx,
       if ((enum driver_cache_blob_part)part_type == END_PART)
          break;
       switch ((enum driver_cache_blob_part)part_type) {
+      case GEN_PART: {
+         uint32_t gen_size = blob_read_uint32(&reader);
+         assert(!reader.overrun &&
+                (uintptr_t)(reader.end - reader.current) > gen_size);
+         deserialize_gen_program(&reader, ctx, prog, stage);
+         break;
+      }
       case NIR_PART: {
          uint32_t nir_size = blob_read_uint32(&reader);
          assert(!reader.overrun &&
