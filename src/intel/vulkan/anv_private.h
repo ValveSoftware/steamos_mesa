@@ -617,6 +617,12 @@ struct anv_block_pool {
 
    struct anv_bo bo;
 
+   /* The address where the start of the pool is pinned. The various bos that
+    * are created as the pool grows will have addresses in the range
+    * [start_address, start_address + BLOCK_POOL_MEMFD_SIZE).
+    */
+   uint64_t start_address;
+
    /* The offset from the start of the bo to the "center" of the block
     * pool.  Pointers to allocated blocks are given by
     * bo.map + center_bo_offset + offsets.
@@ -713,6 +719,7 @@ struct anv_state_stream {
  */
 VkResult anv_block_pool_init(struct anv_block_pool *pool,
                              struct anv_device *device,
+                             uint64_t start_address,
                              uint32_t initial_size,
                              uint64_t bo_flags);
 void anv_block_pool_finish(struct anv_block_pool *pool);
@@ -723,6 +730,7 @@ int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool,
 
 VkResult anv_state_pool_init(struct anv_state_pool *pool,
                              struct anv_device *device,
+                             uint64_t start_address,
                              uint32_t block_size,
                              uint64_t bo_flags);
 void anv_state_pool_finish(struct anv_state_pool *pool);
