@@ -208,6 +208,17 @@ brw_upload_gs_prog(struct brw_context *brw)
    assert(success);
 }
 
+void
+brw_gs_populate_default_key(const struct gen_device_info *devinfo,
+                            struct brw_gs_prog_key *key,
+                            struct gl_program *prog)
+{
+   memset(key, 0, sizeof(*key));
+
+   brw_setup_tex_for_precompile(devinfo, &key->tex, prog);
+   key->program_string_id = brw_program(prog)->id;
+}
+
 bool
 brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
@@ -219,10 +230,7 @@ brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    struct brw_program *bgp = brw_program(prog);
 
-   memset(&key, 0, sizeof(key));
-
-   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
-   key.program_string_id = bgp->id;
+   brw_gs_populate_default_key(&brw->screen->devinfo, &key, prog);
 
    success = brw_codegen_gs_prog(brw, bgp, &key);
 

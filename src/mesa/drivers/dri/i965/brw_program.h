@@ -82,9 +82,16 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         const struct gl_program *prog,
                                         struct brw_stage_prog_data *stage_prog_data,
                                         uint32_t next_binding_table_offset);
+
 void
 brw_prog_key_set_id(union brw_any_prog_key *key, gl_shader_stage stage,
                     unsigned id);
+
+void
+brw_populate_default_key(const struct gen_device_info *devinfo,
+                         union brw_any_prog_key *prog_key,
+                         struct gl_shader_program *sh_prog,
+                         struct gl_program *prog);
 
 void
 brw_stage_prog_data_free(const void *prog_data);
@@ -108,9 +115,17 @@ GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog
 void brw_upload_tcs_prog(struct brw_context *brw);
 void brw_tcs_populate_key(struct brw_context *brw,
                           struct brw_tcs_prog_key *key);
+void brw_tcs_populate_default_key(const struct gen_device_info *devinfo,
+                                  struct brw_tcs_prog_key *key,
+                                  struct gl_shader_program *sh_prog,
+                                  struct gl_program *prog);
 void brw_upload_tes_prog(struct brw_context *brw);
 void brw_tes_populate_key(struct brw_context *brw,
                           struct brw_tes_prog_key *key);
+void brw_tes_populate_default_key(const struct gen_device_info *devinfo,
+                                  struct brw_tes_prog_key *key,
+                                  struct gl_shader_program *sh_prog,
+                                  struct gl_program *prog);
 
 void brw_write_blob_program_data(struct blob *binary, gl_shader_stage stage,
                                  const void *program,

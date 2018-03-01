@@ -211,6 +211,30 @@ brw_upload_tes_prog(struct brw_context *brw)
    assert(success);
 }
 
+void
+brw_tes_populate_default_key(const struct gen_device_info *devinfo,
+                             struct brw_tes_prog_key *key,
+                             struct gl_shader_program *sh_prog,
+                             struct gl_program *prog)
+{
+   struct brw_program *btep = brw_program(prog);
+
+   memset(key, 0, sizeof(*key));
+
+   key->program_string_id = btep->id;
+   key->inputs_read = prog->nir->info.inputs_read;
+   key->patch_inputs_read = prog->nir->info.patch_inputs_read;
+
+   if (sh_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
+      struct gl_program *tcp =
+         sh_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
+      key->inputs_read |= tcp->nir->info.outputs_written &
+         ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
+      key->patch_inputs_read |= tcp->nir->info.patch_outputs_written;
+   }
+
+   brw_setup_tex_for_precompile(devinfo, &key->tex, prog);
+}
 
 bool
 brw_tes_precompile(struct gl_context *ctx,
@@ -225,21 +249,7 @@ brw_tes_precompile(struct gl_context *ctx,
 
    struct brw_program *btep = brw_program(prog);
 
-   memset(&key, 0, sizeof(key));
-
-   key.program_string_id = btep->id;
-   key.inputs_read = prog->nir->info.inputs_read;
-   key.patch_inputs_read = prog->nir->info.patch_inputs_read;
-
-   if (shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
-      struct gl_program *tcp =
-         shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
-      key.inputs_read |= tcp->nir->info.outputs_written &
-         ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
-      key.patch_inputs_read |= tcp->nir->info.patch_outputs_written;
-   }
-
-   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
+   brw_tes_populate_default_key(&brw->screen->devinfo, &key, shader_prog, prog);
 
    success = brw_codegen_tes_prog(brw, btep, &key);
 

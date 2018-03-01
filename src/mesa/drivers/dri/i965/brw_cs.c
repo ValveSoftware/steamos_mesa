@@ -184,6 +184,16 @@ brw_upload_cs_prog(struct brw_context *brw)
    assert(success);
 }
 
+void
+brw_cs_populate_default_key(const struct gen_device_info *devinfo,
+                            struct brw_cs_prog_key *key,
+                            struct gl_program *prog)
+{
+   memset(key, 0, sizeof(*key));
+   key->program_string_id = brw_program(prog)->id;
+
+   brw_setup_tex_for_precompile(devinfo, &key->tex, prog);
+}
 
 bool
 brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog)
@@ -193,10 +203,7 @@ brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    struct brw_program *bcp = brw_program(prog);
 
-   memset(&key, 0, sizeof(key));
-   key.program_string_id = bcp->id;
-
-   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
+   brw_cs_populate_default_key(&brw->screen->devinfo, &key, prog);
 
    uint32_t old_prog_offset = brw->cs.base.prog_offset;
    struct brw_stage_prog_data *old_prog_data = brw->cs.base.prog_data;

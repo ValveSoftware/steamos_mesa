@@ -356,6 +356,23 @@ brw_upload_vs_prog(struct brw_context *brw)
    assert(success);
 }
 
+void
+brw_vs_populate_default_key(const struct gen_device_info *devinfo,
+                            struct brw_vs_prog_key *key,
+                            struct gl_program *prog)
+{
+   struct brw_program *bvp = brw_program(prog);
+
+   memset(key, 0, sizeof(*key));
+
+   brw_setup_tex_for_precompile(devinfo, &key->tex, prog);
+   key->program_string_id = bvp->id;
+   key->clamp_vertex_color =
+      (prog->info.outputs_written &
+       (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
+        VARYING_BIT_BFC1));
+}
+
 bool
 brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
@@ -367,14 +384,7 @@ brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    struct brw_program *bvp = brw_program(prog);
 
-   memset(&key, 0, sizeof(key));
-
-   brw_setup_tex_for_precompile(&brw->screen->devinfo, &key.tex, prog);
-   key.program_string_id = bvp->id;
-   key.clamp_vertex_color =
-      (prog->info.outputs_written &
-       (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
-        VARYING_BIT_BFC1));
+   brw_vs_populate_default_key(&brw->screen->devinfo, &key, prog);
 
    success = brw_codegen_vs_prog(brw, bvp, &key);
 
