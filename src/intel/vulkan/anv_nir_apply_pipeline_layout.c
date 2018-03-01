@@ -427,10 +427,12 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    }
 
    nir_foreach_variable(var, &shader->uniforms) {
-      if (!glsl_type_is_image(var->interface_type))
+      const struct glsl_type *glsl_type = glsl_without_array(var->type);
+
+      if (!glsl_type_is_image(glsl_type))
          continue;
 
-      enum glsl_sampler_dim dim = glsl_get_sampler_dim(var->interface_type);
+      enum glsl_sampler_dim dim = glsl_get_sampler_dim(glsl_type);
 
       const uint32_t set = var->data.descriptor_set;
       const uint32_t binding = var->data.binding;

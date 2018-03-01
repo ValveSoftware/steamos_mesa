@@ -410,8 +410,6 @@ enum vtn_variable_mode {
    vtn_variable_mode_ubo,
    vtn_variable_mode_ssbo,
    vtn_variable_mode_push_constant,
-   vtn_variable_mode_image,
-   vtn_variable_mode_sampler,
    vtn_variable_mode_workgroup,
    vtn_variable_mode_input,
    vtn_variable_mode_output,

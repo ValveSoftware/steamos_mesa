@@ -1548,9 +1548,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                  vtn_var->mode == vtn_variable_mode_output) {
          is_vertex_input = false;
          location += vtn_var->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0;
-      } else if (vtn_var->mode != vtn_variable_mode_uniform &&
-                 vtn_var->mode != vtn_variable_mode_sampler &&
-                 vtn_var->mode != vtn_variable_mode_image) {
+      } else if (vtn_var->mode != vtn_variable_mode_uniform) {
          vtn_warn("Location must be on input, output, uniform, sampler or "
                   "image variable");
          return;
@@ -1628,12 +1626,7 @@ vtn_storage_class_to_mode(struct vtn_builder *b,
       nir_mode = 0;
       break;
    case SpvStorageClassUniformConstant:
-      if (glsl_type_is_image(interface_type->type))
-         mode = vtn_variable_mode_image;
-      else if (glsl_type_is_sampler(interface_type->type))
-         mode = vtn_variable_mode_sampler;
-      else
-         mode = vtn_variable_mode_uniform;
+      mode = vtn_variable_mode_uniform;
       nir_mode = nir_var_uniform;
       break;
    case SpvStorageClassPushConstant:
@@ -1776,11 +1769,11 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    case vtn_variable_mode_ssbo:
       b->shader->info.num_ssbos++;
       break;
-   case vtn_variable_mode_image:
-      b->shader->info.num_images++;
-      break;
-   case vtn_variable_mode_sampler:
-      b->shader->info.num_textures++;
+   case vtn_variable_mode_uniform:
+      if (glsl_type_is_image(without_array->type))
+         b->shader->info.num_images++;
+      else if (glsl_type_is_sampler(without_array->type))
+         b->shader->info.num_textures++;
       break;
    case vtn_variable_mode_push_constant:
       b->shader->num_uniforms = vtn_type_block_size(b, type);
@@ -1800,8 +1793,6 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    switch (var->mode) {
    case vtn_variable_mode_local:
    case vtn_variable_mode_global:
-   case vtn_variable_mode_image:
-   case vtn_variable_mode_sampler:
    case vtn_variable_mode_uniform:
       /* For these, we create the variable normally */
       var->var = rzalloc(b->shader, nir_variable);
@@ -1809,16 +1800,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       var->var->type = var->type->type;
       var->var->data.mode = nir_mode;
       var->var->data.location = -1;
-
-      switch (var->mode) {
-      case vtn_variable_mode_image:
-      case vtn_variable_mode_sampler:
-         var->var->interface_type = without_array->type;
-         break;
-      default:
-         var->var->interface_type = NULL;
-         break;
-      }
+      var->var->interface_type = NULL;
       break;
 
    case vtn_variable_mode_workgroup:
@@ -1943,8 +1925,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
 
    vtn_foreach_decoration(b, val, var_decoration_cb, var);
 
-   if (var->mode == vtn_variable_mode_image ||
-       var->mode == vtn_variable_mode_sampler) {
+   if (var->mode == vtn_variable_mode_uniform) {
       /* XXX: We still need the binding information in the nir_variable
        * for these. We should fix that.
        */
@@ -1952,7 +1933,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       var->var->data.descriptor_set = var->descriptor_set;
       var->var->data.index = var->input_attachment_index;
 
-      if (var->mode == vtn_variable_mode_image)
+      if (glsl_type_is_image(without_array->type))
          var->var->data.image.format = without_array->image_format;
    }
 
@@ -2092,8 +2073,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       vtn_assert_types_equal(b, opcode, res_type, src_val->type->deref);
 
-      if (src->mode == vtn_variable_mode_image ||
-          src->mode == vtn_variable_mode_sampler) {
+      if (glsl_type_is_image(res_type->type) ||
+          glsl_type_is_sampler(res_type->type)) {
          vtn_push_value(b, w[2], vtn_value_type_pointer)->pointer = src;
          return;
       }
