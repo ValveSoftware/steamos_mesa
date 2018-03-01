@@ -174,7 +174,8 @@ write_program_payload(struct gl_context *ctx, struct blob *blob,
    for (unsigned stage = 0; stage < MESA_SHADER_STAGES; stage++) {
       struct gl_linked_shader *shader = sh_prog->_LinkedShaders[stage];
       if (shader)
-         ctx->Driver.ProgramBinarySerializeDriverBlob(ctx, shader->Program);
+         ctx->Driver.ProgramBinarySerializeDriverBlob(ctx, sh_prog,
+                                                      shader->Program);
    }
 
    serialize_glsl_program(blob, ctx, sh_prog);

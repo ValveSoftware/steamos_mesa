@@ -1218,6 +1218,7 @@ struct dd_function_table {
    void (*GetProgramBinaryDriverSHA1)(struct gl_context *ctx, uint8_t *sha1);
 
    void (*ProgramBinarySerializeDriverBlob)(struct gl_context *ctx,
+                                            struct gl_shader_program *shProg,
                                             struct gl_program *prog);
 
    void (*ProgramBinaryDeserializeDriverBlob)(struct gl_context *ctx,

@@ -238,6 +238,14 @@ brw_deserialize_program_binary(struct gl_context *ctx,
 }
 
 void
+brw_serialize_program_binary(struct gl_context *ctx,
+                             struct gl_shader_program *sh_prog,
+                             struct gl_program *prog)
+{
+   brw_program_serialize_nir(ctx, prog);
+}
+
+void
 brw_write_blob_program_data(struct blob *binary, gl_shader_stage stage,
                             const void *program,
                             struct brw_stage_prog_data *prog_data)
