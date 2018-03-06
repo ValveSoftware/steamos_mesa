@@ -629,7 +629,7 @@ def main():
 
     c(textwrap.dedent("""\
         #include "brw_context.h"
-        #include "brw_performance_query.h"
+        #include "brw_performance_query_metrics.h"
 
 
         #define MIN(a, b) ((a < b) ? (a) : (b))

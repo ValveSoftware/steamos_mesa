@@ -76,15 +76,6 @@
 
 #define FILE_DEBUG_FLAG DEBUG_PERFMON
 
-/*
- * The largest OA formats we can use include:
- * For Haswell:
- *   1 timestamp, 45 A counters, 8 B counters and 8 C counters.
- * For Gen8+
- *   1 timestamp, 1 clock, 36 A counters, 8 B counters and 8 C counters
- */
-#define MAX_OA_REPORT_COUNTERS 62
-
 #define OAREPORT_REASON_MASK           0x3f
 #define OAREPORT_REASON_SHIFT          19
 #define OAREPORT_REASON_TIMER          (1<<0)
@@ -216,95 +207,12 @@ struct brw_oa_sample_buf {
    uint32_t last_timestamp;
 };
 
-/**
- * i965 representation of a performance query object.
- *
- * NB: We want to keep this structure relatively lean considering that
- * applications may expect to allocate enough objects to be able to
- * query around all draw calls in a frame.
- */
-struct brw_perf_query_object
-{
-   struct gl_perf_query_object base;
-
-   const struct brw_perf_query_info *query;
-
-   /* See query->kind to know which state below is in use... */
-   union {
-      struct {
-
-         /**
-          * BO containing OA counter snapshots at query Begin/End time.
-          */
-         struct brw_bo *bo;
-
-         /**
-          * Address of mapped of @bo
-          */
-         void *map;
-
-         /**
-          * The MI_REPORT_PERF_COUNT command lets us specify a unique
-          * ID that will be reflected in the resulting OA report
-          * that's written by the GPU. This is the ID we're expecting
-          * in the begin report and the the end report should be
-          * @begin_report_id + 1.
-          */
-         int begin_report_id;
-
-         /**
-          * Reference the head of the brw->perfquery.sample_buffers
-          * list at the time that the query started (so we only need
-          * to look at nodes after this point when looking for samples
-          * related to this query)
-          *
-          * (See struct brw_oa_sample_buf description for more details)
-          */
-         struct exec_node *samples_head;
-
-         /**
-          * Storage for the final accumulated OA counters.
-          */
-         uint64_t accumulator[MAX_OA_REPORT_COUNTERS];
-
-         /**
-          * Hw ID used by the context on which the query was running.
-          */
-         uint32_t hw_id;
-
-         /**
-          * false while in the unaccumulated_elements list, and set to
-          * true when the final, end MI_RPC snapshot has been
-          * accumulated.
-          */
-         bool results_accumulated;
-
-         /**
-          * Number of reports accumulated to produce the results.
-          */
-         uint32_t reports_accumulated;
-      } oa;
-
-      struct {
-         /**
-          * BO containing starting and ending snapshots for the
-          * statistics counters.
-          */
-         struct brw_bo *bo;
-      } pipeline_stats;
-   };
-};
-
 /** Downcasting convenience macro. */
 static inline struct brw_perf_query_object *
 brw_perf_query(struct gl_perf_query_object *o)
 {
    return (struct brw_perf_query_object *) o;
 }
-
-#define STATS_BO_SIZE               4096
-#define STATS_BO_END_OFFSET_BYTES   (STATS_BO_SIZE / 2)
-#define MAX_STAT_COUNTERS           (STATS_BO_END_OFFSET_BYTES / 8)
 
 #define MI_RPC_BO_SIZE              4096
 #define MI_RPC_BO_END_OFFSET_BYTES  (MI_RPC_BO_SIZE / 2)
@@ -606,36 +514,6 @@ drop_from_unaccumulated_query_list(struct brw_context *brw,
    reap_old_sample_buffers(brw);
 }
 
-static void
-accumulate_uint32(const uint32_t *report0,
-                  const uint32_t *report1,
-                  uint64_t *accumulator)
-{
-   *accumulator += (uint32_t)(*report1 - *report0);
-}
-
-static void
-accumulate_uint40(int a_index,
-                  const uint32_t *report0,
-                  const uint32_t *report1,
-                  uint64_t *accumulator)
-{
-   const uint8_t *high_bytes0 = (uint8_t *)(report0 + 40);
-   const uint8_t *high_bytes1 = (uint8_t *)(report1 + 40);
-   uint64_t high0 = (uint64_t)(high_bytes0[a_index]) << 32;
-   uint64_t high1 = (uint64_t)(high_bytes1[a_index]) << 32;
-   uint64_t value0 = report0[a_index + 4] | high0;
-   uint64_t value1 = report1[a_index + 4] | high1;
-   uint64_t delta;
-
-   if (value0 > value1)
-      delta = (1ULL << 40) + value1 - value0;
-   else
-      delta = value1 - value0;
-
-   *accumulator += delta;
-}
-
 /**
  * Given pointers to starting and ending OA snapshots, add the deltas for each
  * counter to the results.
@@ -655,27 +533,29 @@ add_deltas(struct brw_context *brw,
 
    switch (query->oa_format) {
    case I915_OA_FORMAT_A32u40_A4u32_B8_C8:
-      accumulate_uint32(start + 1, end + 1, accumulator + idx++); /* timestamp */
-      accumulate_uint32(start + 3, end + 3, accumulator + idx++); /* clock */
+      brw_perf_query_accumulate_uint32(start + 1, end + 1, accumulator + idx++); /* timestamp */
+      brw_perf_query_accumulate_uint32(start + 3, end + 3, accumulator + idx++); /* clock */
 
       /* 32x 40bit A counters... */
       for (i = 0; i < 32; i++)
-         accumulate_uint40(i, start, end, accumulator + idx++);
+         brw_perf_query_accumulate_uint40(i, start, end, accumulator + idx++);
 
       /* 4x 32bit A counters... */
       for (i = 0; i < 4; i++)
-         accumulate_uint32(start + 36 + i, end + 36 + i, accumulator + idx++);
+         brw_perf_query_accumulate_uint32(start + 36 + i, end + 36 + i,
+                                          accumulator + idx++);
 
       /* 8x 32bit B counters + 8x 32bit C counters... */
       for (i = 0; i < 16; i++)
-         accumulate_uint32(start + 48 + i, end + 48 + i, accumulator + idx++);
+         brw_perf_query_accumulate_uint32(start + 48 + i, end + 48 + i,
+                                          accumulator + idx++);
 
       break;
    case I915_OA_FORMAT_A45_B8_C8:
-      accumulate_uint32(start + 1, end + 1, accumulator); /* timestamp */
+      brw_perf_query_accumulate_uint32(start + 1, end + 1, accumulator); /* timestamp */
 
       for (i = 0; i < 61; i++)
-         accumulate_uint32(start + 3 + i, end + 3 + i, accumulator + 1 + i);
+         brw_perf_query_accumulate_uint32(start + 3 + i, end + 3 + i, accumulator + 1 + i);
 
       break;
    default:
@@ -1643,54 +1523,11 @@ brw_delete_perf_query(struct gl_context *ctx,
 
 /******************************************************************************/
 
-static struct brw_perf_query_info *
-append_query_info(struct brw_context *brw)
-{
-   brw->perfquery.queries =
-      reralloc(brw, brw->perfquery.queries,
-               struct brw_perf_query_info, ++brw->perfquery.n_queries);
-
-   return &brw->perfquery.queries[brw->perfquery.n_queries - 1];
-}
-
-static void
-add_stat_reg(struct brw_perf_query_info *query,
-             uint32_t reg,
-             uint32_t numerator,
-             uint32_t denominator,
-             const char *name,
-             const char *description)
-{
-   struct brw_perf_query_counter *counter;
-
-   assert(query->n_counters < MAX_STAT_COUNTERS);
-
-   counter = &query->counters[query->n_counters];
-   counter->name = name;
-   counter->desc = description;
-   counter->type = GL_PERFQUERY_COUNTER_RAW_INTEL;
-   counter->data_type = GL_PERFQUERY_COUNTER_DATA_UINT64_INTEL;
-   counter->size = sizeof(uint64_t);
-   counter->offset = sizeof(uint64_t) * query->n_counters;
-   counter->pipeline_stat.reg = reg;
-   counter->pipeline_stat.numerator = numerator;
-   counter->pipeline_stat.denominator = denominator;
-
-   query->n_counters++;
-}
-
-static void
-add_basic_stat_reg(struct brw_perf_query_info *query,
-                   uint32_t reg, const char *name)
-{
-   add_stat_reg(query, reg, 1, 1, name, name);
-}
-
 static void
 init_pipeline_statistic_query_registers(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   struct brw_perf_query_info *query = append_query_info(brw);
+   struct brw_perf_query_info *query = brw_perf_query_append_query_info(brw);
 
    query->kind = PIPELINE_STATS;
    query->name = "Pipeline Statistics Registers";
@@ -1698,75 +1535,75 @@ init_pipeline_statistic_query_registers(struct brw_context *brw)
    query->counters =
       rzalloc_array(brw, struct brw_perf_query_counter, MAX_STAT_COUNTERS);
 
-   add_basic_stat_reg(query, IA_VERTICES_COUNT,
-                      "N vertices submitted");
-   add_basic_stat_reg(query, IA_PRIMITIVES_COUNT,
-                      "N primitives submitted");
-   add_basic_stat_reg(query, VS_INVOCATION_COUNT,
-                      "N vertex shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, IA_VERTICES_COUNT,
+                                          "N vertices submitted");
+   brw_perf_query_info_add_basic_stat_reg(query, IA_PRIMITIVES_COUNT,
+                                          "N primitives submitted");
+   brw_perf_query_info_add_basic_stat_reg(query, VS_INVOCATION_COUNT,
+                                          "N vertex shader invocations");
 
    if (devinfo->gen == 6) {
-      add_stat_reg(query, GEN6_SO_PRIM_STORAGE_NEEDED, 1, 1,
-                   "SO_PRIM_STORAGE_NEEDED",
-                   "N geometry shader stream-out primitives (total)");
-      add_stat_reg(query, GEN6_SO_NUM_PRIMS_WRITTEN, 1, 1,
-                   "SO_NUM_PRIMS_WRITTEN",
-                   "N geometry shader stream-out primitives (written)");
+      brw_perf_query_info_add_stat_reg(query, GEN6_SO_PRIM_STORAGE_NEEDED, 1, 1,
+                                       "SO_PRIM_STORAGE_NEEDED",
+                                       "N geometry shader stream-out primitives (total)");
+      brw_perf_query_info_add_stat_reg(query, GEN6_SO_NUM_PRIMS_WRITTEN, 1, 1,
+                                       "SO_NUM_PRIMS_WRITTEN",
+                                       "N geometry shader stream-out primitives (written)");
    } else {
-      add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(0), 1, 1,
-                   "SO_PRIM_STORAGE_NEEDED (Stream 0)",
-                   "N stream-out (stream 0) primitives (total)");
-      add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(1), 1, 1,
-                   "SO_PRIM_STORAGE_NEEDED (Stream 1)",
-                   "N stream-out (stream 1) primitives (total)");
-      add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(2), 1, 1,
-                   "SO_PRIM_STORAGE_NEEDED (Stream 2)",
-                   "N stream-out (stream 2) primitives (total)");
-      add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(3), 1, 1,
-                   "SO_PRIM_STORAGE_NEEDED (Stream 3)",
-                   "N stream-out (stream 3) primitives (total)");
-      add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(0), 1, 1,
-                   "SO_NUM_PRIMS_WRITTEN (Stream 0)",
-                   "N stream-out (stream 0) primitives (written)");
-      add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(1), 1, 1,
-                   "SO_NUM_PRIMS_WRITTEN (Stream 1)",
-                   "N stream-out (stream 1) primitives (written)");
-      add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(2), 1, 1,
-                   "SO_NUM_PRIMS_WRITTEN (Stream 2)",
-                   "N stream-out (stream 2) primitives (written)");
-      add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(3), 1, 1,
-                   "SO_NUM_PRIMS_WRITTEN (Stream 3)",
-                   "N stream-out (stream 3) primitives (written)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(0), 1, 1,
+                                       "SO_PRIM_STORAGE_NEEDED (Stream 0)",
+                                       "N stream-out (stream 0) primitives (total)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(1), 1, 1,
+                                       "SO_PRIM_STORAGE_NEEDED (Stream 1)",
+                                       "N stream-out (stream 1) primitives (total)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(2), 1, 1,
+                                       "SO_PRIM_STORAGE_NEEDED (Stream 2)",
+                                       "N stream-out (stream 2) primitives (total)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_PRIM_STORAGE_NEEDED(3), 1, 1,
+                                       "SO_PRIM_STORAGE_NEEDED (Stream 3)",
+                                       "N stream-out (stream 3) primitives (total)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(0), 1, 1,
+                                       "SO_NUM_PRIMS_WRITTEN (Stream 0)",
+                                       "N stream-out (stream 0) primitives (written)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(1), 1, 1,
+                                       "SO_NUM_PRIMS_WRITTEN (Stream 1)",
+                                       "N stream-out (stream 1) primitives (written)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(2), 1, 1,
+                                       "SO_NUM_PRIMS_WRITTEN (Stream 2)",
+                                       "N stream-out (stream 2) primitives (written)");
+      brw_perf_query_info_add_stat_reg(query, GEN7_SO_NUM_PRIMS_WRITTEN(3), 1, 1,
+                                       "SO_NUM_PRIMS_WRITTEN (Stream 3)",
+                                       "N stream-out (stream 3) primitives (written)");
    }
 
-   add_basic_stat_reg(query, HS_INVOCATION_COUNT,
-                      "N TCS shader invocations");
-   add_basic_stat_reg(query, DS_INVOCATION_COUNT,
-                      "N TES shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, HS_INVOCATION_COUNT,
+                                          "N TCS shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, DS_INVOCATION_COUNT,
+                                          "N TES shader invocations");
 
-   add_basic_stat_reg(query, GS_INVOCATION_COUNT,
-                      "N geometry shader invocations");
-   add_basic_stat_reg(query, GS_PRIMITIVES_COUNT,
-                      "N geometry shader primitives emitted");
+   brw_perf_query_info_add_basic_stat_reg(query, GS_INVOCATION_COUNT,
+                                          "N geometry shader invocations");
+   brw_perf_query_info_add_basic_stat_reg(query, GS_PRIMITIVES_COUNT,
+                                          "N geometry shader primitives emitted");
 
-   add_basic_stat_reg(query, CL_INVOCATION_COUNT,
-                      "N primitives entering clipping");
-   add_basic_stat_reg(query, CL_PRIMITIVES_COUNT,
-                      "N primitives leaving clipping");
+   brw_perf_query_info_add_basic_stat_reg(query, CL_INVOCATION_COUNT,
+                                          "N primitives entering clipping");
+   brw_perf_query_info_add_basic_stat_reg(query, CL_PRIMITIVES_COUNT,
+                                          "N primitives leaving clipping");
 
    if (devinfo->is_haswell || devinfo->gen == 8)
-      add_stat_reg(query, PS_INVOCATION_COUNT, 1, 4,
-                   "N fragment shader invocations",
-                   "N fragment shader invocations");
+      brw_perf_query_info_add_stat_reg(query, PS_INVOCATION_COUNT, 1, 4,
+                                       "N fragment shader invocations",
+                                       "N fragment shader invocations");
    else
-      add_basic_stat_reg(query, PS_INVOCATION_COUNT,
-                         "N fragment shader invocations");
+      brw_perf_query_info_add_basic_stat_reg(query, PS_INVOCATION_COUNT,
+                                             "N fragment shader invocations");
 
-   add_basic_stat_reg(query, PS_DEPTH_COUNT, "N z-pass fragments");
+   brw_perf_query_info_add_basic_stat_reg(query, PS_DEPTH_COUNT, "N z-pass fragments");
 
    if (devinfo->gen >= 7)
-      add_basic_stat_reg(query, CS_INVOCATION_COUNT,
-                         "N compute shader invocations");
+      brw_perf_query_info_add_basic_stat_reg(query, CS_INVOCATION_COUNT,
+                                             "N compute shader invocations");
 
    query->data_size = sizeof(uint64_t) * query->n_counters;
 }
@@ -1776,7 +1613,9 @@ register_oa_config(struct brw_context *brw,
                    const struct brw_perf_query_info *query,
                    uint64_t config_id)
 {
-   struct brw_perf_query_info *registred_query = append_query_info(brw);
+   struct brw_perf_query_info *registred_query =
+      brw_perf_query_append_query_info(brw);
+
    *registred_query = *query;
    registred_query->oa_metrics_set_id = config_id;
    DBG("metric set registred: id = %" PRIu64", guid = %s\n",
