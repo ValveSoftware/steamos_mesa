@@ -865,17 +865,24 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
    }
 
-   case nir_op_isign:
+   case nir_op_isign: {
       /*  ASR(val, 31) -> negative val generates 0xffffffff (signed -1).
        *               -> non-negative val generates 0x00000000.
        *  Predicated OR sets 1 if val is positive.
        */
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.CMP(bld.null_reg_d(), op[0], brw_imm_d(0), BRW_CONDITIONAL_G);
-      bld.ASR(result, op[0], brw_imm_d(31));
-      inst = bld.OR(result, result, brw_imm_d(1));
+      uint32_t bit_size = nir_dest_bit_size(instr->dest.dest);
+      assert(bit_size == 32 || bit_size == 16);
+
+      fs_reg zero = bit_size == 32 ? brw_imm_d(0) : brw_imm_w(0);
+      fs_reg one = bit_size == 32 ? brw_imm_d(1) : brw_imm_w(1);
+      fs_reg shift = bit_size == 32 ? brw_imm_d(31) : brw_imm_w(15);
+
+      bld.CMP(bld.null_reg_d(), op[0], zero, BRW_CONDITIONAL_G);
+      bld.ASR(result, op[0], shift);
+      inst = bld.OR(result, result, one);
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
+   }
 
    case nir_op_frcp:
       inst = bld.emit(SHADER_OPCODE_RCP, result, op[0]);
