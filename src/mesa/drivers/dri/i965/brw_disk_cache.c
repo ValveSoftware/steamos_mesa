@@ -94,35 +94,31 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
    switch (stage) {
    case MESA_SHADER_VERTEX:
       brw_vs_populate_key(brw, &prog_key.vs);
-      /* We don't care what instance of the program it is for the disk cache
-       * hash lookup, so set the id to 0 for the sha1 hashing.
-       * program_string_id will be set below.
-       */
-      prog_key.vs.program_string_id = 0;
       break;
    case MESA_SHADER_TESS_CTRL:
       brw_tcs_populate_key(brw, &prog_key.tcs);
-      prog_key.tcs.program_string_id = 0;
       break;
    case MESA_SHADER_TESS_EVAL:
       brw_tes_populate_key(brw, &prog_key.tes);
-      prog_key.tes.program_string_id = 0;
       break;
    case MESA_SHADER_GEOMETRY:
       brw_gs_populate_key(brw, &prog_key.gs);
-      prog_key.gs.program_string_id = 0;
       break;
    case MESA_SHADER_FRAGMENT:
       brw_wm_populate_key(brw, &prog_key.wm);
-      prog_key.wm.program_string_id = 0;
       break;
    case MESA_SHADER_COMPUTE:
       brw_cs_populate_key(brw, &prog_key.cs);
-      prog_key.cs.program_string_id = 0;
       break;
    default:
       unreachable("Unsupported stage!");
    }
+
+   /* We don't care what instance of the program it is for the disk cache hash
+    * lookup, so set the id to 0 for the sha1 hashing. program_string_id will
+    * be set below.
+    */
+   brw_prog_key_set_id(&prog_key, stage, 0);
 
    gen_shader_sha1(brw, prog, stage, &prog_key, binary_sha1);
 
@@ -171,38 +167,34 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
 
    switch (stage) {
    case MESA_SHADER_VERTEX:
-      prog_key.vs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_VS_PROG;
       stage_state = &brw->vs.base;
       break;
    case MESA_SHADER_TESS_CTRL:
-      prog_key.tcs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_TCS_PROG;
       stage_state = &brw->tcs.base;
       break;
    case MESA_SHADER_TESS_EVAL:
-      prog_key.tes.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_TES_PROG;
       stage_state = &brw->tes.base;
       break;
    case MESA_SHADER_GEOMETRY:
-      prog_key.gs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_GS_PROG;
       stage_state = &brw->gs.base;
       break;
    case MESA_SHADER_FRAGMENT:
-      prog_key.wm.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_FS_PROG;
       stage_state = &brw->wm.base;
       break;
    case MESA_SHADER_COMPUTE:
-      prog_key.cs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_CS_PROG;
       stage_state = &brw->cs.base;
       break;
    default:
       unreachable("Unsupported stage!");
    }
+
+   brw_prog_key_set_id(&prog_key, stage, brw_program(prog)->id);
 
    brw_alloc_stage_scratch(brw, stage_state, prog_data->total_scratch);
 
