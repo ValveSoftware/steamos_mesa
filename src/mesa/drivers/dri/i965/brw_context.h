@@ -681,7 +681,8 @@ struct gen_l3_config;
 
 enum brw_query_kind {
    OA_COUNTERS,
-   PIPELINE_STATS
+   OA_COUNTERS_RAW,
+   PIPELINE_STATS,
 };
 
 struct brw_perf_query_register_prog {

@@ -217,4 +217,11 @@ brw_perf_query_accumulate_uint40(int a_index,
    *accumulator += delta;
 }
 
+int brw_perf_query_get_mdapi_oa_data(struct brw_context *brw,
+                                     struct brw_perf_query_object *obj,
+                                     size_t data_size,
+                                     uint8_t *data);
+void brw_perf_query_register_mdapi_oa_query(struct brw_context *brw);
+
+
 #endif /* BRW_PERFORMANCE_QUERY_H */

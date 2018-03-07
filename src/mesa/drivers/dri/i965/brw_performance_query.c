@@ -266,6 +266,44 @@ static bool
 brw_is_perf_query_ready(struct gl_context *ctx,
                         struct gl_perf_query_object *o);
 
+static uint64_t
+brw_perf_query_get_metric_id(struct brw_context *brw,
+                             const struct brw_perf_query_info *query)
+{
+   /* These queries are know not to ever change, their config ID has been
+    * loaded upon the first query creation. No need to look them up again.
+    */
+   if (query->kind == OA_COUNTERS)
+      return query->oa_metrics_set_id;
+
+   assert(query->kind == OA_COUNTERS_RAW);
+
+   /* Raw queries can be reprogrammed up by an external application/library.
+    * When a raw query is used for the first time it's id is set to a value !=
+    * 0. When it stops being used the id returns to 0. No need to reload the
+    * ID when it's already loaded.
+    */
+   if (query->oa_metrics_set_id != 0) {
+      DBG("Raw query '%s' guid=%s using cached ID: %"PRIu64"\n",
+          query->name, query->guid, query->oa_metrics_set_id);
+      return query->oa_metrics_set_id;
+   }
+
+   char metric_id_file[280];
+   snprintf(metric_id_file, sizeof(metric_id_file),
+            "%s/metrics/%s/id", brw->perfquery.sysfs_dev_dir, query->guid);
+
+   struct brw_perf_query_info *raw_query = (struct brw_perf_query_info *)query;
+   if (!read_file_uint64(metric_id_file, &raw_query->oa_metrics_set_id)) {
+      DBG("Unable to read query guid=%s ID, falling back to test config\n", query->guid);
+      raw_query->oa_metrics_set_id = 1ULL;
+   } else {
+      DBG("Raw query '%s'guid=%s loaded ID: %"PRIu64"\n",
+          query->name, query->guid, query->oa_metrics_set_id);
+   }
+   return query->oa_metrics_set_id;
+}
+
 static void
 dump_perf_query_callback(GLuint id, void *query_void, void *brw_void)
 {
@@ -275,6 +313,7 @@ dump_perf_query_callback(GLuint id, void *query_void, void *brw_void)
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
       DBG("%4d: %-6s %-8s BO: %-4s OA data: %-10s %-15s\n",
           id,
           o->Used ? "Dirty," : "New,",
@@ -383,6 +422,7 @@ brw_get_perf_query_info(struct gl_context *ctx,
 
    switch (query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
       *n_active = brw->perfquery.n_active_oa_queries;
       break;
 
@@ -940,11 +980,17 @@ open_i915_perf_oa_stream(struct brw_context *brw,
 }
 
 static void
-close_perf(struct brw_context *brw)
+close_perf(struct brw_context *brw,
+           const struct brw_perf_query_info *query)
 {
    if (brw->perfquery.oa_stream_fd != -1) {
       close(brw->perfquery.oa_stream_fd);
       brw->perfquery.oa_stream_fd = -1;
+   }
+   if (query->kind == OA_COUNTERS_RAW) {
+      struct brw_perf_query_info *raw_query =
+         (struct brw_perf_query_info *) query;
+      raw_query->oa_metrics_set_id = 0;
    }
 }
 
@@ -1033,6 +1079,7 @@ brw_begin_perf_query(struct gl_context *ctx,
 
    switch (query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW: {
 
       /* Opening an i915 perf stream implies exclusive access to the OA unit
        * which will generate counter reports for a specific counter set with a
@@ -1040,14 +1087,17 @@ brw_begin_perf_query(struct gl_context *ctx,
        * require a different counter set or format unless we get an opportunity
        * to close the stream and open a new one...
        */
-      if (brw->perfquery.oa_stream_fd != -1 &&
-          brw->perfquery.current_oa_metrics_set_id !=
-          query->oa_metrics_set_id) {
+      uint64_t metric_id = brw_perf_query_get_metric_id(brw, query);
 
-         if (brw->perfquery.n_oa_users != 0)
+      if (brw->perfquery.oa_stream_fd != -1 &&
+          brw->perfquery.current_oa_metrics_set_id != metric_id) {
+
+         if (brw->perfquery.n_oa_users != 0) {
+            DBG("WARNING: Begin(%d) failed already using perf config=%i/%"PRIu64"\n",
+                o->Id, brw->perfquery.current_oa_metrics_set_id, metric_id);
             return false;
-         else
-            close_perf(brw);
+         } else
+            close_perf(brw, query);
       }
 
       /* If the OA counters aren't already on, enable them. */
@@ -1109,17 +1159,15 @@ brw_begin_perf_query(struct gl_context *ctx,
              prev_sample_period / 1000000ul);
 
          if (!open_i915_perf_oa_stream(brw,
-                                       query->oa_metrics_set_id,
+                                       metric_id,
                                        query->oa_format,
                                        period_exponent,
                                        screen->fd, /* drm fd */
                                        brw->hw_ctx))
             return false;
       } else {
-         assert(brw->perfquery.current_oa_metrics_set_id ==
-                query->oa_metrics_set_id &&
-                brw->perfquery.current_oa_format ==
-                query->oa_format);
+         assert(brw->perfquery.current_oa_metrics_set_id == metric_id &&
+                brw->perfquery.current_oa_format == query->oa_format);
       }
 
       if (!inc_n_oa_users(brw)) {
@@ -1182,6 +1230,7 @@ brw_begin_perf_query(struct gl_context *ctx,
 
       add_to_unaccumulated_query_list(brw, obj);
       break;
+   }
 
    case PIPELINE_STATS:
       if (obj->pipeline_stats.bo) {
@@ -1232,6 +1281,7 @@ brw_end_perf_query(struct gl_context *ctx,
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
 
       /* NB: It's possible that the query will have already been marked
        * as 'accumulated' if an error was seen while reading samples
@@ -1277,6 +1327,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
       bo = obj->oa.bo;
       break;
 
@@ -1305,7 +1356,8 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
     * we need to wait for all the reports to come in before we can
     * read them.
     */
-   if (obj->query->kind == OA_COUNTERS) {
+   if (obj->query->kind == OA_COUNTERS ||
+       obj->query->kind == OA_COUNTERS_RAW) {
       while (!read_oa_samples_for_query(brw, obj))
          ;
    }
@@ -1323,6 +1375,7 @@ brw_is_perf_query_ready(struct gl_context *ctx,
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
       return (obj->oa.results_accumulated ||
               (obj->oa.bo &&
                !brw_batch_references(&brw->batch, obj->oa.bo) &&
@@ -1438,16 +1491,6 @@ get_oa_counter_data(struct brw_context *brw,
    int n_counters = query->n_counters;
    int written = 0;
 
-   if (!obj->oa.results_accumulated) {
-      read_gt_frequency(brw, obj);
-      read_slice_unslice_frequencies(brw, obj);
-      accumulate_oa_reports(brw, obj);
-      assert(obj->oa.results_accumulated);
-
-      brw_bo_unmap(obj->oa.bo);
-      obj->oa.map = NULL;
-   }
-
    for (int i = 0; i < n_counters; i++) {
       const struct brw_perf_query_counter *counter = &query->counters[i];
       uint64_t *out_uint64;
@@ -1537,7 +1580,20 @@ brw_get_perf_query_data(struct gl_context *ctx,
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
-      written = get_oa_counter_data(brw, obj, data_size, (uint8_t *)data);
+   case OA_COUNTERS_RAW:
+      if (!obj->oa.results_accumulated) {
+         read_gt_frequency(brw, obj);
+         read_slice_unslice_frequencies(brw, obj);
+         accumulate_oa_reports(brw, obj);
+         assert(obj->oa.results_accumulated);
+
+         brw_bo_unmap(obj->oa.bo);
+         obj->oa.map = NULL;
+      }
+      if (obj->query->kind == OA_COUNTERS)
+         written = get_oa_counter_data(brw, obj, data_size, (uint8_t *)data);
+      else
+         written = brw_perf_query_get_mdapi_oa_data(brw, obj, data_size, (uint8_t *)data);
       break;
 
    case PIPELINE_STATS:
@@ -1593,6 +1649,7 @@ brw_delete_perf_query(struct gl_context *ctx,
 
    switch (obj->query->kind) {
    case OA_COUNTERS:
+   case OA_COUNTERS_RAW:
       if (obj->oa.bo) {
          if (!obj->oa.results_accumulated) {
             drop_from_unaccumulated_query_list(brw, obj);
@@ -1618,16 +1675,16 @@ brw_delete_perf_query(struct gl_context *ctx,
       break;
    }
 
-   free(obj);
-
    /* As an indication that the INTEL_performance_query extension is no
     * longer in use, it's a good time to free our cache of sample
     * buffers and close any current i915-perf stream.
     */
    if (--brw->perfquery.n_query_instances == 0) {
       free_sample_bufs(brw);
-      close_perf(brw);
+      close_perf(brw, obj->query);
    }
+
+   free(obj);
 }
 
 /******************************************************************************/
@@ -2150,6 +2207,8 @@ brw_init_perf_query_info(struct gl_context *ctx)
          init_oa_configs(brw);
       else
          enumerate_sysfs_metrics(brw);
+
+      brw_perf_query_register_mdapi_oa_query(brw);
    }
 
    brw->perfquery.unaccumulated =

@@ -56,6 +56,7 @@ files_i965 = files(
   'brw_pipe_control.c',
   'brw_performance_query.h',
   'brw_performance_query.c',
+  'brw_performance_query_mdapi.c',
   'brw_performance_query_metrics.h',
   'brw_program.c',
   'brw_program.h',
