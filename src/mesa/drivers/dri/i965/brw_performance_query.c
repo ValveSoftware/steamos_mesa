@@ -1342,6 +1342,64 @@ brw_is_perf_query_ready(struct gl_context *ctx,
 }
 
 static void
+gen8_read_report_clock_ratios(const uint32_t *report,
+                              uint64_t *slice_freq_hz,
+                              uint64_t *unslice_freq_hz)
+{
+   /* The lower 16bits of the RPT_ID field of the OA reports contains a
+    * snapshot of the bits coming from the RP_FREQ_NORMAL register and is
+    * divided this way :
+    *
+    * RPT_ID[31:25]: RP_FREQ_NORMAL[20:14] (low squashed_slice_clock_frequency)
+    * RPT_ID[10:9]:  RP_FREQ_NORMAL[22:21] (high squashed_slice_clock_frequency)
+    * RPT_ID[8:0]:   RP_FREQ_NORMAL[31:23] (squashed_unslice_clock_frequency)
+    *
+    * RP_FREQ_NORMAL[31:23]: Software Unslice Ratio Request
+    *                        Multiple of 33.33MHz 2xclk (16 MHz 1xclk)
+    *
+    * RP_FREQ_NORMAL[22:14]: Software Slice Ratio Request
+    *                        Multiple of 33.33MHz 2xclk (16 MHz 1xclk)
+    */
+
+   uint32_t unslice_freq = report[0] & 0x1ff;
+   uint32_t slice_freq_low = (report[0] >> 25) & 0x7f;
+   uint32_t slice_freq_high = (report[0] >> 9) & 0x3;
+   uint32_t slice_freq = slice_freq_low | (slice_freq_high << 7);
+
+   *slice_freq_hz = slice_freq * 16666667ULL;
+   *unslice_freq_hz = unslice_freq * 16666667ULL;
+}
+
+static void
+read_slice_unslice_frequencies(struct brw_context *brw,
+                               struct brw_perf_query_object *obj)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   uint32_t *begin_report, *end_report;
+
+   /* Slice/Unslice frequency is only available in the OA reports when the
+    * "Disable OA reports due to clock ratio change" field in
+    * OA_DEBUG_REGISTER is set to 1. This is how the kernel programs this
+    * global register (see drivers/gpu/drm/i915/i915_perf.c)
+    *
+    * Documentation says this should be available on Gen9+ but experimentation
+    * shows that Gen8 reports similar values, so we enable it there too.
+    */
+   if (devinfo->gen < 8)
+      return;
+
+   begin_report = obj->oa.map;
+   end_report = obj->oa.map + MI_RPC_BO_END_OFFSET_BYTES;
+
+   gen8_read_report_clock_ratios(begin_report,
+                                 &obj->oa.slice_frequency[0],
+                                 &obj->oa.unslice_frequency[0]);
+   gen8_read_report_clock_ratios(end_report,
+                                 &obj->oa.slice_frequency[1],
+                                 &obj->oa.unslice_frequency[1]);
+}
+
+static void
 read_gt_frequency(struct brw_context *brw,
                   struct brw_perf_query_object *obj)
 {
@@ -1382,6 +1440,7 @@ get_oa_counter_data(struct brw_context *brw,
 
    if (!obj->oa.results_accumulated) {
       read_gt_frequency(brw, obj);
+      read_slice_unslice_frequencies(brw, obj);
       accumulate_oa_reports(brw, obj);
       assert(obj->oa.results_accumulated);
 

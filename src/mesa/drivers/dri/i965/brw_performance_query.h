@@ -118,6 +118,18 @@ struct brw_perf_query_object
           * Frequency of the GT at begin and end of the query.
           */
          uint64_t gt_frequency[2];
+
+         /**
+          * Frequency in the slices of the GT at the begin and end of the
+          * query.
+          */
+         uint64_t slice_frequency[2];
+
+         /**
+          * Frequency in the unslice of the GT at the begin and end of the
+          * query.
+          */
+         uint64_t unslice_frequency[2];
       } oa;
 
       struct {
