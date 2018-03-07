@@ -374,6 +374,9 @@ anv_physical_device_init(struct anv_physical_device *device,
                               anv_gem_supports_syncobj_wait(fd);
    device->has_context_priority = anv_gem_has_context_priority(fd);
 
+   device->use_softpin = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_SOFTPIN)
+      && device->supports_48bit_addresses;
+
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
    /* Starting with Gen10, the timestamp frequency of the command streamer may
@@ -1527,6 +1530,27 @@ VkResult anv_CreateDevice(
       goto fail_fd;
    }
 
+   if (physical_device->use_softpin) {
+      if (pthread_mutex_init(&device->vma_mutex, NULL) != 0) {
+         result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
+         goto fail_fd;
+      }
+
+      /* keep the page with address zero out of the allocator */
+      util_vma_heap_init(&device->vma_lo, LOW_HEAP_MIN_ADDRESS, LOW_HEAP_SIZE);
+      device->vma_lo_available =
+         physical_device->memory.heaps[physical_device->memory.heap_count - 1].size;
+
+      /* Leave the last 4GiB out of the high vma range, so that no state base
+       * address + size can overflow 48 bits. For more information see the
+       * comment about Wa32bitGeneralStateOffset in anv_allocator.c
+       */
+      util_vma_heap_init(&device->vma_hi, HIGH_HEAP_MIN_ADDRESS,
+                         HIGH_HEAP_SIZE);
+      device->vma_hi_available = physical_device->memory.heap_count == 1 ? 0 :
+         physical_device->memory.heaps[0].size;
+   }
+
    /* As per spec, the driver implementation may deny requests to acquire
     * a priority above the default priority (MEDIUM) if the caller does not
     * have sufficient privileges. In this scenario VK_ERROR_NOT_PERMITTED_EXT
@@ -1885,6 +1909,66 @@ VkResult anv_DeviceWaitIdle(
    anv_batch_emit(&batch, GEN7_MI_NOOP, noop);
 
    return anv_device_submit_simple_batch(device, &batch);
+}
+
+bool
+anv_vma_alloc(struct anv_device *device, struct anv_bo *bo)
+{
+   if (!(bo->flags & EXEC_OBJECT_PINNED))
+      return true;
+
+   pthread_mutex_lock(&device->vma_mutex);
+
+   bo->offset = 0;
+
+   if (bo->flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS &&
+       device->vma_hi_available >= bo->size) {
+      uint64_t addr = util_vma_heap_alloc(&device->vma_hi, bo->size, 4096);
+      if (addr) {
+         bo->offset = gen_canonical_address(addr);
+         assert(addr == gen_48b_address(bo->offset));
+         device->vma_hi_available -= bo->size;
+      }
+   }
+
+   if (bo->offset == 0 && device->vma_lo_available >= bo->size) {
+      uint64_t addr = util_vma_heap_alloc(&device->vma_lo, bo->size, 4096);
+      if (addr) {
+         bo->offset = gen_canonical_address(addr);
+         assert(addr == gen_48b_address(bo->offset));
+         device->vma_lo_available -= bo->size;
+      }
+   }
+
+   pthread_mutex_unlock(&device->vma_mutex);
+
+   return bo->offset != 0;
+}
+
+void
+anv_vma_free(struct anv_device *device, struct anv_bo *bo)
+{
+   if (!(bo->flags & EXEC_OBJECT_PINNED))
+      return;
+
+   const uint64_t addr_48b = gen_48b_address(bo->offset);
+
+   pthread_mutex_lock(&device->vma_mutex);
+
+   if (addr_48b >= LOW_HEAP_MIN_ADDRESS &&
+       addr_48b <= LOW_HEAP_MAX_ADDRESS) {
+      util_vma_heap_free(&device->vma_lo, addr_48b, bo->size);
+      device->vma_lo_available += bo->size;
+   } else {
+      assert(addr_48b >= HIGH_HEAP_MIN_ADDRESS &&
+             addr_48b <= HIGH_HEAP_MAX_ADDRESS);
+      util_vma_heap_free(&device->vma_hi, addr_48b, bo->size);
+      device->vma_hi_available += bo->size;
+   }
+
+   pthread_mutex_unlock(&device->vma_mutex);
+
+   bo->offset = 0;
 }
 
 VkResult

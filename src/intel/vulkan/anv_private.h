@@ -50,6 +50,7 @@
 #include "util/list.h"
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
+#include "util/vma.h"
 #include "vk_alloc.h"
 #include "vk_debug_report.h"
 
@@ -79,6 +80,55 @@ struct gen_l3_config;
 #include "common/gen_debug.h"
 #include "common/intel_log.h"
 #include "wsi_common.h"
+
+/* anv Virtual Memory Layout
+ * =========================
+ *
+ * When the anv driver is determining the virtual graphics addresses of memory
+ * objects itself using the softpin mechanism, the following memory ranges
+ * will be used.
+ *
+ * Three special considerations to notice:
+ *
+ * (1) the dynamic state pool is located within the same 4 GiB as the low
+ * heap. This is to work around a VF cache issue described in a comment in
+ * anv_physical_device_init_heaps.
+ *
+ * (2) the binding table pool is located at lower addresses than the surface
+ * state pool, within a 4 GiB range. This allows surface state base addresses
+ * to cover both binding tables (16 bit offsets) and surface states (32 bit
+ * offsets).
+ *
+ * (3) the last 4 GiB of the address space is withheld from the high
+ * heap. Various hardware units will read past the end of an object for
+ * various reasons. This healthy margin prevents reads from wrapping around
+ * 48-bit addresses.
+ */
+#define LOW_HEAP_MIN_ADDRESS               0x000000001000ULL /* 4 KiB */
+#define LOW_HEAP_MAX_ADDRESS               0x0000bfffffffULL
+#define DYNAMIC_STATE_POOL_MIN_ADDRESS     0x0000c0000000ULL /* 3 GiB */
+#define DYNAMIC_STATE_POOL_MAX_ADDRESS     0x0000ffffffffULL
+#define BINDING_TABLE_POOL_MIN_ADDRESS     0x000100000000ULL /* 4 GiB */
+#define BINDING_TABLE_POOL_MAX_ADDRESS     0x00013fffffffULL
+#define SURFACE_STATE_POOL_MIN_ADDRESS     0x000140000000ULL /* 5 GiB */
+#define SURFACE_STATE_POOL_MAX_ADDRESS     0x00017fffffffULL
+#define INSTRUCTION_STATE_POOL_MIN_ADDRESS 0x000180000000ULL /* 6 GiB */
+#define INSTRUCTION_STATE_POOL_MAX_ADDRESS 0x0001bfffffffULL
+#define HIGH_HEAP_MIN_ADDRESS              0x0001c0000000ULL /* 7 GiB */
+#define HIGH_HEAP_MAX_ADDRESS              0xfffeffffffffULL
+
+#define LOW_HEAP_SIZE               \
+   (LOW_HEAP_MAX_ADDRESS - LOW_HEAP_MIN_ADDRESS + 1)
+#define HIGH_HEAP_SIZE              \
+   (HIGH_HEAP_MAX_ADDRESS - HIGH_HEAP_MIN_ADDRESS + 1)
+#define DYNAMIC_STATE_POOL_SIZE     \
+   (DYNAMIC_STATE_POOL_MAX_ADDRESS - DYNAMIC_STATE_POOL_MIN_ADDRESS + 1)
+#define BINDING_TABLE_POOL_SIZE     \
+   (BINDING_TABLE_POOL_MAX_ADDRESS - BINDING_TABLE_POOL_MIN_ADDRESS + 1)
+#define SURFACE_STATE_POOL_SIZE     \
+   (SURFACE_STATE_POOL_MAX_ADDRESS - SURFACE_STATE_POOL_MIN_ADDRESS + 1)
+#define INSTRUCTION_STATE_POOL_SIZE \
+   (INSTRUCTION_STATE_POOL_MAX_ADDRESS - INSTRUCTION_STATE_POOL_MIN_ADDRESS + 1)
 
 /* Allowing different clear colors requires us to perform a depth resolve at
  * the end of certain render passes. This is because while slow clears store
@@ -791,6 +841,7 @@ struct anv_physical_device {
     bool                                        has_syncobj;
     bool                                        has_syncobj_wait;
     bool                                        has_context_priority;
+    bool                                        use_softpin;
 
     struct anv_device_extension_table           supported_extensions;
 
@@ -884,6 +935,12 @@ struct anv_device {
     struct anv_device_extension_table           enabled_extensions;
     struct anv_dispatch_table                   dispatch;
 
+    pthread_mutex_t                             vma_mutex;
+    struct util_vma_heap                        vma_lo;
+    struct util_vma_heap                        vma_hi;
+    uint64_t                                    vma_lo_available;
+    uint64_t                                    vma_hi_available;
+
     struct anv_bo_pool                          batch_bo_pool;
 
     struct anv_bo_cache                         bo_cache;
@@ -976,6 +1033,9 @@ bool anv_gem_supports_syncobj_wait(int fd);
 int anv_gem_syncobj_wait(struct anv_device *device,
                          uint32_t *handles, uint32_t num_handles,
                          int64_t abs_timeout_ns, bool wait_all);
+
+bool anv_vma_alloc(struct anv_device *device, struct anv_bo *bo);
+void anv_vma_free(struct anv_device *device, struct anv_bo *bo);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 
