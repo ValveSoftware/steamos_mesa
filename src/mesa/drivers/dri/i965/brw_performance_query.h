@@ -113,6 +113,11 @@ struct brw_perf_query_object
           * Number of reports accumulated to produce the results.
           */
          uint32_t reports_accumulated;
+
+         /**
+          * Frequency of the GT at begin and end of the query.
+          */
+         uint64_t gt_frequency[2];
       } oa;
 
       struct {

@@ -216,6 +216,8 @@ brw_perf_query(struct gl_perf_query_object *o)
 
 #define MI_RPC_BO_SIZE              4096
 #define MI_RPC_BO_END_OFFSET_BYTES  (MI_RPC_BO_SIZE / 2)
+#define MI_FREQ_START_OFFSET_BYTES  (3072)
+#define MI_FREQ_END_OFFSET_BYTES    (3076)
 
 /******************************************************************************/
 
@@ -946,6 +948,21 @@ close_perf(struct brw_context *brw)
    }
 }
 
+static void
+capture_frequency_stat_register(struct brw_context *brw,
+                                struct brw_bo *bo,
+                                uint32_t bo_offset)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen >= 7 && devinfo->gen <= 8 &&
+       !devinfo->is_baytrail && !devinfo->is_cherryview) {
+      brw_store_register_mem32(brw, bo, GEN7_RPSTAT1, bo_offset);
+   } else if (devinfo->gen >= 9) {
+      brw_store_register_mem32(brw, bo, GEN9_RPSTAT0, bo_offset);
+   }
+}
+
 /**
  * Driver hook for glBeginPerfQueryINTEL().
  */
@@ -1138,6 +1155,8 @@ brw_begin_perf_query(struct gl_context *ctx,
       /* Take a starting OA counter snapshot. */
       brw->vtbl.emit_mi_report_perf_count(brw, obj->oa.bo, 0,
                                           obj->oa.begin_report_id);
+      capture_frequency_stat_register(brw, obj->oa.bo, MI_FREQ_START_OFFSET_BYTES);
+
       ++brw->perfquery.n_active_oa_queries;
 
       /* No already-buffered samples can possibly be associated with this query
@@ -1221,6 +1240,7 @@ brw_end_perf_query(struct gl_context *ctx,
        */
       if (!obj->oa.results_accumulated) {
          /* Take an ending OA counter snapshot. */
+         capture_frequency_stat_register(brw, obj->oa.bo, MI_FREQ_END_OFFSET_BYTES);
          brw->vtbl.emit_mi_report_perf_count(brw, obj->oa.bo,
                                              MI_RPC_BO_END_OFFSET_BYTES,
                                              obj->oa.begin_report_id + 1);
@@ -1321,6 +1341,35 @@ brw_is_perf_query_ready(struct gl_context *ctx,
    return false;
 }
 
+static void
+read_gt_frequency(struct brw_context *brw,
+                  struct brw_perf_query_object *obj)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   uint32_t start = *((uint32_t *)(obj->oa.map + MI_FREQ_START_OFFSET_BYTES)),
+      end = *((uint32_t *)(obj->oa.map + MI_FREQ_END_OFFSET_BYTES));
+
+   switch (devinfo->gen) {
+   case 7:
+   case 8:
+      obj->oa.gt_frequency[0] = GET_FIELD(start, GEN7_RPSTAT1_CURR_GT_FREQ) * 50ULL;
+      obj->oa.gt_frequency[1] = GET_FIELD(end, GEN7_RPSTAT1_CURR_GT_FREQ) * 50ULL;
+      break;
+   case 9:
+   case 10:
+   case 11:
+      obj->oa.gt_frequency[0] = GET_FIELD(start, GEN9_RPSTAT0_CURR_GT_FREQ) * 50ULL / 3ULL;
+      obj->oa.gt_frequency[1] = GET_FIELD(end, GEN9_RPSTAT0_CURR_GT_FREQ) * 50ULL / 3ULL;
+      break;
+   default:
+      unreachable("unexpected gen");
+   }
+
+   /* Put the numbers into Hz. */
+   obj->oa.gt_frequency[0] *= 1000000ULL;
+   obj->oa.gt_frequency[1] *= 1000000ULL;
+}
+
 static int
 get_oa_counter_data(struct brw_context *brw,
                     struct brw_perf_query_object *obj,
@@ -1332,6 +1381,7 @@ get_oa_counter_data(struct brw_context *brw,
    int written = 0;
 
    if (!obj->oa.results_accumulated) {
+      read_gt_frequency(brw, obj);
       accumulate_oa_reports(brw, obj);
       assert(obj->oa.results_accumulated);
 
