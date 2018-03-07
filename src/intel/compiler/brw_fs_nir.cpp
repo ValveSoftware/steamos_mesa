@@ -1164,8 +1164,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_i2b:
-   case nir_op_f2b:
-      if (nir_src_bit_size(instr->src[0].src) == 64) {
+   case nir_op_f2b: {
+      uint32_t bit_size = nir_src_bit_size(instr->src[0].src);
+      if (bit_size == 64) {
          /* two-argument instructions can't take 64-bit immediates */
          fs_reg zero;
          fs_reg tmp;
@@ -1187,13 +1188,18 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          bld.CMP(tmp, op[0], zero, BRW_CONDITIONAL_NZ);
          bld.MOV(result, subscript(tmp, BRW_REGISTER_TYPE_UD, 0));
       } else {
-         if (instr->op == nir_op_f2b) {
-            bld.CMP(result, op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ);
+         fs_reg zero;
+         if (bit_size == 32) {
+            zero = instr->op == nir_op_f2b ? brw_imm_f(0.0f) : brw_imm_d(0);
          } else {
-            bld.CMP(result, op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ);
+            assert(bit_size == 16);
+            zero = instr->op == nir_op_f2b ?
+               retype(brw_imm_w(0), BRW_REGISTER_TYPE_HF) : brw_imm_w(0);
          }
+         bld.CMP(result, op[0], zero, BRW_CONDITIONAL_NZ);
       }
       break;
+   }
 
    case nir_op_ftrunc:
       inst = bld.RNDZ(result, op[0]);
