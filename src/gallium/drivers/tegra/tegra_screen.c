@@ -219,11 +219,9 @@ free:
 }
 
 static int tegra_screen_import_resource(struct tegra_screen *screen,
-                                        struct tegra_resource *resource,
-                                        bool has_modifiers)
+                                        struct tegra_resource *resource)
 {
    unsigned usage = PIPE_HANDLE_USAGE_READ;
-   struct drm_tegra_gem_set_tiling args;
    struct winsys_handle handle;
    boolean status;
    int fd, err;
@@ -254,67 +252,6 @@ static int tegra_screen_import_resource(struct tegra_screen *screen,
 
    close(fd);
 
-   if (!has_modifiers) {
-      memset(&args, 0, sizeof(args));
-      args.handle = resource->handle;
-
-      switch (handle.modifier) {
-         case DRM_FORMAT_MOD_NVIDIA_TEGRA_TILED:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_TILED;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_ONE_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 0;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_TWO_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 1;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_FOUR_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 2;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_EIGHT_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 3;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_SIXTEEN_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 4;
-            break;
-
-         case DRM_FORMAT_MOD_NVIDIA_16BX2_BLOCK_THIRTYTWO_GOB:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-            args.value = 5;
-            break;
-
-         default:
-            debug_printf("unsupported modifier %" PRIx64 ", assuming linear\n",
-                         handle.modifier);
-            /* fall-through */
-
-         case DRM_FORMAT_MOD_LINEAR:
-            args.mode = DRM_TEGRA_GEM_TILING_MODE_PITCH;
-            break;
-      }
-
-      err = drmIoctl(screen->fd, DRM_IOCTL_TEGRA_GEM_SET_TILING, &args);
-      if (err < 0) {
-         fprintf(stderr, "failed to set tiling parameters: %s\n",
-                 strerror(errno));
-         err = -errno;
-         goto out;
-      }
-   }
-
-   return 0;
-
-out:
    return err;
 }
 
@@ -336,7 +273,7 @@ tegra_screen_resource_create(struct pipe_screen *pscreen,
 
    /* import scanout buffers for display */
    if (template->bind & PIPE_BIND_SCANOUT) {
-      err = tegra_screen_import_resource(screen, resource, false);
+      err = tegra_screen_import_resource(screen, resource);
       if (err < 0)
          goto destroy;
    }
@@ -575,7 +512,7 @@ tegra_screen_resource_create_with_modifiers(struct pipe_screen *pscreen,
    if (!resource->gpu)
       goto free;
 
-   err = tegra_screen_import_resource(screen, resource, true);
+   err = tegra_screen_import_resource(screen, resource);
    if (err < 0)
       goto destroy;
 
