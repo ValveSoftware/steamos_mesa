@@ -47,7 +47,9 @@
 #include "blorp/blorp.h"
 #include "compiler/brw_compiler.h"
 #include "util/macros.h"
+#include "util/hash_table.h"
 #include "util/list.h"
+#include "util/set.h"
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
 #include "util/vma.h"
@@ -1076,6 +1078,7 @@ struct anv_reloc_list {
    uint32_t                                     array_length;
    struct drm_i915_gem_relocation_entry *       relocs;
    struct anv_bo **                             reloc_bos;
+   struct set *                                 deps;
 };
 
 VkResult anv_reloc_list_init(struct anv_reloc_list *list,

@@ -75,11 +75,24 @@ anv_reloc_list_init_clone(struct anv_reloc_list *list,
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
+   list->deps = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                 _mesa_key_pointer_equal);
+
+   if (!list->deps) {
+      vk_free(alloc, list->relocs);
+      vk_free(alloc, list->reloc_bos);
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   }
+
    if (other_list) {
       memcpy(list->relocs, other_list->relocs,
              list->array_length * sizeof(*list->relocs));
       memcpy(list->reloc_bos, other_list->reloc_bos,
              list->array_length * sizeof(*list->reloc_bos));
+      struct set_entry *entry;
+      set_foreach(other_list->deps, entry) {
+         _mesa_set_add_pre_hashed(list->deps, entry->hash, entry->key);
+      }
    }
 
    return VK_SUCCESS;
@@ -98,6 +111,7 @@ anv_reloc_list_finish(struct anv_reloc_list *list,
 {
    vk_free(alloc, list->relocs);
    vk_free(alloc, list->reloc_bos);
+   _mesa_set_destroy(list->deps, NULL);
 }
 
 static VkResult
@@ -148,6 +162,11 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    struct drm_i915_gem_relocation_entry *entry;
    int index;
 
+   if (target_bo->flags & EXEC_OBJECT_PINNED) {
+      _mesa_set_add(list->deps, target_bo);
+      return VK_SUCCESS;
+   }
+
    VkResult result = anv_reloc_list_grow(list, alloc, 1);
    if (result != VK_SUCCESS)
       return result;
@@ -185,6 +204,12 @@ anv_reloc_list_append(struct anv_reloc_list *list,
       list->relocs[i + list->num_relocs].offset += offset;
 
    list->num_relocs += other->num_relocs;
+
+   struct set_entry *entry;
+   set_foreach(other->deps, entry) {
+      _mesa_set_add_pre_hashed(list->deps, entry->hash, entry->key);
+   }
+
    return VK_SUCCESS;
 }
 
@@ -338,6 +363,7 @@ anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
    batch->end = bbo->bo.map + bbo->bo.size - batch_padding;
    batch->relocs = &bbo->relocs;
    bbo->relocs.num_relocs = 0;
+   _mesa_set_clear(bbo->relocs.deps, NULL);
 }
 
 static void
@@ -784,6 +810,7 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->bt_next = 0;
 
    cmd_buffer->surface_relocs.num_relocs = 0;
+   _mesa_set_clear(cmd_buffer->surface_relocs.deps, NULL);
    cmd_buffer->last_ss_pool_center = 0;
 
    /* Reset the list of seen buffers */
@@ -986,6 +1013,15 @@ anv_execbuf_finish(struct anv_execbuf *exec,
    vk_free(alloc, exec->syncobjs);
 }
 
+static int
+_compare_bo_handles(const void *_bo1, const void *_bo2)
+{
+   struct anv_bo * const *bo1 = _bo1;
+   struct anv_bo * const *bo2 = _bo2;
+
+   return (*bo1)->gem_handle - (*bo2)->gem_handle;
+}
+
 static VkResult
 anv_execbuf_add_bo(struct anv_execbuf *exec,
                    struct anv_bo *bo,
@@ -1069,6 +1105,33 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
          if (result != VK_SUCCESS)
             return result;
       }
+
+      const uint32_t entries = relocs->deps->entries;
+      struct anv_bo **bos =
+         vk_alloc(alloc, entries * sizeof(*bos),
+                  8, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+      if (bos == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      struct set_entry *entry;
+      struct anv_bo **bo = bos;
+      set_foreach(relocs->deps, entry) {
+         *bo++ = (void *)entry->key;
+      }
+
+      qsort(bos, entries, sizeof(struct anv_bo*), _compare_bo_handles);
+
+      VkResult result = VK_SUCCESS;
+      for (bo = bos; bo < bos + entries; bo++) {
+         result = anv_execbuf_add_bo(exec, *bo, NULL, extra_flags, alloc);
+         if (result != VK_SUCCESS)
+            break;
+      }
+
+      vk_free(alloc, bos);
+
+      if (result != VK_SUCCESS)
+         return result;
    }
 
    return VK_SUCCESS;
