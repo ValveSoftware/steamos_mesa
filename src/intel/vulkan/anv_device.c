@@ -1641,9 +1641,18 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_instruction_state_pool;
 
+   if (physical_device->use_softpin) {
+      result = anv_state_pool_init(&device->binding_table_pool, device,
+                                   BINDING_TABLE_POOL_MIN_ADDRESS,
+                                   4096,
+                                   bo_flags);
+      if (result != VK_SUCCESS)
+         goto fail_surface_state_pool;
+   }
+
    result = anv_bo_init_new(&device->workaround_bo, device, 1024);
    if (result != VK_SUCCESS)
-      goto fail_surface_state_pool;
+      goto fail_binding_table_pool;
 
    anv_device_init_trivial_batch(device);
 
@@ -1694,6 +1703,9 @@ VkResult anv_CreateDevice(
    anv_scratch_pool_finish(device, &device->scratch_pool);
    anv_gem_munmap(device->workaround_bo.map, device->workaround_bo.size);
    anv_gem_close(device, device->workaround_bo.gem_handle);
+ fail_binding_table_pool:
+   if (physical_device->use_softpin)
+      anv_state_pool_finish(&device->binding_table_pool);
  fail_surface_state_pool:
    anv_state_pool_finish(&device->surface_state_pool);
  fail_instruction_state_pool:

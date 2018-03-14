@@ -452,7 +452,7 @@ anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_state *bt_block = u_vector_head(&cmd_buffer->bt_block_states);
    return (struct anv_address) {
-      .bo = &cmd_buffer->device->surface_state_pool.block_pool.bo,
+      .bo = &anv_binding_table_pool(cmd_buffer->device)->block_pool.bo,
       .offset = bt_block->offset,
    };
 }
@@ -619,7 +619,8 @@ struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t entries, uint32_t *state_offset)
 {
-   struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
+   struct anv_device *device = cmd_buffer->device;
+   struct anv_state_pool *state_pool = &device->surface_state_pool;
    struct anv_state *bt_block = u_vector_head(&cmd_buffer->bt_block_states);
    struct anv_state state;
 
@@ -629,12 +630,19 @@ anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return (struct anv_state) { 0 };
 
    state.offset = cmd_buffer->bt_next;
-   state.map = state_pool->block_pool.map + bt_block->offset + state.offset;
+   state.map = anv_binding_table_pool(device)->block_pool.map +
+      bt_block->offset + state.offset;
 
    cmd_buffer->bt_next += state.alloc_size;
 
-   assert(bt_block->offset < 0);
-   *state_offset = -bt_block->offset;
+   if (device->instance->physicalDevice.use_softpin) {
+      assert(bt_block->offset >= 0);
+      *state_offset = device->surface_state_pool.block_pool.start_address -
+         device->binding_table_pool.block_pool.start_address - bt_block->offset;
+   } else {
+      assert(bt_block->offset < 0);
+      *state_offset = -bt_block->offset;
+   }
 
    return state;
 }
@@ -658,15 +666,13 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_state_pool *state_pool = &cmd_buffer->device->surface_state_pool;
-
    struct anv_state *bt_block = u_vector_add(&cmd_buffer->bt_block_states);
    if (bt_block == NULL) {
       anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   *bt_block = anv_state_pool_alloc_back(state_pool);
+   *bt_block = anv_binding_table_pool_alloc(cmd_buffer->device);
    cmd_buffer->bt_next = 0;
 
    return VK_SUCCESS;
@@ -740,7 +746,7 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_state *bt_block;
    u_vector_foreach(bt_block, &cmd_buffer->bt_block_states)
-      anv_state_pool_free(&cmd_buffer->device->surface_state_pool, *bt_block);
+      anv_binding_table_pool_free(cmd_buffer->device, *bt_block);
    u_vector_finish(&cmd_buffer->bt_block_states);
 
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc);
@@ -772,7 +778,7 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 
    while (u_vector_length(&cmd_buffer->bt_block_states) > 1) {
       struct anv_state *bt_block = u_vector_remove(&cmd_buffer->bt_block_states);
-      anv_state_pool_free(&cmd_buffer->device->surface_state_pool, *bt_block);
+      anv_binding_table_pool_free(cmd_buffer->device, *bt_block);
    }
    assert(u_vector_length(&cmd_buffer->bt_block_states) == 1);
    cmd_buffer->bt_next = 0;

@@ -955,6 +955,7 @@ struct anv_device {
 
     struct anv_state_pool                       dynamic_state_pool;
     struct anv_state_pool                       instruction_state_pool;
+    struct anv_state_pool                       binding_table_pool;
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_bo                               workaround_bo;
@@ -976,6 +977,29 @@ struct anv_device {
     pthread_cond_t                              queue_submit;
     bool                                        lost;
 };
+
+static inline struct anv_state_pool *
+anv_binding_table_pool(struct anv_device *device)
+{
+   if (device->instance->physicalDevice.use_softpin)
+      return &device->binding_table_pool;
+   else
+      return &device->surface_state_pool;
+}
+
+static inline struct anv_state
+anv_binding_table_pool_alloc(struct anv_device *device) {
+   if (device->instance->physicalDevice.use_softpin)
+      return anv_state_pool_alloc(&device->binding_table_pool,
+                                  device->binding_table_pool.block_size, 0);
+   else
+      return anv_state_pool_alloc_back(&device->surface_state_pool);
+}
+
+static inline void
+anv_binding_table_pool_free(struct anv_device *device, struct anv_state state) {
+   anv_state_pool_free(anv_binding_table_pool(device), state);
+}
 
 static void inline
 anv_state_flush(struct anv_device *device, struct anv_state state)
