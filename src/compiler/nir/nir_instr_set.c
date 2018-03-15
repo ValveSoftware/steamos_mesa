@@ -79,6 +79,40 @@ hash_alu(uint32_t hash, const nir_alu_instr *instr)
 }
 
 static uint32_t
+hash_deref(uint32_t hash, const nir_deref_instr *instr)
+{
+   hash = HASH(hash, instr->deref_type);
+   hash = HASH(hash, instr->mode);
+   hash = HASH(hash, instr->type);
+
+   if (instr->deref_type == nir_deref_type_var)
+      return HASH(hash, instr->var);
+
+   hash = hash_src(hash, &instr->parent);
+
+   switch (instr->deref_type) {
+   case nir_deref_type_struct:
+      hash = HASH(hash, instr->strct.index);
+      break;
+
+   case nir_deref_type_array:
+      hash = hash_src(hash, &instr->arr.index);
+      break;
+
+   case nir_deref_type_var:
+   case nir_deref_type_array_wildcard:
+   case nir_deref_type_cast:
+      /* Nothing to do */
+      break;
+
+   default:
+      unreachable("Invalid instruction deref type");
+   }
+
+   return hash;
+}
+
+static uint32_t
 hash_load_const(uint32_t hash, const nir_load_const_instr *instr)
 {
    hash = HASH(hash, instr->def.num_components);
@@ -181,6 +215,9 @@ hash_instr(const void *data)
    switch (instr->type) {
    case nir_instr_type_alu:
       hash = hash_alu(hash, nir_instr_as_alu(instr));
+      break;
+   case nir_instr_type_deref:
+      hash = hash_deref(hash, nir_instr_as_deref(instr));
       break;
    case nir_instr_type_load_const:
       hash = hash_load_const(hash, nir_instr_as_load_const(instr));
@@ -288,6 +325,43 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
          }
       }
       return true;
+   }
+   case nir_instr_type_deref: {
+      nir_deref_instr *deref1 = nir_instr_as_deref(instr1);
+      nir_deref_instr *deref2 = nir_instr_as_deref(instr2);
+
+      if (deref1->deref_type != deref2->deref_type ||
+          deref1->mode != deref2->mode ||
+          deref1->type != deref2->type)
+         return false;
+
+      if (deref1->deref_type == nir_deref_type_var)
+         return deref1->var == deref2->var;
+
+      if (!nir_srcs_equal(deref1->parent, deref2->parent))
+         return false;
+
+      switch (deref1->deref_type) {
+      case nir_deref_type_struct:
+         if (deref1->strct.index != deref2->strct.index)
+            return false;
+         break;
+
+      case nir_deref_type_array:
+         if (!nir_srcs_equal(deref1->arr.index, deref2->arr.index))
+            return false;
+         break;
+
+      case nir_deref_type_var:
+      case nir_deref_type_array_wildcard:
+      case nir_deref_type_cast:
+         /* Nothing to do */
+         break;
+
+      default:
+         unreachable("Invalid instruction deref type");
+      }
+      break;
    }
    case nir_instr_type_tex: {
       nir_tex_instr *tex1 = nir_instr_as_tex(instr1);
@@ -430,6 +504,7 @@ instr_can_rewrite(nir_instr *instr)
 
    switch (instr->type) {
    case nir_instr_type_alu:
+   case nir_instr_type_deref:
    case nir_instr_type_load_const:
    case nir_instr_type_phi:
       return true;
@@ -468,6 +543,9 @@ nir_instr_get_dest_ssa_def(nir_instr *instr)
    case nir_instr_type_alu:
       assert(nir_instr_as_alu(instr)->dest.dest.is_ssa);
       return &nir_instr_as_alu(instr)->dest.dest.ssa;
+   case nir_instr_type_deref:
+      assert(nir_instr_as_deref(instr)->dest.is_ssa);
+      return &nir_instr_as_deref(instr)->dest.ssa;
    case nir_instr_type_load_const:
       return &nir_instr_as_load_const(instr)->def;
    case nir_instr_type_phi:

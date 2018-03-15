@@ -346,6 +346,46 @@ clone_alu(clone_state *state, const nir_alu_instr *alu)
    return nalu;
 }
 
+static nir_deref_instr *
+clone_deref_instr(clone_state *state, const nir_deref_instr *deref)
+{
+   nir_deref_instr *nderef =
+      nir_deref_instr_create(state->ns, deref->deref_type);
+
+   __clone_dst(state, &nderef->instr, &nderef->dest, &deref->dest);
+
+   nderef->mode = deref->mode;
+   nderef->type = deref->type;
+
+   if (deref->deref_type == nir_deref_type_var) {
+      nderef->var = remap_var(state, deref->var);
+      return nderef;
+   }
+
+   __clone_src(state, &nderef->instr, &nderef->parent, &deref->parent);
+
+   switch (deref->deref_type) {
+   case nir_deref_type_struct:
+      nderef->strct.index = deref->strct.index;
+      break;
+
+   case nir_deref_type_array:
+      __clone_src(state, &nderef->instr,
+                  &nderef->arr.index, &deref->arr.index);
+      break;
+
+   case nir_deref_type_array_wildcard:
+   case nir_deref_type_cast:
+      /* Nothing to do */
+      break;
+
+   default:
+      unreachable("Invalid instruction deref type");
+   }
+
+   return nderef;
+}
+
 static nir_intrinsic_instr *
 clone_intrinsic(clone_state *state, const nir_intrinsic_instr *itr)
 {
@@ -502,6 +542,8 @@ clone_instr(clone_state *state, const nir_instr *instr)
    switch (instr->type) {
    case nir_instr_type_alu:
       return &clone_alu(state, nir_instr_as_alu(instr))->instr;
+   case nir_instr_type_deref:
+      return &clone_deref_instr(state, nir_instr_as_deref(instr))->instr;
    case nir_instr_type_intrinsic:
       return &clone_intrinsic(state, nir_instr_as_intrinsic(instr))->instr;
    case nir_instr_type_load_const:

@@ -473,6 +473,26 @@ nir_alu_instr_create(nir_shader *shader, nir_op op)
    return instr;
 }
 
+nir_deref_instr *
+nir_deref_instr_create(nir_shader *shader, nir_deref_type deref_type)
+{
+   nir_deref_instr *instr =
+      rzalloc_size(shader, sizeof(nir_deref_instr));
+
+   instr_init(&instr->instr, nir_instr_type_deref);
+
+   instr->deref_type = deref_type;
+   if (deref_type != nir_deref_type_var)
+      src_init(&instr->parent);
+
+   if (deref_type == nir_deref_type_array)
+      src_init(&instr->arr.index);
+
+   dest_init(&instr->dest);
+
+   return instr;
+}
+
 nir_jump_instr *
 nir_jump_instr_create(nir_shader *shader, nir_jump_type type)
 {
@@ -1202,6 +1222,12 @@ visit_alu_dest(nir_alu_instr *instr, nir_foreach_dest_cb cb, void *state)
 }
 
 static bool
+visit_deref_dest(nir_deref_instr *instr, nir_foreach_dest_cb cb, void *state)
+{
+   return cb(&instr->dest, state);
+}
+
+static bool
 visit_intrinsic_dest(nir_intrinsic_instr *instr, nir_foreach_dest_cb cb,
                      void *state)
 {
@@ -1242,6 +1268,8 @@ nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state)
    switch (instr->type) {
    case nir_instr_type_alu:
       return visit_alu_dest(nir_instr_as_alu(instr), cb, state);
+   case nir_instr_type_deref:
+      return visit_deref_dest(nir_instr_as_deref(instr), cb, state);
    case nir_instr_type_intrinsic:
       return visit_intrinsic_dest(nir_instr_as_intrinsic(instr), cb, state);
    case nir_instr_type_tex:
@@ -1287,6 +1315,7 @@ nir_foreach_ssa_def(nir_instr *instr, nir_foreach_ssa_def_cb cb, void *state)
 {
    switch (instr->type) {
    case nir_instr_type_alu:
+   case nir_instr_type_deref:
    case nir_instr_type_tex:
    case nir_instr_type_intrinsic:
    case nir_instr_type_phi:
@@ -1348,6 +1377,23 @@ visit_alu_src(nir_alu_instr *instr, nir_foreach_src_cb cb, void *state)
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
       if (!visit_src(&instr->src[i].src, cb, state))
          return false;
+
+   return true;
+}
+
+static bool
+visit_deref_instr_src(nir_deref_instr *instr,
+                      nir_foreach_src_cb cb, void *state)
+{
+   if (instr->deref_type != nir_deref_type_var) {
+      if (!visit_src(&instr->parent, cb, state))
+         return false;
+   }
+
+   if (instr->deref_type == nir_deref_type_array) {
+      if (!visit_src(&instr->arr.index, cb, state))
+         return false;
+   }
 
    return true;
 }
@@ -1438,6 +1484,10 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
    switch (instr->type) {
    case nir_instr_type_alu:
       if (!visit_alu_src(nir_instr_as_alu(instr), cb, state))
+         return false;
+      break;
+   case nir_instr_type_deref:
+      if (!visit_deref_instr_src(nir_instr_as_deref(instr), cb, state))
          return false;
       break;
    case nir_instr_type_intrinsic:

@@ -429,6 +429,7 @@ typedef struct nir_register {
 
 typedef enum {
    nir_instr_type_alu,
+   nir_instr_type_deref,
    nir_instr_type_call,
    nir_instr_type_tex,
    nir_instr_type_intrinsic,
@@ -898,7 +899,9 @@ bool nir_alu_srcs_equal(const nir_alu_instr *alu1, const nir_alu_instr *alu2,
 typedef enum {
    nir_deref_type_var,
    nir_deref_type_array,
-   nir_deref_type_struct
+   nir_deref_type_array_wildcard,
+   nir_deref_type_struct,
+   nir_deref_type_cast,
 } nir_deref_type;
 
 typedef struct nir_deref {
@@ -955,6 +958,56 @@ nir_deref_tail(nir_deref *deref)
    while (deref->child)
       deref = deref->child;
    return deref;
+}
+
+typedef struct {
+   nir_instr instr;
+
+   /** The type of this deref instruction */
+   nir_deref_type deref_type;
+
+   /** The mode of the underlying variable */
+   nir_variable_mode mode;
+
+   /** The dereferenced type of the resulting pointer value */
+   const struct glsl_type *type;
+
+   union {
+      /** Variable being dereferenced if deref_type is a deref_var */
+      nir_variable *var;
+
+      /** Parent deref if deref_type is not deref_var */
+      nir_src parent;
+   };
+
+   /** Additional deref parameters */
+   union {
+      struct {
+         nir_src index;
+      } arr;
+
+      struct {
+         unsigned index;
+      } strct;
+   };
+
+   /** Destination to store the resulting "pointer" */
+   nir_dest dest;
+} nir_deref_instr;
+
+NIR_DEFINE_CAST(nir_instr_as_deref, nir_instr, nir_deref_instr, instr,
+                type, nir_instr_type_deref)
+
+static inline nir_deref_instr *
+nir_src_as_deref(nir_src src)
+{
+   if (!src.is_ssa)
+      return NULL;
+
+   if (src.ssa->parent_instr->type != nir_instr_type_deref)
+      return NULL;
+
+   return nir_instr_as_deref(src.ssa->parent_instr);
 }
 
 typedef struct {
@@ -2120,6 +2173,9 @@ void nir_metadata_preserve(nir_function_impl *impl, nir_metadata preserved);
 
 /** creates an instruction with default swizzle/writemask/etc. with NULL registers */
 nir_alu_instr *nir_alu_instr_create(nir_shader *shader, nir_op op);
+
+nir_deref_instr *nir_deref_instr_create(nir_shader *shader,
+                                        nir_deref_type deref_type);
 
 nir_jump_instr *nir_jump_instr_create(nir_shader *shader, nir_jump_type type);
 

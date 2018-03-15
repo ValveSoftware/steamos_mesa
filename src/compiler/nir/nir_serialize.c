@@ -479,6 +479,81 @@ read_alu(read_ctx *ctx)
 }
 
 static void
+write_deref(write_ctx *ctx, const nir_deref_instr *deref)
+{
+   blob_write_uint32(ctx->blob, deref->deref_type);
+
+   blob_write_uint32(ctx->blob, deref->mode);
+   encode_type_to_blob(ctx->blob, deref->type);
+
+   write_dest(ctx, &deref->dest);
+
+   if (deref->deref_type == nir_deref_type_var) {
+      write_object(ctx, deref->var);
+      return;
+   }
+
+   write_src(ctx, &deref->parent);
+
+   switch (deref->deref_type) {
+   case nir_deref_type_struct:
+      blob_write_uint32(ctx->blob, deref->strct.index);
+      break;
+
+   case nir_deref_type_array:
+      write_src(ctx, &deref->arr.index);
+      break;
+
+   case nir_deref_type_array_wildcard:
+   case nir_deref_type_cast:
+      /* Nothing to do */
+      break;
+
+   default:
+      unreachable("Invalid deref type");
+   }
+}
+
+static nir_deref_instr *
+read_deref(read_ctx *ctx)
+{
+   nir_deref_type deref_type = blob_read_uint32(ctx->blob);
+   nir_deref_instr *deref = nir_deref_instr_create(ctx->nir, deref_type);
+
+   deref->mode = blob_read_uint32(ctx->blob);
+   deref->type = decode_type_from_blob(ctx->blob);
+
+   read_dest(ctx, &deref->dest, &deref->instr);
+
+   if (deref_type == nir_deref_type_var) {
+      deref->var = read_object(ctx);
+      return deref;
+   }
+
+   read_src(ctx, &deref->parent, &deref->instr);
+
+   switch (deref->deref_type) {
+   case nir_deref_type_struct:
+      deref->strct.index = blob_read_uint32(ctx->blob);
+      break;
+
+   case nir_deref_type_array:
+      read_src(ctx, &deref->arr.index, &deref->instr);
+      break;
+
+   case nir_deref_type_array_wildcard:
+   case nir_deref_type_cast:
+      /* Nothing to do */
+      break;
+
+   default:
+      unreachable("Invalid deref type");
+   }
+
+   return deref;
+}
+
+static void
 write_intrinsic(write_ctx *ctx, const nir_intrinsic_instr *intrin)
 {
    blob_write_uint32(ctx->blob, intrin->intrinsic);
@@ -803,6 +878,9 @@ write_instr(write_ctx *ctx, const nir_instr *instr)
    case nir_instr_type_alu:
       write_alu(ctx, nir_instr_as_alu(instr));
       break;
+   case nir_instr_type_deref:
+      write_deref(ctx, nir_instr_as_deref(instr));
+      break;
    case nir_instr_type_intrinsic:
       write_intrinsic(ctx, nir_instr_as_intrinsic(instr));
       break;
@@ -839,6 +917,9 @@ read_instr(read_ctx *ctx, nir_block *block)
    switch (type) {
    case nir_instr_type_alu:
       instr = &read_alu(ctx)->instr;
+      break;
+   case nir_instr_type_deref:
+      instr = &read_deref(ctx)->instr;
       break;
    case nir_instr_type_intrinsic:
       instr = &read_intrinsic(ctx)->instr;

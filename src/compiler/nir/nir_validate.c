@@ -463,6 +463,85 @@ validate_deref_var(void *parent_mem_ctx, nir_deref_var *deref, validate_state *s
 }
 
 static void
+validate_deref_instr(nir_deref_instr *instr, validate_state *state)
+{
+   if (instr->deref_type == nir_deref_type_var) {
+      /* Variable dereferences are stupid simple. */
+      validate_assert(state, instr->mode == instr->var->data.mode);
+      validate_assert(state, instr->type == instr->var->type);
+      validate_var_use(instr->var, state);
+   } else if (instr->deref_type == nir_deref_type_cast) {
+      /* For cast, we simply have to trust the instruction.  It's up to
+       * lowering passes and front/back-ends to make them sane.
+       */
+      validate_src(&instr->parent, state, 0, 0);
+
+      /* We just validate that the type and mode are there */
+      validate_assert(state, instr->mode);
+      validate_assert(state, instr->type);
+   } else {
+      /* We require the parent to be SSA.  This may be lifted in the future */
+      validate_assert(state, instr->parent.is_ssa);
+
+      /* The parent pointer value must have the same number of components
+       * as the destination.
+       */
+      validate_src(&instr->parent, state, nir_dest_bit_size(instr->dest),
+                   nir_dest_num_components(instr->dest));
+
+      nir_instr *parent_instr = instr->parent.ssa->parent_instr;
+
+      /* The parent must come from another deref instruction */
+      validate_assert(state, parent_instr->type == nir_instr_type_deref);
+
+      nir_deref_instr *parent = nir_instr_as_deref(parent_instr);
+
+      validate_assert(state, instr->mode == parent->mode);
+
+      switch (instr->deref_type) {
+      case nir_deref_type_struct:
+         validate_assert(state, glsl_type_is_struct(parent->type));
+         validate_assert(state,
+            instr->strct.index < glsl_get_length(parent->type));
+         validate_assert(state, instr->type ==
+            glsl_get_struct_field(parent->type, instr->strct.index));
+         break;
+
+      case nir_deref_type_array:
+      case nir_deref_type_array_wildcard:
+         if (instr->mode == nir_var_shared) {
+            /* Shared variables have a bit more relaxed rules because we need
+             * to be able to handle array derefs on vectors.  Fortunately,
+             * nir_lower_io handles these just fine.
+             */
+            validate_assert(state, glsl_type_is_array(parent->type) ||
+                                   glsl_type_is_matrix(parent->type) ||
+                                   glsl_type_is_vector(parent->type));
+         } else {
+            /* Most of NIR cannot handle array derefs on vectors */
+            validate_assert(state, glsl_type_is_array(parent->type) ||
+                                   glsl_type_is_matrix(parent->type));
+         }
+         validate_assert(state,
+            instr->type == glsl_get_array_element(parent->type));
+
+         if (instr->deref_type == nir_deref_type_array)
+            validate_src(&instr->arr.index, state, 32, 1);
+         break;
+
+      default:
+         unreachable("Invalid deref instruction type");
+      }
+   }
+
+   /* We intentionally don't validate the size of the destination because we
+    * want to let other compiler components such as SPIR-V decide how big
+    * pointers should be.
+    */
+   validate_dest(&instr->dest, state, 0, 0);
+}
+
+static void
 validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
 {
    unsigned dest_bit_size = 0;
@@ -608,6 +687,10 @@ validate_instr(nir_instr *instr, validate_state *state)
    switch (instr->type) {
    case nir_instr_type_alu:
       validate_alu_instr(nir_instr_as_alu(instr), state);
+      break;
+
+   case nir_instr_type_deref:
+      validate_deref_instr(nir_instr_as_deref(instr), state);
       break;
 
    case nir_instr_type_call:

@@ -393,7 +393,7 @@ print_constant(nir_constant *c, const struct glsl_type *type, print_state *state
 }
 
 static const char *
-get_variable_mode_str(nir_variable_mode mode)
+get_variable_mode_str(nir_variable_mode mode, bool want_local_global_mode)
 {
    switch (mode) {
    case nir_var_shader_in:
@@ -410,7 +410,9 @@ get_variable_mode_str(nir_variable_mode mode)
       return "shared";
    case nir_var_param:
    case nir_var_global:
+      return want_local_global_mode ? "global" : "";
    case nir_var_local:
+      return want_local_global_mode ? "local" : "";
    default:
       return "";
    }
@@ -428,7 +430,7 @@ print_var_decl(nir_variable *var, print_state *state)
    const char *const patch = (var->data.patch) ? "patch " : "";
    const char *const inv = (var->data.invariant) ? "invariant " : "";
    fprintf(fp, "%s%s%s%s%s %s ",
-           cent, samp, patch, inv, get_variable_mode_str(var->data.mode),
+           cent, samp, patch, inv, get_variable_mode_str(var->data.mode, false),
            glsl_interp_mode_name(var->data.interpolation));
 
    const char *const coher = (var->data.image.coherent) ? "coherent " : "";
@@ -515,6 +517,128 @@ print_var_decl(nir_variable *var, print_state *state)
 
    fprintf(fp, "\n");
    print_annotation(state, var);
+}
+
+static void
+print_deref_link(nir_deref_instr *instr, bool whole_chain, print_state *state)
+{
+   FILE *fp = state->fp;
+
+   if (instr->deref_type == nir_deref_type_var) {
+      fprintf(fp, "%s", get_var_name(instr->var, state));
+      return;
+   } else if (instr->deref_type == nir_deref_type_cast) {
+      fprintf(fp, "(%s *)", glsl_get_type_name(instr->type));
+      print_src(&instr->parent, state);
+      return;
+   }
+
+   assert(instr->parent.is_ssa);
+   nir_deref_instr *parent =
+      nir_instr_as_deref(instr->parent.ssa->parent_instr);
+
+   /* Is the parent we're going to print a bare cast? */
+   const bool is_parent_cast =
+      whole_chain && parent->deref_type == nir_deref_type_cast;
+
+   /* If we're not printing the whole chain, the parent we print will be a SSA
+    * value that represents a pointer.  The only deref type that naturally
+    * gives a pointer is a cast.
+    */
+   const bool is_parent_pointer =
+      !whole_chain || parent->deref_type == nir_deref_type_cast;
+
+   /* Struct derefs have a nice syntax that works on pointers, arrays derefs
+    * do not.
+    */
+   const bool need_deref =
+      is_parent_pointer && instr->deref_type != nir_deref_type_struct;
+
+   /* Cast need extra parens and so * dereferences */
+   if (is_parent_cast || need_deref)
+      fprintf(fp, "(");
+
+   if (need_deref)
+      fprintf(fp, "*");
+
+   if (whole_chain) {
+      print_deref_link(parent, whole_chain, state);
+   } else {
+      print_src(&instr->parent, state);
+   }
+
+   if (is_parent_cast || need_deref)
+      fprintf(fp, ")");
+
+   switch (instr->deref_type) {
+   case nir_deref_type_struct:
+      fprintf(fp, "%s%s", is_parent_pointer ? "->" : ".",
+              glsl_get_struct_elem_name(parent->type, instr->strct.index));
+      break;
+
+   case nir_deref_type_array: {
+      nir_const_value *const_index = nir_src_as_const_value(instr->arr.index);
+      if (const_index) {
+         fprintf(fp, "[%u]", const_index->u32[0]);
+      } else {
+         fprintf(fp, "[");
+         print_src(&instr->arr.index, state);
+         fprintf(fp, "]");
+      }
+      break;
+   }
+
+   case nir_deref_type_array_wildcard:
+      fprintf(fp, "[*]");
+      break;
+
+   default:
+      unreachable("Invalid deref instruction type");
+   }
+}
+
+static void
+print_deref_instr(nir_deref_instr *instr, print_state *state)
+{
+   FILE *fp = state->fp;
+
+   print_dest(&instr->dest, state);
+
+   switch (instr->deref_type) {
+   case nir_deref_type_var:
+      fprintf(fp, " = deref_var ");
+      break;
+   case nir_deref_type_array:
+   case nir_deref_type_array_wildcard:
+      fprintf(fp, " = deref_array ");
+      break;
+   case nir_deref_type_struct:
+      fprintf(fp, " = deref_struct ");
+      break;
+   case nir_deref_type_cast:
+      fprintf(fp, " = deref_cast ");
+      break;
+   default:
+      unreachable("Invalid deref instruction type");
+   }
+
+   /* Only casts naturally return a pointer type */
+   if (instr->deref_type != nir_deref_type_cast)
+      fprintf(fp, "&");
+
+   print_deref_link(instr, false, state);
+
+   fprintf(fp, " (%s %s) ",
+           get_variable_mode_str(instr->mode, true),
+           glsl_get_type_name(instr->type));
+
+   if (instr->deref_type != nir_deref_type_var &&
+       instr->deref_type != nir_deref_type_cast) {
+      /* Print the entire chain as a comment */
+      fprintf(fp, "/* &");
+      print_deref_link(instr, true, state);
+      fprintf(fp, " */");
+   }
 }
 
 static void
@@ -963,6 +1087,10 @@ print_instr(const nir_instr *instr, print_state *state, unsigned tabs)
    switch (instr->type) {
    case nir_instr_type_alu:
       print_alu_instr(nir_instr_as_alu(instr), state);
+      break;
+
+   case nir_instr_type_deref:
+      print_deref_instr(nir_instr_as_deref(instr), state);
       break;
 
    case nir_instr_type_call:
