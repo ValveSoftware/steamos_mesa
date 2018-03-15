@@ -1110,18 +1110,8 @@ write_reloc(const struct anv_device *device, void *p, uint64_t v, bool flush)
 {
    unsigned reloc_size = 0;
    if (device->info.gen >= 8) {
-      /* From the Broadwell PRM Vol. 2a, MI_LOAD_REGISTER_MEM::MemoryAddress:
-       *
-       *    "This field specifies the address of the memory location where the
-       *    register value specified in the DWord above will read from. The
-       *    address specifies the DWord location of the data. Range =
-       *    GraphicsVirtualAddress[63:2] for a DWord register GraphicsAddress
-       *    [63:48] are ignored by the HW and assumed to be in correct
-       *    canonical form [63:48] == [47]."
-       */
-      const int shift = 63 - 47;
       reloc_size = sizeof(uint64_t);
-      *(uint64_t *)p = (((int64_t)v) << shift) >> shift;
+      *(uint64_t *)p = gen_canonical_address(v);
    } else {
       reloc_size = sizeof(uint32_t);
       *(uint32_t *)p = v;

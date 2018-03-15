@@ -42,6 +42,7 @@
 #endif
 
 #include "common/gen_clflush.h"
+#include "common/gen_gem.h"
 #include "dev/gen_device_info.h"
 #include "blorp/blorp.h"
 #include "compiler/brw_compiler.h"
