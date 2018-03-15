@@ -86,8 +86,8 @@ calc_sampler_offsets(nir_deref *tail, nir_tex_instr *instr,
 }
 
 static bool
-lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_program,
-              gl_shader_stage stage, nir_builder *b)
+lower_sampler(nir_builder *b, nir_tex_instr *instr,
+              const struct gl_shader_program *shader_program)
 {
    if (instr->texture == NULL)
       return false;
@@ -116,6 +116,7 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
       instr->texture_array_size = array_elements;
    }
 
+   gl_shader_stage stage = b->shader->info.stage;
    assert(location < shader_program->data->NumUniformStorage &&
           shader_program->data->UniformStorage[location].opaque[stage].active);
 
@@ -131,8 +132,8 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
 }
 
 static bool
-lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_program,
-           gl_shader_stage stage)
+lower_impl(nir_function_impl *impl,
+           const struct gl_shader_program *shader_program)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
@@ -141,8 +142,8 @@ lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_progr
    nir_foreach_block(block, impl) {
       nir_foreach_instr(instr, block) {
          if (instr->type == nir_instr_type_tex)
-            progress |= lower_sampler(nir_instr_as_tex(instr),
-                                      shader_program, stage, &b);
+            progress |= lower_sampler(&b, nir_instr_as_tex(instr),
+                                      shader_program);
       }
    }
 
@@ -159,8 +160,7 @@ gl_nir_lower_samplers(nir_shader *shader,
 
    nir_foreach_function(function, shader) {
       if (function->impl)
-         progress |= lower_impl(function->impl, shader_program,
-                                shader->info.stage);
+         progress |= lower_impl(function->impl, shader_program);
    }
 
    return progress;
