@@ -651,6 +651,43 @@ nir_load_reg(nir_builder *build, nir_register *reg)
 }
 
 static inline nir_ssa_def *
+nir_load_deref(nir_builder *build, nir_deref_instr *deref)
+{
+   nir_intrinsic_instr *load =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_deref);
+   load->num_components = glsl_get_vector_elements(deref->type);
+   load->src[0] = nir_src_for_ssa(&deref->dest.ssa);
+   nir_ssa_dest_init(&load->instr, &load->dest, load->num_components,
+                     glsl_get_bit_size(deref->type), NULL);
+   nir_builder_instr_insert(build, &load->instr);
+   return &load->dest.ssa;
+}
+
+static inline void
+nir_store_deref(nir_builder *build, nir_deref_instr *deref,
+                nir_ssa_def *value, unsigned writemask)
+{
+   nir_intrinsic_instr *store =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_store_deref);
+   store->num_components = glsl_get_vector_elements(deref->type);
+   store->src[0] = nir_src_for_ssa(&deref->dest.ssa);
+   store->src[1] = nir_src_for_ssa(value);
+   nir_intrinsic_set_write_mask(store,
+                                writemask & ((1 << store->num_components) - 1));
+   nir_builder_instr_insert(build, &store->instr);
+}
+
+static inline void
+nir_copy_deref(nir_builder *build, nir_deref_instr *dest, nir_deref_instr *src)
+{
+   nir_intrinsic_instr *copy =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_copy_deref);
+   copy->src[0] = nir_src_for_ssa(&dest->dest.ssa);
+   copy->src[1] = nir_src_for_ssa(&src->dest.ssa);
+   nir_builder_instr_insert(build, &copy->instr);
+}
+
+static inline nir_ssa_def *
 nir_load_var(nir_builder *build, nir_variable *var)
 {
    const unsigned num_components = glsl_get_vector_elements(var->type);

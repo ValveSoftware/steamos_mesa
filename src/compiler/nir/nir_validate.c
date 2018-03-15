@@ -547,6 +547,40 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
    unsigned dest_bit_size = 0;
    unsigned src_bit_sizes[NIR_INTRINSIC_MAX_INPUTS] = { 0, };
    switch (instr->intrinsic) {
+   case nir_intrinsic_load_deref: {
+      nir_deref_instr *src = nir_src_as_deref(instr->src[0]);
+      validate_assert(state, glsl_type_is_vector_or_scalar(src->type) ||
+                      (src->mode == nir_var_uniform &&
+                       glsl_get_base_type(src->type) == GLSL_TYPE_SUBROUTINE));
+      validate_assert(state, instr->num_components ==
+                             glsl_get_vector_elements(src->type));
+      dest_bit_size = glsl_get_bit_size(src->type);
+      break;
+   }
+
+   case nir_intrinsic_store_deref: {
+      nir_deref_instr *dst = nir_src_as_deref(instr->src[0]);
+      validate_assert(state, glsl_type_is_vector_or_scalar(dst->type));
+      validate_assert(state, instr->num_components ==
+                             glsl_get_vector_elements(dst->type));
+      src_bit_sizes[1] = glsl_get_bit_size(dst->type);
+      validate_assert(state, (dst->mode & (nir_var_shader_in |
+                                           nir_var_uniform |
+                                           nir_var_shader_storage)) == 0);
+      validate_assert(state, (nir_intrinsic_write_mask(instr) & ~((1 << instr->num_components) - 1)) == 0);
+      break;
+   }
+
+   case nir_intrinsic_copy_deref: {
+      nir_deref_instr *dst = nir_src_as_deref(instr->src[0]);
+      nir_deref_instr *src = nir_src_as_deref(instr->src[1]);
+      validate_assert(state, dst->type == src->type);
+      validate_assert(state, (dst->mode & (nir_var_shader_in |
+                                           nir_var_uniform |
+                                           nir_var_shader_storage)) == 0);
+      break;
+   }
+
    case nir_intrinsic_load_var: {
       const struct glsl_type *type =
          nir_deref_tail(&instr->variables[0]->deref)->type;

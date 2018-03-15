@@ -124,6 +124,10 @@ intrinsic("load_var", dest_comp=0, num_vars=1, flags=[CAN_ELIMINATE])
 intrinsic("store_var", src_comp=[0], num_vars=1, indices=[WRMASK])
 intrinsic("copy_var", num_vars=2)
 
+intrinsic("load_deref", dest_comp=0, src_comp=[1], flags=[CAN_ELIMINATE])
+intrinsic("store_deref", src_comp=[1, 0], indices=[WRMASK])
+intrinsic("copy_deref", src_comp=[1, 1])
+
 # Interpolation of input.  The interp_var_at* intrinsics are similar to the
 # load_var intrinsic acting on a shader input except that they interpolate
 # the input differently.  The at_sample and at_offset intrinsics take an
@@ -135,6 +139,19 @@ intrinsic("interp_var_at_centroid", dest_comp=0, num_vars=1,
 intrinsic("interp_var_at_sample", src_comp=[1], dest_comp=0, num_vars=1,
           flags=[CAN_ELIMINATE, CAN_REORDER])
 intrinsic("interp_var_at_offset", src_comp=[2], dest_comp=0, num_vars=1,
+          flags=[CAN_ELIMINATE, CAN_REORDER])
+
+# Interpolation of input.  The interp_deref_at* intrinsics are similar to the
+# load_var intrinsic acting on a shader input except that they interpolate the
+# input differently.  The at_sample and at_offset intrinsics take an
+# additional source that is an integer sample id or a vec2 position offset
+# respectively.
+
+intrinsic("interp_deref_at_centroid", dest_comp=0, src_comp=[1],
+          flags=[ CAN_ELIMINATE, CAN_REORDER])
+intrinsic("interp_deref_at_sample", src_comp=[1, 1], dest_comp=0,
+          flags=[CAN_ELIMINATE, CAN_REORDER])
+intrinsic("interp_deref_at_offset", src_comp=[1, 2], dest_comp=0,
           flags=[CAN_ELIMINATE, CAN_REORDER])
 
 # Ask the driver for the size of a given buffer. It takes the buffer index
@@ -258,14 +275,17 @@ intrinsic("set_vertex_count", src_comp=[1])
 
 def atomic(name, flags=[]):
     intrinsic(name + "_var", dest_comp=1, num_vars=1, flags=flags)
+    intrinsic(name + "_deref", src_comp=[1], dest_comp=1, flags=flags)
     intrinsic(name, src_comp=[1], dest_comp=1, indices=[BASE], flags=flags)
 
 def atomic2(name):
     intrinsic(name + "_var", src_comp=[1], dest_comp=1, num_vars=1)
+    intrinsic(name + "_deref", src_comp=[1, 1], dest_comp=1)
     intrinsic(name, src_comp=[1, 1], dest_comp=1, indices=[BASE])
 
 def atomic3(name):
     intrinsic(name + "_var", src_comp=[1, 1], dest_comp=1, num_vars=1)
+    intrinsic(name + "_deref", src_comp=[1, 1, 1], dest_comp=1)
     intrinsic(name, src_comp=[1, 1, 1], dest_comp=1, indices=[BASE])
 
 atomic("atomic_counter_inc")
@@ -306,6 +326,34 @@ intrinsic("image_var_atomic_exchange",  src_comp=[4, 1, 1], dest_comp=1, num_var
 intrinsic("image_var_atomic_comp_swap", src_comp=[4, 1, 1, 1], dest_comp=1, num_vars=1)
 intrinsic("image_var_size",    dest_comp=0, num_vars=1, flags=[CAN_ELIMINATE, CAN_REORDER])
 intrinsic("image_var_samples", dest_comp=1, num_vars=1, flags=[CAN_ELIMINATE, CAN_REORDER])
+
+# Image load, store and atomic intrinsics.
+#
+# All image intrinsics take an image target passed as a nir_variable.  The
+# variable is passed in using a chain of nir_deref_instr with as the first
+# source of the image intrinsic.  Image variables contain a number of memory
+# and layout qualifiers that influence the semantics of the intrinsic.
+#
+# All image intrinsics take a four-coordinate vector and a sample index as
+# first two sources, determining the location within the image that will be
+# accessed by the intrinsic.  Components not applicable to the image target
+# in use are undefined.  Image store takes an additional four-component
+# argument with the value to be written, and image atomic operations take
+# either one or two additional scalar arguments with the same meaning as in
+# the ARB_shader_image_load_store specification.
+intrinsic("image_deref_load", src_comp=[1, 4, 1], dest_comp=4,
+          flags=[CAN_ELIMINATE])
+intrinsic("image_deref_store", src_comp=[1, 4, 1, 4])
+intrinsic("image_deref_atomic_add",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_min",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_max",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_and",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_or",   src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_xor",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_exchange",  src_comp=[1, 4, 1, 1], dest_comp=1)
+intrinsic("image_deref_atomic_comp_swap", src_comp=[1, 4, 1, 1, 1], dest_comp=1)
+intrinsic("image_deref_size",    src_comp=[1], dest_comp=0, flags=[CAN_ELIMINATE, CAN_REORDER])
+intrinsic("image_deref_samples", src_comp=[1], dest_comp=1, flags=[CAN_ELIMINATE, CAN_REORDER])
 
 # Vulkan descriptor set intrinsics
 #
@@ -355,6 +403,30 @@ intrinsic("var_atomic_or",   src_comp=[1], dest_comp=1, num_vars=1)
 intrinsic("var_atomic_xor",  src_comp=[1], dest_comp=1, num_vars=1)
 intrinsic("var_atomic_exchange", src_comp=[1], dest_comp=1, num_vars=1)
 intrinsic("var_atomic_comp_swap", src_comp=[1, 1], dest_comp=1, num_vars=1)
+
+# variable atomic intrinsics
+#
+# All of these variable atomic memory operations read a value from memory,
+# compute a new value using one of the operations below, write the new value
+# to memory, and return the original value read.
+#
+# All operations take 2 sources except CompSwap that takes 3. These sources
+# represent:
+#
+# 0: A deref to the memory on which to perform the atomic
+# 1: The data parameter to the atomic function (i.e. the value to add
+#    in shared_atomic_add, etc).
+# 2: For CompSwap only: the second data parameter.
+intrinsic("deref_atomic_add",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_imin", src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_umin", src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_imax", src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_umax", src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_and",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_or",   src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_xor",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_exchange", src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_comp_swap", src_comp=[1, 1, 1], dest_comp=1)
 
 # SSBO atomic intrinsics
 #

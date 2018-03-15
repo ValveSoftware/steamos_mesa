@@ -1165,7 +1165,7 @@ typedef enum {
 
 } nir_intrinsic_index_flag;
 
-#define NIR_INTRINSIC_MAX_INPUTS 4
+#define NIR_INTRINSIC_MAX_INPUTS 5
 
 typedef struct {
    const char *name;
