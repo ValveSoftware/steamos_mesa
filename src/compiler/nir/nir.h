@@ -2701,6 +2701,8 @@ bool nir_lower_deref_instrs(nir_shader *shader,
 void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, nir_shader *shader);
 bool nir_lower_var_copies(nir_shader *shader);
 
+void nir_fixup_deref_modes(nir_shader *shader);
+
 bool nir_lower_global_vars_to_local(nir_shader *shader);
 
 bool nir_lower_indirect_derefs(nir_shader *shader, nir_variable_mode modes);

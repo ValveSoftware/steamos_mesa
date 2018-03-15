@@ -354,3 +354,33 @@ nir_lower_deref_instrs(nir_shader *shader,
 
    return progress;
 }
+
+void
+nir_fixup_deref_modes(nir_shader *shader)
+{
+   nir_foreach_function(function, shader) {
+      if (!function->impl)
+         continue;
+
+      nir_foreach_block(block, function->impl) {
+         nir_foreach_instr(instr, block) {
+            if (instr->type != nir_instr_type_deref)
+               continue;
+
+            nir_deref_instr *deref = nir_instr_as_deref(instr);
+
+            nir_variable_mode parent_mode;
+            if (deref->deref_type == nir_deref_type_var) {
+               parent_mode = deref->var->data.mode;
+            } else {
+               assert(deref->parent.is_ssa);
+               nir_deref_instr *parent =
+                  nir_instr_as_deref(deref->parent.ssa->parent_instr);
+               parent_mode = parent->mode;
+            }
+
+            deref->mode = parent_mode;
+         }
+      }
+   }
+}
