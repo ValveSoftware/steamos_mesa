@@ -260,6 +260,7 @@ tegra_screen_resource_create(struct pipe_screen *pscreen,
                              const struct pipe_resource *template)
 {
    struct tegra_screen *screen = to_tegra_screen(pscreen);
+   uint64_t modifier = DRM_FORMAT_MOD_INVALID;
    struct tegra_resource *resource;
    int err;
 
@@ -267,7 +268,23 @@ tegra_screen_resource_create(struct pipe_screen *pscreen,
    if (!resource)
       return NULL;
 
-   resource->gpu = screen->gpu->resource_create(screen->gpu, template);
+   /*
+    * Applications that create scanout resources without modifiers are very
+    * unlikely to support modifiers at all. In that case the resources need
+    * to be created with a pitch-linear layout so that they can be properly
+    * shared with scanout hardware.
+    *
+    * Technically it is possible for applications to create resources without
+    * specifying a modifier but still query the modifier associated with the
+    * resource (e.g. using gbm_bo_get_modifier()) before handing it to the
+    * framebuffer creation API (such as the DRM_IOCTL_MODE_ADDFB2 IOCTL).
+    */
+   if (template->bind & PIPE_BIND_SCANOUT)
+      modifier = DRM_FORMAT_MOD_LINEAR;
+
+   resource->gpu = screen->gpu->resource_create_with_modifiers(screen->gpu,
+                                                               template,
+                                                               &modifier, 1);
    if (!resource->gpu)
       goto free;
 
