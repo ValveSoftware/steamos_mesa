@@ -355,11 +355,37 @@ deref_may_be_aliased(nir_deref_var *deref,
                                     &deref->deref, state);
 }
 
+static struct deref_node *
+get_deref_node_for_instr(nir_intrinsic_instr *instr, unsigned idx,
+                         struct lower_variables_state *state)
+{
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_var:
+   case nir_intrinsic_store_var:
+   case nir_intrinsic_copy_var:
+      return get_deref_node(instr->variables[idx], state);
+
+   case nir_intrinsic_load_deref:
+   case nir_intrinsic_store_deref:
+   case nir_intrinsic_copy_deref: {
+      assert(instr->src[idx].is_ssa);
+      nir_deref_instr *deref_instr =
+         nir_instr_as_deref(instr->src[idx].ssa->parent_instr);
+      nir_deref_var *deref_var =
+         nir_deref_instr_to_deref(deref_instr, state->dead_ctx);
+      return get_deref_node(deref_var, state);
+   }
+
+   default:
+      unreachable("Unhanded instruction type");
+   }
+}
+
 static void
 register_load_instr(nir_intrinsic_instr *load_instr,
                     struct lower_variables_state *state)
 {
-   struct deref_node *node = get_deref_node(load_instr->variables[0], state);
+   struct deref_node *node = get_deref_node_for_instr(load_instr, 0, state);
    if (node == NULL)
       return;
 
@@ -374,7 +400,7 @@ static void
 register_store_instr(nir_intrinsic_instr *store_instr,
                      struct lower_variables_state *state)
 {
-   struct deref_node *node = get_deref_node(store_instr->variables[0], state);
+   struct deref_node *node = get_deref_node_for_instr(store_instr, 0, state);
    if (node == NULL)
       return;
 
@@ -391,8 +417,7 @@ register_copy_instr(nir_intrinsic_instr *copy_instr,
 {
    for (unsigned idx = 0; idx < 2; idx++) {
       struct deref_node *node =
-         get_deref_node(copy_instr->variables[idx], state);
-
+         get_deref_node_for_instr(copy_instr, idx, state);
       if (node == NULL)
          continue;
 
@@ -417,14 +442,17 @@ register_variable_uses(nir_function_impl *impl,
 
          switch (intrin->intrinsic) {
          case nir_intrinsic_load_var:
+         case nir_intrinsic_load_deref:
             register_load_instr(intrin, state);
             break;
 
          case nir_intrinsic_store_var:
+         case nir_intrinsic_store_deref:
             register_store_instr(intrin, state);
             break;
 
          case nir_intrinsic_copy_var:
+         case nir_intrinsic_copy_deref:
             register_copy_instr(intrin, state);
             break;
 
@@ -445,15 +473,20 @@ lower_copies_to_load_store(struct deref_node *node,
    if (!node->copies)
       return;
 
+   nir_builder b;
+   nir_builder_init(&b, state->impl);
+
    struct set_entry *copy_entry;
    set_foreach(node->copies, copy_entry) {
       nir_intrinsic_instr *copy = (void *)copy_entry->key;
 
-      nir_lower_var_copy_instr(copy, state->shader);
+      if (copy->intrinsic == nir_intrinsic_copy_var)
+         nir_lower_var_copy_instr(copy, state->shader);
+      else
+         nir_lower_deref_copy_instr(&b, copy);
 
       for (unsigned i = 0; i < 2; ++i) {
-         struct deref_node *arg_node =
-            get_deref_node(copy->variables[i], state);
+         struct deref_node *arg_node = get_deref_node_for_instr(copy, i, state);
 
          /* Only bother removing copy entries for other nodes */
          if (arg_node == NULL || arg_node == node)
@@ -491,10 +524,10 @@ rename_variables(struct lower_variables_state *state)
          nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
          switch (intrin->intrinsic) {
-         case nir_intrinsic_load_var: {
+         case nir_intrinsic_load_var:
+         case nir_intrinsic_load_deref: {
             struct deref_node *node =
-               get_deref_node(intrin->variables[0], state);
-
+               get_deref_node_for_instr(intrin, 0, state);
             if (node == NULL) {
                /* If we hit this path then we are referencing an invalid
                 * value.  Most likely, we unrolled something and are
@@ -539,9 +572,19 @@ rename_variables(struct lower_variables_state *state)
             break;
          }
 
-         case nir_intrinsic_store_var: {
+         case nir_intrinsic_store_var:
+         case nir_intrinsic_store_deref: {
             struct deref_node *node =
-               get_deref_node(intrin->variables[0], state);
+               get_deref_node_for_instr(intrin, 0, state);
+
+            nir_ssa_def *value;
+            if (intrin->intrinsic == nir_intrinsic_store_var) {
+               assert(intrin->src[0].is_ssa);
+               value = intrin->src[0].ssa;
+            } else {
+               assert(intrin->src[1].is_ssa);
+               value = intrin->src[1].ssa;
+            }
 
             if (node == NULL) {
                /* Probably an out-of-bounds array store.  That should be a
@@ -556,22 +599,20 @@ rename_variables(struct lower_variables_state *state)
             assert(intrin->num_components ==
                    glsl_get_vector_elements(node->type));
 
-            assert(intrin->src[0].is_ssa);
-
             nir_ssa_def *new_def;
             b.cursor = nir_before_instr(&intrin->instr);
 
             unsigned wrmask = nir_intrinsic_write_mask(intrin);
             if (wrmask == (1 << intrin->num_components) - 1) {
                /* Whole variable store - just copy the source.  Note that
-                * intrin->num_components and intrin->src[0].ssa->num_components
+                * intrin->num_components and value->num_components
                 * may differ.
                 */
                unsigned swiz[4];
                for (unsigned i = 0; i < 4; i++)
                   swiz[i] = i < intrin->num_components ? i : 0;
 
-               new_def = nir_swizzle(&b, intrin->src[0].ssa, swiz,
+               new_def = nir_swizzle(&b, value, swiz,
                                      intrin->num_components, false);
             } else {
                nir_ssa_def *old_def =
@@ -583,7 +624,7 @@ rename_variables(struct lower_variables_state *state)
                nir_ssa_def *srcs[4];
                for (unsigned i = 0; i < intrin->num_components; i++) {
                   if (wrmask & (1 << i)) {
-                     srcs[i] = nir_channel(&b, intrin->src[0].ssa, i);
+                     srcs[i] = nir_channel(&b, value, i);
                   } else {
                      srcs[i] = nir_channel(&b, old_def, i);
                   }
@@ -736,8 +777,6 @@ bool
 nir_lower_vars_to_ssa(nir_shader *shader)
 {
    bool progress = false;
-
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl)
