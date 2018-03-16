@@ -1010,6 +1010,31 @@ nir_src_as_deref(nir_src src)
    return nir_instr_as_deref(src.ssa->parent_instr);
 }
 
+static inline nir_deref_instr *
+nir_deref_instr_parent(const nir_deref_instr *instr)
+{
+   if (instr->deref_type == nir_deref_type_var)
+      return NULL;
+   else
+      return nir_src_as_deref(instr->parent);
+}
+
+static inline nir_variable *
+nir_deref_instr_get_variable(const nir_deref_instr *instr)
+{
+   while (instr->deref_type != nir_deref_type_var) {
+      if (instr->deref_type == nir_deref_type_cast)
+         return NULL;
+
+      instr = nir_deref_instr_parent(instr);
+   }
+
+   return instr->var;
+}
+
+nir_deref_var *
+nir_deref_instr_to_deref(nir_deref_instr *instr, void *mem_ctx);
+
 typedef struct {
    nir_instr instr;
 
@@ -2646,6 +2671,18 @@ bool nir_lower_returns(nir_shader *shader);
 bool nir_inline_functions(nir_shader *shader);
 
 bool nir_propagate_invariant(nir_shader *shader);
+
+enum nir_lower_deref_flags {
+   nir_lower_load_store_derefs =       (1 << 0),
+   nir_lower_texture_derefs =          (1 << 1),
+   nir_lower_interp_derefs =           (1 << 2),
+   nir_lower_atomic_counter_derefs =   (1 << 3),
+   nir_lower_atomic_derefs =           (1 << 4),
+   nir_lower_image_derefs =            (1 << 5),
+};
+
+bool nir_lower_deref_instrs(nir_shader *shader,
+                            enum nir_lower_deref_flags flags);
 
 void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, nir_shader *shader);
 bool nir_lower_var_copies(nir_shader *shader);

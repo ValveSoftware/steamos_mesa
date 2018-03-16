@@ -644,6 +644,29 @@ nir_build_deref_cast(nir_builder *build, nir_ssa_def *parent,
    return deref;
 }
 
+static inline nir_deref_instr *
+nir_build_deref_for_chain(nir_builder *b, nir_deref_var *deref_var)
+{
+   nir_deref_instr *tail = nir_build_deref_var(b, deref_var->var);
+   for (nir_deref *d = deref_var->deref.child; d; d = d->child) {
+      if (d->deref_type == nir_deref_type_array) {
+         nir_deref_array *a = nir_deref_as_array(d);
+         assert(a->deref_array_type != nir_deref_array_type_wildcard);
+
+         nir_ssa_def *index = nir_imm_int(b, a->base_offset);
+         if (a->deref_array_type == nir_deref_array_type_indirect)
+            index = nir_iadd(b, index, nir_ssa_for_src(b, a->indirect, 1));
+
+         tail = nir_build_deref_array(b, tail, index);
+      } else {
+         nir_deref_struct *s = nir_deref_as_struct(d);
+         tail = nir_build_deref_struct(b, tail, s->index);
+      }
+   }
+
+   return tail;
+}
+
 static inline nir_ssa_def *
 nir_load_reg(nir_builder *build, nir_register *reg)
 {
