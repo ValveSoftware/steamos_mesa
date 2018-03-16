@@ -832,69 +832,6 @@ nir_deref_foreach_leaf(nir_deref_var *deref,
    return deref_foreach_leaf_copy_recur(&copy, &copy.deref, cb, state);
 }
 
-/* Returns a load_const instruction that represents the constant
- * initializer for the given deref chain.  The caller is responsible for
- * ensuring that there actually is a constant initializer.
- */
-nir_load_const_instr *
-nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
-{
-   nir_constant *constant = deref->var->constant_initializer;
-   assert(constant);
-
-   const nir_deref *tail = &deref->deref;
-   unsigned matrix_col = 0;
-   while (tail->child) {
-      switch (tail->child->deref_type) {
-      case nir_deref_type_array: {
-         nir_deref_array *arr = nir_deref_as_array(tail->child);
-         assert(arr->deref_array_type == nir_deref_array_type_direct);
-         if (glsl_type_is_matrix(tail->type)) {
-            assert(arr->deref.child == NULL);
-            matrix_col = arr->base_offset;
-         } else {
-            constant = constant->elements[arr->base_offset];
-         }
-         break;
-      }
-
-      case nir_deref_type_struct: {
-         constant = constant->elements[nir_deref_as_struct(tail->child)->index];
-         break;
-      }
-
-      default:
-         unreachable("Invalid deref child type");
-      }
-
-      tail = tail->child;
-   }
-
-   unsigned bit_size = glsl_get_bit_size(tail->type);
-   nir_load_const_instr *load =
-      nir_load_const_instr_create(shader, glsl_get_vector_elements(tail->type),
-                                  bit_size);
-
-   switch (glsl_get_base_type(tail->type)) {
-   case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_INT:
-   case GLSL_TYPE_UINT:
-   case GLSL_TYPE_FLOAT16:
-   case GLSL_TYPE_DOUBLE:
-   case GLSL_TYPE_INT16:
-   case GLSL_TYPE_UINT16:
-   case GLSL_TYPE_UINT64:
-   case GLSL_TYPE_INT64:
-   case GLSL_TYPE_BOOL:
-      load->value = constant->values[matrix_col];
-      break;
-   default:
-      unreachable("Invalid immediate type");
-   }
-
-   return load;
-}
-
 static nir_const_value
 const_value_float(double d, unsigned bit_size)
 {

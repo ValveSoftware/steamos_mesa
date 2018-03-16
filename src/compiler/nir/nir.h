@@ -2248,9 +2248,6 @@ typedef bool (*nir_deref_foreach_leaf_cb)(nir_deref_var *deref, void *state);
 bool nir_deref_foreach_leaf(nir_deref_var *deref,
                             nir_deref_foreach_leaf_cb cb, void *state);
 
-nir_load_const_instr *
-nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref);
-
 nir_const_value nir_alu_binop_identity(nir_op binop, unsigned bit_size);
 
 /**
