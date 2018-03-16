@@ -667,6 +667,54 @@ nir_build_deref_for_chain(nir_builder *b, nir_deref_var *deref_var)
    return tail;
 }
 
+/** Returns a deref that follows another but starting from the given parent
+ *
+ * The new deref will be the same type and take the same array or struct index
+ * as the leader deref but it may have a different parent.  This is very
+ * useful for walking deref paths.
+ */
+static inline nir_deref_instr *
+nir_build_deref_follower(nir_builder *b, nir_deref_instr *parent,
+                         nir_deref_instr *leader)
+{
+   /* If the derefs would have the same parent, don't make a new one */
+   assert(leader->parent.is_ssa);
+   if (leader->parent.ssa == &parent->dest.ssa)
+      return leader;
+
+   UNUSED nir_deref_instr *leader_parent = nir_src_as_deref(leader->parent);
+
+   switch (leader->deref_type) {
+   case nir_deref_type_var:
+      unreachable("A var dereference cannot have a parent");
+      break;
+
+   case nir_deref_type_array:
+   case nir_deref_type_array_wildcard:
+      assert(glsl_type_is_matrix(parent->type) ||
+             glsl_type_is_array(parent->type));
+      assert(glsl_get_length(parent->type) ==
+             glsl_get_length(leader_parent->type));
+
+      if (leader->deref_type == nir_deref_type_array) {
+         assert(leader->arr.index.is_ssa);
+         return nir_build_deref_array(b, parent, leader->arr.index.ssa);
+      } else {
+         return nir_build_deref_array_wildcard(b, parent);
+      }
+
+   case nir_deref_type_struct:
+      assert(glsl_type_is_struct(parent->type));
+      assert(glsl_get_length(parent->type) ==
+             glsl_get_length(leader_parent->type));
+
+      return nir_build_deref_struct(b, parent, leader->strct.index);
+
+   default:
+      unreachable("Invalid deref instruction type");
+   }
+}
+
 static inline nir_ssa_def *
 nir_load_reg(nir_builder *build, nir_register *reg)
 {
