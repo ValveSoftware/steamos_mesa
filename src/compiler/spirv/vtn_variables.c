@@ -27,6 +27,7 @@
 
 #include "vtn_private.h"
 #include "spirv_info.h"
+#include "nir_deref.h"
 
 static struct vtn_access_chain *
 vtn_access_chain_create(struct vtn_builder *b, unsigned length)
@@ -353,16 +354,31 @@ vtn_pointer_dereference(struct vtn_builder *b,
  * lengths stay the same but the terminal type is the one given by
  * tail_type.  This is useful for split structures.
  */
-static void
-rewrite_deref_types(struct vtn_builder *b, nir_deref *deref,
-                    const struct glsl_type *type)
+static const struct glsl_type *
+rewrite_deref_var(struct vtn_builder *b, nir_deref_instr *deref,
+                  struct nir_variable *var)
 {
-   deref->type = type;
-   if (deref->child) {
-      vtn_assert(deref->child->deref_type == nir_deref_type_array);
-      vtn_assert(glsl_type_is_array(deref->type));
-      rewrite_deref_types(b, deref->child, glsl_get_array_element(type));
+   /* Always set the mode */
+   deref->mode = var->data.mode;
+
+   if (deref->deref_type == nir_deref_type_var) {
+      assert(deref->var == NULL);
+      deref->var = var;
+      deref->type = var->type;
+   } else {
+      assert(deref->deref_type == nir_deref_type_array);
+      assert(deref->parent.is_ssa);
+      nir_deref_instr *parent =
+         nir_instr_as_deref(deref->parent.ssa->parent_instr);
+      deref->type = rewrite_deref_var(b, parent, var);
+      assert(deref->type);
    }
+
+   /* Return of the child type of this deref*/
+   if (glsl_type_is_array(deref->type))
+      return glsl_get_array_element(deref->type);
+   else
+      return NULL;
 }
 
 struct vtn_pointer *
@@ -381,31 +397,36 @@ vtn_pointer_for_variable(struct vtn_builder *b,
    return pointer;
 }
 
-nir_deref_var *
+nir_deref_instr *
 vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
 {
    /* Do on-the-fly copy propagation for samplers. */
    if (ptr->var->copy_prop_sampler)
       return vtn_pointer_to_deref(b, ptr->var->copy_prop_sampler);
 
-   nir_deref_var *deref_var;
+   nir_deref_instr *deref_var =
+      nir_deref_instr_create(b->nb.shader, nir_deref_type_var);
+   nir_ssa_dest_init(&deref_var->instr, &deref_var->dest, 1, 32, NULL);
+   nir_builder_instr_insert(&b->nb, &deref_var->instr);
+
    if (ptr->var->var) {
-      deref_var = nir_deref_var_create(b, ptr->var->var);
+      deref_var->mode = ptr->var->var->data.mode;
+      deref_var->type = ptr->var->var->type;
+      deref_var->var = ptr->var->var;
       /* Raw variable access */
       if (!ptr->chain)
          return deref_var;
    } else {
       vtn_assert(ptr->var->members);
-      /* Create the deref_var manually.  It will get filled out later. */
-      deref_var = rzalloc(b, nir_deref_var);
-      deref_var->deref.deref_type = nir_deref_type_var;
+      /* We'll fill out the rest of the deref_var later */
+      deref_var->type = ptr->var->type->type;
    }
 
    struct vtn_access_chain *chain = ptr->chain;
    vtn_assert(chain);
 
    struct vtn_type *deref_type = ptr->var->type;
-   nir_deref *tail = &deref_var->deref;
+   nir_deref_instr *tail = deref_var;
    nir_variable **members = ptr->var->members;
 
    for (unsigned i = 0; i < chain->length; i++) {
@@ -426,21 +447,14 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
       case GLSL_TYPE_ARRAY: {
          deref_type = deref_type->array_element;
 
-         nir_deref_array *deref_arr = nir_deref_array_create(b);
-         deref_arr->deref.type = deref_type->type;
-
+         nir_ssa_def *index;
          if (chain->link[i].mode == vtn_access_mode_literal) {
-            deref_arr->deref_array_type = nir_deref_array_type_direct;
-            deref_arr->base_offset = chain->link[i].id;
+            index = nir_imm_int(&b->nb, chain->link[i].id);
          } else {
             vtn_assert(chain->link[i].mode == vtn_access_mode_id);
-            deref_arr->deref_array_type = nir_deref_array_type_indirect;
-            deref_arr->base_offset = 0;
-            deref_arr->indirect =
-               nir_src_for_ssa(vtn_ssa_value(b, chain->link[i].id)->def);
+            index = vtn_ssa_value(b, chain->link[i].id)->def;
          }
-         tail->child = &deref_arr->deref;
-         tail = tail->child;
+         tail = nir_build_deref_array(&b->nb, tail, index);
          break;
       }
 
@@ -449,16 +463,11 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
          unsigned idx = chain->link[i].id;
          deref_type = deref_type->members[idx];
          if (members) {
-            /* This is a pre-split structure. */
-            deref_var->var = members[idx];
-            rewrite_deref_types(b, &deref_var->deref, members[idx]->type);
-            vtn_assert(tail->type == deref_type->type);
+            rewrite_deref_var(b, tail, members[idx]);
+            assert(tail->type == deref_type->type);
             members = NULL;
          } else {
-            nir_deref_struct *deref_struct = nir_deref_struct_create(b, idx);
-            deref_struct->deref.type = deref_type->type;
-            tail->child = &deref_struct->deref;
-            tail = tail->child;
+            tail = nir_build_deref_struct(&b->nb, tail, idx);
          }
          break;
       }
@@ -468,71 +477,44 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
    }
 
    vtn_assert(members == NULL);
-   return deref_var;
-}
-
-static void
-_vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_var *deref,
-                      nir_deref *tail, struct vtn_ssa_value *inout)
-{
-   /* The deref tail may contain a deref to select a component of a vector (in
-    * other words, it might not be an actual tail) so we have to save it away
-    * here since we overwrite it later.
-    */
-   nir_deref *old_child = tail->child;
-
-   if (glsl_type_is_vector_or_scalar(tail->type)) {
-      /* Terminate the deref chain in case there is one more link to pick
-       * off a component of the vector.
-       */
-      tail->child = NULL;
-
-      nir_intrinsic_op op = load ? nir_intrinsic_load_var :
-                                   nir_intrinsic_store_var;
-
-      nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
-      intrin->variables[0] = nir_deref_var_clone(deref, intrin);
-      intrin->num_components = glsl_get_vector_elements(tail->type);
-
-      if (load) {
-         nir_ssa_dest_init(&intrin->instr, &intrin->dest,
-                           intrin->num_components,
-                           glsl_get_bit_size(tail->type),
-                           NULL);
-         inout->def = &intrin->dest.ssa;
-      } else {
-         nir_intrinsic_set_write_mask(intrin, (1 << intrin->num_components) - 1);
-         intrin->src[0] = nir_src_for_ssa(inout->def);
-      }
-
-      nir_builder_instr_insert(&b->nb, &intrin->instr);
-   } else if (glsl_get_base_type(tail->type) == GLSL_TYPE_ARRAY ||
-              glsl_type_is_matrix(tail->type)) {
-      unsigned elems = glsl_get_length(tail->type);
-      nir_deref_array *deref_arr = nir_deref_array_create(b);
-      deref_arr->deref_array_type = nir_deref_array_type_direct;
-      deref_arr->deref.type = glsl_get_array_element(tail->type);
-      tail->child = &deref_arr->deref;
-      for (unsigned i = 0; i < elems; i++) {
-         deref_arr->base_offset = i;
-         _vtn_local_load_store(b, load, deref, tail->child, inout->elems[i]);
-      }
-   } else {
-      vtn_assert(glsl_get_base_type(tail->type) == GLSL_TYPE_STRUCT);
-      unsigned elems = glsl_get_length(tail->type);
-      nir_deref_struct *deref_struct = nir_deref_struct_create(b, 0);
-      tail->child = &deref_struct->deref;
-      for (unsigned i = 0; i < elems; i++) {
-         deref_struct->index = i;
-         deref_struct->deref.type = glsl_get_struct_field(tail->type, i);
-         _vtn_local_load_store(b, load, deref, tail->child, inout->elems[i]);
-      }
-   }
-
-   tail->child = old_child;
+   return tail;
 }
 
 nir_deref_var *
+vtn_pointer_to_deref_var(struct vtn_builder *b, struct vtn_pointer *ptr)
+{
+   return nir_deref_instr_to_deref(vtn_pointer_to_deref(b, ptr), b);
+}
+
+static void
+_vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_instr *deref,
+                      struct vtn_ssa_value *inout)
+{
+   if (glsl_type_is_vector_or_scalar(deref->type)) {
+      if (load) {
+         inout->def = nir_load_deref(&b->nb, deref);
+      } else {
+         nir_store_deref(&b->nb, deref, inout->def, ~0);
+      }
+   } else if (glsl_type_is_array(deref->type) ||
+              glsl_type_is_matrix(deref->type)) {
+      unsigned elems = glsl_get_length(deref->type);
+      for (unsigned i = 0; i < elems; i++) {
+         nir_deref_instr *child =
+            nir_build_deref_array(&b->nb, deref, nir_imm_int(&b->nb, i));
+         _vtn_local_load_store(b, load, child, inout->elems[i]);
+      }
+   } else {
+      vtn_assert(glsl_type_is_struct(deref->type));
+      unsigned elems = glsl_get_length(deref->type);
+      for (unsigned i = 0; i < elems; i++) {
+         nir_deref_instr *child = nir_build_deref_struct(&b->nb, deref, i);
+         _vtn_local_load_store(b, load, child, inout->elems[i]);
+      }
+   }
+}
+
+nir_deref_instr *
 vtn_nir_deref(struct vtn_builder *b, uint32_t id)
 {
    struct vtn_pointer *ptr = vtn_value(b, id, vtn_value_type_pointer)->pointer;
@@ -544,32 +526,35 @@ vtn_nir_deref(struct vtn_builder *b, uint32_t id)
  * selecting which component due to OpAccessChain supporting per-component
  * indexing in SPIR-V.
  */
-static nir_deref *
-get_deref_tail(nir_deref_var *deref)
+static nir_deref_instr *
+get_deref_tail(nir_deref_instr *deref)
 {
-   nir_deref *cur = &deref->deref;
-   while (!glsl_type_is_vector_or_scalar(cur->type) && cur->child)
-      cur = cur->child;
+   if (deref->deref_type != nir_deref_type_array)
+      return deref;
 
-   return cur;
+   nir_deref_instr *parent =
+      nir_instr_as_deref(deref->parent.ssa->parent_instr);
+
+   if (glsl_type_is_vector(parent->type))
+      return parent;
+   else
+      return deref;
 }
 
 struct vtn_ssa_value *
-vtn_local_load(struct vtn_builder *b, nir_deref_var *src)
+vtn_local_load(struct vtn_builder *b, nir_deref_instr *src)
 {
-   nir_deref *src_tail = get_deref_tail(src);
+   nir_deref_instr *src_tail = get_deref_tail(src);
    struct vtn_ssa_value *val = vtn_create_ssa_value(b, src_tail->type);
-   _vtn_local_load_store(b, true, src, src_tail, val);
+   _vtn_local_load_store(b, true, src_tail, val);
 
-   if (src_tail->child) {
-      nir_deref_array *vec_deref = nir_deref_as_array(src_tail->child);
-      vtn_assert(vec_deref->deref.child == NULL);
-      val->type = vec_deref->deref.type;
-      if (vec_deref->deref_array_type == nir_deref_array_type_direct)
-         val->def = vtn_vector_extract(b, val->def, vec_deref->base_offset);
+   if (src_tail != src) {
+      val->type = src->type;
+      nir_const_value *const_index = nir_src_as_const_value(src->arr.index);
+      if (const_index)
+         val->def = vtn_vector_extract(b, val->def, const_index->u32[0]);
       else
-         val->def = vtn_vector_extract_dynamic(b, val->def,
-                                               vec_deref->indirect.ssa);
+         val->def = vtn_vector_extract_dynamic(b, val->def, src->arr.index.ssa);
    }
 
    return val;
@@ -577,24 +562,24 @@ vtn_local_load(struct vtn_builder *b, nir_deref_var *src)
 
 void
 vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
-                nir_deref_var *dest)
+                nir_deref_instr *dest)
 {
-   nir_deref *dest_tail = get_deref_tail(dest);
+   nir_deref_instr *dest_tail = get_deref_tail(dest);
 
-   if (dest_tail->child) {
+   if (dest_tail != dest) {
       struct vtn_ssa_value *val = vtn_create_ssa_value(b, dest_tail->type);
-      _vtn_local_load_store(b, true, dest, dest_tail, val);
-      nir_deref_array *deref = nir_deref_as_array(dest_tail->child);
-      vtn_assert(deref->deref.child == NULL);
-      if (deref->deref_array_type == nir_deref_array_type_direct)
+      _vtn_local_load_store(b, true, dest_tail, val);
+
+      nir_const_value *const_index = nir_src_as_const_value(dest->arr.index);
+      if (const_index)
          val->def = vtn_vector_insert(b, val->def, src->def,
-                                      deref->base_offset);
+                                      const_index->u32[0]);
       else
          val->def = vtn_vector_insert_dynamic(b, val->def, src->def,
-                                              deref->indirect.ssa);
-      _vtn_local_load_store(b, false, dest, dest_tail, val);
+                                              dest->arr.index.ssa);
+      _vtn_local_load_store(b, false, dest_tail, val);
    } else {
-      _vtn_local_load_store(b, false, dest, dest_tail, src);
+      _vtn_local_load_store(b, false, dest_tail, src);
    }
 }
 

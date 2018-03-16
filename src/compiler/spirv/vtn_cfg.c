@@ -190,7 +190,7 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       } else {
          /* We're a regular SSA value. */
          struct vtn_ssa_value *param_ssa =
-            vtn_local_load(b, nir_deref_var_create(b, param));
+            vtn_local_load(b, nir_build_deref_var(&b->nb, param));
          struct vtn_value *val = vtn_push_ssa(b, w[2], type, param_ssa);
 
          /* Name the parameter so it shows up nicely in NIR */
@@ -643,7 +643,7 @@ vtn_handle_phis_first_pass(struct vtn_builder *b, SpvOp opcode,
    _mesa_hash_table_insert(b->phi_table, w, phi_var);
 
    vtn_push_ssa(b, w[2], type,
-                vtn_local_load(b, nir_deref_var_create(b, phi_var)));
+                vtn_local_load(b, nir_build_deref_var(&b->nb, phi_var)));
 
    return true;
 }
@@ -667,7 +667,7 @@ vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
 
       struct vtn_ssa_value *src = vtn_ssa_value(b, w[i]);
 
-      vtn_local_store(b, src, nir_deref_var_create(b, phi_var));
+      vtn_local_store(b, src, nir_build_deref_var(&b->nb, phi_var));
    }
 
    return true;
@@ -730,7 +730,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
          if ((*block->branch & SpvOpCodeMask) == SpvOpReturnValue) {
             struct vtn_ssa_value *src = vtn_ssa_value(b, block->branch[1]);
             vtn_local_store(b, src,
-                            nir_deref_var_create(b, b->nb.impl->return_var));
+                            nir_build_deref_var(&b->nb, b->nb.impl->return_var));
          }
 
          if (block->branch_type != vtn_branch_type_none) {

@@ -668,22 +668,25 @@ nir_ssa_def *vtn_vector_insert(struct vtn_builder *b, nir_ssa_def *src,
 nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
                                        nir_ssa_def *insert, nir_ssa_def *index);
 
-nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
+nir_deref_instr *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
 
 struct vtn_pointer *vtn_pointer_for_variable(struct vtn_builder *b,
                                              struct vtn_variable *var,
                                              struct vtn_type *ptr_type);
 
-nir_deref_var *vtn_pointer_to_deref(struct vtn_builder *b,
-                                    struct vtn_pointer *ptr);
+nir_deref_var *vtn_pointer_to_deref_var(struct vtn_builder *b,
+                                        struct vtn_pointer *ptr);
+nir_deref_instr *vtn_pointer_to_deref(struct vtn_builder *b,
+                                      struct vtn_pointer *ptr);
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
                       nir_ssa_def **index_out, unsigned *end_idx_out);
 
-struct vtn_ssa_value *vtn_local_load(struct vtn_builder *b, nir_deref_var *src);
+struct vtn_ssa_value *
+vtn_local_load(struct vtn_builder *b, nir_deref_instr *src);
 
 void vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
-                     nir_deref_var *dest);
+                     nir_deref_instr *dest);
 
 struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, struct vtn_pointer *src);
