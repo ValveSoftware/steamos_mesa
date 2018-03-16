@@ -1520,14 +1520,16 @@ update_image_surface(struct brw_context *brw,
       const unsigned format = get_image_format(brw, u->_ActualFormat, access);
 
       if (obj->Target == GL_TEXTURE_BUFFER) {
-         struct intel_buffer_object *intel_obj =
-            intel_buffer_object(obj->BufferObject);
          const unsigned texel_size = (format == ISL_FORMAT_RAW ? 1 :
                                       _mesa_get_format_bytes(u->_ActualFormat));
          const unsigned buffer_size = buffer_texture_range_size(brw, obj);
+         struct brw_bo *const bo = !obj->BufferObject ? NULL :
+            intel_bufferobj_buffer(brw, intel_buffer_object(obj->BufferObject),
+                                   obj->BufferOffset, buffer_size,
+                                   access != GL_READ_ONLY);
 
          brw_emit_buffer_surface_state(
-            brw, surf_offset, intel_obj->buffer, obj->BufferOffset,
+            brw, surf_offset, bo, obj->BufferOffset,
             format, buffer_size, texel_size,
             access != GL_READ_ONLY ? RELOC_WRITE : 0);
 
