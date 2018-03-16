@@ -647,6 +647,7 @@ buffer_texture_range_size(struct brw_context *brw,
    const unsigned texel_size = _mesa_get_format_bytes(obj->_BufferObjectFormat);
    const unsigned buffer_size = (!obj->BufferObject ? 0 :
                                  obj->BufferObject->Size);
+   const unsigned buffer_offset = MIN2(buffer_size, obj->BufferOffset);
 
    /* The ARB_texture_buffer_specification says:
     *
@@ -664,7 +665,8 @@ buffer_texture_range_size(struct brw_context *brw,
     * so that when ISL divides by stride to obtain the number of texels, that
     * texel count is clamped to MAX_TEXTURE_BUFFER_SIZE.
     */
-   return MIN3((unsigned)obj->BufferSize, buffer_size,
+   return MIN3((unsigned)obj->BufferSize,
+               buffer_size - buffer_offset,
                brw->ctx.Const.MaxTextureBufferSize * texel_size);
 }
 
