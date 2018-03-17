@@ -74,9 +74,9 @@ update_type(nir_variable *var, gl_shader_stage stage, unsigned length)
  * Rewrite any clip/cull distances to refer to the new combined array.
  */
 static void
-rewrite_references(nir_instr *instr,
-                   nir_variable *combined,
-                   unsigned cull_offset)
+rewrite_var_references(nir_instr *instr,
+                       nir_variable *combined,
+                       unsigned cull_offset)
 {
    if (instr->type != nir_instr_type_intrinsic)
       return;
@@ -121,6 +121,63 @@ rewrite_references(nir_instr *instr,
    /* There's no need to update writemasks; it's a scalar array. */
 }
 
+static void
+rewrite_clip_cull_deref(nir_builder *b,
+                        nir_deref_instr *deref,
+                        const struct glsl_type *type,
+                        unsigned tail_offset)
+{
+   deref->type = type;
+
+   if (glsl_type_is_array(type)) {
+      const struct glsl_type *child_type = glsl_get_array_element(type);
+      nir_foreach_use(src, &deref->dest.ssa) {
+         rewrite_clip_cull_deref(b, nir_instr_as_deref(src->parent_instr),
+                                 child_type, tail_offset);
+      }
+   } else {
+      assert(glsl_type_is_scalar(type));
+
+      /* This is the end of the line.  Add the tail offset if needed */
+      if (tail_offset > 0) {
+         b->cursor = nir_before_instr(&deref->instr);
+         assert(deref->deref_type == nir_deref_type_array);
+         nir_ssa_def *index = nir_iadd(b, deref->arr.index.ssa,
+                                          nir_imm_int(b, tail_offset));
+         nir_instr_rewrite_src(&deref->instr, &deref->arr.index,
+                               nir_src_for_ssa(index));
+      }
+   }
+}
+
+static void
+rewrite_references(nir_builder *b,
+                   nir_instr *instr,
+                   nir_variable *combined,
+                   unsigned cull_offset)
+{
+   if (instr->type != nir_instr_type_deref)
+      return;
+
+   nir_deref_instr *deref = nir_instr_as_deref(instr);
+   if (deref->deref_type != nir_deref_type_var)
+      return;
+
+   if (deref->var->data.mode != combined->data.mode)
+      return;
+
+   const unsigned location = deref->var->data.location;
+   if (location != VARYING_SLOT_CLIP_DIST0 &&
+       location != VARYING_SLOT_CULL_DIST0)
+      return;
+
+   deref->var = combined;
+   if (location == VARYING_SLOT_CULL_DIST0)
+      rewrite_clip_cull_deref(b, deref, combined->type, cull_offset);
+   else
+      rewrite_clip_cull_deref(b, deref, combined->type, 0);
+}
+
 static bool
 combine_clip_cull(nir_shader *nir,
                   struct exec_list *vars,
@@ -163,9 +220,13 @@ combine_clip_cull(nir_shader *nir,
          /* Rewrite CullDistance to reference the combined array */
          nir_foreach_function(function, nir) {
             if (function->impl) {
+               nir_builder b;
+               nir_builder_init(&b, function->impl);
+
                nir_foreach_block(block, function->impl) {
                   nir_foreach_instr(instr, block) {
-                     rewrite_references(instr, clip, clip_array_size);
+                     rewrite_var_references(instr, clip, clip_array_size);
+                     rewrite_references(&b, instr, clip, clip_array_size);
                   }
                }
             }
@@ -193,8 +254,6 @@ bool
 nir_lower_clip_cull_distance_arrays(nir_shader *nir)
 {
    bool progress = false;
-
-   nir_assert_lowered_derefs(nir, nir_lower_load_store_derefs);
 
    if (nir->info.stage <= MESA_SHADER_GEOMETRY)
       progress |= combine_clip_cull(nir, &nir->outputs, true);
