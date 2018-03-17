@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "nir_builder.h"
 
 /*
  * Implements "copy splitting" which is similar to structure splitting only
@@ -259,6 +260,25 @@ split_var_copies_block(nir_block *block, struct split_var_copies_state *state)
    return true;
 }
 
+static void
+split_deref_copy_instr(nir_builder *b,
+                       nir_deref_instr *dst, nir_deref_instr *src)
+{
+   assert(dst->type == src->type);
+   if (glsl_type_is_vector_or_scalar(src->type)) {
+      nir_copy_deref(b, dst, src);
+   } else if (glsl_type_is_struct(src->type)) {
+      for (unsigned i = 0; i < glsl_get_length(src->type); i++) {
+         split_deref_copy_instr(b, nir_build_deref_struct(b, dst, i),
+                                   nir_build_deref_struct(b, src, i));
+      }
+   } else {
+      assert(glsl_type_is_matrix(src->type) || glsl_type_is_array(src->type));
+      split_deref_copy_instr(b, nir_build_deref_array_wildcard(b, dst),
+                                nir_build_deref_array_wildcard(b, src));
+   }
+}
+
 static bool
 split_var_copies_impl(nir_function_impl *impl)
 {
@@ -268,8 +288,30 @@ split_var_copies_impl(nir_function_impl *impl)
    state.dead_ctx = ralloc_context(NULL);
    state.progress = false;
 
+   nir_builder b;
+   nir_builder_init(&b, impl);
+
    nir_foreach_block(block, impl) {
       split_var_copies_block(block, &state);
+
+      nir_foreach_instr_safe(instr, block) {
+         if (instr->type != nir_instr_type_intrinsic)
+            continue;
+
+         nir_intrinsic_instr *copy = nir_instr_as_intrinsic(instr);
+         if (copy->intrinsic != nir_intrinsic_copy_deref)
+            continue;
+
+         b.cursor = nir_instr_remove(&copy->instr);
+
+         nir_deref_instr *dst =
+            nir_instr_as_deref(copy->src[0].ssa->parent_instr);
+         nir_deref_instr *src =
+            nir_instr_as_deref(copy->src[1].ssa->parent_instr);
+         split_deref_copy_instr(&b, dst, src);
+
+         state.progress = true;
+      }
    }
 
    ralloc_free(state.dead_ctx);
@@ -286,8 +328,6 @@ bool
 nir_split_var_copies(nir_shader *shader)
 {
    bool progress = false;
-
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl)
