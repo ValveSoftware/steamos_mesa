@@ -292,4 +292,6 @@ brw_nir_lower_patch_vertices_in_to_uniform(nir_shader *nir)
       exec_node_remove(&var->node);
       exec_list_push_tail(&nir->uniforms, &var->node);
    }
+
+   nir_fixup_deref_modes(nir);
 }
