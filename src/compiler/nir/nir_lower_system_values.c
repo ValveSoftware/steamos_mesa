@@ -39,10 +39,15 @@ convert_block(nir_block *block, nir_builder *b)
 
       nir_intrinsic_instr *load_var = nir_instr_as_intrinsic(instr);
 
-      if (load_var->intrinsic != nir_intrinsic_load_var)
-         continue;
+      nir_variable *var;
+      if (load_var->intrinsic == nir_intrinsic_load_var) {
+         var = load_var->variables[0]->var;
+      } else if (load_var->intrinsic == nir_intrinsic_load_deref) {
+         var = nir_deref_instr_get_variable(nir_src_as_deref(load_var->src[0]));
+      } else {
+         continue; /* Not a load instruction */
+      }
 
-      nir_variable *var = load_var->variables[0]->var;
       if (var->data.mode != nir_var_system_value)
          continue;
 
@@ -203,12 +208,15 @@ nir_lower_system_values(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
-
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress = convert_impl(function->impl) || progress;
    }
+
+   /* We're going to delete the variables so we need to clean up all those
+    * derefs we left lying around.
+    */
+   nir_remove_dead_derefs(shader);
 
    exec_list_make_empty(&shader->system_values);
 
