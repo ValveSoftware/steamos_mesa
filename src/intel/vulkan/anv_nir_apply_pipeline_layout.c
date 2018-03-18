@@ -159,7 +159,7 @@ lower_res_reindex_intrinsic(nir_intrinsic_instr *intrin,
 static void
 lower_tex_deref(nir_tex_instr *tex, nir_deref_var *deref,
                 unsigned *const_index, unsigned array_size,
-                nir_tex_src_type src_type, bool allow_indirect,
+                nir_tex_src_type src_type,
                 struct apply_pipeline_layout_state *state)
 {
    nir_builder *b = &state->builder;
@@ -176,7 +176,7 @@ lower_tex_deref(nir_tex_instr *tex, nir_deref_var *deref,
           * aggregated into arrays in shader code, irrespective of the
           * shaderSampledImageArrayDynamicIndexing feature.
           */
-         assert(allow_indirect);
+         assert(nir_tex_instr_src_index(tex, nir_tex_src_plane) == -1);
 
          nir_ssa_def *index =
             nir_iadd(b, nir_imm_int(b, deref_array->base_offset),
@@ -206,37 +206,16 @@ cleanup_tex_deref(nir_tex_instr *tex, nir_deref_var *deref)
    nir_instr_rewrite_src(&tex->instr, &deref_array->indirect, NIR_SRC_INIT);
 }
 
-static bool
-has_tex_src_plane(nir_tex_instr *tex)
-{
-   for (unsigned i = 0; i < tex->num_srcs; i++) {
-      if (tex->src[i].src_type == nir_tex_src_plane)
-         return true;
-   }
-
-   return false;
-}
-
 static uint32_t
-extract_tex_src_plane(nir_tex_instr *tex)
+tex_instr_get_and_remove_plane_src(nir_tex_instr *tex)
 {
-   unsigned plane = 0;
+   int plane_src_idx = nir_tex_instr_src_index(tex, nir_tex_src_plane);
+   if (plane_src_idx < 0)
+      return 0;
 
-   int plane_src_idx = -1;
-   for (unsigned i = 0; i < tex->num_srcs; i++) {
-      if (tex->src[i].src_type == nir_tex_src_plane) {
-         nir_const_value *const_plane =
-            nir_src_as_const_value(tex->src[i].src);
+   unsigned plane =
+      nir_src_as_const_value(tex->src[plane_src_idx].src)->u32[0];
 
-         /* Our color conversion lowering pass should only ever insert
-          * constants. */
-         assert(const_plane);
-         plane = const_plane->u32[0];
-         plane_src_idx = i;
-      }
-   }
-
-   assert(plane_src_idx >= 0);
    nir_tex_instr_remove_src(tex, plane_src_idx);
 
    return plane;
@@ -254,12 +233,11 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
    unsigned binding = tex->texture->var->data.binding;
    unsigned array_size =
       state->layout->set[set].layout->binding[binding].array_size;
-   bool has_plane = has_tex_src_plane(tex);
-   unsigned plane = has_plane ? extract_tex_src_plane(tex) : 0;
+   unsigned plane = tex_instr_get_and_remove_plane_src(tex);
 
    tex->texture_index = state->set[set].surface_offsets[binding];
    lower_tex_deref(tex, tex->texture, &tex->texture_index, array_size,
-                   nir_tex_src_texture_offset, !has_plane, state);
+                   nir_tex_src_texture_offset, state);
    tex->texture_index += plane;
 
    if (tex->sampler) {
@@ -269,7 +247,7 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
          state->layout->set[set].layout->binding[binding].array_size;
       tex->sampler_index = state->set[set].sampler_offsets[binding];
       lower_tex_deref(tex, tex->sampler, &tex->sampler_index, array_size,
-                      nir_tex_src_sampler_offset, !has_plane, state);
+                      nir_tex_src_sampler_offset, state);
       tex->sampler_index += plane;
    }
 
