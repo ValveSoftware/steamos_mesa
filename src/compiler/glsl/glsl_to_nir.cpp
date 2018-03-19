@@ -617,14 +617,7 @@ nir_visitor::visit(ir_loop_jump *ir)
 void
 nir_visitor::visit(ir_return *ir)
 {
-   if (ir->value != NULL) {
-      nir_intrinsic_instr *copy =
-         nir_intrinsic_instr_create(this->shader, nir_intrinsic_copy_var);
-
-      copy->variables[0] = nir_deref_var_create(copy, this->impl->return_var);
-      copy->variables[1] = evaluate_deref(&copy->instr, ir->value);
-   }
-
+   assert(ir->value == NULL);
    nir_jump_instr *instr = nir_jump_instr_create(this->shader, nir_jump_return);
    nir_builder_instr_insert(&b, &instr->instr);
 }
@@ -1246,21 +1239,7 @@ nir_visitor::visit(ir_call *ir)
       return;
    }
 
-   struct hash_entry *entry =
-      _mesa_hash_table_search(this->overload_table, ir->callee);
-   assert(entry);
-   nir_function *callee = (nir_function *) entry->data;
-
-   nir_call_instr *instr = nir_call_instr_create(this->shader, callee);
-
-   unsigned i = 0;
-   foreach_in_list(ir_dereference, param, &ir->actual_parameters) {
-      instr->params[i] = evaluate_deref(&instr->instr, param);
-      i++;
-   }
-
-   instr->return_deref = evaluate_deref(&instr->instr, ir->return_deref);
-   nir_builder_instr_insert(&b, &instr->instr);
+   unreachable("glsl_to_nir only handles function calls to intrinsics");
 }
 
 void
