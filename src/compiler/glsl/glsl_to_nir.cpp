@@ -2010,7 +2010,7 @@ nir_visitor::visit(ir_texture *ir)
       num_srcs++;
 
    /* Add one for the texture deref */
-   num_srcs += 1;
+   num_srcs += 2;
 
    nir_tex_instr *instr = nir_tex_instr_create(this->shader, num_srcs);
 
@@ -2039,8 +2039,10 @@ nir_visitor::visit(ir_texture *ir)
    nir_deref_instr *sampler_deref = evaluate_deref(ir->sampler);
    instr->src[0].src = nir_src_for_ssa(&sampler_deref->dest.ssa);
    instr->src[0].src_type = nir_tex_src_texture_deref;
+   instr->src[1].src = nir_src_for_ssa(&sampler_deref->dest.ssa);
+   instr->src[1].src_type = nir_tex_src_sampler_deref;
 
-   unsigned src_number = 1;
+   unsigned src_number = 2;
 
    if (ir->coordinate != NULL) {
       instr->coord_components = ir->coordinate->type->vector_elements;
