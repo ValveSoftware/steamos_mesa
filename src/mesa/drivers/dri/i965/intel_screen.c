@@ -1262,12 +1262,14 @@ intel_query_dma_buf_formats(__DRIscreen *screen, int max,
    int i, j = 0;
 
    if (max == 0) {
-      *count = ARRAY_SIZE(intel_image_formats) - 1; /* not SARGB */
+      /* Note, sRGB formats not included. */
+      *count = ARRAY_SIZE(intel_image_formats) - 2;
       return true;
    }
 
    for (i = 0; i < (ARRAY_SIZE(intel_image_formats)) && j < max; i++) {
-     if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888)
+     if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
+         intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
        continue;
      formats[j++] = intel_image_formats[i].fourcc;
    }
@@ -2085,6 +2087,8 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
 
       /* Required by Android, for HAL_PIXEL_FORMAT_RGBX_8888. */
       MESA_FORMAT_R8G8B8X8_UNORM,
+
+      MESA_FORMAT_R8G8B8A8_SRGB,
    };
 
    /* GLX_SWAP_COPY_OML is not supported due to page flipping. */
@@ -2104,7 +2108,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    if (intel_loader_get_cap(dri_screen, DRI_LOADER_CAP_RGBA_ORDERING))
       num_formats = ARRAY_SIZE(formats);
    else
-      num_formats = ARRAY_SIZE(formats) - 2; /* all - RGBA_ORDERING formats */
+      num_formats = ARRAY_SIZE(formats) - 3; /* all - RGBA_ORDERING formats */
 
    /* Shall we expose 10 bpc formats? */
    bool allow_rgb10_configs = driQueryOptionb(&screen->optionCache,
