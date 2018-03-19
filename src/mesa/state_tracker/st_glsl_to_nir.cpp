@@ -376,6 +376,7 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
       return prog->nir;
 
    nir_shader *nir = glsl_to_nir(shader_program, stage, options);
+   nir_lower_deref_instrs(nir, (nir_lower_deref_flags)~0);
 
    /* Set the next shader stage hint for VS and TES. */
    if (!nir->info.separate_shader &&

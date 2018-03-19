@@ -173,6 +173,8 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
       nir_print_shader(nir, stderr);
    }
 
+   NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
+
    /* We have to lower away local constant initializers right before we
     * inline functions.  That way they get properly initialized at the top
     * of the function and not at the top of its caller.
