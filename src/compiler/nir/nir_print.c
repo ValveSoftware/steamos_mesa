@@ -923,6 +923,12 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       case nir_tex_src_ddy:
          fprintf(fp, "(ddy)");
          break;
+      case nir_tex_src_texture_deref:
+         fprintf(fp, "(texture_deref)");
+         break;
+      case nir_tex_src_sampler_deref:
+         fprintf(fp, "(sampler_deref)");
+         break;
       case nir_tex_src_texture_offset:
          fprintf(fp, "(texture_offset)");
          break;

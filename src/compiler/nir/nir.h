@@ -1272,6 +1272,8 @@ typedef enum {
    nir_tex_src_ms_mcs, /* MSAA compression value */
    nir_tex_src_ddx,
    nir_tex_src_ddy,
+   nir_tex_src_texture_deref, /* < deref pointing to the texture */
+   nir_tex_src_sampler_deref, /* < deref pointing to the sampler */
    nir_tex_src_texture_offset, /* < dynamically uniform indirect offset */
    nir_tex_src_sampler_offset, /* < dynamically uniform indirect offset */
    nir_tex_src_plane,          /* < selects plane for planar textures */
