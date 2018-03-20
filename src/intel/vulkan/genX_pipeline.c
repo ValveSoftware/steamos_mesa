@@ -1600,6 +1600,7 @@ emit_3dstate_ps_extra(struct anv_pipeline *pipeline,
          ps.PixelShaderHasUAV = true;
 
 #if GEN_GEN >= 9
+      ps.PixelShaderComputesStencil = wm_prog_data->computed_stencil;
       ps.PixelShaderPullsBary    = wm_prog_data->pulls_bary;
       ps.InputCoverageMaskState  = wm_prog_data->uses_sample_mask ?
                                    ICMS_INNER_CONSERVATIVE : ICMS_NONE;
