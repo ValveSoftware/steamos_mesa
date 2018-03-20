@@ -26,9 +26,9 @@
  */
 
 #include "compiler/nir/nir.h"
+#include "compiler/nir/nir_builder.h"
 #include "gl_nir.h"
 #include "ir_uniform.h"
-
 #include "main/config.h"
 #include "main/mtypes.h"
 #include <assert.h>
@@ -39,9 +39,9 @@
  */
 
 static bool
-lower_instr(nir_intrinsic_instr *instr,
-            const struct gl_shader_program *shader_program,
-            nir_shader *shader, bool use_binding_as_idx)
+lower_var_instr(nir_intrinsic_instr *instr,
+                const struct gl_shader_program *shader_program,
+                nir_shader *shader, bool use_binding_as_idx)
 {
    nir_intrinsic_op op;
    switch (instr->intrinsic) {
@@ -178,6 +178,103 @@ lower_instr(nir_intrinsic_instr *instr,
    return true;
 }
 
+static bool
+lower_deref_instr(nir_builder *b, nir_intrinsic_instr *instr,
+                  const struct gl_shader_program *shader_program,
+                  nir_shader *shader, bool use_binding_as_idx)
+{
+   nir_intrinsic_op op;
+   switch (instr->intrinsic) {
+   case nir_intrinsic_atomic_counter_read_deref:
+      op = nir_intrinsic_atomic_counter_read;
+      break;
+
+   case nir_intrinsic_atomic_counter_inc_deref:
+      op = nir_intrinsic_atomic_counter_inc;
+      break;
+
+   case nir_intrinsic_atomic_counter_dec_deref:
+      op = nir_intrinsic_atomic_counter_dec;
+      break;
+
+   case nir_intrinsic_atomic_counter_add_deref:
+      op = nir_intrinsic_atomic_counter_add;
+      break;
+
+   case nir_intrinsic_atomic_counter_min_deref:
+      op = nir_intrinsic_atomic_counter_min;
+      break;
+
+   case nir_intrinsic_atomic_counter_max_deref:
+      op = nir_intrinsic_atomic_counter_max;
+      break;
+
+   case nir_intrinsic_atomic_counter_and_deref:
+      op = nir_intrinsic_atomic_counter_and;
+      break;
+
+   case nir_intrinsic_atomic_counter_or_deref:
+      op = nir_intrinsic_atomic_counter_or;
+      break;
+
+   case nir_intrinsic_atomic_counter_xor_deref:
+      op = nir_intrinsic_atomic_counter_xor;
+      break;
+
+   case nir_intrinsic_atomic_counter_exchange_deref:
+      op = nir_intrinsic_atomic_counter_exchange;
+      break;
+
+   case nir_intrinsic_atomic_counter_comp_swap_deref:
+      op = nir_intrinsic_atomic_counter_comp_swap;
+      break;
+
+   default:
+      return false;
+   }
+
+   nir_deref_instr *deref = nir_src_as_deref(instr->src[0]);
+   nir_variable *var = nir_deref_instr_get_variable(deref);
+
+   if (var->data.mode != nir_var_uniform &&
+       var->data.mode != nir_var_shader_storage &&
+       var->data.mode != nir_var_shared)
+      return false; /* atomics passed as function arguments can't be lowered */
+
+   const unsigned uniform_loc = var->data.location;
+   const unsigned idx = use_binding_as_idx ? var->data.binding :
+      shader_program->data->UniformStorage[uniform_loc].opaque[shader->info.stage].index;
+
+   b->cursor = nir_before_instr(&instr->instr);
+
+   nir_ssa_def *offset = nir_imm_int(b, var->data.offset);
+   for (nir_deref_instr *d = deref; d->deref_type != nir_deref_type_var;
+        d = nir_deref_instr_parent(d)) {
+      assert(d->deref_type == nir_deref_type_array);
+      assert(d->arr.index.is_ssa);
+
+      unsigned array_stride = ATOMIC_COUNTER_SIZE;
+      if (glsl_type_is_array(d->type))
+         array_stride *= glsl_get_aoa_size(d->type);
+
+      offset = nir_iadd(b, offset, nir_imul(b, d->arr.index.ssa,
+                                            nir_imm_int(b, array_stride)));
+   }
+
+   /* Since the first source is a deref and the first source in the lowered
+    * instruction is the offset, we can just swap it out and change the
+    * opcode.
+    */
+   instr->intrinsic = op;
+   nir_instr_rewrite_src(&instr->instr, &instr->src[0],
+                         nir_src_for_ssa(offset));
+   nir_intrinsic_set_base(instr, idx);
+
+   nir_deref_instr_remove_if_unused(deref);
+
+   return true;
+}
+
 bool
 gl_nir_lower_atomics(nir_shader *shader,
                      const struct gl_shader_program *shader_program,
@@ -185,22 +282,28 @@ gl_nir_lower_atomics(nir_shader *shader,
 {
    bool progress = false;
 
-   nir_assert_lowered_derefs(shader, nir_lower_atomic_counter_derefs);
-
    nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
 
       bool impl_progress = false;
 
+      nir_builder build;
+      nir_builder_init(&build, function->impl);
+
       nir_foreach_block(block, function->impl) {
          nir_foreach_instr_safe(instr, block) {
             if (instr->type != nir_instr_type_intrinsic)
                continue;
 
-            impl_progress |= lower_instr(nir_instr_as_intrinsic(instr),
-                                         shader_program, shader,
-                                         use_binding_as_idx);
+            impl_progress |= lower_var_instr(nir_instr_as_intrinsic(instr),
+                                             shader_program, shader,
+                                             use_binding_as_idx);
+
+            impl_progress |= lower_deref_instr(&build,
+                                               nir_instr_as_intrinsic(instr),
+                                               shader_program, shader,
+                                               use_binding_as_idx);
          }
       }
 
