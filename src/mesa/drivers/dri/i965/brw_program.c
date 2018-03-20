@@ -79,10 +79,10 @@ brw_create_nir(struct brw_context *brw,
    if (shader_prog) {
       if (shader_prog->data->spirv) {
          nir = _mesa_spirv_to_nir(ctx, shader_prog, stage, options);
-         nir_lower_deref_instrs(nir, ~0);
+         nir_lower_deref_instrs(nir, nir_lower_texture_derefs);
       } else {
          nir = glsl_to_nir(shader_prog, stage, options);
-         nir_lower_deref_instrs(nir, ~0);
+         nir_lower_deref_instrs(nir, nir_lower_texture_derefs);
       }
       assert (nir);
 
@@ -93,7 +93,6 @@ brw_create_nir(struct brw_context *brw,
                  nir_shader_get_entrypoint(nir), true, false);
    } else {
       nir = prog_to_nir(prog, options);
-      nir_lower_deref_instrs(nir, ~0);
       NIR_PASS_V(nir, nir_lower_regs_to_ssa); /* turn registers into SSA */
    }
    nir_validate_shader(nir);
