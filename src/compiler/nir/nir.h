@@ -2999,6 +2999,9 @@ bool nir_opt_conditional_discard(nir_shader *shader);
 
 void nir_sweep(nir_shader *shader);
 
+void nir_remap_attributes(nir_shader *shader,
+                          const nir_shader_compiler_options *options);
+
 nir_intrinsic_op nir_intrinsic_from_system_value(gl_system_value val);
 gl_system_value nir_system_value_from_intrinsic(nir_intrinsic_op intrin);
 
