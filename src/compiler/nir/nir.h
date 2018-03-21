@@ -370,6 +370,17 @@ typedef struct nir_variable {
     * \sa ir_variable::location
     */
    const struct glsl_type *interface_type;
+
+   /**
+    * Description of per-member data for per-member struct variables
+    *
+    * This is used for variables which are actually an amalgamation of
+    * multiple entities such as a struct of built-in values or a struct of
+    * inputs each with their own layout specifier.  This is only allowed on
+    * variables with a struct or array of array of struct type.
+    */
+   unsigned num_members;
+   struct nir_variable_data *members;
 } nir_variable;
 
 #define nir_foreach_variable(var, var_list) \
@@ -2678,6 +2689,7 @@ void nir_dump_cfg(nir_shader *shader, FILE *fp);
 int nir_gs_count_vertices(const nir_shader *shader);
 
 bool nir_split_var_copies(nir_shader *shader);
+bool nir_split_per_member_structs(nir_shader *shader);
 
 bool nir_lower_returns_impl(nir_function_impl *impl);
 bool nir_lower_returns(nir_shader *shader);

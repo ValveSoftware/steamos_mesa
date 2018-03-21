@@ -149,6 +149,11 @@ write_variable(write_ctx *ctx, const nir_variable *var)
    blob_write_uint32(ctx->blob, !!(var->interface_type));
    if (var->interface_type)
       encode_type_to_blob(ctx->blob, var->interface_type);
+   blob_write_uint32(ctx->blob, var->num_members);
+   if (var->num_members > 0) {
+      blob_write_bytes(ctx->blob, (uint8_t *) var->members,
+                       var->num_members * sizeof(*var->members));
+   }
 }
 
 static nir_variable *
@@ -180,6 +185,13 @@ read_variable(read_ctx *ctx)
       var->interface_type = decode_type_from_blob(ctx->blob);
    else
       var->interface_type = NULL;
+   var->num_members = blob_read_uint32(ctx->blob);
+   if (var->num_members > 0) {
+      var->members = ralloc_array(var, struct nir_variable_data,
+                                  var->num_members);
+      blob_copy_bytes(ctx->blob, (uint8_t *) var->members,
+                      var->num_members * sizeof(*var->members));
+   }
 
    return var;
 }

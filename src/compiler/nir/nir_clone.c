@@ -161,6 +161,14 @@ nir_variable_clone(const nir_variable *var, nir_shader *shader)
    }
    nvar->interface_type = var->interface_type;
 
+   nvar->num_members = var->num_members;
+   if (var->num_members) {
+      nvar->members = ralloc_array(nvar, struct nir_variable_data,
+                                   var->num_members);
+      memcpy(nvar->members, var->members,
+             var->num_members * sizeof(*var->members));
+   }
+
    return nvar;
 }
 
