@@ -3237,21 +3237,44 @@ static void tex_fetch_ptrs(struct ac_nir_context *ctx,
 			   LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr,
 			   LLVMValueRef *fmask_ptr)
 {
+	nir_deref_instr *texture_deref_instr = NULL;
+	nir_deref_instr *sampler_deref_instr = NULL;
+	nir_deref_var *texture_deref_var = NULL;
+	nir_deref_var *sampler_deref_var = NULL;
+
+	for (unsigned i = 0; i < instr->num_srcs; i++) {
+		switch (instr->src[i].src_type) {
+		case nir_tex_src_texture_deref:
+			texture_deref_instr = nir_src_as_deref(instr->src[i].src);
+			break;
+		case nir_tex_src_sampler_deref:
+			sampler_deref_instr = nir_src_as_deref(instr->src[i].src);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (!sampler_deref_instr)
+		sampler_deref_instr = texture_deref_instr;
+
+	if (!texture_deref_instr) {
+		texture_deref_var = instr->texture;
+		sampler_deref_var = instr->sampler ? instr->sampler : instr->texture;
+	}
+
 	if (instr->sampler_dim  == GLSL_SAMPLER_DIM_BUF)
-		*res_ptr = get_sampler_desc(ctx, instr->texture, NULL, AC_DESC_BUFFER, instr, false, false);
+		*res_ptr = get_sampler_desc(ctx, texture_deref_var, texture_deref_instr, AC_DESC_BUFFER, instr, false, false);
 	else
-		*res_ptr = get_sampler_desc(ctx, instr->texture, NULL, AC_DESC_IMAGE, instr, false, false);
+		*res_ptr = get_sampler_desc(ctx, texture_deref_var, texture_deref_instr, AC_DESC_IMAGE, instr, false, false);
 	if (samp_ptr) {
-		if (instr->sampler)
-			*samp_ptr = get_sampler_desc(ctx, instr->sampler, NULL, AC_DESC_SAMPLER, instr, false, false);
-		else
-			*samp_ptr = get_sampler_desc(ctx, instr->texture, NULL, AC_DESC_SAMPLER, instr, false, false);
+		*samp_ptr = get_sampler_desc(ctx, sampler_deref_var, sampler_deref_instr, AC_DESC_SAMPLER, instr, false, false);
 		if (instr->sampler_dim < GLSL_SAMPLER_DIM_RECT)
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 	}
 	if (fmask_ptr && !instr->sampler && (instr->op == nir_texop_txf_ms ||
-					     instr->op == nir_texop_samples_identical))
-		*fmask_ptr = get_sampler_desc(ctx, instr->texture, NULL, AC_DESC_FMASK, instr, false, false);
+	                                     instr->op == nir_texop_samples_identical))
+		*fmask_ptr = get_sampler_desc(ctx, instr->texture, texture_deref_instr, AC_DESC_FMASK, instr, false, false);
 }
 
 static LLVMValueRef apply_round_slice(struct ac_llvm_context *ctx,

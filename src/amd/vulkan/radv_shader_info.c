@@ -294,6 +294,19 @@ static void
 gather_tex_info(const nir_shader *nir, const nir_tex_instr *instr,
 		struct radv_shader_info *info)
 {
+	for (unsigned i = 0; i < instr->num_srcs; i++) {
+		switch (instr->src[i].src_type) {
+		case nir_tex_src_texture_deref:
+			mark_sampler_desc(nir_deref_instr_get_variable(nir_src_as_deref(instr->src[i].src)), info);
+			break;
+		case nir_tex_src_sampler_deref:
+			mark_sampler_desc(nir_deref_instr_get_variable(nir_src_as_deref(instr->src[i].src)), info);
+			break;
+		default:
+			break;
+		}
+	}
+
 	if (instr->sampler)
 		mark_sampler_desc(instr->sampler->var, info);
 	if (instr->texture)
