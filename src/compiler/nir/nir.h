@@ -1032,6 +1032,8 @@ nir_deref_instr_get_variable(const nir_deref_instr *instr)
    return instr->var;
 }
 
+bool nir_deref_instr_remove_if_unused(nir_deref_instr *instr);
+
 nir_deref_var *
 nir_deref_instr_to_deref(nir_deref_instr *instr, void *mem_ctx);
 
@@ -2728,6 +2730,8 @@ bool nir_lower_regs_to_ssa_impl(nir_function_impl *impl);
 bool nir_lower_regs_to_ssa(nir_shader *shader);
 bool nir_lower_vars_to_ssa(nir_shader *shader);
 
+bool nir_remove_dead_derefs(nir_shader *shader);
+bool nir_remove_dead_derefs_impl(nir_function_impl *impl);
 bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes);
 bool nir_lower_constant_initializers(nir_shader *shader,
                                      nir_variable_mode modes);

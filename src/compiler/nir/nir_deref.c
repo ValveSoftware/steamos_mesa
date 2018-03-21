@@ -24,6 +24,59 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+/**
+ * Recursively removes unused deref instructions
+ */
+bool
+nir_deref_instr_remove_if_unused(nir_deref_instr *instr)
+{
+   bool progress = false;
+
+   for (nir_deref_instr *d = instr; d; d = nir_deref_instr_parent(d)) {
+      /* If anyone is using this deref, leave it alone */
+      assert(d->dest.is_ssa);
+      if (!list_empty(&d->dest.ssa.uses))
+         break;
+
+      nir_instr_remove(&d->instr);
+      progress = true;
+   }
+
+   return progress;
+}
+
+bool
+nir_remove_dead_derefs_impl(nir_function_impl *impl)
+{
+   bool progress = false;
+
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(instr, block) {
+         if (instr->type == nir_instr_type_deref &&
+             nir_deref_instr_remove_if_unused(nir_instr_as_deref(instr)))
+            progress = true;
+      }
+   }
+
+   if (progress)
+      nir_metadata_preserve(impl, nir_metadata_block_index |
+                                  nir_metadata_dominance);
+
+   return progress;
+}
+
+bool
+nir_remove_dead_derefs(nir_shader *shader)
+{
+   bool progress = false;
+   nir_foreach_function(function, shader) {
+      if (function->impl && nir_remove_dead_derefs_impl(function->impl))
+         progress = true;
+   }
+
+   return progress;
+}
+
 nir_deref_var *
 nir_deref_instr_to_deref(nir_deref_instr *instr, void *mem_ctx)
 {
