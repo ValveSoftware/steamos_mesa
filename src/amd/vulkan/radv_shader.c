@@ -266,6 +266,13 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		 * lower the rest of the constant initializers.
 		 */
 		NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
+
+		/* Split member structs.  We do this before lower_io_to_temporaries so that
+		 * it doesn't lower system values to temporaries by accident.
+		 */
+		NIR_PASS_V(nir, nir_split_var_copies);
+		NIR_PASS_V(nir, nir_split_per_member_structs);
+
 		NIR_PASS_V(nir, nir_lower_system_values);
 		NIR_PASS_V(nir, nir_lower_clip_cull_distance_arrays);
 	}

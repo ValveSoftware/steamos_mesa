@@ -350,37 +350,6 @@ vtn_pointer_dereference(struct vtn_builder *b,
    }
 }
 
-/* Crawls a chain of array derefs and rewrites the types so that the
- * lengths stay the same but the terminal type is the one given by
- * tail_type.  This is useful for split structures.
- */
-static const struct glsl_type *
-rewrite_deref_var(struct vtn_builder *b, nir_deref_instr *deref,
-                  struct nir_variable *var)
-{
-   /* Always set the mode */
-   deref->mode = var->data.mode;
-
-   if (deref->deref_type == nir_deref_type_var) {
-      assert(deref->var == NULL);
-      deref->var = var;
-      deref->type = var->type;
-   } else {
-      assert(deref->deref_type == nir_deref_type_array);
-      assert(deref->parent.is_ssa);
-      nir_deref_instr *parent =
-         nir_instr_as_deref(deref->parent.ssa->parent_instr);
-      deref->type = rewrite_deref_var(b, parent, var);
-      assert(deref->type);
-   }
-
-   /* Return of the child type of this deref*/
-   if (glsl_type_is_array(deref->type))
-      return glsl_get_array_element(deref->type);
-   else
-      return NULL;
-}
-
 struct vtn_pointer *
 vtn_pointer_for_variable(struct vtn_builder *b,
                          struct vtn_variable *var, struct vtn_type *ptr_type)
@@ -409,25 +378,19 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
    nir_ssa_dest_init(&deref_var->instr, &deref_var->dest, 1, 32, NULL);
    nir_builder_instr_insert(&b->nb, &deref_var->instr);
 
-   if (ptr->var->var) {
-      deref_var->mode = ptr->var->var->data.mode;
-      deref_var->type = ptr->var->var->type;
-      deref_var->var = ptr->var->var;
-      /* Raw variable access */
-      if (!ptr->chain)
-         return deref_var;
-   } else {
-      vtn_assert(ptr->var->members);
-      /* We'll fill out the rest of the deref_var later */
-      deref_var->type = ptr->var->type->type;
-   }
+   assert(ptr->var->var);
+   deref_var->mode = ptr->var->var->data.mode;
+   deref_var->type = ptr->var->var->type;
+   deref_var->var = ptr->var->var;
+   /* Raw variable access */
+   if (!ptr->chain)
+      return deref_var;
 
    struct vtn_access_chain *chain = ptr->chain;
    vtn_assert(chain);
 
    struct vtn_type *deref_type = ptr->var->type;
    nir_deref_instr *tail = deref_var;
-   nir_variable **members = ptr->var->members;
 
    for (unsigned i = 0; i < chain->length; i++) {
       enum glsl_base_type base_type = glsl_get_base_type(deref_type->type);
@@ -462,13 +425,7 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
          vtn_assert(chain->link[i].mode == vtn_access_mode_literal);
          unsigned idx = chain->link[i].id;
          deref_type = deref_type->members[idx];
-         if (members) {
-            rewrite_deref_var(b, tail, members[idx]);
-            assert(tail->type == deref_type->type);
-            members = NULL;
-         } else {
-            tail = nir_build_deref_struct(&b->nb, tail, idx);
-         }
+         tail = nir_build_deref_struct(&b->nb, tail, idx);
          break;
       }
       default:
@@ -476,7 +433,6 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
       }
    }
 
-   vtn_assert(members == NULL);
    return tail;
 }
 
@@ -1540,36 +1496,35 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          return;
       }
 
-      if (vtn_var->var) {
+      if (vtn_var->var->num_members == 0) {
          /* This handles the member and lone variable cases */
          vtn_var->var->data.location = location;
       } else {
          /* This handles the structure member case */
-         assert(vtn_var->members);
-         unsigned length =
-            glsl_get_length(glsl_without_array(vtn_var->type->type));
-         for (unsigned i = 0; i < length; i++) {
-            vtn_var->members[i]->data.location = location;
-            location +=
-               glsl_count_attribute_slots(vtn_var->members[i]->interface_type,
-                                          is_vertex_input);
+         assert(vtn_var->var->members);
+         for (unsigned i = 0; i < vtn_var->var->num_members; i++) {
+            vtn_var->var->members[i].location = location;
+            const struct glsl_type *member_type =
+               glsl_get_struct_field(vtn_var->var->interface_type, i);
+            location += glsl_count_attribute_slots(member_type,
+                                                   is_vertex_input);
          }
       }
       return;
    } else {
       if (vtn_var->var) {
-         assert(member == -1);
-         apply_var_decoration(b, &vtn_var->var->data, dec);
-      } else if (vtn_var->members) {
-         if (member >= 0) {
+         if (vtn_var->var->num_members == 0) {
+            assert(member == -1);
+            apply_var_decoration(b, &vtn_var->var->data, dec);
+         } else if (member >= 0) {
             /* Member decorations must come from a type */
             assert(val->value_type == vtn_value_type_type);
-            apply_var_decoration(b, &vtn_var->members[member]->data, dec);
+            apply_var_decoration(b, &vtn_var->var->members[member], dec);
          } else {
             unsigned length =
                glsl_get_length(glsl_without_array(vtn_var->type->type));
             for (unsigned i = 0; i < length; i++)
-               apply_var_decoration(b, &vtn_var->members[i]->data, dec);
+               apply_var_decoration(b, &vtn_var->var->members[i], dec);
          }
       } else {
          /* A few variables, those with external storage, have no actual
@@ -1836,7 +1791,6 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
        * able to preserve that information.
        */
 
-      int array_length = -1;
       struct vtn_type *interface_type = var->type;
       if (is_per_vertex_inout(var, b->shader->info.stage)) {
          /* In Geometry shaders (and some tessellation), inputs come
@@ -1846,43 +1800,25 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
           * check should be sufficient.
           */
          interface_type = var->type->array_element;
-         array_length = glsl_get_length(var->type->type);
       }
 
+      var->var = rzalloc(b->shader, nir_variable);
+      var->var->name = ralloc_strdup(var->var, val->name);
+      var->var->type = var->type->type;
+      var->var->interface_type = interface_type->type;
+      var->var->data.mode = nir_mode;
+      var->var->data.patch = var->patch;
+
       if (glsl_type_is_struct(interface_type->type)) {
-         /* It's a struct.  Split it. */
-         unsigned num_members = glsl_get_length(interface_type->type);
-         var->members = ralloc_array(b, nir_variable *, num_members);
+         /* It's a struct.  Set it up as per-member. */
+         var->var->num_members = glsl_get_length(interface_type->type);
+         var->var->members = rzalloc_array(var->var, struct nir_variable_data,
+                                           var->var->num_members);
 
-         for (unsigned i = 0; i < num_members; i++) {
-            const struct glsl_type *mtype = interface_type->members[i]->type;
-            if (array_length >= 0)
-               mtype = glsl_array_type(mtype, array_length);
-
-            var->members[i] = rzalloc(b->shader, nir_variable);
-            var->members[i]->name =
-               ralloc_asprintf(var->members[i], "%s.%d", val->name, i);
-            var->members[i]->type = mtype;
-            var->members[i]->interface_type =
-               interface_type->members[i]->type;
-            var->members[i]->data.mode = nir_mode;
-            var->members[i]->data.patch = var->patch;
-
-            if (initializer) {
-               assert(i < initializer->num_elements);
-               var->members[i]->constant_initializer =
-                  nir_constant_clone(initializer->elements[i], var->members[i]);
-            }
+         for (unsigned i = 0; i < var->var->num_members; i++) {
+            var->var->members[i].mode = nir_mode;
+            var->var->members[i].patch = var->patch;
          }
-
-         initializer = NULL;
-      } else {
-         var->var = rzalloc(b->shader, nir_variable);
-         var->var->name = ralloc_strdup(var->var, val->name);
-         var->var->type = var->type->type;
-         var->var->interface_type = interface_type->type;
-         var->var->data.mode = nir_mode;
-         var->var->data.patch = var->patch;
       }
 
       /* For inputs and outputs, we need to grab locations and builtin
@@ -1925,16 +1861,10 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    }
 
    if (var->mode == vtn_variable_mode_local) {
-      vtn_assert(var->members == NULL && var->var != NULL);
+      vtn_assert(var->var != NULL && var->var->members == NULL);
       nir_function_impl_add_variable(b->nb.impl, var->var);
    } else if (var->var) {
       nir_shader_add_variable(b->shader, var->var);
-   } else if (var->members) {
-      unsigned count = glsl_get_length(without_array->type);
-      for (unsigned i = 0; i < count; i++) {
-         vtn_assert(var->members[i]->data.mode != nir_var_local);
-         nir_shader_add_variable(b->shader, var->members[i]);
-      }
    } else {
       vtn_assert(vtn_pointer_is_external_block(b, val->pointer));
    }

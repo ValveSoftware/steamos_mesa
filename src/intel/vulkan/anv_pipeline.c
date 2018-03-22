@@ -198,6 +198,12 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
     */
    NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
 
+   /* Split member structs.  We do this before lower_io_to_temporaries so that
+    * it doesn't lower system values to temporaries by accident.
+    */
+   NIR_PASS_V(nir, nir_split_var_copies);
+   NIR_PASS_V(nir, nir_split_per_member_structs);
+
    NIR_PASS_V(nir, nir_remove_dead_variables,
               nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
 
