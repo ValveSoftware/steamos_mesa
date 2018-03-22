@@ -64,6 +64,7 @@ vtn_pointer_uses_ssa_offset(struct vtn_builder *b,
 {
    return ptr->mode == vtn_variable_mode_ubo ||
           ptr->mode == vtn_variable_mode_ssbo ||
+          ptr->mode == vtn_variable_mode_push_constant ||
           (ptr->mode == vtn_variable_mode_workgroup &&
            b->options->lower_workgroup_access_to_offsets);
 }
@@ -269,6 +270,12 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
          }
 
          offset = nir_imm_int(&b->nb, base->var->shared_location);
+      } else if (base->mode == vtn_variable_mode_push_constant) {
+         /* Push constants neither need nor have a block index */
+         vtn_assert(!block_index);
+
+         /* Start off with at the start of the push constant block. */
+         offset = nir_imm_int(&b->nb, 0);
       } else {
          /* The code above should have ensured a block_index when needed. */
          vtn_assert(block_index);
@@ -662,31 +669,6 @@ vtn_type_block_size(struct vtn_builder *b, struct vtn_type *type)
 }
 
 static void
-vtn_access_chain_get_offset_size(struct vtn_builder *b,
-                                 struct vtn_access_chain *chain,
-                                 struct vtn_type *type,
-                                 unsigned *access_offset,
-                                 unsigned *access_size)
-{
-   *access_offset = 0;
-
-   for (unsigned i = 0; i < chain->length; i++) {
-      if (chain->link[i].mode != vtn_access_mode_literal)
-         break;
-
-      if (glsl_type_is_struct(type->type)) {
-         *access_offset += type->offsets[chain->link[i].id];
-         type = type->members[chain->link[i].id];
-      } else {
-         *access_offset += type->stride * chain->link[i].id;
-         type = type->array_element;
-      }
-   }
-
-   *access_size = vtn_type_block_size(b, type);
-}
-
-static void
 _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                      nir_ssa_def *index, nir_ssa_def *offset,
                      unsigned access_offset, unsigned access_size,
@@ -882,8 +864,7 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
       break;
    case vtn_variable_mode_push_constant:
       op = nir_intrinsic_load_push_constant;
-      vtn_access_chain_get_offset_size(b, src->chain, src->var->type,
-                                       &access_offset, &access_size);
+      access_size = b->shader->num_uniforms;
       break;
    case vtn_variable_mode_workgroup:
       op = nir_intrinsic_load_shared;
@@ -1661,7 +1642,8 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
       ptr->offset = nir_channel(&b->nb, ssa, 1);
    } else {
       vtn_assert(ssa->num_components == 1);
-      vtn_assert(ptr->mode == vtn_variable_mode_workgroup);
+      vtn_assert(ptr->mode == vtn_variable_mode_workgroup ||
+                 ptr->mode == vtn_variable_mode_push_constant);
       ptr->block_index = NULL;
       ptr->offset = ssa;
    }

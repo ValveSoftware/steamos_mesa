@@ -1182,6 +1182,13 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          val->type->type = glsl_vector_type(GLSL_TYPE_UINT, 2);
       }
 
+      if (storage_class == SpvStorageClassPushConstant) {
+         /* These can actually be stored to nir_variables and used as SSA
+          * values so they need a real glsl_type.
+          */
+         val->type->type = glsl_uint_type();
+      }
+
       if (storage_class == SpvStorageClassWorkgroup &&
           b->options->lower_workgroup_access_to_offsets) {
          uint32_t size, align;
