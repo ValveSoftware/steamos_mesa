@@ -2631,7 +2631,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
       }
    } else {
       nir_ssa_def *offset, *index;
-      offset = vtn_pointer_to_offset(b, ptr, &index, NULL);
+      offset = vtn_pointer_to_offset(b, ptr, &index);
 
       nir_intrinsic_op op;
       if (ptr->mode == vtn_variable_mode_ssbo) {

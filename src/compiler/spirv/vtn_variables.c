@@ -548,70 +548,17 @@ vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
 
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
-                      nir_ssa_def **index_out, unsigned *end_idx_out)
+                      nir_ssa_def **index_out)
 {
-   if (vtn_pointer_uses_ssa_offset(b, ptr)) {
-      if (!ptr->offset) {
-         struct vtn_access_chain chain = {
-            .length = 0,
-         };
-         ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
-      }
-      *index_out = ptr->block_index;
-      return ptr->offset;
+   assert(vtn_pointer_uses_ssa_offset(b, ptr));
+   if (!ptr->offset) {
+      struct vtn_access_chain chain = {
+         .length = 0,
+      };
+      ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
    }
-
-   vtn_assert(ptr->mode == vtn_variable_mode_push_constant);
-   *index_out = NULL;
-
-   unsigned idx = 0;
-   struct vtn_type *type = ptr->var->type;
-   nir_ssa_def *offset = nir_imm_int(&b->nb, 0);
-
-   if (ptr->chain) {
-      for (; idx < ptr->chain->length; idx++) {
-         enum glsl_base_type base_type = glsl_get_base_type(type->type);
-         switch (base_type) {
-         case GLSL_TYPE_UINT:
-         case GLSL_TYPE_INT:
-         case GLSL_TYPE_UINT16:
-         case GLSL_TYPE_INT16:
-         case GLSL_TYPE_UINT8:
-         case GLSL_TYPE_INT8:
-         case GLSL_TYPE_UINT64:
-         case GLSL_TYPE_INT64:
-         case GLSL_TYPE_FLOAT:
-         case GLSL_TYPE_FLOAT16:
-         case GLSL_TYPE_DOUBLE:
-         case GLSL_TYPE_BOOL:
-         case GLSL_TYPE_ARRAY:
-            offset = nir_iadd(&b->nb, offset,
-                              vtn_access_link_as_ssa(b, ptr->chain->link[idx],
-                                                     type->stride));
-
-            type = type->array_element;
-            break;
-
-         case GLSL_TYPE_STRUCT: {
-            vtn_assert(ptr->chain->link[idx].mode == vtn_access_mode_literal);
-            unsigned member = ptr->chain->link[idx].id;
-            offset = nir_iadd(&b->nb, offset,
-                              nir_imm_int(&b->nb, type->offsets[member]));
-            type = type->members[member];
-            break;
-         }
-
-         default:
-            vtn_fail("Invalid type for deref");
-         }
-      }
-   }
-
-   vtn_assert(type == ptr->type);
-   if (end_idx_out)
-      *end_idx_out = idx;
-
-   return offset;
+   *index_out = ptr->block_index;
+   return ptr->offset;
 }
 
 /* Tries to compute the size of an interface block based on the strides and
@@ -718,13 +665,9 @@ static void
 _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                       nir_ssa_def *index, nir_ssa_def *offset,
                       unsigned access_offset, unsigned access_size,
-                      struct vtn_access_chain *chain, unsigned chain_idx,
                       struct vtn_type *type, struct vtn_ssa_value **inout)
 {
-   if (chain && chain_idx >= chain->length)
-      chain = NULL;
-
-   if (load && chain == NULL && *inout == NULL)
+   if (load && *inout == NULL)
       *inout = vtn_create_ssa_value(b, type->type);
 
    enum glsl_base_type base_type = glsl_get_base_type(type->type);
@@ -826,7 +769,6 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
             nir_iadd(&b->nb, offset, nir_imm_int(&b->nb, i * type->stride));
          _vtn_block_load_store(b, op, load, index, elem_off,
                                access_offset, access_size,
-                               NULL, 0,
                                type->array_element, &(*inout)->elems[i]);
       }
       return;
@@ -839,7 +781,6 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
             nir_iadd(&b->nb, offset, nir_imm_int(&b->nb, type->offsets[i]));
          _vtn_block_load_store(b, op, load, index, elem_off,
                                access_offset, access_size,
-                               NULL, 0,
                                type->members[i], &(*inout)->elems[i]);
       }
       return;
@@ -874,13 +815,12 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
    }
 
    nir_ssa_def *offset, *index = NULL;
-   unsigned chain_idx;
-   offset = vtn_pointer_to_offset(b, src, &index, &chain_idx);
+   offset = vtn_pointer_to_offset(b, src, &index);
 
    struct vtn_ssa_value *value = NULL;
    _vtn_block_load_store(b, op, true, index, offset,
                          access_offset, access_size,
-                         src->chain, chain_idx, src->type, &value);
+                         src->type, &value);
    return value;
 }
 
@@ -901,11 +841,10 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
    }
 
    nir_ssa_def *offset, *index = NULL;
-   unsigned chain_idx;
-   offset = vtn_pointer_to_offset(b, dst, &index, &chain_idx);
+   offset = vtn_pointer_to_offset(b, dst, &index);
 
    _vtn_block_load_store(b, op, false, index, offset,
-                         0, 0, dst->chain, chain_idx, dst->type, &src);
+                         0, 0, dst->type, &src);
 }
 
 static void
