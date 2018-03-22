@@ -1349,70 +1349,70 @@ vtn_get_builtin_location(struct vtn_builder *b,
 }
 
 static void
-apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
+apply_var_decoration(struct vtn_builder *b,
+                     struct nir_variable_data *var_data,
                      const struct vtn_decoration *dec)
 {
    switch (dec->decoration) {
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationNoPerspective:
-      nir_var->data.interpolation = INTERP_MODE_NOPERSPECTIVE;
+      var_data->interpolation = INTERP_MODE_NOPERSPECTIVE;
       break;
    case SpvDecorationFlat:
-      nir_var->data.interpolation = INTERP_MODE_FLAT;
+      var_data->interpolation = INTERP_MODE_FLAT;
       break;
    case SpvDecorationCentroid:
-      nir_var->data.centroid = true;
+      var_data->centroid = true;
       break;
    case SpvDecorationSample:
-      nir_var->data.sample = true;
+      var_data->sample = true;
       break;
    case SpvDecorationInvariant:
-      nir_var->data.invariant = true;
+      var_data->invariant = true;
       break;
    case SpvDecorationConstant:
-      vtn_assert(nir_var->constant_initializer != NULL);
-      nir_var->data.read_only = true;
+      var_data->read_only = true;
       break;
    case SpvDecorationNonReadable:
-      nir_var->data.image.write_only = true;
+      var_data->image.write_only = true;
       break;
    case SpvDecorationNonWritable:
-      nir_var->data.read_only = true;
-      nir_var->data.image.read_only = true;
+      var_data->read_only = true;
+      var_data->image.read_only = true;
       break;
    case SpvDecorationRestrict:
-      nir_var->data.image.restrict_flag = true;
+      var_data->image.restrict_flag = true;
       break;
    case SpvDecorationVolatile:
-      nir_var->data.image._volatile = true;
+      var_data->image._volatile = true;
       break;
    case SpvDecorationCoherent:
-      nir_var->data.image.coherent = true;
+      var_data->image.coherent = true;
       break;
    case SpvDecorationComponent:
-      nir_var->data.location_frac = dec->literals[0];
+      var_data->location_frac = dec->literals[0];
       break;
    case SpvDecorationIndex:
-      nir_var->data.index = dec->literals[0];
+      var_data->index = dec->literals[0];
       break;
    case SpvDecorationBuiltIn: {
       SpvBuiltIn builtin = dec->literals[0];
 
-      nir_variable_mode mode = nir_var->data.mode;
-      vtn_get_builtin_location(b, builtin, &nir_var->data.location, &mode);
-      nir_var->data.mode = mode;
+      nir_variable_mode mode = var_data->mode;
+      vtn_get_builtin_location(b, builtin, &var_data->location, &mode);
+      var_data->mode = mode;
 
       switch (builtin) {
       case SpvBuiltInTessLevelOuter:
       case SpvBuiltInTessLevelInner:
-         nir_var->data.compact = true;
+         var_data->compact = true;
          break;
       case SpvBuiltInFragCoord:
-         nir_var->data.pixel_center_integer = b->pixel_center_integer;
+         var_data->pixel_center_integer = b->pixel_center_integer;
          /* fallthrough */
       case SpvBuiltInSamplePosition:
-         nir_var->data.origin_upper_left = b->origin_upper_left;
+         var_data->origin_upper_left = b->origin_upper_left;
          break;
       default:
          break;
@@ -1431,7 +1431,7 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       break; /* Do nothing with these here */
 
    case SpvDecorationPatch:
-      nir_var->data.patch = true;
+      var_data->patch = true;
       break;
 
    case SpvDecorationLocation:
@@ -1559,17 +1559,17 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    } else {
       if (vtn_var->var) {
          assert(member == -1);
-         apply_var_decoration(b, vtn_var->var, dec);
+         apply_var_decoration(b, &vtn_var->var->data, dec);
       } else if (vtn_var->members) {
          if (member >= 0) {
             /* Member decorations must come from a type */
             assert(val->value_type == vtn_value_type_type);
-            apply_var_decoration(b, vtn_var->members[member], dec);
+            apply_var_decoration(b, &vtn_var->members[member]->data, dec);
          } else {
             unsigned length =
                glsl_get_length(glsl_without_array(vtn_var->type->type));
             for (unsigned i = 0; i < length; i++)
-               apply_var_decoration(b, vtn_var->members[i], dec);
+               apply_var_decoration(b, &vtn_var->members[i]->data, dec);
          }
       } else {
          /* A few variables, those with external storage, have no actual
