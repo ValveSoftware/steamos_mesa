@@ -1503,30 +1503,34 @@ vtn_storage_class_to_mode(struct vtn_builder *b,
 nir_ssa_def *
 vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
 {
-   /* This pointer needs to have a pointer type with actual storage */
-   vtn_assert(ptr->ptr_type);
-   vtn_assert(ptr->ptr_type->type);
+   if (vtn_pointer_uses_ssa_offset(b, ptr)) {
+      /* This pointer needs to have a pointer type with actual storage */
+      vtn_assert(ptr->ptr_type);
+      vtn_assert(ptr->ptr_type->type);
 
-   if (!ptr->offset) {
-      /* If we don't have an offset then we must be a pointer to the variable
-       * itself.
-       */
-      vtn_assert(!ptr->offset && !ptr->block_index);
+      if (!ptr->offset) {
+         /* If we don't have an offset then we must be a pointer to the variable
+          * itself.
+          */
+         vtn_assert(!ptr->offset && !ptr->block_index);
 
-      struct vtn_access_chain chain = {
-         .length = 0,
-      };
-      ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
-   }
+         struct vtn_access_chain chain = {
+            .length = 0,
+         };
+         ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
+      }
 
-   vtn_assert(ptr->offset);
-   if (ptr->block_index) {
-      vtn_assert(ptr->mode == vtn_variable_mode_ubo ||
-                 ptr->mode == vtn_variable_mode_ssbo);
-      return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
+      vtn_assert(ptr->offset);
+      if (ptr->block_index) {
+         vtn_assert(ptr->mode == vtn_variable_mode_ubo ||
+                    ptr->mode == vtn_variable_mode_ssbo);
+         return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
+      } else {
+         vtn_assert(ptr->mode == vtn_variable_mode_workgroup);
+         return ptr->offset;
+      }
    } else {
-      vtn_assert(ptr->mode == vtn_variable_mode_workgroup);
-      return ptr->offset;
+      return &vtn_pointer_to_deref(b, ptr)->dest.ssa;
    }
 }
 
@@ -1536,28 +1540,35 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
 {
    vtn_assert(ssa->num_components <= 2 && ssa->bit_size == 32);
    vtn_assert(ptr_type->base_type == vtn_base_type_pointer);
-   vtn_assert(ptr_type->deref->base_type != vtn_base_type_pointer);
-   /* This pointer type needs to have actual storage */
-   vtn_assert(ptr_type->type);
+
+   struct vtn_type *interface_type = ptr_type->deref;
+   while (interface_type->base_type == vtn_base_type_array)
+      interface_type = interface_type->array_element;
 
    struct vtn_pointer *ptr = rzalloc(b, struct vtn_pointer);
+   nir_variable_mode nir_mode;
    ptr->mode = vtn_storage_class_to_mode(b, ptr_type->storage_class,
-                                         ptr_type, NULL);
+                                         interface_type, &nir_mode);
    ptr->type = ptr_type->deref;
    ptr->ptr_type = ptr_type;
 
-   if (ssa->num_components > 1) {
+   if (ptr->mode == vtn_variable_mode_ubo ||
+       ptr->mode == vtn_variable_mode_ssbo) {
+      /* This pointer type needs to have actual storage */
+      vtn_assert(ptr_type->type);
       vtn_assert(ssa->num_components == 2);
-      vtn_assert(ptr->mode == vtn_variable_mode_ubo ||
-                 ptr->mode == vtn_variable_mode_ssbo);
       ptr->block_index = nir_channel(&b->nb, ssa, 0);
       ptr->offset = nir_channel(&b->nb, ssa, 1);
-   } else {
+   } else if (ptr->mode == vtn_variable_mode_workgroup ||
+              ptr->mode == vtn_variable_mode_push_constant) {
+      /* This pointer type needs to have actual storage */
+      vtn_assert(ptr_type->type);
       vtn_assert(ssa->num_components == 1);
-      vtn_assert(ptr->mode == vtn_variable_mode_workgroup ||
-                 ptr->mode == vtn_variable_mode_push_constant);
       ptr->block_index = NULL;
       ptr->offset = ssa;
+   } else {
+      ptr->deref = nir_build_deref_cast(&b->nb, ssa, nir_mode,
+                                        ptr_type->deref->type);
    }
 
    return ptr;
