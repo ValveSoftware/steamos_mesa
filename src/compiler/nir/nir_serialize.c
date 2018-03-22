@@ -863,9 +863,7 @@ write_call(write_ctx *ctx, const nir_call_instr *call)
    blob_write_intptr(ctx->blob, write_lookup_object(ctx, call->callee));
 
    for (unsigned i = 0; i < call->num_params; i++)
-      write_deref_chain(ctx, call->params[i]);
-
-   write_deref_chain(ctx, call->return_deref);
+      write_src(ctx, &call->params[i]);
 }
 
 static nir_call_instr *
@@ -875,9 +873,7 @@ read_call(read_ctx *ctx)
    nir_call_instr *call = nir_call_instr_create(ctx->nir, callee);
 
    for (unsigned i = 0; i < call->num_params; i++)
-      call->params[i] = read_deref_chain(ctx, &call->instr);
-
-   call->return_deref = read_deref_chain(ctx, &call->instr);
+      read_src(ctx, &call->params[i], call);
 
    return call;
 }
@@ -1102,15 +1098,6 @@ write_function_impl(write_ctx *ctx, const nir_function_impl *fi)
    write_reg_list(ctx, &fi->registers);
    blob_write_uint32(ctx->blob, fi->reg_alloc);
 
-   blob_write_uint32(ctx->blob, fi->num_params);
-   for (unsigned i = 0; i < fi->num_params; i++) {
-      write_variable(ctx, fi->params[i]);
-   }
-
-   blob_write_uint32(ctx->blob, !!(fi->return_var));
-   if (fi->return_var)
-      write_variable(ctx, fi->return_var);
-
    write_cf_list(ctx, &fi->body);
    write_fixup_phis(ctx);
 }
@@ -1124,17 +1111,6 @@ read_function_impl(read_ctx *ctx, nir_function *fxn)
    read_var_list(ctx, &fi->locals);
    read_reg_list(ctx, &fi->registers);
    fi->reg_alloc = blob_read_uint32(ctx->blob);
-
-   fi->num_params = blob_read_uint32(ctx->blob);
-   for (unsigned i = 0; i < fi->num_params; i++) {
-      fi->params[i] = read_variable(ctx);
-   }
-
-   bool has_return = blob_read_uint32(ctx->blob);
-   if (has_return)
-      fi->return_var = read_variable(ctx);
-   else
-      fi->return_var = NULL;
 
    read_cf_list(ctx, &fi->body);
    read_fixup_phis(ctx);
@@ -1155,11 +1131,11 @@ write_function(write_ctx *ctx, const nir_function *fxn)
 
    blob_write_uint32(ctx->blob, fxn->num_params);
    for (unsigned i = 0; i < fxn->num_params; i++) {
-      blob_write_uint32(ctx->blob, fxn->params[i].param_type);
-      encode_type_to_blob(ctx->blob, fxn->params[i].type);
+      uint32_t val =
+         ((uint32_t)fxn->params[i].num_components) |
+         ((uint32_t)fxn->params[i].bit_size) << 8;
+      blob_write_uint32(ctx->blob, val);
    }
-
-   encode_type_to_blob(ctx->blob, fxn->return_type);
 
    /* At first glance, it looks like we should write the function_impl here.
     * However, call instructions need to be able to reference at least the
@@ -1179,12 +1155,12 @@ read_function(read_ctx *ctx)
    read_add_object(ctx, fxn);
 
    fxn->num_params = blob_read_uint32(ctx->blob);
+   fxn->params = ralloc_array(fxn, nir_parameter, fxn->num_params);
    for (unsigned i = 0; i < fxn->num_params; i++) {
-      fxn->params[i].param_type = blob_read_uint32(ctx->blob);
-      fxn->params[i].type = decode_type_from_blob(ctx->blob);
+      uint32_t val = blob_read_uint32(ctx->blob);
+      fxn->params[i].num_components = val & 0xff;
+      fxn->params[i].bit_size = (val >> 8) & 0xff;
    }
-
-   fxn->return_type = decode_type_from_blob(ctx->blob);
 }
 
 void

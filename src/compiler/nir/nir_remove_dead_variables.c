@@ -52,7 +52,7 @@ deref_used_for_not_store(nir_deref_instr *deref)
 
       default:
          /* If it's used by any other instruction type (most likely a texture
-          * instruction), consider it used.
+          * or call instruction), consider it used.
           */
          return true;
       }
@@ -114,20 +114,6 @@ add_var_use_intrinsic(nir_intrinsic_instr *instr, struct set *live,
 }
 
 static void
-add_var_use_call(nir_call_instr *instr, struct set *live)
-{
-   if (instr->return_deref != NULL) {
-      nir_variable *var = instr->return_deref->var;
-      _mesa_set_add(live, var);
-   }
-
-   for (unsigned i = 0; i < instr->num_params; i++) {
-      nir_variable *var = instr->params[i]->var;
-      _mesa_set_add(live, var);
-   }
-}
-
-static void
 add_var_use_tex(nir_tex_instr *instr, struct set *live)
 {
    if (instr->texture != NULL) {
@@ -156,10 +142,6 @@ add_var_use_shader(nir_shader *shader, struct set *live, nir_variable_mode modes
                case nir_instr_type_intrinsic:
                   add_var_use_intrinsic(nir_instr_as_intrinsic(instr), live,
                                         modes);
-                  break;
-
-               case nir_instr_type_call:
-                  add_var_use_call(nir_instr_as_call(instr), live);
                   break;
 
                case nir_instr_type_tex:

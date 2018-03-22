@@ -102,6 +102,8 @@ INTERP_MODE = "NIR_INTRINSIC_INTERP_MODE"
 REDUCTION_OP = "NIR_INTRINSIC_REDUCTION_OP"
 # Cluster size for reduction operations
 CLUSTER_SIZE = "NIR_INTRINSIC_CLUSTER_SIZE"
+# Parameter index for a load_param intrinsic
+PARAM_IDX = "NIR_INTRINSIC_PARAM_IDX"
 
 #
 # Possible flags:
@@ -119,6 +121,8 @@ def intrinsic(name, src_comp=[], dest_comp=-1, num_vars=0, indices=[],
                                    indices, flags, sysval)
 
 intrinsic("nop", flags=[CAN_ELIMINATE])
+
+intrinsic("load_param", dest_comp=0, indices=[PARAM_IDX], flags=[CAN_ELIMINATE])
 
 intrinsic("load_var", dest_comp=0, num_vars=1, flags=[CAN_ELIMINATE])
 intrinsic("store_var", src_comp=[0], num_vars=1, indices=[WRMASK])

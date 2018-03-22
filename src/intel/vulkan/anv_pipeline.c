@@ -173,8 +173,6 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
       nir_print_shader(nir, stderr);
    }
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
-
    /* We have to lower away local constant initializers right before we
     * inline functions.  That way they get properly initialized at the top
     * of the function and not at the top of its caller.
@@ -182,6 +180,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    NIR_PASS_V(nir, nir_lower_constant_initializers, nir_var_local);
    NIR_PASS_V(nir, nir_lower_returns);
    NIR_PASS_V(nir, nir_inline_functions);
+   NIR_PASS_V(nir, nir_copy_prop);
 
    /* Pick off the single entrypoint that we want */
    foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
@@ -190,6 +189,8 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    }
    assert(exec_list_length(&nir->functions) == 1);
    entry_point->name = ralloc_strdup(entry_point, "main");
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
 
    /* Now that we've deleted all but the main function, we can go ahead and
     * lower the rest of the constant initializers.  We do this here so that

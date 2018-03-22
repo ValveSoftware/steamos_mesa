@@ -416,12 +416,6 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
    return tail;
 }
 
-nir_deref_var *
-vtn_pointer_to_deref_var(struct vtn_builder *b, struct vtn_pointer *ptr)
-{
-   return nir_deref_instr_to_deref(vtn_pointer_to_deref(b, ptr), b);
-}
-
 static void
 _vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_instr *deref,
                       struct vtn_ssa_value *inout)
@@ -1734,9 +1728,6 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
                              var_decoration_cb, var);
       break;
    }
-
-   case vtn_variable_mode_param:
-      vtn_fail("Not created through OpVariable");
 
    case vtn_variable_mode_ubo:
    case vtn_variable_mode_ssbo:

@@ -536,10 +536,7 @@ clone_call(clone_state *state, const nir_call_instr *call)
    nir_call_instr *ncall = nir_call_instr_create(state->ns, ncallee);
 
    for (unsigned i = 0; i < ncall->num_params; i++)
-      ncall->params[i] = clone_deref_var(state, call->params[i], &ncall->instr);
-
-   ncall->return_deref = clone_deref_var(state, call->return_deref,
-                                         &ncall->instr);
+      __clone_src(state, ncall, &ncall->params[i], &call->params[i]);
 
    return ncall;
 }
@@ -721,14 +718,6 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi)
    clone_reg_list(state, &nfi->registers, &fi->registers);
    nfi->reg_alloc = fi->reg_alloc;
 
-   nfi->num_params = fi->num_params;
-   nfi->params = ralloc_array(state->ns, nir_variable *, fi->num_params);
-   for (unsigned i = 0; i < fi->num_params; i++) {
-      nfi->params[i] = clone_variable(state, fi->params[i]);
-   }
-   if (fi->return_var)
-      nfi->return_var = clone_variable(state, fi->return_var);
-
    assert(list_empty(&state->phi_srcs));
 
    clone_cf_list(state, &nfi->body, &fi->body);
@@ -769,8 +758,6 @@ clone_function(clone_state *state, const nir_function *fxn, nir_shader *ns)
    nfxn->num_params = fxn->num_params;
    nfxn->params = ralloc_array(state->ns, nir_parameter, fxn->num_params);
    memcpy(nfxn->params, fxn->params, sizeof(nir_parameter) * fxn->num_params);
-
-   nfxn->return_type = fxn->return_type;
 
    /* At first glance, it looks like we should clone the function_impl here.
     * However, call instructions need to be able to reference at least the

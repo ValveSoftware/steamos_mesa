@@ -236,8 +236,6 @@ radv_shader_compile_to_nir(struct radv_device *device,
 
 		free(spec_entries);
 
-		NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
-
 		/* We have to lower away local constant initializers right before we
 		 * inline functions.  That way they get properly initialized at the top
 		 * of the function and not at the top of its caller.
@@ -245,6 +243,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		NIR_PASS_V(nir, nir_lower_constant_initializers, nir_var_local);
 		NIR_PASS_V(nir, nir_lower_returns);
 		NIR_PASS_V(nir, nir_inline_functions);
+		NIR_PASS_V(nir, nir_copy_prop);
 
 		/* Pick off the single entrypoint that we want */
 		foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
@@ -253,6 +252,8 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		}
 		assert(exec_list_length(&nir->functions) == 1);
 		entry_point->name = ralloc_strdup(entry_point, "main");
+
+		NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
 
 		/* Make sure we lower constant initializers on output variables so that
 		 * nir_remove_dead_variables below sees the corresponding stores

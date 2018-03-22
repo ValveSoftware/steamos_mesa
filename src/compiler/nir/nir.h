@@ -99,7 +99,6 @@ typedef enum {
    nir_var_uniform         = (1 << 4),
    nir_var_shader_storage  = (1 << 5),
    nir_var_system_value    = (1 << 6),
-   nir_var_param           = (1 << 7),
    nir_var_shared          = (1 << 8),
    nir_var_all             = ~0,
 } nir_variable_mode;
@@ -392,7 +391,7 @@ typedef struct nir_variable {
 static inline bool
 nir_variable_is_global(const nir_variable *var)
 {
-   return var->data.mode != nir_var_local && var->data.mode != nir_var_param;
+   return var->data.mode != nir_var_local;
 }
 
 typedef struct nir_register {
@@ -1052,11 +1051,10 @@ nir_deref_instr_to_deref(nir_deref_instr *instr, void *mem_ctx);
 typedef struct {
    nir_instr instr;
 
-   unsigned num_params;
-   nir_deref_var **params;
-   nir_deref_var *return_deref;
-
    struct nir_function *callee;
+
+   unsigned num_params;
+   nir_src params[];
 } nir_call_instr;
 
 #include "nir_intrinsics.h"
@@ -1200,6 +1198,11 @@ typedef enum {
     */
    NIR_INTRINSIC_CLUSTER_SIZE = 11,
 
+   /**
+    * Parameter index for a load_param intrinsic
+    */
+   NIR_INTRINSIC_PARAM_IDX = 12,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1292,6 +1295,7 @@ INTRINSIC_IDX_ACCESSORS(component, COMPONENT, unsigned)
 INTRINSIC_IDX_ACCESSORS(interp_mode, INTERP_MODE, unsigned)
 INTRINSIC_IDX_ACCESSORS(reduction_op, REDUCTION_OP, unsigned)
 INTRINSIC_IDX_ACCESSORS(cluster_size, CLUSTER_SIZE, unsigned)
+INTRINSIC_IDX_ACCESSORS(param_idx, PARAM_IDX, unsigned)
 
 /**
  * \group texture information
@@ -1847,13 +1851,6 @@ typedef struct {
    /** list for all local variables in the function */
    struct exec_list locals;
 
-   /** array of variables used as parameters */
-   unsigned num_params;
-   nir_variable **params;
-
-   /** variable used to hold the result of the function */
-   nir_variable *return_var;
-
    /** list of local registers in the function */
    struct exec_list registers;
 
@@ -1964,15 +1961,9 @@ nir_loop_last_block(nir_loop *loop)
    return nir_cf_node_as_block(exec_node_data(nir_cf_node, tail, node));
 }
 
-typedef enum {
-   nir_parameter_in,
-   nir_parameter_out,
-   nir_parameter_inout,
-} nir_parameter_type;
-
 typedef struct {
-   nir_parameter_type param_type;
-   const struct glsl_type *type;
+   uint8_t num_components;
+   uint8_t bit_size;
 } nir_parameter;
 
 typedef struct nir_function {
@@ -1983,7 +1974,6 @@ typedef struct nir_function {
 
    unsigned num_params;
    nir_parameter *params;
-   const struct glsl_type *return_type;
 
    /** The implementation of this function.
     *
@@ -2164,7 +2154,6 @@ nir_shader_get_entrypoint(nir_shader *shader)
    assert(exec_list_length(&shader->functions) == 1);
    struct exec_node *func_node = exec_list_get_head(&shader->functions);
    nir_function *func = exec_node_data(nir_function, func_node, node);
-   assert(func->return_type == glsl_void_type());
    assert(func->num_params == 0);
    assert(func->impl);
    return func->impl;

@@ -127,10 +127,6 @@ nir_shader_add_variable(nir_shader *shader, nir_variable *var)
       assert(!"nir_shader_add_variable cannot be used for local variables");
       break;
 
-   case nir_var_param:
-      assert(!"nir_shader_add_variable cannot be used for function parameters");
-      break;
-
    case nir_var_global:
       exec_list_push_tail(&shader->globals, &var->node);
       break;
@@ -207,7 +203,6 @@ nir_function_create(nir_shader *shader, const char *name)
    func->shader = shader;
    func->num_params = 0;
    func->params = NULL;
-   func->return_type = glsl_void_type();
    func->impl = NULL;
 
    return func;
@@ -291,9 +286,6 @@ nir_function_impl_create_bare(nir_shader *shader)
    exec_list_make_empty(&impl->body);
    exec_list_make_empty(&impl->registers);
    exec_list_make_empty(&impl->locals);
-   impl->num_params = 0;
-   impl->params = NULL;
-   impl->return_var = NULL;
    impl->reg_alloc = 0;
    impl->ssa_alloc = 0;
    impl->valid_metadata = nir_metadata_none;
@@ -321,26 +313,6 @@ nir_function_impl_create(nir_function *function)
 
    function->impl = impl;
    impl->function = function;
-
-   impl->num_params = function->num_params;
-   impl->params = ralloc_array(function->shader,
-                               nir_variable *, impl->num_params);
-
-   for (unsigned i = 0; i < impl->num_params; i++) {
-      impl->params[i] = rzalloc(function->shader, nir_variable);
-      impl->params[i]->type = function->params[i].type;
-      impl->params[i]->data.mode = nir_var_param;
-      impl->params[i]->data.location = i;
-   }
-
-   if (!glsl_type_is_void(function->return_type)) {
-      impl->return_var = rzalloc(function->shader, nir_variable);
-      impl->return_var->type = function->return_type;
-      impl->return_var->data.mode = nir_var_param;
-      impl->return_var->data.location = -1;
-   } else {
-      impl->return_var = NULL;
-   }
 
    return impl;
 }
@@ -539,13 +511,16 @@ nir_intrinsic_instr_create(nir_shader *shader, nir_intrinsic_op op)
 nir_call_instr *
 nir_call_instr_create(nir_shader *shader, nir_function *callee)
 {
-   nir_call_instr *instr = ralloc(shader, nir_call_instr);
-   instr_init(&instr->instr, nir_instr_type_call);
+   const unsigned num_params = callee->num_params;
+   nir_call_instr *instr =
+      rzalloc_size(shader, sizeof(*instr) +
+                   num_params * sizeof(instr->params[0]));
 
+   instr_init(&instr->instr, nir_instr_type_call);
    instr->callee = callee;
-   instr->num_params = callee->num_params;
-   instr->params = ralloc_array(instr, nir_deref_var *, instr->num_params);
-   instr->return_deref = NULL;
+   instr->num_params = num_params;
+   for (unsigned i = 0; i < num_params; i++)
+      src_init(&instr->params[i]);
 
    return instr;
 }
@@ -1441,6 +1416,17 @@ visit_intrinsic_src(nir_intrinsic_instr *instr, nir_foreach_src_cb cb,
 }
 
 static bool
+visit_call_src(nir_call_instr *instr, nir_foreach_src_cb cb, void *state)
+{
+   for (unsigned i = 0; i < instr->num_params; i++) {
+      if (!visit_src(&instr->params[i], cb, state))
+         return false;
+   }
+
+   return true;
+}
+
+static bool
 visit_phi_src(nir_phi_instr *instr, nir_foreach_src_cb cb, void *state)
 {
    nir_foreach_phi_src(src, instr) {
@@ -1500,7 +1486,8 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
          return false;
       break;
    case nir_instr_type_call:
-      /* Call instructions have no regular sources */
+      if (!visit_call_src(nir_instr_as_call(instr), cb, state))
+         return false;
       break;
    case nir_instr_type_load_const:
       /* Constant load instructions have no regular sources */

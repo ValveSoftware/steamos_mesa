@@ -843,6 +843,22 @@ nir_copy_var(nir_builder *build, nir_variable *dest, nir_variable *src)
    nir_builder_instr_insert(build, &copy->instr);
 }
 
+static inline nir_ssa_def *
+nir_load_param(nir_builder *build, uint32_t param_idx)
+{
+   assert(param_idx < build->impl->function->num_params);
+   nir_parameter *param = &build->impl->function->params[param_idx];
+
+   nir_intrinsic_instr *load =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_param);
+   nir_intrinsic_set_param_idx(load, param_idx);
+   load->num_components = param->num_components;
+   nir_ssa_dest_init(&load->instr, &load->dest,
+                     param->num_components, param->bit_size, NULL);
+   nir_builder_instr_insert(build, &load->instr);
+   return &load->dest.ssa;
+}
+
 #include "nir_builder_opcodes.h"
 
 static inline nir_ssa_def *

@@ -517,7 +517,6 @@ nir_visitor::visit(ir_function_signature *ir)
 
       assert(strcmp(func->name, "main") == 0);
       assert(ir->parameters.is_empty());
-      assert(func->return_type == glsl_type::void_type);
 
       this->is_global = false;
 

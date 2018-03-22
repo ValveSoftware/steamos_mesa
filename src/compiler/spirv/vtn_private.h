@@ -407,7 +407,6 @@ struct vtn_access_chain {
 enum vtn_variable_mode {
    vtn_variable_mode_local,
    vtn_variable_mode_global,
-   vtn_variable_mode_param,
    vtn_variable_mode_uniform,
    vtn_variable_mode_ubo,
    vtn_variable_mode_ssbo,
@@ -682,8 +681,6 @@ struct vtn_pointer *vtn_pointer_for_variable(struct vtn_builder *b,
                                              struct vtn_variable *var,
                                              struct vtn_type *ptr_type);
 
-nir_deref_var *vtn_pointer_to_deref_var(struct vtn_builder *b,
-                                        struct vtn_pointer *ptr);
 nir_deref_instr *vtn_pointer_to_deref(struct vtn_builder *b,
                                       struct vtn_pointer *ptr);
 nir_ssa_def *

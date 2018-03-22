@@ -408,7 +408,6 @@ get_variable_mode_str(nir_variable_mode mode, bool want_local_global_mode)
       return "system";
    case nir_var_shared:
       return "shared";
-   case nir_var_param:
    case nir_var_global:
       return want_local_global_mode ? "global" : "";
    case nir_var_local:
@@ -649,14 +648,6 @@ print_var(nir_variable *var, print_state *state)
 }
 
 static void
-print_arg(nir_variable *var, print_state *state)
-{
-   FILE *fp = state->fp;
-   fprintf(fp, "%s %s", glsl_get_type_name(var->type),
-           get_var_name(var, state));
-}
-
-static void
 print_deref_var(nir_deref_var *deref, print_state *state)
 {
    print_var(deref->var, state);
@@ -777,6 +768,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
       [NIR_INTRINSIC_INTERP_MODE] = "interp_mode",
       [NIR_INTRINSIC_REDUCTION_OP] = "reduction_op",
       [NIR_INTRINSIC_CLUSTER_SIZE] = "cluster_size",
+      [NIR_INTRINSIC_PARAM_IDX] = "param_idx",
    };
    for (unsigned idx = 1; idx < NIR_INTRINSIC_NUM_INDEX_FLAGS; idx++) {
       if (!info->index_map[idx])
@@ -976,14 +968,7 @@ print_call_instr(nir_call_instr *instr, print_state *state)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_deref(instr->params[i], state);
-   }
-
-   if (instr->return_deref != NULL) {
-      if (instr->num_params != 0)
-         fprintf(fp, ", ");
-      fprintf(fp, "returning ");
-      print_deref(instr->return_deref, state);
+      print_src(&instr->params[i], state);
    }
 }
 
@@ -1258,20 +1243,6 @@ print_function_impl(nir_function_impl *impl, print_state *state)
 
    fprintf(fp, "\nimpl %s ", impl->function->name);
 
-   for (unsigned i = 0; i < impl->num_params; i++) {
-      if (i != 0)
-         fprintf(fp, ", ");
-
-      print_arg(impl->params[i], state);
-   }
-
-   if (impl->return_var != NULL) {
-      if (impl->num_params != 0)
-         fprintf(fp, ", ");
-      fprintf(fp, "returning ");
-      print_arg(impl->return_var, state);
-   }
-
    fprintf(fp, "{\n");
 
    nir_foreach_variable(var, &impl->locals) {
@@ -1298,34 +1269,8 @@ print_function(nir_function *function, print_state *state)
 {
    FILE *fp = state->fp;
 
-   fprintf(fp, "decl_function %s ", function->name);
-
-   for (unsigned i = 0; i < function->num_params; i++) {
-      if (i != 0)
-         fprintf(fp, ", ");
-
-      switch (function->params[i].param_type) {
-      case nir_parameter_in:
-         fprintf(fp, "in ");
-         break;
-      case nir_parameter_out:
-         fprintf(fp, "out ");
-         break;
-      case nir_parameter_inout:
-         fprintf(fp, "inout ");
-         break;
-      default:
-         unreachable("Invalid parameter type");
-      }
-
-      fprintf(fp, "%s", glsl_get_type_name(function->params[i].type));
-   }
-
-   if (function->return_type != NULL) {
-      if (function->num_params != 0)
-         fprintf(fp, ", ");
-      fprintf(fp, "returning %s", glsl_get_type_name(function->return_type));
-   }
+   fprintf(fp, "decl_function %s (%d params)", function->name,
+           function->num_params);
 
    fprintf(fp, "\n");
 
