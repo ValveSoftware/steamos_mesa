@@ -221,9 +221,6 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, anv_nir_lower_input_attachments);
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs,
-              nir_lower_texture_derefs | nir_lower_image_derefs);
-
    return nir;
 }
 
@@ -422,6 +419,9 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       return NULL;
 
    NIR_PASS_V(nir, anv_nir_lower_ycbcr_textures, layout);
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs,
+              nir_lower_texture_derefs | nir_lower_image_derefs);
 
    NIR_PASS_V(nir, anv_nir_lower_push_constants);
 
