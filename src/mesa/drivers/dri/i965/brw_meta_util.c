@@ -293,18 +293,7 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
        brw->mesa_to_isl_render_format[mt->format])
       return false;
 
-   const bool srgb_rb = _mesa_get_srgb_format_linear(mt->format) != mt->format;
-  /* Gen10 doesn't automatically decode the clear color of sRGB buffers. Since
-   * we currently don't perform this decode in software, avoid a fast-clear
-   * altogether. TODO: Do this in software.
-   */
    const mesa_format format = _mesa_get_render_format(ctx, mt->format);
-   if (devinfo->gen >= 10 && srgb_rb) {
-      perf_debug("sRGB fast clear not enabled for (%s)",
-                 _mesa_get_format_name(format));
-      return false;
-   }
-
    if (_mesa_is_format_integer_color(format)) {
       if (devinfo->gen >= 8) {
          perf_debug("Integer fast clear not enabled for (%s)",
