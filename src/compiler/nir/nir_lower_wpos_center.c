@@ -81,7 +81,18 @@ lower_wpos_center_block(nir_builder *b, nir_block *block,
    nir_foreach_instr(instr, block) {
       if (instr->type == nir_instr_type_intrinsic) {
          nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);
-         if (intr->intrinsic == nir_intrinsic_load_var) {
+         if (intr->intrinsic == nir_intrinsic_load_deref) {
+            nir_deref_instr *deref = nir_src_as_deref(intr->src[0]);
+            nir_variable *var = nir_deref_instr_get_variable(deref);
+
+            if (var->data.mode == nir_var_shader_in &&
+                var->data.location == VARYING_SLOT_POS) {
+               /* gl_FragCoord should not have array/struct derefs: */
+               assert(deref->deref_type == nir_deref_type_var);
+               update_fragcoord(b, intr, for_sample_shading);
+               progress = true;
+            }
+         } else if (intr->intrinsic == nir_intrinsic_load_var) {
             nir_deref_var *dvar = intr->variables[0];
             nir_variable *var = dvar->var;
 
@@ -106,8 +117,6 @@ nir_lower_wpos_center(nir_shader *shader, const bool for_sample_shading)
    nir_builder b;
 
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
-
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl) {
