@@ -235,7 +235,7 @@ public:
    fs_reg get_nir_src(const nir_src &src);
    fs_reg get_nir_src_imm(const nir_src &src);
    fs_reg get_nir_dest(const nir_dest &dest);
-   fs_reg get_nir_image_deref(const nir_deref_var *deref);
+   fs_reg get_nir_image_deref(nir_deref_instr *deref);
    fs_reg get_indirect_offset(nir_intrinsic_instr *instr);
    void emit_percomp(const brw::fs_builder &bld, const fs_inst &inst,
                      unsigned wr_mask);
