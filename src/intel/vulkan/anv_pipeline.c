@@ -190,8 +190,6 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    assert(exec_list_length(&nir->functions) == 1);
    entry_point->name = ralloc_strdup(entry_point, "main");
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs, ~0);
-
    /* Now that we've deleted all but the main function, we can go ahead and
     * lower the rest of the constant initializers.  We do this here so that
     * nir_remove_dead_variables and split_per_member_structs below see the
@@ -219,6 +217,9 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    nir->info.separate_shader = true;
 
    nir = brw_preprocess_nir(compiler, nir);
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs,
+              nir_lower_texture_derefs | nir_lower_image_derefs);
 
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, anv_nir_lower_input_attachments);
