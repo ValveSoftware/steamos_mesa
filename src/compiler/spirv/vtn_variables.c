@@ -112,6 +112,7 @@ vtn_access_chain_pointer_dereference(struct vtn_builder *b,
    ptr->mode = base->mode;
    ptr->type = type;
    ptr->var = base->var;
+   ptr->deref = base->deref;
    ptr->chain = chain;
 
    return ptr;
@@ -377,46 +378,30 @@ nir_deref_instr *
 vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
 {
    /* Do on-the-fly copy propagation for samplers. */
-   if (ptr->var->copy_prop_sampler)
+   if (ptr->var && ptr->var->copy_prop_sampler)
       return vtn_pointer_to_deref(b, ptr->var->copy_prop_sampler);
 
-   nir_deref_instr *deref_var =
-      nir_deref_instr_create(b->nb.shader, nir_deref_type_var);
-   nir_ssa_dest_init(&deref_var->instr, &deref_var->dest, 1, 32, NULL);
-   nir_builder_instr_insert(&b->nb, &deref_var->instr);
+   nir_deref_instr *tail;
+   if (ptr->deref) {
+      tail = ptr->deref;
+   } else {
+      assert(ptr->var && ptr->var->var);
+      tail = nir_build_deref_var(&b->nb, ptr->var->var);
+   }
 
-   assert(ptr->var->var);
-   deref_var->mode = ptr->var->var->data.mode;
-   deref_var->type = ptr->var->var->type;
-   deref_var->var = ptr->var->var;
    /* Raw variable access */
    if (!ptr->chain)
-      return deref_var;
+      return tail;
 
    struct vtn_access_chain *chain = ptr->chain;
    vtn_assert(chain);
 
-   struct vtn_type *deref_type = ptr->var->type;
-   nir_deref_instr *tail = deref_var;
-
    for (unsigned i = 0; i < chain->length; i++) {
-      enum glsl_base_type base_type = glsl_get_base_type(deref_type->type);
-      switch (base_type) {
-      case GLSL_TYPE_UINT:
-      case GLSL_TYPE_INT:
-      case GLSL_TYPE_UINT16:
-      case GLSL_TYPE_INT16:
-      case GLSL_TYPE_UINT8:
-      case GLSL_TYPE_INT8:
-      case GLSL_TYPE_UINT64:
-      case GLSL_TYPE_INT64:
-      case GLSL_TYPE_FLOAT:
-      case GLSL_TYPE_FLOAT16:
-      case GLSL_TYPE_DOUBLE:
-      case GLSL_TYPE_BOOL:
-      case GLSL_TYPE_ARRAY: {
-         deref_type = deref_type->array_element;
-
+      if (glsl_type_is_struct(tail->type)) {
+         vtn_assert(chain->link[i].mode == vtn_access_mode_literal);
+         unsigned idx = chain->link[i].id;
+         tail = nir_build_deref_struct(&b->nb, tail, idx);
+      } else {
          nir_ssa_def *index;
          if (chain->link[i].mode == vtn_access_mode_literal) {
             index = nir_imm_int(&b->nb, chain->link[i].id);
@@ -425,18 +410,6 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
             index = vtn_ssa_value(b, chain->link[i].id)->def;
          }
          tail = nir_build_deref_array(&b->nb, tail, index);
-         break;
-      }
-
-      case GLSL_TYPE_STRUCT: {
-         vtn_assert(chain->link[i].mode == vtn_access_mode_literal);
-         unsigned idx = chain->link[i].id;
-         deref_type = deref_type->members[idx];
-         tail = nir_build_deref_struct(&b->nb, tail, idx);
-         break;
-      }
-      default:
-         vtn_fail("Invalid type for deref");
       }
    }
 

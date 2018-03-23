@@ -433,9 +433,16 @@ struct vtn_pointer {
    /** The referenced variable, if known
     *
     * This field may be NULL if the pointer uses a (block_index, offset) pair
-    * instead of an access chain.
+    * instead of an access chain or if the access chain starts at a deref.
     */
    struct vtn_variable *var;
+
+   /** The deref at the base of the chain
+    *
+    * This field may be NULL if the pointer uses a (block_index, offset) pair
+    * instead of an access chain or if the access chain starts at a variable.
+    */
+   nir_deref_instr *deref;
 
    /** An access chain describing how to get from var to the referenced data
     *
