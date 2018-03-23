@@ -221,6 +221,8 @@ struct vtn_block {
 struct vtn_function {
    struct exec_node node;
 
+   struct vtn_type *type;
+
    bool referenced;
    bool emitted;
 

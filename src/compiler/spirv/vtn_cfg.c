@@ -56,8 +56,8 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_function);
       val->func = b->func;
 
-      const struct vtn_type *func_type =
-         vtn_value(b, w[4], vtn_value_type_type)->type;
+      b->func->type = vtn_value(b, w[4], vtn_value_type_type)->type;
+      const struct vtn_type *func_type = b->func->type;
 
       vtn_assert(func_type->return_type->type == result_type);
 
