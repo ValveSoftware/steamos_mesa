@@ -218,11 +218,11 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
 
    nir = brw_preprocess_nir(compiler, nir);
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs,
-              nir_lower_texture_derefs | nir_lower_image_derefs);
-
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, anv_nir_lower_input_attachments);
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs,
+              nir_lower_texture_derefs | nir_lower_image_derefs);
 
    return nir;
 }
