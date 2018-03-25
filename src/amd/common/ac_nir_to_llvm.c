@@ -2125,18 +2125,61 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct ac_llvm_context *ctx,
 	return sample_index;
 }
 
+static bool is_var_image_intrinsic(const nir_intrinsic_instr *instr)
+{
+	switch(instr->intrinsic) {
+	case nir_intrinsic_image_var_samples:
+	case nir_intrinsic_image_var_load:
+	case nir_intrinsic_image_var_store:
+	case nir_intrinsic_image_var_atomic_add:
+	case nir_intrinsic_image_var_atomic_min:
+	case nir_intrinsic_image_var_atomic_max:
+	case nir_intrinsic_image_var_atomic_and:
+	case nir_intrinsic_image_var_atomic_or:
+	case nir_intrinsic_image_var_atomic_xor:
+	case nir_intrinsic_image_var_atomic_exchange:
+	case nir_intrinsic_image_var_atomic_comp_swap:
+	case nir_intrinsic_image_var_size:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static nir_variable *get_image_variable(const nir_intrinsic_instr *instr)
+{
+	if (is_var_image_intrinsic(instr))
+		return instr->variables[0]->var;
+
+	assert(instr->src[0].is_ssa);
+	return nir_deref_instr_get_variable(nir_instr_as_deref(instr->src[0].ssa->parent_instr));
+}
+
+static LLVMValueRef get_image_descriptor(struct ac_nir_context *ctx,
+                                         const nir_intrinsic_instr *instr,
+                                         enum ac_descriptor_type desc_type,
+                                         bool write)
+{
+	if (is_var_image_intrinsic(instr))
+		return get_sampler_desc(ctx, instr->variables[0], NULL, desc_type, NULL, true, true);
+
+	return get_sampler_desc(ctx, NULL, nir_instr_as_deref(instr->src[0].ssa->parent_instr), desc_type, NULL, true, true);
+}
+
 static void get_image_coords(struct ac_nir_context *ctx,
 			     const nir_intrinsic_instr *instr,
 			     struct ac_image_args *args)
 {
-	const struct glsl_type *type = glsl_without_array(instr->variables[0]->var->type);
+	/* As the deref instrinsics have the deref as src 0, everything is shifted. */
+	int src_shift = is_var_image_intrinsic(instr) ? 0 : 1;
+	const struct glsl_type *type = glsl_without_array(get_image_variable(instr)->type);
 
-	LLVMValueRef src0 = get_src(ctx, instr->src[0]);
+	LLVMValueRef src0 = get_src(ctx, instr->src[src_shift]);
 	LLVMValueRef masks[] = {
 		LLVMConstInt(ctx->ac.i32, 0, false), LLVMConstInt(ctx->ac.i32, 1, false),
 		LLVMConstInt(ctx->ac.i32, 2, false), LLVMConstInt(ctx->ac.i32, 3, false),
 	};
-	LLVMValueRef sample_index = ac_llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[1]), 0);
+	LLVMValueRef sample_index = ac_llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[src_shift + 1]), 0);
 
 	int count;
 	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
@@ -2171,10 +2214,10 @@ static void get_image_coords(struct ac_nir_context *ctx,
 							       fmask_load_address[1],
 							       fmask_load_address[2],
 							       sample_index,
-							       get_sampler_desc(ctx, instr->variables[0], NULL, AC_DESC_FMASK, NULL, true, false));
+							       get_image_descriptor(ctx, instr, AC_DESC_FMASK, false));
 	}
 	if (count == 1 && !gfx9_1d) {
-		if (instr->src[0].ssa->num_components)
+		if (instr->src[src_shift].ssa->num_components)
 			args->coords[0] = LLVMBuildExtractElement(ctx->ac.builder, src0, masks[0], "");
 		else
 			args->coords[0] = src0;
@@ -2217,7 +2260,7 @@ static void get_image_coords(struct ac_nir_context *ctx,
 static LLVMValueRef get_image_buffer_descriptor(struct ac_nir_context *ctx,
                                                 const nir_intrinsic_instr *instr, bool write)
 {
-	LLVMValueRef rsrc = get_sampler_desc(ctx, instr->variables[0], NULL, AC_DESC_BUFFER, NULL, true, write);
+	LLVMValueRef rsrc = get_image_descriptor(ctx, instr, AC_DESC_BUFFER, write);
 	if (ctx->abi->gfx9_stride_size_workaround) {
 		LLVMValueRef elem_count = LLVMBuildExtractElement(ctx->ac.builder, rsrc, LLVMConstInt(ctx->ac.i32, 2, 0), "");
 		LLVMValueRef stride = LLVMBuildExtractElement(ctx->ac.builder, rsrc, LLVMConstInt(ctx->ac.i32, 1, 0), "");
@@ -2237,22 +2280,22 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef res;
-	const nir_variable *var = instr->variables[0]->var;
+	const nir_variable *var = get_image_variable(instr);
 	const struct glsl_type *type = var->type;
-
-	if(instr->variables[0]->deref.child)
-		type = instr->variables[0]->deref.child->type;
 
 	type = glsl_without_array(type);
 
 	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
 	if (dim == GLSL_SAMPLER_DIM_BUF) {
+		/* As the deref instrinsics have the deref as src 0, everything is shifted. */
+		int src_shift = is_var_image_intrinsic(instr) ? 0 : 1;
+
 		unsigned mask = nir_ssa_def_components_read(&instr->dest.ssa);
 		unsigned num_channels = util_last_bit(mask);
 		LLVMValueRef rsrc, vindex;
 
 		rsrc = get_image_buffer_descriptor(ctx, instr, false);
-		vindex = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
+		vindex = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[src_shift]),
 						 ctx->ac.i32_0, "");
 
 		/* TODO: set "glc" and "can_speculate" when OpenGL needs it. */
@@ -2267,8 +2310,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		struct ac_image_args args = {};
 		args.opcode = ac_image_load;
 		get_image_coords(ctx, instr, &args);
-		args.resource = get_sampler_desc(ctx, instr->variables[0], NULL,
-						 AC_DESC_IMAGE, NULL, true, false);
+		args.resource = get_image_descriptor(ctx, instr, AC_DESC_IMAGE, false);
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
 					    glsl_sampler_type_is_array(type));
 		args.dmask = 15;
@@ -2285,7 +2327,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 			      nir_intrinsic_instr *instr)
 {
 	LLVMValueRef params[8];
-	const nir_variable *var = instr->variables[0]->var;
+	const nir_variable *var = get_image_variable(instr);
 	const struct glsl_type *type = glsl_without_array(var->type);
 	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
 	LLVMValueRef glc = ctx->ac.i1false;
@@ -2293,12 +2335,15 @@ static void visit_image_store(struct ac_nir_context *ctx,
 	if (force_glc)
 		glc = ctx->ac.i1true;
 
+	/* As the deref instrinsics have the deref as src 0, everything is shifted. */
+	int src_shift = is_var_image_intrinsic(instr) ? 0 : 1;
+
 	if (dim == GLSL_SAMPLER_DIM_BUF) {
 		LLVMValueRef rsrc = get_image_buffer_descriptor(ctx, instr, true);
 
-		params[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[2])); /* data */
+		params[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[src_shift + 2])); /* data */
 		params[1] = rsrc;
-		params[2] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
+		params[2] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[src_shift]),
 						    ctx->ac.i32_0, ""); /* vindex */
 		params[3] = ctx->ac.i32_0; /* voffset */
 		params[4] = glc;  /* glc */
@@ -2308,10 +2353,9 @@ static void visit_image_store(struct ac_nir_context *ctx,
 	} else {
 		struct ac_image_args args = {};
 		args.opcode = ac_image_store;
-		args.data[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[2]));
+		args.data[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[src_shift + 2]));
 		get_image_coords(ctx, instr, &args);
-		args.resource = get_sampler_desc(ctx, instr->variables[0], NULL,
-						 AC_DESC_IMAGE, NULL, true, false);
+		args.resource = get_image_descriptor(ctx, instr, AC_DESC_IMAGE, true);;
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
 					    glsl_sampler_type_is_array(type));
 		args.dmask = 15;
@@ -2328,9 +2372,10 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 {
 	LLVMValueRef params[7];
 	int param_count = 0;
-	const nir_variable *var = instr->variables[0]->var;
+	const nir_variable *var = get_image_variable(instr);
 
-	bool cmpswap = instr->intrinsic == nir_intrinsic_image_var_atomic_comp_swap;
+	bool cmpswap = instr->intrinsic == nir_intrinsic_image_var_atomic_comp_swap ||
+	               instr->intrinsic == nir_intrinsic_image_deref_atomic_comp_swap;
 	const char *atomic_name;
 	char intrinsic_name[41];
 	enum ac_atomic_op atomic_subop;
@@ -2341,34 +2386,42 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 
 	switch (instr->intrinsic) {
 	case nir_intrinsic_image_var_atomic_add:
+	case nir_intrinsic_image_deref_atomic_add:
 		atomic_name = "add";
 		atomic_subop = ac_atomic_add;
 		break;
 	case nir_intrinsic_image_var_atomic_min:
+	case nir_intrinsic_image_deref_atomic_min:
 		atomic_name = is_unsigned ? "umin" : "smin";
 		atomic_subop = is_unsigned ? ac_atomic_umin : ac_atomic_smin;
 		break;
 	case nir_intrinsic_image_var_atomic_max:
+	case nir_intrinsic_image_deref_atomic_max:
 		atomic_name = is_unsigned ? "umax" : "smax";
 		atomic_subop = is_unsigned ? ac_atomic_umax : ac_atomic_smax;
 		break;
 	case nir_intrinsic_image_var_atomic_and:
+	case nir_intrinsic_image_deref_atomic_and:
 		atomic_name = "and";
 		atomic_subop = ac_atomic_and;
 		break;
 	case nir_intrinsic_image_var_atomic_or:
+	case nir_intrinsic_image_deref_atomic_or:
 		atomic_name = "or";
 		atomic_subop = ac_atomic_or;
 		break;
 	case nir_intrinsic_image_var_atomic_xor:
+	case nir_intrinsic_image_deref_atomic_xor:
 		atomic_name = "xor";
 		atomic_subop = ac_atomic_xor;
 		break;
 	case nir_intrinsic_image_var_atomic_exchange:
+	case nir_intrinsic_image_deref_atomic_exchange:
 		atomic_name = "swap";
 		atomic_subop = ac_atomic_swap;
 		break;
 	case nir_intrinsic_image_var_atomic_comp_swap:
+	case nir_intrinsic_image_deref_atomic_comp_swap:
 		atomic_name = "cmpswap";
 		atomic_subop = 0; /* not used */
 		break;
@@ -2376,13 +2429,16 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 		abort();
 	}
 
+	/* As the deref instrinsics have the deref as src 0, everything is shifted. */
+	int src_shift = is_var_image_intrinsic(instr) ? 0 : 1;
+
 	if (cmpswap)
-		params[param_count++] = get_src(ctx, instr->src[3]);
-	params[param_count++] = get_src(ctx, instr->src[2]);
+		params[param_count++] = get_src(ctx, instr->src[src_shift + 3]);
+	params[param_count++] = get_src(ctx, instr->src[src_shift + 2]);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
 		params[param_count++] = get_image_buffer_descriptor(ctx, instr, true);
-		params[param_count++] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
+		params[param_count++] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[src_shift]),
 								ctx->ac.i32_0, ""); /* vindex */
 		params[param_count++] = ctx->ac.i32_0; /* voffset */
 		params[param_count++] = ctx->ac.i1false;  /* slc */
@@ -2401,8 +2457,7 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 		if (cmpswap)
 			args.data[1] = params[1];
 		get_image_coords(ctx, instr, &args);
-		args.resource = get_sampler_desc(ctx, instr->variables[0], NULL,
-						 AC_DESC_IMAGE, NULL, true, false);
+		args.resource = get_image_descriptor(ctx, instr, AC_DESC_IMAGE, true);
 		args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
 					    glsl_sampler_type_is_array(type));
 
@@ -2413,15 +2468,14 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 static LLVMValueRef visit_image_samples(struct ac_nir_context *ctx,
 					const nir_intrinsic_instr *instr)
 {
-	const nir_variable *var = instr->variables[0]->var;
+	const nir_variable *var = get_image_variable(instr);
 	const struct glsl_type *type = glsl_without_array(var->type);
 
 	struct ac_image_args args = { 0 };
 	args.dim = get_ac_sampler_dim(&ctx->ac, glsl_get_sampler_dim(type),
 				      glsl_sampler_type_is_array(type));
 	args.dmask = 0xf;
-	args.resource = get_sampler_desc(ctx, instr->variables[0], NULL,
-					 AC_DESC_IMAGE, NULL, true, false);
+	args.resource = get_image_descriptor(ctx, instr, AC_DESC_IMAGE, false);
 	args.opcode = ac_image_get_resinfo;
 	args.lod = ctx->ac.i32_0;
 	args.attributes = AC_FUNC_ATTR_READNONE;
@@ -2433,20 +2487,18 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef res;
-	const nir_variable *var = instr->variables[0]->var;
+	const nir_variable *var = get_image_variable(instr);
 	const struct glsl_type *type = glsl_without_array(var->type);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF)
-		return get_buffer_size(ctx,
-			get_sampler_desc(ctx, instr->variables[0], NULL,
-					 AC_DESC_BUFFER, NULL, true, false), true);
+		return get_buffer_size(ctx, get_image_descriptor(ctx, instr, AC_DESC_BUFFER, false), true);
 
 	struct ac_image_args args = { 0 };
 
 	args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
 				    glsl_sampler_type_is_array(type));
 	args.dmask = 0xf;
-	args.resource = get_sampler_desc(ctx, instr->variables[0], NULL, AC_DESC_IMAGE, NULL, true, false);
+	args.resource = get_image_descriptor(ctx, instr, AC_DESC_IMAGE, false);
 	args.opcode = ac_image_get_resinfo;
 	args.lod = ctx->ac.i32_0;
 	args.attributes = AC_FUNC_ATTR_READNONE;
@@ -2989,12 +3041,15 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		visit_store_shared(ctx, instr);
 		break;
 	case nir_intrinsic_image_var_samples:
+	case nir_intrinsic_image_deref_samples:
 		result = visit_image_samples(ctx, instr);
 		break;
 	case nir_intrinsic_image_var_load:
+	case nir_intrinsic_image_deref_load:
 		result = visit_image_load(ctx, instr);
 		break;
 	case nir_intrinsic_image_var_store:
+	case nir_intrinsic_image_deref_store:
 		visit_image_store(ctx, instr);
 		break;
 	case nir_intrinsic_image_var_atomic_add:
@@ -3005,9 +3060,18 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_image_var_atomic_xor:
 	case nir_intrinsic_image_var_atomic_exchange:
 	case nir_intrinsic_image_var_atomic_comp_swap:
+	case nir_intrinsic_image_deref_atomic_add:
+	case nir_intrinsic_image_deref_atomic_min:
+	case nir_intrinsic_image_deref_atomic_max:
+	case nir_intrinsic_image_deref_atomic_and:
+	case nir_intrinsic_image_deref_atomic_or:
+	case nir_intrinsic_image_deref_atomic_xor:
+	case nir_intrinsic_image_deref_atomic_exchange:
+	case nir_intrinsic_image_deref_atomic_comp_swap:
 		result = visit_image_atomic(ctx, instr);
 		break;
 	case nir_intrinsic_image_var_size:
+	case nir_intrinsic_image_deref_size:
 		result = visit_image_size(ctx, instr);
 		break;
 	case nir_intrinsic_shader_clock:
