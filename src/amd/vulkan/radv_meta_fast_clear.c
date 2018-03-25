@@ -66,19 +66,20 @@ build_dcc_decompress_compute_shader(struct radv_device *dev)
 						b.shader->info.cs.local_size[2], 0);
 
 	nir_ssa_def *global_id = nir_iadd(&b, nir_imul(&b, wg_id, block_size), invoc_id);
+	nir_ssa_def *input_img_deref = &nir_build_deref_var(&b, input_img)->dest.ssa;
 
-	nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
+	nir_tex_instr *tex = nir_tex_instr_create(b.shader, 3);
 	tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
 	tex->op = nir_texop_txf;
 	tex->src[0].src_type = nir_tex_src_coord;
 	tex->src[0].src = nir_src_for_ssa(nir_channels(&b, global_id, 3));
 	tex->src[1].src_type = nir_tex_src_lod;
 	tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
+	tex->src[2].src_type = nir_tex_src_texture_deref;
+	tex->src[2].src = nir_src_for_ssa(input_img_deref);
 	tex->dest_type = nir_type_float;
 	tex->is_array = false;
 	tex->coord_components = 2;
-	tex->texture = nir_deref_var_create(tex, input_img);
-	tex->sampler = NULL;
 
 	nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
 	nir_builder_instr_insert(&b, &tex->instr);
