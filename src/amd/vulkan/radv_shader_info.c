@@ -239,9 +239,7 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 	case nir_intrinsic_image_var_atomic_exchange:
 	case nir_intrinsic_image_var_atomic_comp_swap:
 	case nir_intrinsic_image_var_size: {
-		const struct glsl_type *type = instr->variables[0]->var->type;
-		if(instr->variables[0]->deref.child)
-			type = instr->variables[0]->deref.child->type;
+		const struct glsl_type *type = glsl_without_array(instr->variables[0]->var->type);
 
 		enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
 		if (dim == GLSL_SAMPLER_DIM_SUBPASS ||
@@ -260,6 +258,42 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 		    nir_intrinsic_image_var_atomic_xor ||
 		    nir_intrinsic_image_var_atomic_exchange ||
 		    nir_intrinsic_image_var_atomic_comp_swap) {
+			if (nir->info.stage == MESA_SHADER_FRAGMENT)
+				info->ps.writes_memory = true;
+		}
+		break;
+	}
+	case nir_intrinsic_image_deref_load:
+	case nir_intrinsic_image_deref_store:
+	case nir_intrinsic_image_deref_atomic_add:
+	case nir_intrinsic_image_deref_atomic_min:
+	case nir_intrinsic_image_deref_atomic_max:
+	case nir_intrinsic_image_deref_atomic_and:
+	case nir_intrinsic_image_deref_atomic_or:
+	case nir_intrinsic_image_deref_atomic_xor:
+	case nir_intrinsic_image_deref_atomic_exchange:
+	case nir_intrinsic_image_deref_atomic_comp_swap:
+	case nir_intrinsic_image_deref_size: {
+		nir_variable *var = nir_deref_instr_get_variable(nir_instr_as_deref(instr->src[0].ssa->parent_instr));
+		const struct glsl_type *type = glsl_without_array(var->type);
+
+		enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+		if (dim == GLSL_SAMPLER_DIM_SUBPASS ||
+		    dim == GLSL_SAMPLER_DIM_SUBPASS_MS) {
+			info->ps.layer_input = true;
+			info->ps.uses_input_attachments = true;
+		}
+		mark_sampler_desc(var, info);
+
+		if (nir_intrinsic_image_deref_store ||
+		    nir_intrinsic_image_deref_atomic_add ||
+		    nir_intrinsic_image_deref_atomic_min ||
+		    nir_intrinsic_image_deref_atomic_max ||
+		    nir_intrinsic_image_deref_atomic_and ||
+		    nir_intrinsic_image_deref_atomic_or ||
+		    nir_intrinsic_image_deref_atomic_xor ||
+		    nir_intrinsic_image_deref_atomic_exchange ||
+		    nir_intrinsic_image_deref_atomic_comp_swap) {
 			if (nir->info.stage == MESA_SHADER_FRAGMENT)
 				info->ps.writes_memory = true;
 		}
