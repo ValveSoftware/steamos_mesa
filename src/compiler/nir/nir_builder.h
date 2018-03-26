@@ -761,16 +761,7 @@ nir_copy_deref(nir_builder *build, nir_deref_instr *dest, nir_deref_instr *src)
 static inline nir_ssa_def *
 nir_load_var(nir_builder *build, nir_variable *var)
 {
-   const unsigned num_components = glsl_get_vector_elements(var->type);
-
-   nir_intrinsic_instr *load =
-      nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_var);
-   load->num_components = num_components;
-   load->variables[0] = nir_deref_var_create(load, var);
-   nir_ssa_dest_init(&load->instr, &load->dest, num_components,
-                     glsl_get_bit_size(var->type), NULL);
-   nir_builder_instr_insert(build, &load->instr);
-   return &load->dest.ssa;
+   return nir_load_deref(build, nir_build_deref_var(build, var));
 }
 
 static inline nir_ssa_def *
@@ -793,15 +784,7 @@ static inline void
 nir_store_var(nir_builder *build, nir_variable *var, nir_ssa_def *value,
               unsigned writemask)
 {
-   const unsigned num_components = glsl_get_vector_elements(var->type);
-
-   nir_intrinsic_instr *store =
-      nir_intrinsic_instr_create(build->shader, nir_intrinsic_store_var);
-   store->num_components = num_components;
-   nir_intrinsic_set_write_mask(store, writemask);
-   store->variables[0] = nir_deref_var_create(store, var);
-   store->src[0] = nir_src_for_ssa(value);
-   nir_builder_instr_insert(build, &store->instr);
+   nir_store_deref(build, nir_build_deref_var(build, var), value, writemask);
 }
 
 static inline void
@@ -836,11 +819,8 @@ nir_copy_deref_var(nir_builder *build, nir_deref_var *dest, nir_deref_var *src)
 static inline void
 nir_copy_var(nir_builder *build, nir_variable *dest, nir_variable *src)
 {
-   nir_intrinsic_instr *copy =
-      nir_intrinsic_instr_create(build->shader, nir_intrinsic_copy_var);
-   copy->variables[0] = nir_deref_var_create(copy, dest);
-   copy->variables[1] = nir_deref_var_create(copy, src);
-   nir_builder_instr_insert(build, &copy->instr);
+   nir_copy_deref(build, nir_build_deref_var(build, dest),
+                         nir_build_deref_var(build, src));
 }
 
 static inline nir_ssa_def *
