@@ -219,28 +219,6 @@ copy_prop_dest(nir_dest *dest, nir_instr *instr)
 }
 
 static bool
-copy_prop_deref_var(nir_instr *instr, nir_deref_var *deref_var)
-{
-   if (!deref_var)
-      return false;
-
-   bool progress = false;
-   for (nir_deref *deref = deref_var->deref.child;
-        deref; deref = deref->child) {
-      if (deref->deref_type != nir_deref_type_array)
-         continue;
-
-      nir_deref_array *arr = nir_deref_as_array(deref);
-      if (arr->deref_array_type != nir_deref_array_type_indirect)
-         continue;
-
-      while (copy_prop_src(&arr->indirect, instr, NULL, 1))
-         progress = true;
-   }
-   return progress;
-}
-
-static bool
 copy_prop_instr(nir_instr *instr)
 {
    bool progress = false;
@@ -284,11 +262,6 @@ copy_prop_instr(nir_instr *instr)
             progress = true;
       }
 
-      if (copy_prop_deref_var(instr, tex->texture))
-         progress = true;
-      if (copy_prop_deref_var(instr, tex->sampler))
-         progress = true;
-
       while (copy_prop_dest(&tex->dest, instr))
          progress = true;
 
@@ -302,12 +275,6 @@ copy_prop_instr(nir_instr *instr)
          unsigned num_components = nir_intrinsic_src_components(intrin, i);
 
          while (copy_prop_src(&intrin->src[i], instr, NULL, num_components))
-            progress = true;
-      }
-
-      for (unsigned i = 0;
-           i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
-         if (copy_prop_deref_var(instr, intrin->variables[i]))
             progress = true;
       }
 

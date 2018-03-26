@@ -164,8 +164,6 @@ nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes)
    struct set *live =
       _mesa_set_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
 
-   nir_assert_unlowered_derefs(shader, nir_lower_all_derefs);
-
    add_var_use_shader(shader, live, modes);
 
    if (modes & nir_var_uniform)

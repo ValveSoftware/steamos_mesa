@@ -155,8 +155,6 @@ nir_lower_var_copies(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
-
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= lower_var_copies_impl(function->impl);

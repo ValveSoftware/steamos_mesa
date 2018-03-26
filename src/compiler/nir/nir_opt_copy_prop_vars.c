@@ -744,8 +744,6 @@ nir_opt_copy_prop_vars(nir_shader *shader)
 {
    struct copy_prop_var_state state;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
-
    state.shader = shader;
    state.mem_ctx = ralloc_context(NULL);
    list_inithead(&state.copies);

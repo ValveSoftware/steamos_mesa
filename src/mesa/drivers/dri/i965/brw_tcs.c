@@ -109,7 +109,6 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    }
 
    nir_validate_shader(nir);
-   nir_lower_deref_instrs(nir, ~0);
 
    nir = brw_preprocess_nir(compiler, nir);
 

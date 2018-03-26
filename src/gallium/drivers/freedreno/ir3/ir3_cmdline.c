@@ -113,7 +113,6 @@ load_glsl(unsigned num_files, char* const* files, gl_shader_stage stage)
 		errx(1, "couldn't parse `%s'", files[0]);
 
 	nir_shader *nir = glsl_to_nir(prog, stage, ir3_get_compiler_options(compiler));
-	nir_lower_deref_instrs(nir, ~0);
 
 	/* required NIR passes: */
 	/* TODO cmdline args for some of the conditional lowering passes? */
@@ -231,8 +230,6 @@ load_spirv(const char *filename, const char *entry, gl_shader_stage stage)
 			stage, entry,
 			&spirv_options,
 			ir3_get_compiler_options(compiler));
-
-	NIR_PASS_V(entry_point->shader, nir_lower_deref_instrs, ~0);
 
 	nir_print_shader(entry_point->shader, stdout);
 

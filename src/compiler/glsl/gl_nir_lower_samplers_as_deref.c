@@ -282,8 +282,6 @@ gl_nir_lower_samplers_as_deref(nir_shader *shader,
    bool progress = false;
    struct lower_samplers_as_deref_state state;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_texture_derefs);
-
    state.shader = shader;
    state.shader_program = shader_program;
    state.remap_table = _mesa_hash_table_create(NULL, _mesa_key_hash_string,

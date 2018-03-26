@@ -177,8 +177,6 @@ nir_split_per_member_structs(nir_shader *shader)
       _mesa_hash_table_create(dead_ctx, _mesa_hash_pointer,
                               _mesa_key_pointer_equal);
 
-   nir_assert_unlowered_derefs(shader, nir_lower_all_derefs);
-
    progress |= split_variables_in_list(&shader->inputs, shader,
                                        var_to_member_map, dead_ctx);
    progress |= split_variables_in_list(&shader->outputs, shader,

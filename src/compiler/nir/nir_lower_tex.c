@@ -882,8 +882,6 @@ nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
 {
    bool progress = false;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_texture_derefs);
-
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= nir_lower_tex_impl(function->impl, options);

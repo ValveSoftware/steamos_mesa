@@ -107,8 +107,6 @@ nir_lower_wpos_center(nir_shader *shader, const bool for_sample_shading)
 
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
 
-   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
-
    nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_builder_init(&b, function->impl);

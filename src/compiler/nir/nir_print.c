@@ -641,81 +641,6 @@ print_deref_instr(nir_deref_instr *instr, print_state *state)
 }
 
 static void
-print_var(nir_variable *var, print_state *state)
-{
-   FILE *fp = state->fp;
-   fprintf(fp, "%s", get_var_name(var, state));
-}
-
-static void
-print_deref_var(nir_deref_var *deref, print_state *state)
-{
-   print_var(deref->var, state);
-}
-
-static void
-print_deref_array(nir_deref_array *deref, print_state *state)
-{
-   FILE *fp = state->fp;
-   fprintf(fp, "[");
-   switch (deref->deref_array_type) {
-   case nir_deref_array_type_direct:
-      fprintf(fp, "%u", deref->base_offset);
-      break;
-   case nir_deref_array_type_indirect:
-      if (deref->base_offset != 0)
-         fprintf(fp, "%u + ", deref->base_offset);
-      print_src(&deref->indirect, state);
-      break;
-   case nir_deref_array_type_wildcard:
-      fprintf(fp, "*");
-      break;
-   }
-   fprintf(fp, "]");
-}
-
-static void
-print_deref_struct(nir_deref_struct *deref, const struct glsl_type *parent_type,
-                   print_state *state)
-{
-   FILE *fp = state->fp;
-   fprintf(fp, ".%s", glsl_get_struct_elem_name(parent_type, deref->index));
-}
-
-static void
-print_deref(nir_deref_var *deref, print_state *state)
-{
-   nir_deref *tail = &deref->deref;
-   nir_deref *pretail = NULL;
-   while (tail != NULL) {
-      switch (tail->deref_type) {
-      case nir_deref_type_var:
-         assert(pretail == NULL);
-         assert(tail == &deref->deref);
-         print_deref_var(deref, state);
-         break;
-
-      case nir_deref_type_array:
-         assert(pretail != NULL);
-         print_deref_array(nir_deref_as_array(tail), state);
-         break;
-
-      case nir_deref_type_struct:
-         assert(pretail != NULL);
-         print_deref_struct(nir_deref_as_struct(tail),
-                            pretail->type, state);
-         break;
-
-      default:
-         unreachable("Invalid deref type");
-      }
-
-      pretail = tail;
-      tail = pretail->child;
-   }
-}
-
-static void
 print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 {
    const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
@@ -734,15 +659,6 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
          fprintf(fp, ", ");
 
       print_src(&instr->src[i], state);
-   }
-
-   fprintf(fp, ") (");
-
-   for (unsigned i = 0; i < info->num_variables; i++) {
-      if (i != 0)
-         fprintf(fp, ", ");
-
-      print_deref(instr->variables[i], state);
    }
 
    fprintf(fp, ") (");
@@ -941,19 +857,6 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
 
    if (instr->op == nir_texop_tg4) {
       fprintf(fp, "%u (gather_component), ", instr->component);
-   }
-
-   if (instr->texture) {
-      print_deref(instr->texture, state);
-      fprintf(fp, " (texture)");
-      if (instr->sampler) {
-         print_deref(instr->sampler, state);
-         fprintf(fp, " (sampler)");
-      }
-   } else {
-      assert(instr->sampler == NULL);
-      fprintf(fp, "%u (texture) %u (sampler)",
-              instr->texture_index, instr->sampler_index);
    }
 }
 

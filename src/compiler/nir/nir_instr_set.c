@@ -165,8 +165,6 @@ hash_intrinsic(uint32_t hash, const nir_intrinsic_instr *instr)
       hash = HASH(hash, instr->dest.ssa.bit_size);
    }
 
-   assert(info->num_variables == 0);
-
    hash = _mesa_fnv32_1a_accumulate_block(hash, instr->const_index,
                                           info->num_indices
                                              * sizeof(instr->const_index[0]));
@@ -194,8 +192,6 @@ hash_tex(uint32_t hash, const nir_tex_instr *instr)
    hash = HASH(hash, instr->texture_index);
    hash = HASH(hash, instr->texture_array_size);
    hash = HASH(hash, instr->sampler_index);
-
-   assert(!instr->texture && !instr->sampler);
 
    return hash;
 }
@@ -391,10 +387,6 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
          return false;
       }
 
-      /* Don't support un-lowered sampler derefs currently. */
-      assert(!tex1->texture && !tex1->sampler &&
-             !tex2->texture && !tex2->sampler);
-
       return true;
    }
    case nir_instr_type_load_const: {
@@ -453,8 +445,6 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
             return false;
       }
 
-      assert(info->num_variables == 0);
-
       for (unsigned i = 0; i < info->num_indices; i++) {
          if (intrinsic1->const_index[i] != intrinsic2->const_index[i])
             return false;
@@ -505,24 +495,15 @@ instr_can_rewrite(nir_instr *instr)
    switch (instr->type) {
    case nir_instr_type_alu:
    case nir_instr_type_deref:
+   case nir_instr_type_tex:
    case nir_instr_type_load_const:
    case nir_instr_type_phi:
       return true;
-   case nir_instr_type_tex: {
-      nir_tex_instr *tex = nir_instr_as_tex(instr);
-
-      /* Don't support un-lowered sampler derefs currently. */
-      if (tex->texture || tex->sampler)
-         return false;
-
-      return true;
-   }
    case nir_instr_type_intrinsic: {
       const nir_intrinsic_info *info =
          &nir_intrinsic_infos[nir_instr_as_intrinsic(instr)->intrinsic];
       return (info->flags & NIR_INTRINSIC_CAN_ELIMINATE) &&
-             (info->flags & NIR_INTRINSIC_CAN_REORDER) &&
-             info->num_variables == 0; /* not implemented yet */
+             (info->flags & NIR_INTRINSIC_CAN_REORDER);
    }
    case nir_instr_type_call:
    case nir_instr_type_jump:

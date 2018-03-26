@@ -370,81 +370,6 @@ read_dest(read_ctx *ctx, nir_dest *dst, nir_instr *instr)
 }
 
 static void
-write_deref_chain(write_ctx *ctx, const nir_deref_var *deref_var)
-{
-   write_object(ctx, deref_var->var);
-
-   uint32_t len = 0;
-   for (const nir_deref *d = deref_var->deref.child; d; d = d->child)
-      len++;
-   blob_write_uint32(ctx->blob, len);
-
-   for (const nir_deref *d = deref_var->deref.child; d; d = d->child) {
-      blob_write_uint32(ctx->blob, d->deref_type);
-      switch (d->deref_type) {
-      case nir_deref_type_array: {
-         const nir_deref_array *deref_array = nir_deref_as_array(d);
-         blob_write_uint32(ctx->blob, deref_array->deref_array_type);
-         blob_write_uint32(ctx->blob, deref_array->base_offset);
-         if (deref_array->deref_array_type == nir_deref_array_type_indirect)
-            write_src(ctx, &deref_array->indirect);
-         break;
-      }
-      case nir_deref_type_struct: {
-         const nir_deref_struct *deref_struct = nir_deref_as_struct(d);
-         blob_write_uint32(ctx->blob, deref_struct->index);
-         break;
-      }
-      case nir_deref_type_var:
-         unreachable("Invalid deref type");
-      }
-
-      encode_type_to_blob(ctx->blob, d->type);
-   }
-}
-
-static nir_deref_var *
-read_deref_chain(read_ctx *ctx, void *mem_ctx)
-{
-   nir_variable *var = read_object(ctx);
-   nir_deref_var *deref_var = nir_deref_var_create(mem_ctx, var);
-
-   uint32_t len = blob_read_uint32(ctx->blob);
-
-   nir_deref *tail = &deref_var->deref;
-   for (uint32_t i = 0; i < len; i++) {
-      nir_deref_type deref_type = blob_read_uint32(ctx->blob);
-      nir_deref *deref = NULL;
-      switch (deref_type) {
-      case nir_deref_type_array: {
-         nir_deref_array *deref_array = nir_deref_array_create(tail);
-         deref_array->deref_array_type = blob_read_uint32(ctx->blob);
-         deref_array->base_offset = blob_read_uint32(ctx->blob);
-         if (deref_array->deref_array_type == nir_deref_array_type_indirect)
-            read_src(ctx, &deref_array->indirect, mem_ctx);
-         deref = &deref_array->deref;
-         break;
-      }
-      case nir_deref_type_struct: {
-         uint32_t index = blob_read_uint32(ctx->blob);
-         nir_deref_struct *deref_struct = nir_deref_struct_create(tail, index);
-         deref = &deref_struct->deref;
-         break;
-      }
-      case nir_deref_type_var:
-         unreachable("Invalid deref type");
-      }
-
-      deref->type = decode_type_from_blob(ctx->blob);
-
-      tail->child = deref;
-      tail = deref;
-   }
-
-   return deref_var;
-}
-
-static void
 write_alu(write_ctx *ctx, const nir_alu_instr *alu)
 {
    blob_write_uint32(ctx->blob, alu->op);
@@ -570,7 +495,6 @@ write_intrinsic(write_ctx *ctx, const nir_intrinsic_instr *intrin)
 {
    blob_write_uint32(ctx->blob, intrin->intrinsic);
 
-   unsigned num_variables = nir_intrinsic_infos[intrin->intrinsic].num_variables;
    unsigned num_srcs = nir_intrinsic_infos[intrin->intrinsic].num_srcs;
    unsigned num_indices = nir_intrinsic_infos[intrin->intrinsic].num_indices;
 
@@ -578,9 +502,6 @@ write_intrinsic(write_ctx *ctx, const nir_intrinsic_instr *intrin)
 
    if (nir_intrinsic_infos[intrin->intrinsic].has_dest)
       write_dest(ctx, &intrin->dest);
-
-   for (unsigned i = 0; i < num_variables; i++)
-      write_deref_chain(ctx, intrin->variables[i]);
 
    for (unsigned i = 0; i < num_srcs; i++)
       write_src(ctx, &intrin->src[i]);
@@ -596,7 +517,6 @@ read_intrinsic(read_ctx *ctx)
 
    nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(ctx->nir, op);
 
-   unsigned num_variables = nir_intrinsic_infos[op].num_variables;
    unsigned num_srcs = nir_intrinsic_infos[op].num_srcs;
    unsigned num_indices = nir_intrinsic_infos[op].num_indices;
 
@@ -604,9 +524,6 @@ read_intrinsic(read_ctx *ctx)
 
    if (nir_intrinsic_infos[op].has_dest)
       read_dest(ctx, &intrin->dest, &intrin->instr);
-
-   for (unsigned i = 0; i < num_variables; i++)
-      intrin->variables[i] = read_deref_chain(ctx, &intrin->instr);
 
    for (unsigned i = 0; i < num_srcs; i++)
       read_src(ctx, &intrin->src[i], &intrin->instr);
@@ -671,8 +588,6 @@ union packed_tex_data {
       unsigned is_shadow:1;
       unsigned is_new_style_shadow:1;
       unsigned component:2;
-      unsigned has_texture_deref:1;
-      unsigned has_sampler_deref:1;
       unsigned unused:10; /* Mark unused for valgrind. */
    } u;
 };
@@ -695,8 +610,6 @@ write_tex(write_ctx *ctx, const nir_tex_instr *tex)
       .u.is_shadow = tex->is_shadow,
       .u.is_new_style_shadow = tex->is_new_style_shadow,
       .u.component = tex->component,
-      .u.has_texture_deref = tex->texture != NULL,
-      .u.has_sampler_deref = tex->sampler != NULL,
    };
    blob_write_uint32(ctx->blob, packed.u32);
 
@@ -705,11 +618,6 @@ write_tex(write_ctx *ctx, const nir_tex_instr *tex)
       blob_write_uint32(ctx->blob, tex->src[i].src_type);
       write_src(ctx, &tex->src[i].src);
    }
-
-   if (tex->texture)
-      write_deref_chain(ctx, tex->texture);
-   if (tex->sampler)
-      write_deref_chain(ctx, tex->sampler);
 }
 
 static nir_tex_instr *
@@ -738,11 +646,6 @@ read_tex(read_ctx *ctx)
       tex->src[i].src_type = blob_read_uint32(ctx->blob);
       read_src(ctx, &tex->src[i].src, &tex->instr);
    }
-
-   tex->texture = packed.u.has_texture_deref ?
-                  read_deref_chain(ctx, &tex->instr) : NULL;
-   tex->sampler = packed.u.has_sampler_deref ?
-                  read_deref_chain(ctx, &tex->instr) : NULL;
 
    return tex;
 }
@@ -1203,7 +1106,6 @@ nir_serialize(struct blob *blob, const nir_shader *nir)
    blob_write_uint32(blob, nir->num_uniforms);
    blob_write_uint32(blob, nir->num_outputs);
    blob_write_uint32(blob, nir->num_shared);
-   blob_write_uint32(blob, nir->lowered_derefs);
 
    blob_write_uint32(blob, exec_list_length(&nir->functions));
    nir_foreach_function(fxn, nir) {
@@ -1259,7 +1161,6 @@ nir_deserialize(void *mem_ctx,
    ctx.nir->num_uniforms = blob_read_uint32(blob);
    ctx.nir->num_outputs = blob_read_uint32(blob);
    ctx.nir->num_shared = blob_read_uint32(blob);
-   ctx.nir->lowered_derefs = blob_read_uint32(blob);
 
    unsigned num_functions = blob_read_uint32(blob);
    for (unsigned i = 0; i < num_functions; i++)

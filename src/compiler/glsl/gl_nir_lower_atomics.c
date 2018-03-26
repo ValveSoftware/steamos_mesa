@@ -142,8 +142,6 @@ gl_nir_lower_atomics(nir_shader *shader,
 {
    bool progress = false;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_atomic_counter_derefs);
-
    nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;

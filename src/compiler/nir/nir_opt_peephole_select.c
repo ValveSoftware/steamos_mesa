@@ -255,8 +255,6 @@ nir_opt_peephole_select(nir_shader *shader, unsigned limit)
 {
    bool progress = false;
 
-   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
-
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= nir_opt_peephole_select_impl(function->impl, limit);

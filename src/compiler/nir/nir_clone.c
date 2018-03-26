@@ -266,73 +266,6 @@ __clone_dst(clone_state *state, nir_instr *ninstr,
    }
 }
 
-static nir_deref *clone_deref(clone_state *state, const nir_deref *deref,
-                              nir_instr *ninstr, nir_deref *parent);
-
-static nir_deref_var *
-clone_deref_var(clone_state *state, const nir_deref_var *dvar,
-                nir_instr *ninstr)
-{
-   nir_variable *nvar = remap_var(state, dvar->var);
-   nir_deref_var *ndvar = nir_deref_var_create(ninstr, nvar);
-
-   if (dvar->deref.child)
-      ndvar->deref.child = clone_deref(state, dvar->deref.child,
-                                       ninstr, &ndvar->deref);
-
-   return ndvar;
-}
-
-static nir_deref_array *
-clone_deref_array(clone_state *state, const nir_deref_array *darr,
-                  nir_instr *ninstr, nir_deref *parent)
-{
-   nir_deref_array *ndarr = nir_deref_array_create(parent);
-
-   ndarr->deref.type = darr->deref.type;
-   if (darr->deref.child)
-      ndarr->deref.child = clone_deref(state, darr->deref.child,
-                                       ninstr, &ndarr->deref);
-
-   ndarr->deref_array_type = darr->deref_array_type;
-   ndarr->base_offset = darr->base_offset;
-   if (ndarr->deref_array_type == nir_deref_array_type_indirect)
-      __clone_src(state, ninstr, &ndarr->indirect, &darr->indirect);
-
-   return ndarr;
-}
-
-static nir_deref_struct *
-clone_deref_struct(clone_state *state, const nir_deref_struct *dstr,
-                   nir_instr *ninstr, nir_deref *parent)
-{
-   nir_deref_struct *ndstr = nir_deref_struct_create(parent, dstr->index);
-
-   ndstr->deref.type = dstr->deref.type;
-   if (dstr->deref.child)
-      ndstr->deref.child = clone_deref(state, dstr->deref.child,
-                                       ninstr, &ndstr->deref);
-
-   return ndstr;
-}
-
-static nir_deref *
-clone_deref(clone_state *state, const nir_deref *dref,
-            nir_instr *ninstr, nir_deref *parent)
-{
-   switch (dref->deref_type) {
-   case nir_deref_type_array:
-      return &clone_deref_array(state, nir_deref_as_array(dref),
-                                ninstr, parent)->deref;
-   case nir_deref_type_struct:
-      return &clone_deref_struct(state, nir_deref_as_struct(dref),
-                                 ninstr, parent)->deref;
-   default:
-      unreachable("bad deref type");
-      return NULL;
-   }
-}
-
 static nir_alu_instr *
 clone_alu(clone_state *state, const nir_alu_instr *alu)
 {
@@ -400,7 +333,6 @@ clone_intrinsic(clone_state *state, const nir_intrinsic_instr *itr)
    nir_intrinsic_instr *nitr =
       nir_intrinsic_instr_create(state->ns, itr->intrinsic);
 
-   unsigned num_variables = nir_intrinsic_infos[itr->intrinsic].num_variables;
    unsigned num_srcs = nir_intrinsic_infos[itr->intrinsic].num_srcs;
 
    if (nir_intrinsic_infos[itr->intrinsic].has_dest)
@@ -408,11 +340,6 @@ clone_intrinsic(clone_state *state, const nir_intrinsic_instr *itr)
 
    nitr->num_components = itr->num_components;
    memcpy(nitr->const_index, itr->const_index, sizeof(nitr->const_index));
-
-   for (unsigned i = 0; i < num_variables; i++) {
-      nitr->variables[i] = clone_deref_var(state, itr->variables[i],
-                                           &nitr->instr);
-   }
 
    for (unsigned i = 0; i < num_srcs; i++)
       __clone_src(state, &nitr->instr, &nitr->src[i], &itr->src[i]);
@@ -466,13 +393,8 @@ clone_tex(clone_state *state, const nir_tex_instr *tex)
    ntex->component = tex->component;
 
    ntex->texture_index = tex->texture_index;
-   if (tex->texture)
-      ntex->texture = clone_deref_var(state, tex->texture, &ntex->instr);
    ntex->texture_array_size = tex->texture_array_size;
-
    ntex->sampler_index = tex->sampler_index;
-   if (tex->sampler)
-      ntex->sampler = clone_deref_var(state, tex->sampler, &ntex->instr);
 
    return ntex;
 }
@@ -811,7 +733,6 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
    ns->num_uniforms = s->num_uniforms;
    ns->num_outputs = s->num_outputs;
    ns->num_shared = s->num_shared;
-   ns->lowered_derefs = s->lowered_derefs;
 
    free_clone_state(&state);
 
