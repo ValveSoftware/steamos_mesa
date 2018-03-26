@@ -252,6 +252,8 @@ _mesa_spirv_to_nir(struct gl_context *ctx,
                       prog->Name);
    nir_validate_shader(nir);
 
+   nir->info.separate_shader = linked_shader->Program->info.separate_shader;
+
    /* We have to lower away local constant initializers right before we
     * inline functions.  That way they get properly initialized at the top
     * of the function and not at the top of its caller.
