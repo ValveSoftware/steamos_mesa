@@ -166,7 +166,11 @@ blorp_surf_for_miptree(struct brw_context *brw,
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
        */
-      surf->clear_color = mt->fast_clear_color;
+      surf->clear_color =
+         intel_miptree_get_clear_color(devinfo, mt, mt->surf.format,
+                                       !is_render_target, (struct brw_bo **)
+                                       &surf->clear_color_addr.buffer,
+                                       &surf->clear_color_addr.offset);
 
       surf->aux_surf = &mt->aux_buf->surf;
       surf->aux_addr = (struct blorp_address) {
@@ -176,13 +180,6 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
       surf->aux_addr.buffer = mt->aux_buf->bo;
       surf->aux_addr.offset = mt->aux_buf->offset;
-
-      if (devinfo->gen >= 10) {
-         surf->clear_color_addr = (struct blorp_address) {
-            .buffer = mt->aux_buf->clear_color_bo,
-            .offset = mt->aux_buf->clear_color_offset,
-         };
-      }
    } else {
       surf->aux_addr = (struct blorp_address) {
          .buffer = NULL,
