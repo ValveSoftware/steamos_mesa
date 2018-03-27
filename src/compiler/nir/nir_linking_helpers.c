@@ -71,14 +71,11 @@ tcs_add_output_reads(nir_shader *shader, uint64_t *read, uint64_t *patches_read)
                continue;
 
             nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-            nir_variable *var;
-            if (intrin->intrinsic == nir_intrinsic_load_var) {
-               var = intrin->variables[0]->var;
-            } else if (intrin->intrinsic == nir_intrinsic_load_deref) {
-               var = nir_deref_instr_get_variable(nir_src_as_deref(intrin->src[0]));
-            } else {
+            if (intrin->intrinsic != nir_intrinsic_load_deref)
                continue;
-            }
+
+            nir_variable *var =
+               nir_deref_instr_get_variable(nir_src_as_deref(intrin->src[0]));
 
             if (var->data.mode != nir_var_shader_out)
                continue;
@@ -137,6 +134,8 @@ nir_remove_unused_varyings(nir_shader *producer, nir_shader *consumer)
 {
    assert(producer->info.stage != MESA_SHADER_FRAGMENT);
    assert(consumer->info.stage != MESA_SHADER_VERTEX);
+   nir_assert_unlowered_derefs(producer, nir_lower_load_store_derefs);
+   nir_assert_unlowered_derefs(consumer, nir_lower_load_store_derefs);
 
    uint64_t read[4] = { 0 }, written[4] = { 0 };
    uint64_t patches_read[4] = { 0 }, patches_written[4] = { 0 };
