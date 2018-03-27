@@ -55,27 +55,10 @@ mark_global_var_uses_block(nir_block *block, nir_function_impl *impl,
                            struct hash_table *var_func_table)
 {
    nir_foreach_instr(instr, block) {
-      switch (instr->type) {
-      case nir_instr_type_deref: {
+      if (instr->type ==  nir_instr_type_deref) {
          nir_deref_instr *deref = nir_instr_as_deref(instr);
          if (deref->deref_type == nir_deref_type_var)
             register_var_use(deref->var, impl, var_func_table);
-         break;
-      }
-
-      case nir_instr_type_intrinsic: {
-         nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-         unsigned num_vars =
-            nir_intrinsic_infos[intrin->intrinsic].num_variables;
-
-         for (unsigned i = 0; i < num_vars; i++)
-            register_var_use(intrin->variables[i]->var, impl, var_func_table);
-         break;
-      }
-
-      default:
-         /* Nothing to do */
-         break;
       }
    }
 
@@ -94,6 +77,9 @@ nir_lower_global_vars_to_local(nir_shader *shader)
    struct hash_table *var_func_table =
       _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                               _mesa_key_pointer_equal);
+
+   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs | nir_lower_interp_derefs |
+         nir_lower_atomic_counter_derefs | nir_lower_atomic_derefs | nir_lower_image_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl) {
