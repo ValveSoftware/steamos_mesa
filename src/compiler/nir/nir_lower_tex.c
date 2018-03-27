@@ -108,7 +108,16 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
 
    nir_tex_instr *txs;
 
-   txs = nir_tex_instr_create(b->shader, 1);
+   unsigned num_srcs = 1; /* One for the LOD */
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      if (tex->src[i].src_type == nir_tex_src_texture_deref ||
+          tex->src[i].src_type == nir_tex_src_sampler_deref ||
+          tex->src[i].src_type == nir_tex_src_texture_offset ||
+          tex->src[i].src_type == nir_tex_src_sampler_offset)
+         num_srcs++;
+   }
+
+   txs = nir_tex_instr_create(b->shader, num_srcs);
    txs->op = nir_texop_txs;
    txs->sampler_dim = tex->sampler_dim;
    txs->is_array = tex->is_array;
@@ -120,9 +129,20 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
    txs->sampler = nir_deref_var_clone(tex->sampler, txs);
    txs->dest_type = nir_type_int;
 
-   /* only single src, the lod: */
-   txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
-   txs->src[0].src_type = nir_tex_src_lod;
+   unsigned idx = 0;
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      if (tex->src[i].src_type == nir_tex_src_texture_deref ||
+          tex->src[i].src_type == nir_tex_src_sampler_deref ||
+          tex->src[i].src_type == nir_tex_src_texture_offset ||
+          tex->src[i].src_type == nir_tex_src_sampler_offset) {
+         nir_src_copy(&txs->src[idx].src, &tex->src[i].src, txs);
+         txs->src[idx].src_type = tex->src[i].src_type;
+         idx++;
+      }
+   }
+   /* Add in an LOD because some back-ends require it */
+   txs->src[idx].src = nir_src_for_ssa(nir_imm_int(b, 0));
+   txs->src[idx].src_type = nir_tex_src_lod;
 
    nir_ssa_dest_init(&txs->instr, &txs->dest,
                      nir_tex_instr_dest_size(txs), 32, NULL);
@@ -217,11 +237,14 @@ sample_plane(nir_builder *b, nir_tex_instr *tex, int plane)
    assert(tex->op == nir_texop_tex);
    assert(tex->coord_components == 2);
 
-   nir_tex_instr *plane_tex = nir_tex_instr_create(b->shader, 2);
-   nir_src_copy(&plane_tex->src[0].src, &tex->src[0].src, plane_tex);
-   plane_tex->src[0].src_type = nir_tex_src_coord;
-   plane_tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, plane));
-   plane_tex->src[1].src_type = nir_tex_src_plane;
+   nir_tex_instr *plane_tex =
+      nir_tex_instr_create(b->shader, tex->num_srcs + 1);
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      nir_src_copy(&plane_tex->src[i].src, &tex->src[i].src, plane_tex);
+      plane_tex->src[i].src_type = tex->src[i].src_type;
+   }
+   plane_tex->src[tex->num_srcs].src = nir_src_for_ssa(nir_imm_int(b, plane));
+   plane_tex->src[tex->num_srcs].src_type = nir_tex_src_plane;
    plane_tex->op = nir_texop_tex;
    plane_tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
    plane_tex->dest_type = nir_type_float;
@@ -864,8 +887,6 @@ bool
 nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
 {
    bool progress = false;
-
-   nir_assert_lowered_derefs(shader, nir_lower_texture_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl)
