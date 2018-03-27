@@ -128,7 +128,6 @@ files_libnir = files(
   'nir_lower_io_arrays_to_elements.c',
   'nir_lower_io_to_temporaries.c',
   'nir_lower_io_to_scalar.c',
-  'nir_lower_io_types.c',
   'nir_lower_packing.c',
   'nir_lower_passthrough_edgeflags.c',
   'nir_lower_patch_vertices.c',

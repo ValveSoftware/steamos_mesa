@@ -127,7 +127,6 @@ load_glsl(unsigned num_files, char* const* files, gl_shader_stage stage)
 
 	NIR_PASS_V(nir, nir_split_var_copies);
 	NIR_PASS_V(nir, nir_lower_var_copies);
-	NIR_PASS_V(nir, nir_lower_io_types);
 
 	switch (stage) {
 	case MESA_SHADER_VERTEX:

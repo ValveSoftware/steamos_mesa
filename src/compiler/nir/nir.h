@@ -2740,7 +2740,6 @@ nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 
 bool nir_is_per_vertex_io(const nir_variable *var, gl_shader_stage stage);
 
-void nir_lower_io_types(nir_shader *shader);
 bool nir_lower_regs_to_ssa_impl(nir_function_impl *impl);
 bool nir_lower_regs_to_ssa(nir_shader *shader);
 bool nir_lower_vars_to_ssa(nir_shader *shader);
