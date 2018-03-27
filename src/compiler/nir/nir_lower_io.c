@@ -275,7 +275,7 @@ lower_atomic(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
    nir_intrinsic_op op;
    switch (intrin->intrinsic) {
-#define OP(O) case nir_intrinsic_var_##O: op = nir_intrinsic_shared_##O; break;
+#define OP(O) case nir_intrinsic_deref_##O: op = nir_intrinsic_shared_##O; break;
    OP(atomic_exchange)
    OP(atomic_comp_swap)
    OP(atomic_add)
@@ -297,8 +297,10 @@ lower_atomic(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    nir_intrinsic_set_base(atomic, var->data.driver_location);
 
    atomic->src[0] = nir_src_for_ssa(offset);
-   for (unsigned i = 0; i < nir_intrinsic_infos[intrin->intrinsic].num_srcs; i++) {
-      nir_src_copy(&atomic->src[i+1], &intrin->src[i], atomic);
+   assert(nir_intrinsic_infos[intrin->intrinsic].num_srcs ==
+          nir_intrinsic_infos[op].num_srcs);
+   for (unsigned i = 1; i < nir_intrinsic_infos[op].num_srcs; i++) {
+      nir_src_copy(&atomic->src[i], &intrin->src[i], atomic);
    }
 
    return atomic;
@@ -383,16 +385,16 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_load_deref:
       case nir_intrinsic_store_var:
       case nir_intrinsic_store_deref:
-      case nir_intrinsic_var_atomic_add:
-      case nir_intrinsic_var_atomic_imin:
-      case nir_intrinsic_var_atomic_umin:
-      case nir_intrinsic_var_atomic_imax:
-      case nir_intrinsic_var_atomic_umax:
-      case nir_intrinsic_var_atomic_and:
-      case nir_intrinsic_var_atomic_or:
-      case nir_intrinsic_var_atomic_xor:
-      case nir_intrinsic_var_atomic_exchange:
-      case nir_intrinsic_var_atomic_comp_swap:
+      case nir_intrinsic_deref_atomic_add:
+      case nir_intrinsic_deref_atomic_imin:
+      case nir_intrinsic_deref_atomic_umin:
+      case nir_intrinsic_deref_atomic_imax:
+      case nir_intrinsic_deref_atomic_umax:
+      case nir_intrinsic_deref_atomic_and:
+      case nir_intrinsic_deref_atomic_or:
+      case nir_intrinsic_deref_atomic_xor:
+      case nir_intrinsic_deref_atomic_exchange:
+      case nir_intrinsic_deref_atomic_comp_swap:
          /* We can lower the io for this nir instrinsic */
          break;
       case nir_intrinsic_interp_var_at_centroid:
@@ -457,16 +459,16 @@ nir_lower_io_block(nir_block *block,
                                    component_offset);
          break;
 
-      case nir_intrinsic_var_atomic_add:
-      case nir_intrinsic_var_atomic_imin:
-      case nir_intrinsic_var_atomic_umin:
-      case nir_intrinsic_var_atomic_imax:
-      case nir_intrinsic_var_atomic_umax:
-      case nir_intrinsic_var_atomic_and:
-      case nir_intrinsic_var_atomic_or:
-      case nir_intrinsic_var_atomic_xor:
-      case nir_intrinsic_var_atomic_exchange:
-      case nir_intrinsic_var_atomic_comp_swap:
+      case nir_intrinsic_deref_atomic_add:
+      case nir_intrinsic_deref_atomic_imin:
+      case nir_intrinsic_deref_atomic_umin:
+      case nir_intrinsic_deref_atomic_imax:
+      case nir_intrinsic_deref_atomic_umax:
+      case nir_intrinsic_deref_atomic_and:
+      case nir_intrinsic_deref_atomic_or:
+      case nir_intrinsic_deref_atomic_xor:
+      case nir_intrinsic_deref_atomic_exchange:
+      case nir_intrinsic_deref_atomic_comp_swap:
          assert(vertex_index == NULL);
          replacement = lower_atomic(intrin, state, var, offset);
          break;
@@ -538,6 +540,8 @@ nir_lower_io(nir_shader *shader, nir_variable_mode modes,
              nir_lower_io_options options)
 {
    bool progress = false;
+
+   nir_assert_unlowered_derefs(shader, nir_lower_atomic_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl) {
