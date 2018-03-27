@@ -70,6 +70,9 @@ lower_intrinsic(lower_state *state, nir_intrinsic_instr *intr)
    case nir_intrinsic_store_var:
       out = intr->variables[0]->var;
       break;
+   case nir_intrinsic_store_deref:
+      out = nir_deref_instr_get_variable(nir_src_as_deref(intr->src[0]));
+      break;
    case nir_intrinsic_store_output:
       /* already had i/o lowered.. lookup the matching output var: */
       nir_foreach_variable(var, &state->shader->outputs) {
@@ -90,9 +93,10 @@ lower_intrinsic(lower_state *state, nir_intrinsic_instr *intr)
 
    if (is_color_output(state, out)) {
       b->cursor = nir_before_instr(&intr->instr);
-      s = nir_ssa_for_src(b, intr->src[0], intr->num_components);
+      int src = intr->intrinsic == nir_intrinsic_store_deref ? 1 : 0;
+      s = nir_ssa_for_src(b, intr->src[src], intr->num_components);
       s = nir_fsat(b, s);
-      nir_instr_rewrite_src(&intr->instr, &intr->src[0], nir_src_for_ssa(s));
+      nir_instr_rewrite_src(&intr->instr, &intr->src[src], nir_src_for_ssa(s));
    }
 
    return true;
@@ -133,8 +137,6 @@ nir_lower_clamp_color_outputs(nir_shader *shader)
    lower_state state = {
       .shader = shader,
    };
-
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
 
    nir_foreach_function(function, shader) {
       if (function->impl)
