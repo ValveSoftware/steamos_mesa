@@ -1466,17 +1466,36 @@ GCRA::allocateRegisters(ArrayList& insns)
          nodes[i].init(regs, lval);
          RIG.insert(&nodes[i]);
 
-         if (lval->inFile(FILE_GPR) && lval->getInsn() != NULL &&
-             prog->getTarget()->getChipset() < 0xc0) {
+         if (lval->inFile(FILE_GPR) && lval->getInsn() != NULL) {
             Instruction *insn = lval->getInsn();
-            if (insn->op == OP_MAD || insn->op == OP_FMA || insn->op == OP_SAD)
-               // Short encoding only possible if they're all GPRs, no need to
-               // affect them otherwise.
-               if (insn->flagsDef < 0 &&
-                   insn->src(0).getFile() == FILE_GPR &&
-                   insn->src(1).getFile() == FILE_GPR &&
-                   insn->src(2).getFile() == FILE_GPR)
-                  nodes[i].addRegPreference(getNode(insn->getSrc(2)->asLValue()));
+            if (insn->op != OP_MAD && insn->op != OP_FMA && insn->op != OP_SAD)
+               continue;
+            // For both of the cases below, we only want to add the preference
+            // if all arguments are in registers.
+            if (insn->src(0).getFile() != FILE_GPR ||
+                insn->src(1).getFile() != FILE_GPR ||
+                insn->src(2).getFile() != FILE_GPR)
+               continue;
+            if (prog->getTarget()->getChipset() < 0xc0) {
+               // Outputting a flag is not supported with short encodings nor
+               // with immediate arguments.
+               // See handleMADforNV50.
+               if (insn->flagsDef >= 0)
+                  continue;
+            } else {
+               // We can only fold immediate arguments if dst == src2. This
+               // only matters if one of the first two arguments is an
+               // immediate. This form is also only supported for floats.
+               // See handleMADforNVC0.
+               ImmediateValue imm;
+               if (insn->dType != TYPE_F32)
+                  continue;
+               if (!insn->src(0).getImmediate(imm) &&
+                   !insn->src(1).getImmediate(imm))
+                  continue;
+            }
+
+            nodes[i].addRegPreference(getNode(insn->getSrc(2)->asLValue()));
          }
       }
    }
