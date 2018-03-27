@@ -272,24 +272,6 @@ lower_interp_deref_at_offset(lower_wpos_ytransform_state *state,
 }
 
 static void
-lower_interp_var_at_offset(lower_wpos_ytransform_state *state,
-                           nir_intrinsic_instr *interp)
-{
-   nir_builder *b = &state->b;
-   nir_ssa_def *offset;
-   nir_ssa_def *flip_y;
-
-   b->cursor = nir_before_instr(&interp->instr);
-
-   offset = nir_ssa_for_src(b, interp->src[0], 2);
-   flip_y = nir_fmul(b, nir_channel(b, offset, 1),
-                        nir_channel(b, get_transform(state), 0));
-   nir_instr_rewrite_src(&interp->instr, &interp->src[0],
-                         nir_src_for_ssa(nir_vec2(b, nir_channel(b, offset, 0),
-                                                     flip_y)));
-}
-
-static void
 lower_load_sample_pos(lower_wpos_ytransform_state *state,
                       nir_intrinsic_instr *intr)
 {
@@ -329,30 +311,12 @@ lower_wpos_ytransform_block(lower_wpos_ytransform_state *state, nir_block *block
                        var->data.location == SYSTEM_VALUE_SAMPLE_POS) {
                lower_load_sample_pos(state, intr);
             }
-         } else if (intr->intrinsic == nir_intrinsic_load_var) {
-            nir_deref_var *dvar = intr->variables[0];
-            nir_variable *var = dvar->var;
-
-            if ((var->data.mode == nir_var_shader_in &&
-                 var->data.location == VARYING_SLOT_POS) ||
-                (var->data.mode == nir_var_system_value &&
-                 var->data.location == SYSTEM_VALUE_FRAG_COORD)) {
-               /* gl_FragCoord should not have array/struct derefs: */
-               assert(dvar->deref.child == NULL);
-               lower_fragcoord(state, intr, var);
-            } else if (var->data.mode == nir_var_system_value &&
-                       var->data.location == SYSTEM_VALUE_SAMPLE_POS) {
-               assert(dvar->deref.child == NULL);
-               lower_load_sample_pos(state, intr);
-            }
          } else if (intr->intrinsic == nir_intrinsic_load_frag_coord) {
             lower_fragcoord(state, intr, NULL);
          } else if (intr->intrinsic == nir_intrinsic_load_sample_pos) {
             lower_load_sample_pos(state, intr);
          } else if (intr->intrinsic == nir_intrinsic_interp_deref_at_offset) {
             lower_interp_deref_at_offset(state, intr);
-         } else if (intr->intrinsic == nir_intrinsic_interp_var_at_offset) {
-            lower_interp_var_at_offset(state, intr);
          }
       } else if (instr->type == nir_instr_type_alu) {
          nir_alu_instr *alu = nir_instr_as_alu(instr);
@@ -384,6 +348,8 @@ nir_lower_wpos_ytransform(nir_shader *shader,
       .options = options,
       .shader = shader,
    };
+
+   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
 
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
 
