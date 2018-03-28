@@ -543,7 +543,7 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
    do {
       progress = false;
       OPT(nir_lower_vars_to_ssa);
-      /* OPT(nir_opt_copy_prop_vars); */
+      OPT(nir_opt_copy_prop_vars);
 
       if (is_scalar) {
          OPT(nir_lower_alu_to_scalar);
