@@ -151,19 +151,19 @@ compare_derefs(nir_deref_var *a, nir_deref_var *b)
          nir_deref_array *a_arr = nir_deref_as_array(a_tail);
          nir_deref_array *b_arr = nir_deref_as_array(b_tail);
 
-         if (a_arr->deref_array_type == nir_deref_array_type_direct &&
-             b_arr->deref_array_type == nir_deref_array_type_direct) {
-            /* If they're both direct and have different offsets, they
-             * don't even alias much less anything else.
-             */
-            if (a_arr->base_offset != b_arr->base_offset)
-               return 0;
-         } else if (a_arr->deref_array_type == nir_deref_array_type_wildcard) {
+         if (a_arr->deref_array_type == nir_deref_array_type_wildcard) {
             if (b_arr->deref_array_type != nir_deref_array_type_wildcard)
                result &= ~derefs_b_contains_a_bit;
          } else if (b_arr->deref_array_type == nir_deref_array_type_wildcard) {
             if (a_arr->deref_array_type != nir_deref_array_type_wildcard)
                result &= ~derefs_a_contains_b_bit;
+         } else if (a_arr->deref_array_type == nir_deref_array_type_direct &&
+                    b_arr->deref_array_type == nir_deref_array_type_direct) {
+            /* If they're both direct and have different offsets, they
+             * don't even alias much less anything else.
+             */
+            if (a_arr->base_offset != b_arr->base_offset)
+               return 0;
          } else if (a_arr->deref_array_type == nir_deref_array_type_indirect &&
                     b_arr->deref_array_type == nir_deref_array_type_indirect) {
             assert(a_arr->indirect.is_ssa && b_arr->indirect.is_ssa);
