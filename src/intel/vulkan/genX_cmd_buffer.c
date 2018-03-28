@@ -122,6 +122,18 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       sba.InstructionBufferSize                 = 0xfffff;
       sba.InstructionBuffersizeModifyEnable     = true;
 #  endif
+#  if (GEN_GEN >= 9)
+      sba.BindlessSurfaceStateBaseAddress = (struct anv_address) { NULL, 0 };
+      sba.BindlessSurfaceStateMemoryObjectControlState = GENX(MOCS);
+      sba.BindlessSurfaceStateBaseAddressModifyEnable = true;
+      sba.BindlessSurfaceStateSize = 0;
+#  endif
+#  if (GEN_GEN >= 10)
+      sba.BindlessSamplerStateBaseAddress = (struct anv_address) { NULL, 0 };
+      sba.BindlessSamplerStateMemoryObjectControlState = GENX(MOCS);
+      sba.BindlessSamplerStateBaseAddressModifyEnable = true;
+      sba.BindlessSamplerStateBufferSize = 0;
+#  endif
    }
 
    /* After re-setting the surface state base address, we have to do some
