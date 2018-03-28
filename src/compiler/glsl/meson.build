@@ -112,6 +112,7 @@ files_libglsl = files(
   'ir_visitor.h',
   'linker.cpp',
   'linker.h',
+  'linker_util.h',
   'link_atomics.cpp',
   'link_functions.cpp',
   'link_interface_blocks.cpp',
