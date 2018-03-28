@@ -1409,7 +1409,7 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
 
 static void
 generate_set_simd4x2_header_gen9(struct brw_codegen *p,
-                                 vec4_instruction *inst,
+                                 vec4_instruction *,
                                  struct brw_reg dst)
 {
    brw_push_insn_state(p);
@@ -1427,9 +1427,9 @@ generate_set_simd4x2_header_gen9(struct brw_codegen *p,
 
 static void
 generate_mov_indirect(struct brw_codegen *p,
-                      vec4_instruction *inst,
+                      vec4_instruction *,
                       struct brw_reg dst, struct brw_reg reg,
-                      struct brw_reg indirect, struct brw_reg length)
+                      struct brw_reg indirect)
 {
    assert(indirect.type == BRW_REGISTER_TYPE_UD);
    assert(p->devinfo->gen >= 6);
@@ -2141,7 +2141,7 @@ generate_code(struct brw_codegen *p,
          break;
 
       case SHADER_OPCODE_MOV_INDIRECT:
-         generate_mov_indirect(p, inst, dst, src[0], src[1], src[2]);
+         generate_mov_indirect(p, inst, dst, src[0], src[1]);
          break;
 
       case BRW_OPCODE_DIM:

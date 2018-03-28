@@ -740,7 +740,7 @@ fs_generator::generate_cs_terminate(fs_inst *inst, struct brw_reg payload)
 }
 
 void
-fs_generator::generate_barrier(fs_inst *inst, struct brw_reg src)
+fs_generator::generate_barrier(fs_inst *, struct brw_reg src)
 {
    brw_barrier(p, src);
    brw_WAIT(p);
@@ -1323,7 +1323,7 @@ fs_generator::generate_ddy(const fs_inst *inst,
 }
 
 void
-fs_generator::generate_discard_jump(fs_inst *inst)
+fs_generator::generate_discard_jump(fs_inst *)
 {
    assert(devinfo->gen >= 6);
 
@@ -1672,7 +1672,7 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
 }
 
 void
-fs_generator::generate_pack_half_2x16_split(fs_inst *inst,
+fs_generator::generate_pack_half_2x16_split(fs_inst *,
                                             struct brw_reg dst,
                                             struct brw_reg x,
                                             struct brw_reg y)
@@ -1740,7 +1740,7 @@ fs_generator::generate_unpack_half_2x16_split(fs_inst *inst,
 }
 
 void
-fs_generator::generate_shader_time_add(fs_inst *inst,
+fs_generator::generate_shader_time_add(fs_inst *,
                                        struct brw_reg payload,
                                        struct brw_reg offset,
                                        struct brw_reg value)
