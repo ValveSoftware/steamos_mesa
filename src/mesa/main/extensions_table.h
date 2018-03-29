@@ -357,6 +357,7 @@ EXT(NV_read_depth                           , dummy_true                        
 EXT(NV_read_depth_stencil                   , dummy_true                             ,  x ,  x ,  x , ES2, 2011)
 EXT(NV_read_stencil                         , dummy_true                             ,  x ,  x ,  x , ES2, 2011)
 EXT(NV_sample_locations                     , ARB_sample_locations                   , GLL, GLC,  x , ES2, 2015)
+EXT(NV_shader_atomic_float                  , NV_shader_atomic_float                 , GLL, GLC,  x ,  x , 2012)
 EXT(NV_texgen_reflection                    , dummy_true                             , GLL,  x ,  x ,  x , 1999)
 EXT(NV_texture_barrier                      , NV_texture_barrier                     , GLL, GLC,  x ,  x , 2009)
 EXT(NV_texture_env_combine4                 , NV_texture_env_combine4                , GLL,  x ,  x ,  x , 1999)
