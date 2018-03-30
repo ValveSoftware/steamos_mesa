@@ -2737,11 +2737,11 @@ intel_miptree_render_aux_usage(struct brw_context *brw,
          return ISL_AUX_USAGE_NONE;
       }
 
-      /* gen9 hardware technically supports non-0/1 clear colors with sRGB
+      /* gen9+ hardware technically supports non-0/1 clear colors with sRGB
        * formats.  However, there are issues with blending where it doesn't
        * properly apply the sRGB curve to the clear color when blending.
        */
-      if (devinfo->gen == 9 && blend_enabled &&
+      if (devinfo->gen >= 9 && blend_enabled &&
           isl_format_is_srgb(render_format) &&
           !isl_color_value_is_zero_one(mt->fast_clear_color, render_format))
          return ISL_AUX_USAGE_NONE;
