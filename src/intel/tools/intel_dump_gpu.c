@@ -51,12 +51,20 @@
 #define MI_LOAD_REGISTER_IMM_n(n) ((0x22 << 23) | (2 * (n) - 1))
 #define MI_LRI_FORCE_POSTED       (1<<12)
 
+#define MI_BATCH_NON_SECURE_I965 (1 << 8)
+
 #define MI_BATCH_BUFFER_END (0xA << 23)
 
 #define min(a, b) ({                            \
          __typeof(a) _a = (a);                  \
          __typeof(b) _b = (b);                  \
          _a < _b ? _a : _b;                     \
+      })
+
+#define max(a, b) ({                            \
+         __typeof(a) _a = (a);                  \
+         __typeof(b) _b = (b);                  \
+         _a > _b ? _a : _b;                     \
       })
 
 #define HWS_PGA_RCSUNIT      0x02080
@@ -93,8 +101,12 @@
 
 #define RING_SIZE         (1 * 4096)
 #define PPHWSP_SIZE         (1 * 4096)
-#define GEN10_LR_CONTEXT_RENDER_SIZE   (19 * 4096)
-#define GEN8_LR_CONTEXT_OTHER_SIZE   (2 * 4096)
+#define GEN11_LR_CONTEXT_RENDER_SIZE    (14 * 4096)
+#define GEN10_LR_CONTEXT_RENDER_SIZE    (19 * 4096)
+#define GEN9_LR_CONTEXT_RENDER_SIZE     (22 * 4096)
+#define GEN8_LR_CONTEXT_RENDER_SIZE     (20 * 4096)
+#define GEN8_LR_CONTEXT_OTHER_SIZE      (2 * 4096)
+
 
 #define STATIC_GGTT_MAP_START 0
 
@@ -110,14 +122,19 @@
 #define STATIC_GGTT_MAP_END (VIDEO_CONTEXT_ADDR + PPHWSP_SIZE + GEN8_LR_CONTEXT_OTHER_SIZE)
 #define STATIC_GGTT_MAP_SIZE (STATIC_GGTT_MAP_END - STATIC_GGTT_MAP_START)
 
-#define CONTEXT_FLAGS (0x229)   /* Normal Priority | L3-LLC Coherency |
-                                   Legacy Context with no 64 bit VA support | Valid */
+#define PML4_PHYS_ADDR ((uint64_t)(STATIC_GGTT_MAP_END))
 
-#define RENDER_CONTEXT_DESCRIPTOR  ((uint64_t)1 << 32 | RENDER_CONTEXT_ADDR  | CONTEXT_FLAGS)
-#define BLITTER_CONTEXT_DESCRIPTOR ((uint64_t)2 << 32 | BLITTER_CONTEXT_ADDR | CONTEXT_FLAGS)
-#define VIDEO_CONTEXT_DESCRIPTOR   ((uint64_t)3 << 32 | VIDEO_CONTEXT_ADDR   | CONTEXT_FLAGS)
+#define CONTEXT_FLAGS (0x339)   /* Normal Priority | L3-LLC Coherency |
+                                 * PPGTT Enabled |
+                                 * Legacy Context with 64 bit VA support |
+                                 * Valid
+                                 */
 
-static const uint32_t render_context_init[GEN10_LR_CONTEXT_RENDER_SIZE /
+#define RENDER_CONTEXT_DESCRIPTOR  ((uint64_t)1 << 62 | RENDER_CONTEXT_ADDR  | CONTEXT_FLAGS)
+#define BLITTER_CONTEXT_DESCRIPTOR ((uint64_t)2 << 62 | BLITTER_CONTEXT_ADDR | CONTEXT_FLAGS)
+#define VIDEO_CONTEXT_DESCRIPTOR   ((uint64_t)3 << 62 | VIDEO_CONTEXT_ADDR   | CONTEXT_FLAGS)
+
+static const uint32_t render_context_init[GEN9_LR_CONTEXT_RENDER_SIZE / /* Choose the largest */
                                           sizeof(uint32_t)] = {
    0 /* MI_NOOP */,
    MI_LOAD_REGISTER_IMM_n(14) | MI_LRI_FORCE_POSTED,
@@ -147,8 +164,8 @@ static const uint32_t render_context_init[GEN10_LR_CONTEXT_RENDER_SIZE /
    0x2280 /* PDP2_LDW */,      0,
    0x227C /* PDP1_UDW */,      0,
    0x2278 /* PDP1_LDW */,      0,
-   0x2274 /* PDP0_UDW */,      0,
-   0x2270 /* PDP0_LDW */,      0,
+   0x2274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
+   0x2270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
    /* MI_NOOP */
    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
@@ -185,8 +202,8 @@ static const uint32_t blitter_context_init[GEN8_LR_CONTEXT_OTHER_SIZE /
    0x22280 /* PDP2_LDW */,      0,
    0x2227C /* PDP1_UDW */,      0,
    0x22278 /* PDP1_LDW */,      0,
-   0x22274 /* PDP0_UDW */,      0,
-   0x22270 /* PDP0_LDW */,      0,
+   0x22274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
+   0x22270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
    /* MI_NOOP */
    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
@@ -220,8 +237,8 @@ static const uint32_t video_context_init[GEN8_LR_CONTEXT_OTHER_SIZE /
    0x1C280 /* PDP2_LDW */,      0,
    0x1C27C /* PDP1_UDW */,      0,
    0x1C278 /* PDP1_LDW */,      0,
-   0x1C274 /* PDP0_UDW */,      0,
-   0x1C270 /* PDP0_LDW */,      0,
+   0x1C274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
+   0x1C270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
    /* MI_NOOP */
    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
@@ -287,6 +304,11 @@ struct drm_i915_gem_userptr {
 #define I915_EXEC_BATCH_FIRST (1 << 18)
 #endif
 
+static inline bool use_execlists(void)
+{
+   return devinfo.gen >= 8;
+}
+
 static void __attribute__ ((format(__printf__, 2, 3)))
 fail_if(int cond, const char *format, ...)
 {
@@ -315,12 +337,6 @@ get_bo(uint32_t handle)
 
 static inline uint32_t
 align_u32(uint32_t v, uint32_t a)
-{
-   return (v + a - 1) & ~(a - 1);
-}
-
-static inline uint64_t
-align_u64(uint64_t v, uint64_t a)
 {
    return (v + a - 1) & ~(a - 1);
 }
@@ -385,137 +401,105 @@ register_write_out(uint32_t addr, uint32_t value)
    dword_out(value);
 }
 
+static struct ppgtt_table {
+   uint64_t phys_addr;
+   struct ppgtt_table *subtables[512];
+} pml4 = {PML4_PHYS_ADDR};
+
 static void
-gen8_emit_ggtt_pte_for_range(uint64_t start, uint64_t end)
+populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
+                     int level)
 {
-   uint64_t entry_addr;
-   uint64_t page_num;
-   uint64_t end_aligned = align_u64(end, 4096);
+   static uint64_t phys_addrs_allocator = (PML4_PHYS_ADDR >> 12) + 1;
+   uint64_t entries[512] = {0};
+   int dirty_start = 512, dirty_end = 0;
 
-   if (start >= end || end > (1ull << 32))
-      return;
-
-   entry_addr = start & ~(4096 - 1);
-   do {
-      uint64_t last_page_entry, num_entries;
-
-      page_num = entry_addr >> 21;
-      last_page_entry = min((page_num + 1) << 21, end_aligned);
-      num_entries = (last_page_entry - entry_addr) >> 12;
-      mem_trace_memory_write_header_out(
-         entry_addr >> 9, num_entries * GEN8_PTE_SIZE,
-         AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT_ENTRY);
-      while (num_entries-- > 0) {
-         dword_out((entry_addr & ~(4096 - 1)) |
-                   3 /* read/write | present */);
-         dword_out(entry_addr >> 32);
-         entry_addr += 4096;
+   for (int i = start; i <= end; i++) {
+      if (!table->subtables[i]) {
+         dirty_start = min(dirty_start, i);
+         dirty_end = max(dirty_end, i);
+         if (level == 1) {
+            table->subtables[i] =
+               (void *)(phys_addrs_allocator++ << 12);
+         } else {
+            table->subtables[i] =
+               calloc(1, sizeof(struct ppgtt_table));
+            table->subtables[i]->phys_addr =
+               phys_addrs_allocator++ << 12;
+         }
       }
-   } while (entry_addr < end);
-}
-
-/**
- * Sets bits `start` through `end` - 1 in the bitmap array.
- */
-static void
-set_bitmap_range(uint32_t *bitmap, uint32_t start, uint32_t end)
-{
-   uint32_t pos = start;
-   while (pos < end) {
-      const uint32_t bit = 1 << (pos & 0x1f);
-      if (bit == 1 && (end - pos) > 32) {
-         bitmap[pos >> 5] = 0xffffffff;
-         pos += 32;
-      } else {
-         bitmap[pos >> 5] |= bit;
-         pos++;
-      }
-   }
-}
-
-/**
- * Finds the next `set` (or clear) bit in the bitmap array.
- *
- * The search starts at `*start` and only checks until `end` - 1.
- *
- * If found, returns true, and the found bit index in `*start`.
- */
-static bool
-find_bitmap_bit(uint32_t *bitmap, bool set, uint32_t *start, uint32_t end)
-{
-   uint32_t pos = *start;
-   const uint32_t neg_dw = set ? 0 : -1;
-   while (pos < end) {
-      const uint32_t dw = bitmap[pos >> 5];
-      const uint32_t bit = 1 << (pos & 0x1f);
-      if (!!(dw & bit) == set) {
-         *start = pos;
-         return true;
-      } else if (bit == 1 && dw == neg_dw)
-         pos += 32;
-      else
-         pos++;
-   }
-   return false;
-}
-
-/**
- * Finds a range of clear bits within the bitmap array.
- *
- * The search starts at `*start` and only checks until `*end` - 1.
- *
- * If found, returns true, and `*start` and `*end` are set for the
- * range of clear bits.
- */
-static bool
-find_bitmap_clear_bit_range(uint32_t *bitmap, uint32_t *start, uint32_t *end)
-{
-   if (find_bitmap_bit(bitmap, false, start, *end)) {
-      uint32_t found_end = *start;
-      if (find_bitmap_bit(bitmap, true, &found_end, *end))
-         *end = found_end;
-      return true;
-   }
-   return false;
-}
-
-static void
-gen8_map_ggtt_range(uint64_t start, uint64_t end)
-{
-   uint32_t pos1, pos2, end_pos;
-   static uint32_t *bitmap = NULL;
-   if (bitmap == NULL) {
-      /* 4GiB (32-bits) of 4KiB pages (12-bits) in dwords (5-bits) */
-      bitmap = calloc(1 << (32 - 12 - 5), sizeof(*bitmap));
-      if (bitmap == NULL)
-         return;
+      entries[i] = 3 /* read/write | present */ |
+         (level == 1 ? (uint64_t)table->subtables[i] :
+          table->subtables[i]->phys_addr);
    }
 
-   pos1 = start >> 12;
-   end_pos = (end + 4096 - 1) >> 12;
-   while (pos1 < end_pos) {
-      pos2 = end_pos;
-      if (!find_bitmap_clear_bit_range(bitmap, &pos1, &pos2))
-         break;
-
-      if (verbose)
-         printf("MAPPING 0x%08lx-0x%08lx\n",
-                (uint64_t)pos1 << 12, (uint64_t)pos2 << 12);
-      gen8_emit_ggtt_pte_for_range((uint64_t)pos1 << 12,
-                                   (uint64_t)pos2 << 12);
-      set_bitmap_range(bitmap, (uint64_t)pos1, (uint64_t)pos2);
-      pos1 = pos2;
+   if (dirty_start <= dirty_end) {
+      uint64_t write_addr = table->phys_addr + dirty_start *
+         sizeof(uint64_t);
+      uint64_t write_size = (dirty_end - dirty_start + 1) *
+         sizeof(uint64_t);
+      mem_trace_memory_write_header_out(write_addr, write_size,
+                                        AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
+      data_out(entries + dirty_start, write_size);
    }
 }
 
 static void
-gen8_map_base_size(uint64_t base, uint64_t size)
+map_ppgtt(uint64_t start, uint64_t size)
 {
-   gen8_map_ggtt_range(base, base + size);
+   uint64_t l4_start = start & 0xff8000000000;
+   uint64_t l3_start = start & 0xffffc0000000;
+   uint64_t l2_start = start & 0xffffffe00000;
+   uint64_t l1_start = start & 0xfffffffff000;
+   uint64_t l4_end = ((start + size - 1) | 0x007fffffffff) & 0xffffffffffff;
+   uint64_t l3_end = ((start + size - 1) | 0x00003fffffff) & 0xffffffffffff;
+   uint64_t l2_end = ((start + size - 1) | 0x0000001fffff) & 0xffffffffffff;
+   uint64_t l1_end = ((start + size - 1) | 0x000000000fff) & 0xffffffffffff;
+
+#define L4_index(addr) (((addr) >> 39) & 0x1ff)
+#define L3_index(addr) (((addr) >> 30) & 0x1ff)
+#define L2_index(addr) (((addr) >> 21) & 0x1ff)
+#define L1_index(addr) (((addr) >> 12) & 0x1ff)
+
+#define L3_table(addr) (pml4.subtables[L4_index(addr)])
+#define L2_table(addr) (L3_table(addr)->subtables[L3_index(addr)])
+#define L1_table(addr) (L2_table(addr)->subtables[L2_index(addr)])
+
+   populate_ppgtt_table(&pml4, L4_index(l4_start), L4_index(l4_end), 4);
+
+   for (uint64_t a = l4_start; a < l4_end; a += (1ULL << 39)) {
+      uint64_t _start = max(a, l3_start);
+      uint64_t _end = min(a + (1ULL << 39), l3_end);
+
+      populate_ppgtt_table(L3_table(a), L3_index(_start),
+                           L3_index(_end), 3);
+   }
+
+   for (uint64_t a = l3_start; a < l3_end; a += (1ULL << 30)) {
+      uint64_t _start = max(a, l2_start);
+      uint64_t _end = min(a + (1ULL << 30), l2_end);
+
+      populate_ppgtt_table(L2_table(a), L2_index(_start),
+                           L2_index(_end), 2);
+   }
+
+   for (uint64_t a = l2_start; a < l2_end; a += (1ULL << 21)) {
+      uint64_t _start = max(a, l1_start);
+      uint64_t _end = min(a + (1ULL << 21), l1_end);
+
+      populate_ppgtt_table(L1_table(a), L1_index(_start),
+                           L1_index(_end), 1);
+   }
+}
+
+static uint64_t
+ppgtt_lookup(uint64_t ppgtt_addr)
+{
+   return (uint64_t)L1_table(ppgtt_addr)->subtables[L1_index(ppgtt_addr)];
 }
 
 static void
-gen10_write_header(void)
+write_execlists_header(void)
 {
    char app_name[8 * 4];
    int app_name_len, dwords;
@@ -528,26 +512,33 @@ gen10_write_header(void)
    dwords = 5 + app_name_len / sizeof(uint32_t);
    dword_out(CMD_MEM_TRACE_VERSION | (dwords - 1));
    dword_out(AUB_MEM_TRACE_VERSION_FILE_VERSION);
-   dword_out(AUB_MEM_TRACE_VERSION_DEVICE_CNL |
-             AUB_MEM_TRACE_VERSION_METHOD_PHY);
+   dword_out(AUB_MEM_TRACE_VERSION_DEVICE_CNL);
    dword_out(0);      /* version */
    dword_out(0);      /* version */
    data_out(app_name, app_name_len);
 
+   /* GGTT PT */
+   uint32_t ggtt_ptes = STATIC_GGTT_MAP_SIZE >> 12;
+
+   mem_trace_memory_write_header_out(STATIC_GGTT_MAP_START >> 12,
+                                     ggtt_ptes * GEN8_PTE_SIZE,
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT_ENTRY);
+   for (uint32_t i = 0; i < ggtt_ptes; i++) {
+      dword_out(1 + 0x1000 * i + STATIC_GGTT_MAP_START);
+      dword_out(0);
+   }
+
    /* RENDER_RING */
-   gen8_map_base_size(RENDER_RING_ADDR, RING_SIZE);
    mem_trace_memory_write_header_out(RENDER_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
    /* RENDER_PPHWSP */
-   gen8_map_base_size(RENDER_CONTEXT_ADDR,
-                      PPHWSP_SIZE + sizeof(render_context_init));
    mem_trace_memory_write_header_out(RENDER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(render_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
@@ -555,19 +546,16 @@ gen10_write_header(void)
    data_out(render_context_init, sizeof(render_context_init));
 
    /* BLITTER_RING */
-   gen8_map_base_size(BLITTER_RING_ADDR, RING_SIZE);
    mem_trace_memory_write_header_out(BLITTER_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
    /* BLITTER_PPHWSP */
-   gen8_map_base_size(BLITTER_CONTEXT_ADDR,
-                      PPHWSP_SIZE + sizeof(blitter_context_init));
    mem_trace_memory_write_header_out(BLITTER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(blitter_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
@@ -575,19 +563,16 @@ gen10_write_header(void)
    data_out(blitter_context_init, sizeof(blitter_context_init));
 
    /* VIDEO_RING */
-   gen8_map_base_size(VIDEO_RING_ADDR, RING_SIZE);
    mem_trace_memory_write_header_out(VIDEO_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
    /* VIDEO_PPHWSP */
-   gen8_map_base_size(VIDEO_CONTEXT_ADDR,
-                      PPHWSP_SIZE + sizeof(video_context_init));
    mem_trace_memory_write_header_out(VIDEO_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(video_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(0);
 
@@ -603,7 +588,7 @@ gen10_write_header(void)
    register_write_out(GFX_MODE_BCSUNIT, 0x80008000 /* execlist enable */);
 }
 
-static void write_header(void)
+static void write_legacy_header(void)
 {
    char app_name[8 * 4];
    char comment[16];
@@ -658,15 +643,13 @@ aub_write_trace_block(uint32_t type, void *virtual, uint32_t size, uint64_t gtt_
    static const char null_block[8 * 4096];
 
    for (uint32_t offset = 0; offset < size; offset += block_size) {
-      block_size = size - offset;
+      block_size = min(8 * 4096, size - offset);
 
-      if (block_size > 8 * 4096)
-         block_size = 8 * 4096;
-
-      if (devinfo.gen >= 10) {
-         mem_trace_memory_write_header_out(gtt_offset + offset,
+      if (use_execlists()) {
+         block_size = min(4096, block_size);
+         mem_trace_memory_write_header_out(ppgtt_lookup(gtt_offset + offset),
                                            block_size,
-                                           AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                           AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
       } else {
          dword_out(CMD_AUB_TRACE_HEADER_BLOCK |
                    ((addr_bits > 32 ? 6 : 5) - 2));
@@ -754,17 +737,17 @@ aub_dump_execlist(uint64_t batch_offset, int ring_flag)
    }
 
    mem_trace_memory_write_header_out(ring_addr, 16,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
-   dword_out(AUB_MI_BATCH_BUFFER_START | (3 - 2));
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+   dword_out(AUB_MI_BATCH_BUFFER_START | MI_BATCH_NON_SECURE_I965 | (3 - 2));
    dword_out(batch_offset & 0xFFFFFFFF);
    dword_out(batch_offset >> 32);
    dword_out(0 /* MI_NOOP */);
 
    mem_trace_memory_write_header_out(ring_addr + 8192 + 20, 4,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    dword_out(0); /* RING_BUFFER_HEAD */
    mem_trace_memory_write_header_out(ring_addr + 8192 + 28, 4,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_LOCAL);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    dword_out(16); /* RING_BUFFER_TAIL */
 
    if (devinfo.gen >= 11) {
@@ -923,10 +906,10 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
 
       addr_bits = devinfo.gen >= 8 ? 48 : 32;
 
-      if (devinfo.gen >= 10)
-         gen10_write_header();
+      if (use_execlists())
+         write_execlists_header();
       else
-         write_header();
+         write_legacy_header();
 
       if (verbose)
          printf("[intel_aubdump: running, "
@@ -934,8 +917,8 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
                 filename, device, devinfo.gen);
    }
 
-   if (devinfo.gen >= 10)
-      offset = STATIC_GGTT_MAP_END;
+   if (use_execlists())
+      offset = 0x1000;
    else
       offset = gtt_size();
 
@@ -974,8 +957,8 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
          bo->map = gem_mmap(fd, obj->handle, 0, bo->size);
       fail_if(bo->map == MAP_FAILED, "intel_aubdump: bo mmap failed\n");
 
-      if (devinfo.gen >= 10)
-         gen8_map_ggtt_range(bo->offset, bo->offset + bo->size);
+      if (use_execlists())
+         map_ppgtt(bo->offset, bo->size);
    }
 
    batch_index = (execbuffer2->flags & I915_EXEC_BATCH_FIRST) ? 0 :
@@ -1001,7 +984,7 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
          free(data);
    }
 
-   if (devinfo.gen >= 10) {
+   if (use_execlists()) {
       aub_dump_execlist(batch_bo->offset +
                         execbuffer2->batch_start_offset, ring_flag);
    } else {
