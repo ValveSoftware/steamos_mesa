@@ -409,6 +409,7 @@ static const struct { unsigned int attrib, offset; } attribMap[] = {
     __ATTRIB(__DRI_ATTRIB_BIND_TO_TEXTURE_TARGETS,	bindToTextureTargets),
     __ATTRIB(__DRI_ATTRIB_YINVERTED,			yInverted),
     __ATTRIB(__DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE,	sRGBCapable),
+    __ATTRIB(__DRI_ATTRIB_MUTABLE_RENDER_BUFFER,	mutableRenderBuffer),
 
     /* The struct field doesn't matter here, these are handled by the
      * switch in driGetConfigAttribIndex.  We need them in the array
