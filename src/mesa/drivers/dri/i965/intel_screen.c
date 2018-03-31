@@ -2195,7 +2195,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
                                      num_depth_stencil_bits,
                                      back_buffer_modes, 2,
                                      singlesample_samples, 1,
-                                     false, false);
+                                     false, false, false);
       configs = driConcatConfigs(configs, new_configs);
    }
 
@@ -2222,7 +2222,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
                                      depth_bits, stencil_bits, 1,
                                      back_buffer_modes, 1,
                                      singlesample_samples, 1,
-                                     true, false);
+                                     true, false, false);
       configs = driConcatConfigs(configs, new_configs);
    }
 
@@ -2289,7 +2289,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
                                      back_buffer_modes, 1,
                                      multisample_samples,
                                      num_msaa_modes,
-                                     false, false);
+                                     false, false, false);
       configs = driConcatConfigs(configs, new_configs);
    }
 

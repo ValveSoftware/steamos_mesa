@@ -804,7 +804,7 @@ __DRIconfig **radeonInitScreen2(__DRIscreen *psp)
 				     ARRAY_SIZE(back_buffer_modes),
 				     msaa_samples_array,
 				     ARRAY_SIZE(msaa_samples_array),
-				     GL_TRUE, GL_FALSE);
+				     GL_TRUE, GL_FALSE, GL_FALSE);
       configs = driConcatConfigs(configs, new_configs);
    }
 
