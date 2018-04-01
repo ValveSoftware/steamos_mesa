@@ -552,9 +552,6 @@ st_create_context_priv(struct gl_context *ctx, struct pipe_context *pipe,
    /* Initialize context's winsys buffers list */
    LIST_INITHEAD(&st->winsys_buffers);
 
-   /* Keep our list of gl_vertex_array inputs */
-   _vbo_init_inputs(&st->draw_arrays);
-
    return st;
 }
 

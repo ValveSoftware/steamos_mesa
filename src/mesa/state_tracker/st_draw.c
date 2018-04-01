@@ -146,10 +146,6 @@ st_draw_vbo(struct gl_context *ctx,
    unsigned i;
    unsigned start = 0;
 
-   /* The initial pushdown of the inputs array into the drivers */
-   _mesa_set_drawing_arrays(ctx, st->draw_arrays.inputs);
-   _vbo_update_inputs(ctx, &st->draw_arrays);
-
    prepare_draw(st, ctx);
 
    if (st->vertex_array_out_of_memory)
@@ -254,10 +250,6 @@ st_indirect_draw_vbo(struct gl_context *ctx,
    struct st_context *st = st_context(ctx);
    struct pipe_draw_info info;
    struct pipe_draw_indirect_info indirect;
-
-   /* The initial pushdown of the inputs array into the drivers */
-   _mesa_set_drawing_arrays(ctx, st->draw_arrays.inputs);
-   _vbo_update_inputs(ctx, &st->draw_arrays);
 
    assert(stride);
    prepare_draw(st, ctx);
