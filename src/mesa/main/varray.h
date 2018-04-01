@@ -53,20 +53,6 @@ _mesa_attr_zero_aliases_vertex(const struct gl_context *ctx)
 }
 
 
-/**
- * This specifies the set of vertex arrays used by the driver for drawing.
- */
-static inline void
-_mesa_set_drawing_arrays(struct gl_context *ctx,
-                         const struct gl_vertex_array *arrays)
-{
-   if (ctx->Array._DrawArrays != arrays) {
-      ctx->Array._DrawArrays = arrays;
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-   }
-}
-
-
 extern void
 _mesa_update_array_format(struct gl_context *ctx,
                           struct gl_vertex_array_object *vao,

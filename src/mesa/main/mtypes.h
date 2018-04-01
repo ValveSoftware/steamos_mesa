@@ -1629,12 +1629,6 @@ struct gl_array_attrib
     */
    struct gl_vertex_array_object *_EmptyVAO;
 
-   /**
-    * Vertex arrays as consumed by a driver.
-    * The array pointer is set up only by the VBO module.
-    */
-   const struct gl_vertex_array *_DrawArrays; /**< 0..VERT_ATTRIB_MAX-1 */
-
    /** Legal array datatypes and the API for which they have been computed */
    GLbitfield LegalTypesMask;
    gl_api LegalTypesMaskAPI;

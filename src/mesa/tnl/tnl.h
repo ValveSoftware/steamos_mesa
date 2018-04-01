@@ -66,7 +66,7 @@ _tnl_wakeup( struct gl_context *ctx );
 extern void
 _tnl_need_projected_coords( struct gl_context *ctx, GLboolean flag );
 
-extern void
+extern const struct gl_vertex_array*
 _tnl_bind_inputs( struct gl_context *ctx );
 
 

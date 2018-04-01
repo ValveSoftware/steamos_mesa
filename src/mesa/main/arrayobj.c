@@ -970,7 +970,6 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, bool no_error)
     * or to prevent a crash if the VAO being unbound is going to be
     * deleted.
     */
-   _mesa_set_drawing_arrays(ctx, NULL);
    _mesa_set_draw_vao(ctx, ctx->Array._EmptyVAO, 0);
 
    ctx->NewState |= _NEW_ARRAY;

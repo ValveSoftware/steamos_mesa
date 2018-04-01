@@ -550,9 +550,9 @@ TAG(vbo_draw)(struct gl_context *ctx,
 	      struct gl_buffer_object *indirect)
 {
 	/* Borrow and update the inputs list from the tnl context */
-	_tnl_bind_inputs(ctx);
+	const struct gl_vertex_array* arrays = _tnl_bind_inputs(ctx);
 
-	TAG(vbo_check_render_prims)(ctx, ctx->Array._DrawArrays,
+	TAG(vbo_check_render_prims)(ctx, arrays,
 				    prims, nr_prims, ib,
 				    index_bounds_valid, min_index, max_index,
 				    tfb_vertcount, stream, indirect);

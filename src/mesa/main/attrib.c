@@ -1588,7 +1588,6 @@ copy_array_attrib(struct gl_context *ctx,
    /* skip IndexBufferObj */
 
    /* Invalidate array state. It will be updated during the next draw. */
-   _mesa_set_drawing_arrays(ctx, NULL);
    _mesa_set_draw_vao(ctx, ctx->Array._EmptyVAO, 0);
 }
 

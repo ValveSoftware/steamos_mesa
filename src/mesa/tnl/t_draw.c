@@ -537,12 +537,12 @@ void _tnl_draw_prims(struct gl_context *ctx,
 }
 
 
-void
+const struct gl_vertex_array*
 _tnl_bind_inputs( struct gl_context *ctx )
 {
    TNLcontext *tnl = TNL_CONTEXT(ctx);
-   _mesa_set_drawing_arrays(ctx, tnl->draw_arrays.inputs);
    _vbo_update_inputs(ctx, &tnl->draw_arrays);
+   return tnl->draw_arrays.inputs;
 }
 
 
@@ -558,12 +558,11 @@ _tnl_draw(struct gl_context *ctx,
           struct gl_transform_feedback_object *tfb_vertcount,
           unsigned stream, struct gl_buffer_object *indirect)
 {
-   /* Update TNLcontext::draw_arrays and set that pointer
-    * into Array._DrawArrays.
+   /* Update TNLcontext::draw_arrays and return that pointer.
     */
-   _tnl_bind_inputs(ctx);
+   const struct gl_vertex_array* arrays = _tnl_bind_inputs(ctx);
 
-   _tnl_draw_prims(ctx, ctx->Array._DrawArrays, prim, nr_prims, ib,
+   _tnl_draw_prims(ctx, arrays, prim, nr_prims, ib,
                    index_bounds_valid, min_index, max_index,
                    tfb_vertcount, stream, indirect);
 }
