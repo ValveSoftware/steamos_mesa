@@ -1426,6 +1426,32 @@ struct gl_array_attributes
    unsigned _ElementSize:8; /**< Size of each element in bytes */
    /** Index into gl_vertex_array_object::BufferBinding[] array */
    unsigned BufferBindingIndex:6;
+
+   /**
+    * Derived effective buffer binding index
+    *
+    * Index into the gl_vertex_buffer_binding array of the vao.
+    * Similar to BufferBindingIndex, but with the mapping of the
+    * position/generic0 attributes applied and with identical
+    * gl_vertex_buffer_binding entries collapsed to a single
+    * entry within the vao.
+    *
+    * The value is valid past calling _mesa_update_vao_derived_arrays.
+    * Note that _mesa_update_vao_derived_arrays is called when binding
+    * the VAO to Array._DrawVAO.
+    */
+   unsigned _EffBufferBindingIndex:6;
+   /**
+    * Derived effective relative offset.
+    *
+    * Relative offset to the effective buffers offset in
+    * gl_vertex_buffer_binding::_EffOffset.
+    *
+    * The value is valid past calling _mesa_update_vao_derived_arrays.
+    * Note that _mesa_update_vao_derived_arrays is called when binding
+    * the VAO to Array._DrawVAO.
+    */
+   GLushort _EffRelativeOffset;
 };
 
 
@@ -1441,6 +1467,35 @@ struct gl_vertex_buffer_binding
    GLuint InstanceDivisor;             /**< GL_ARB_instanced_arrays */
    struct gl_buffer_object *BufferObj; /**< GL_ARB_vertex_buffer_object */
    GLbitfield _BoundArrays;            /**< Arrays bound to this binding point */
+
+   /**
+    * Derived effective bound arrays.
+    *
+    * The effective binding handles enabled arrays past the
+    * position/generic0 attribute mapping and reduces the refered
+    * gl_vertex_buffer_binding entries to a unique subset.
+    *
+    * The value is valid past calling _mesa_update_vao_derived_arrays.
+    * Note that _mesa_update_vao_derived_arrays is called when binding
+    * the VAO to Array._DrawVAO.
+    */
+   GLbitfield _EffBoundArrays;
+   /**
+    * Derived offset.
+    *
+    * The absolute offset to that we can collapse some attributes
+    * to this unique effective binding.
+    * For user space array bindings this contains the smallest pointer value
+    * in the bound and interleaved arrays.
+    * For VBO bindings this contains an offset that lets the attributes
+    * _EffRelativeOffset stay positive and in bounds with
+    * Const.MaxVertexAttribRelativeOffset
+    *
+    * The value is valid past calling _mesa_update_vao_derived_arrays.
+    * Note that _mesa_update_vao_derived_arrays is called when binding
+    * the VAO to Array._DrawVAO.
+    */
+   GLintptr _EffOffset;
 };
 
 
@@ -1494,6 +1549,15 @@ struct gl_vertex_array_object
 
    /** Mask of VERT_BIT_* values indicating which arrays are enabled */
    GLbitfield _Enabled;
+
+   /**
+    * Mask of VERT_BIT_* enabled arrays past position/generic0 mapping
+    *
+    * The value is valid past calling _mesa_update_vao_derived_arrays.
+    * Note that _mesa_update_vao_derived_arrays is called when binding
+    * the VAO to Array._DrawVAO.
+    */
+   GLbitfield _EffEnabledVBO;
 
    /** Denotes the way the position/generic0 attribute is mapped */
    gl_attribute_map_mode _AttributeMapMode;

@@ -604,6 +604,11 @@ update_array(struct gl_context *ctx,
    /* The Stride and Ptr fields are not set by update_array_format() */
    struct gl_array_attributes *array = &vao->VertexAttrib[attrib];
    array->Stride = stride;
+   /* For updating the pointer we would need to add the vao->NewArrays flag
+    * to the VAO. But but that is done already unconditionally in
+    * _mesa_update_array_format called above.
+    */
+   assert((vao->NewArrays | ~vao->_Enabled) & VERT_BIT(attrib));
    array->Ptr = ptr;
 
    /* Update the vertex buffer binding */
@@ -2868,6 +2873,8 @@ _mesa_copy_vertex_attrib_array(struct gl_context *ctx,
    dst->Ptr            = src->Ptr;
    dst->Enabled        = src->Enabled;
    dst->_ElementSize   = src->_ElementSize;
+   dst->_EffBufferBindingIndex = src->_EffBufferBindingIndex;
+   dst->_EffRelativeOffset = src->_EffRelativeOffset;
 }
 
 void
@@ -2879,6 +2886,8 @@ _mesa_copy_vertex_buffer_binding(struct gl_context *ctx,
    dst->Stride          = src->Stride;
    dst->InstanceDivisor = src->InstanceDivisor;
    dst->_BoundArrays    = src->_BoundArrays;
+   dst->_EffBoundArrays = src->_EffBoundArrays;
+   dst->_EffOffset      = src->_EffOffset;
 
    _mesa_reference_buffer_object(ctx, &dst->BufferObj, src->BufferObj);
 }

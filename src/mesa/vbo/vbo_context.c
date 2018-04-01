@@ -234,6 +234,23 @@ _vbo_DestroyContext(struct gl_context *ctx)
 }
 
 
+const struct gl_array_attributes *
+_vbo_current_attrib(const struct gl_context *ctx, gl_vert_attrib attr)
+{
+   const struct vbo_context *vbo = vbo_context_const(ctx);
+   const gl_vertex_processing_mode vmp = ctx->VertexProgram._VPMode;
+   return &vbo->current[_vbo_attribute_alias_map[vmp][attr]];
+}
+
+
+const struct gl_vertex_buffer_binding *
+_vbo_current_binding(const struct gl_context *ctx)
+{
+   const struct vbo_context *vbo = vbo_context_const(ctx);
+   return &vbo->binding;
+}
+
+
 /*
  * Helper function for _vbo_draw_indirect below that additionally takes a zero
  * initialized array of _mesa_prim scratch space memory as the last argument.

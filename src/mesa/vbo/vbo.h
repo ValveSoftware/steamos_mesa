@@ -186,6 +186,14 @@ void
 _vbo_update_inputs(struct gl_context *ctx, struct vbo_inputs *inputs);
 
 
+const struct gl_array_attributes*
+_vbo_current_attrib(const struct gl_context *ctx, gl_vert_attrib attr);
+
+
+const struct gl_vertex_buffer_binding*
+_vbo_current_binding(const struct gl_context *ctx);
+
+
 void GLAPIENTRY
 _es_Color4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
 
