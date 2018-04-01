@@ -936,10 +936,6 @@ brw_draw_prims(struct gl_context *ctx,
    struct brw_transform_feedback_object *xfb_obj =
       (struct brw_transform_feedback_object *) gl_xfb_obj;
 
-   /* The initial pushdown of the inputs array into the drivers */
-   _mesa_set_drawing_arrays(ctx, brw->vb.draw_arrays.inputs);
-   _vbo_update_inputs(ctx, &brw->vb.draw_arrays);
-
    if (!brw_check_conditional_render(brw))
       return;
 
@@ -1078,9 +1074,6 @@ brw_init_draw_functions(struct dd_function_table *functions)
 void
 brw_draw_init(struct brw_context *brw)
 {
-   /* Keep our list of gl_vertex_array inputs */
-   _vbo_init_inputs(&brw->vb.draw_arrays);
-
    for (int i = 0; i < VERT_ATTRIB_MAX; i++)
       brw->vb.inputs[i].buffer = -1;
    brw->vb.nr_buffers = 0;
