@@ -278,8 +278,7 @@ brw_emit_prim(struct brw_context *brw,
 
 
 static void
-brw_merge_inputs(struct brw_context *brw,
-                 const struct gl_vertex_array *arrays)
+brw_merge_inputs(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct gl_context *ctx = &brw->ctx;
@@ -292,8 +291,10 @@ brw_merge_inputs(struct brw_context *brw,
    brw->vb.nr_buffers = 0;
 
    for (i = 0; i < VERT_ATTRIB_MAX; i++) {
-      brw->vb.inputs[i].buffer = -1;
-      brw->vb.inputs[i].glarray = &arrays[i];
+      struct brw_vertex_element *input = &brw->vb.inputs[i];
+      input->buffer = -1;
+      _mesa_draw_attrib_and_binding(ctx, i,
+                                    &input->glattrib, &input->glbinding);
    }
 
    if (devinfo->gen < 8 && !devinfo->is_haswell) {
@@ -306,7 +307,7 @@ brw_merge_inputs(struct brw_context *brw,
          uint8_t wa_flags = 0;
 
          i = u_bit_scan64(&mask);
-         glattrib = brw->vb.inputs[i].glarray->VertexAttrib;
+         glattrib = brw->vb.inputs[i].glattrib;
 
          switch (glattrib->Type) {
 
@@ -693,7 +694,6 @@ brw_postdraw_reconcile_align_wa_slices(struct brw_context *brw)
 
 static void
 brw_prepare_drawing(struct gl_context *ctx,
-                    const struct gl_vertex_array *arrays,
                     const struct _mesa_index_buffer *ib,
                     bool index_bounds_valid,
                     GLuint min_index,
@@ -746,7 +746,7 @@ brw_prepare_drawing(struct gl_context *ctx,
 
    /* Bind all inputs, derive varying and size information:
     */
-   brw_merge_inputs(brw, arrays);
+   brw_merge_inputs(brw);
 
    brw->ib.ib = ib;
    brw->ctx.NewDriverState |= BRW_NEW_INDICES;
@@ -780,7 +780,6 @@ brw_finish_drawing(struct gl_context *ctx)
  */
 static void
 brw_draw_single_prim(struct gl_context *ctx,
-                     const struct gl_vertex_array *arrays,
                      const struct _mesa_prim *prim,
                      unsigned prim_id,
                      struct brw_transform_feedback_object *xfb_obj,
@@ -811,7 +810,7 @@ brw_draw_single_prim(struct gl_context *ctx,
       brw->baseinstance = prim->base_instance;
       if (prim_id > 0) { /* For i == 0 we just did this before the loop */
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
-         brw_merge_inputs(brw, arrays);
+         brw_merge_inputs(brw);
       }
    }
 
@@ -933,14 +932,12 @@ brw_draw_prims(struct gl_context *ctx,
 {
    unsigned i;
    struct brw_context *brw = brw_context(ctx);
-   const struct gl_vertex_array *arrays;
    int predicate_state = brw->predicate.state;
    struct brw_transform_feedback_object *xfb_obj =
       (struct brw_transform_feedback_object *) gl_xfb_obj;
 
    /* The initial pushdown of the inputs array into the drivers */
    _mesa_set_drawing_arrays(ctx, brw->vb.draw_arrays.inputs);
-   arrays = ctx->Array._DrawArrays;
    _vbo_update_inputs(ctx, &brw->vb.draw_arrays);
 
    if (!brw_check_conditional_render(brw))
@@ -976,8 +973,7 @@ brw_draw_prims(struct gl_context *ctx,
       index_bounds_valid = true;
    }
 
-   brw_prepare_drawing(ctx, arrays, ib, index_bounds_valid, min_index,
-                       max_index);
+   brw_prepare_drawing(ctx, ib, index_bounds_valid, min_index, max_index);
    /* Try drawing with the hardware, but don't do anything else if we can't
     * manage it.  swrast doesn't support our featureset, so we can't fall back
     * to it.
@@ -1014,8 +1010,7 @@ brw_draw_prims(struct gl_context *ctx,
          brw->predicate.state = BRW_PREDICATE_STATE_USE_BIT;
       }
 
-      brw_draw_single_prim(ctx, arrays, &prims[i], i, xfb_obj, stream,
-                           indirect);
+      brw_draw_single_prim(ctx, &prims[i], i, xfb_obj, stream, indirect);
    }
 
    brw_finish_drawing(ctx);

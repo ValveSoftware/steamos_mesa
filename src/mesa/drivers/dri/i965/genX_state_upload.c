@@ -560,8 +560,7 @@ genX(emit_vertices)(struct brw_context *brw)
     */
    for (unsigned i = 0; i < brw->vb.nr_enabled; i++) {
       struct brw_vertex_element *input = brw->vb.enabled[i];
-      const struct gl_vertex_array *glarray = input->glarray;
-      const struct gl_array_attributes *glattrib = glarray->VertexAttrib;
+      const struct gl_array_attributes *glattrib = input->glattrib;
       uint32_t format = brw_get_vertex_surface_type(brw, glattrib);
 
       if (uploads_needed(format, input->is_dual_slot) > 1)
@@ -652,8 +651,7 @@ genX(emit_vertices)(struct brw_context *brw)
    unsigned i;
    for (i = 0; i < brw->vb.nr_enabled; i++) {
       const struct brw_vertex_element *input = brw->vb.enabled[i];
-      const struct gl_vertex_array *glarray = input->glarray;
-      const struct gl_array_attributes *glattrib = glarray->VertexAttrib;
+      const struct gl_array_attributes *glattrib = input->glattrib;
       uint32_t format = brw_get_vertex_surface_type(brw, glattrib);
       uint32_t comp0 = VFCOMP_STORE_SRC;
       uint32_t comp1 = VFCOMP_STORE_SRC;
@@ -695,8 +693,7 @@ genX(emit_vertices)(struct brw_context *brw)
           * entry. */
          const unsigned offset = input->offset + c * 16;
 
-         const struct gl_vertex_array *glarray = input->glarray;
-         const struct gl_array_attributes *glattrib = glarray->VertexAttrib;
+         const struct gl_array_attributes *glattrib = input->glattrib;
          const int size = (GEN_GEN < 8 && is_passthru_format(format)) ?
             upload_format_size(upload_format) : glattrib->Size;
 
@@ -818,8 +815,7 @@ genX(emit_vertices)(struct brw_context *brw)
 
 #if GEN_GEN >= 6
    if (gen6_edgeflag_input) {
-      const struct gl_vertex_array *glarray = gen6_edgeflag_input->glarray;
-      const struct gl_array_attributes *glattrib = glarray->VertexAttrib;
+      const struct gl_array_attributes *glattrib = gen6_edgeflag_input->glattrib;
       const uint32_t format = brw_get_vertex_surface_type(brw, glattrib);
 
       struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
