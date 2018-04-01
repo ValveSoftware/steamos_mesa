@@ -449,18 +449,6 @@ _mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
                                 GLuint divisor);
 
 
-/**
- * Shallow copy one vertex array to another.
- */
-static inline void
-_mesa_copy_vertex_array(struct gl_vertex_array *dst,
-                        const struct gl_vertex_array *src)
-{
-   dst->VertexAttrib = src->VertexAttrib;
-   dst->BufferBinding = src->BufferBinding;
-}
-
-
 extern void
 _mesa_copy_vertex_attrib_array(struct gl_context *ctx,
                                struct gl_array_attributes *dst,

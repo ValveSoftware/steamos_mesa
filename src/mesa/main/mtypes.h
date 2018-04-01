@@ -1500,20 +1500,6 @@ struct gl_vertex_buffer_binding
 
 
 /**
- * Vertex array information which is derived from gl_array_attributes
- * and gl_vertex_buffer_binding information.  Used by the VBO module and
- * device drivers.
- */
-struct gl_vertex_array
-{
-   /** Vertex attribute array */
-   const struct gl_array_attributes *VertexAttrib;
-   /** Vertex buffer binding */
-   const struct gl_vertex_buffer_binding *BufferBinding;
-};
-
-
-/**
  * A representation of "Vertex Array Objects" (VAOs) from OpenGL 3.1+ /
  * the GL_ARB_vertex_array_object extension.
  */
