@@ -77,10 +77,7 @@ var_is_invariant(nir_variable *var, struct set * invariants)
 static nir_variable *
 intrinsic_get_var(nir_intrinsic_instr *intrin, unsigned i)
 {
-   if (nir_intrinsic_infos[intrin->intrinsic].num_variables == 0)
-      return nir_deref_instr_get_variable(nir_src_as_deref(intrin->src[i]));
-   else
-      return intrin->variables[i]->var;
+   return nir_deref_instr_get_variable(nir_src_as_deref(intrin->src[i]));
 }
 
 static void
@@ -107,22 +104,15 @@ propagate_invariant_instr(nir_instr *instr, struct set *invariants)
    case nir_instr_type_intrinsic: {
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
       switch (intrin->intrinsic) {
-      case nir_intrinsic_copy_var:
       case nir_intrinsic_copy_deref:
          /* If the destination is invariant then so is the source */
          if (var_is_invariant(intrinsic_get_var(intrin, 0), invariants))
             add_var(intrinsic_get_var(intrin, 1), invariants);
          break;
 
-      case nir_intrinsic_load_var:
       case nir_intrinsic_load_deref:
          if (dest_is_invariant(&intrin->dest, invariants))
             add_var(intrinsic_get_var(intrin, 0), invariants);
-         break;
-
-      case nir_intrinsic_store_var:
-         if (var_is_invariant(intrin->variables[0]->var, invariants))
-            add_src(&intrin->src[0], invariants);
          break;
 
       case nir_intrinsic_store_deref:
@@ -200,6 +190,8 @@ nir_propagate_invariant(nir_shader *shader)
    /* Hash set of invariant things */
    struct set *invariants = _mesa_set_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
+
+   nir_assert_unlowered_derefs(shader, nir_lower_load_store_derefs);
 
    bool progress = false;
    nir_foreach_function(function, shader) {
