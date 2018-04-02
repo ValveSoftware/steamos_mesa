@@ -212,7 +212,20 @@ lower_drawpixels_block(lower_drawpixels_state *state, nir_block *block)
    nir_foreach_instr_safe(instr, block) {
       if (instr->type == nir_instr_type_intrinsic) {
          nir_intrinsic_instr *intr = nir_instr_as_intrinsic(instr);
-         if (intr->intrinsic == nir_intrinsic_load_var) {
+         if (intr->intrinsic == nir_intrinsic_load_deref) {
+            nir_deref_instr *deref = nir_src_as_deref(intr->src[0]);
+            nir_variable *var = nir_deref_instr_get_variable(deref);
+
+            if (var->data.location == VARYING_SLOT_COL0) {
+               /* gl_Color should not have array/struct derefs: */
+               assert(deref->deref_type == nir_deref_type_var);
+               lower_color(state, intr);
+            } else if (var->data.location == VARYING_SLOT_TEX0) {
+               /* gl_TexCoord should not have array/struct derefs: */
+               assert(deref->deref_type == nir_deref_type_var);
+               lower_texcoord(state, intr);
+            }
+         } else if (intr->intrinsic == nir_intrinsic_load_var) {
             nir_deref_var *dvar = intr->variables[0];
             nir_variable *var = dvar->var;
 
@@ -252,11 +265,6 @@ nir_lower_drawpixels(nir_shader *shader,
       .options = options,
       .shader = shader,
    };
-
-   /* note that this pass already assumes texture/sampler derefs are already
-    * lowered to index
-    */
-   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
 
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
 
