@@ -178,8 +178,6 @@ blorp_create_nir_tex_instr(nir_builder *b, struct brw_blorp_blit_vars *v,
    tex->is_shadow = false;
 
    /* Blorp only has one texture and it's bound at unit 0 */
-   tex->texture = NULL;
-   tex->sampler = NULL;
    tex->texture_index = 0;
    tex->sampler_index = 0;
 
