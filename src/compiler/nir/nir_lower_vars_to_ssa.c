@@ -50,6 +50,11 @@ struct deref_node {
 
    struct nir_phi_builder_value *pb_value;
 
+   /* True if this node is fully direct.  If set, it must be in the children
+    * array of its parent.
+    */
+   bool is_direct;
+
    struct deref_node *wildcard;
    struct deref_node *indirect;
    struct deref_node *children[0];
@@ -92,16 +97,18 @@ struct lower_variables_state {
 
 static struct deref_node *
 deref_node_create(struct deref_node *parent,
-                  const struct glsl_type *type, nir_shader *shader)
+                  const struct glsl_type *type,
+                  bool is_direct, void *mem_ctx)
 {
    size_t size = sizeof(struct deref_node) +
                  glsl_get_length(type) * sizeof(struct deref_node *);
 
-   struct deref_node *node = rzalloc_size(shader, size);
+   struct deref_node *node = rzalloc_size(mem_ctx, size);
    node->type = type;
    node->parent = parent;
    node->deref = NULL;
    exec_node_init(&node->direct_derefs_link);
+   node->is_direct = is_direct;
 
    return node;
 }
@@ -120,7 +127,7 @@ get_deref_node_for_var(nir_variable *var, struct lower_variables_state *state)
    if (var_entry) {
       return var_entry->data;
    } else {
-      node = deref_node_create(NULL, var->type, state->dead_ctx);
+      node = deref_node_create(NULL, var->type, true, state->dead_ctx);
       _mesa_hash_table_insert(state->deref_var_nodes, var, node);
       return node;
    }
@@ -134,8 +141,6 @@ get_deref_node_for_var(nir_variable *var, struct lower_variables_state *state)
 static struct deref_node *
 get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
 {
-   bool is_direct = true;
-
    /* Start at the base of the chain. */
    struct deref_node *node = get_deref_node_for_var(deref->var, state);
    assert(deref->deref.type == node->type);
@@ -147,9 +152,11 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
 
          assert(deref_struct->index < glsl_get_length(node->type));
 
-         if (node->children[deref_struct->index] == NULL)
+         if (node->children[deref_struct->index] == NULL) {
             node->children[deref_struct->index] =
-               deref_node_create(node, tail->type, state->dead_ctx);
+               deref_node_create(node, tail->type, node->is_direct,
+                                 state->dead_ctx);
+         }
 
          node = node->children[deref_struct->index];
          break;
@@ -167,29 +174,31 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
             if (arr->base_offset >= glsl_get_length(node->type))
                return NULL;
 
-            if (node->children[arr->base_offset] == NULL)
+            if (node->children[arr->base_offset] == NULL) {
                node->children[arr->base_offset] =
-                  deref_node_create(node, tail->type, state->dead_ctx);
+                  deref_node_create(node, tail->type, node->is_direct,
+                                    state->dead_ctx);
+            }
 
             node = node->children[arr->base_offset];
             break;
 
          case nir_deref_array_type_indirect:
-            if (node->indirect == NULL)
-               node->indirect = deref_node_create(node, tail->type,
+            if (node->indirect == NULL) {
+               node->indirect = deref_node_create(node, tail->type, false,
                                                   state->dead_ctx);
+            }
 
             node = node->indirect;
-            is_direct = false;
             break;
 
          case nir_deref_array_type_wildcard:
-            if (node->wildcard == NULL)
-               node->wildcard = deref_node_create(node, tail->type,
+            if (node->wildcard == NULL) {
+               node->wildcard = deref_node_create(node, tail->type, false,
                                                   state->dead_ctx);
+            }
 
             node = node->wildcard;
-            is_direct = false;
             break;
 
          default:
@@ -205,7 +214,7 @@ get_deref_node(nir_deref_var *deref, struct lower_variables_state *state)
    assert(node);
 
    /* Only insert if it isn't already in the list. */
-   if (is_direct && state->add_to_direct_deref_nodes &&
+   if (node->is_direct && state->add_to_direct_deref_nodes &&
        node->direct_derefs_link.next == NULL) {
       node->deref = deref;
       assert(deref->var != NULL);
