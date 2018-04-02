@@ -77,80 +77,14 @@ add_var_use_deref(nir_deref_instr *deref, struct set *live)
 }
 
 static void
-add_var_use_intrinsic(nir_intrinsic_instr *instr, struct set *live,
-                      nir_variable_mode modes)
-{
-   unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
-
-   switch (instr->intrinsic) {
-   case nir_intrinsic_copy_var:
-      _mesa_set_add(live, instr->variables[1]->var);
-      /* Fall through */
-   case nir_intrinsic_store_var: {
-      /* The first source in both copy_var and store_var is the destination.
-       * If the variable is a local that never escapes the shader, then we
-       * don't mark it as live for just a store.
-       */
-      nir_variable_mode mode = instr->variables[0]->var->data.mode;
-      if (!(mode & (nir_var_local | nir_var_global | nir_var_shared)))
-         _mesa_set_add(live, instr->variables[0]->var);
-      break;
-   }
-
-   /* This pass can't be used on I/O variables after they've been lowered. */
-   case nir_intrinsic_load_input:
-      assert(!(modes & nir_var_shader_in));
-      break;
-   case nir_intrinsic_store_output:
-      assert(!(modes & nir_var_shader_out));
-      break;
-
-   default:
-      for (unsigned i = 0; i < num_vars; i++) {
-         _mesa_set_add(live, instr->variables[i]->var);
-      }
-      break;
-   }
-}
-
-static void
-add_var_use_tex(nir_tex_instr *instr, struct set *live)
-{
-   if (instr->texture != NULL) {
-      nir_variable *var = instr->texture->var;
-      _mesa_set_add(live, var);
-   }
-
-   if (instr->sampler != NULL) {
-      nir_variable *var = instr->sampler->var;
-      _mesa_set_add(live, var);
-   }
-}
-
-static void
 add_var_use_shader(nir_shader *shader, struct set *live, nir_variable_mode modes)
 {
    nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_foreach_block(block, function->impl) {
             nir_foreach_instr(instr, block) {
-               switch(instr->type) {
-               case nir_instr_type_deref:
+               if (instr->type == nir_instr_type_deref)
                   add_var_use_deref(nir_instr_as_deref(instr), live);
-                  break;
-
-               case nir_instr_type_intrinsic:
-                  add_var_use_intrinsic(nir_instr_as_intrinsic(instr), live,
-                                        modes);
-                  break;
-
-               case nir_instr_type_tex:
-                  add_var_use_tex(nir_instr_as_tex(instr), live);
-                  break;
-
-               default:
-                  break;
-               }
             }
          }
       }
@@ -163,22 +97,6 @@ remove_dead_var_writes(nir_shader *shader, struct set *live)
    nir_foreach_function(function, shader) {
       if (!function->impl)
          continue;
-
-      nir_foreach_block(block, function->impl) {
-         nir_foreach_instr_safe(instr, block) {
-            if (instr->type != nir_instr_type_intrinsic)
-               continue;
-
-            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-            if (intrin->intrinsic != nir_intrinsic_copy_var &&
-                intrin->intrinsic != nir_intrinsic_store_var)
-               continue;
-
-            /* Stores to dead variables need to be removed */
-            if (intrin->variables[0]->var->data.mode == 0)
-               nir_instr_remove(instr);
-         }
-      }
 
       nir_foreach_block(block, function->impl) {
          nir_foreach_instr_safe(instr, block) {
@@ -245,6 +163,8 @@ nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes)
    bool progress = false;
    struct set *live =
       _mesa_set_create(NULL, _mesa_hash_pointer, _mesa_key_pointer_equal);
+
+   nir_assert_unlowered_derefs(shader, nir_lower_all_derefs);
 
    add_var_use_shader(shader, live, modes);
 
