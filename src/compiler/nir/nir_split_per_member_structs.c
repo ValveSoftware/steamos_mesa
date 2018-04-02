@@ -168,71 +168,6 @@ rewrite_deref_instr(nir_builder *b, nir_deref_instr *deref,
    nir_deref_instr_remove_if_unused(deref);
 }
 
-static void
-rewrite_deref_var(nir_instr *instr, nir_deref_var **deref,
-                 struct hash_table *var_to_member_map)
-{
-   if ((*deref)->var->members == 0)
-      return;
-
-   nir_deref_struct *strct = NULL;
-   for (nir_deref *d = (*deref)->deref.child; d; d = d->child) {
-      if (d->deref_type == nir_deref_type_struct) {
-         strct = nir_deref_as_struct(d);
-         break;
-      }
-   }
-   assert(strct);
-
-   nir_variable *member = find_var_member((*deref)->var, strct->index,
-                                          var_to_member_map);
-
-   nir_deref_var *head = nir_deref_var_create(ralloc_parent(*deref), member);
-   nir_deref *tail = &head->deref;
-   for (nir_deref *d = (*deref)->deref.child;
-        d != &strct->deref; d = d->child) {
-      nir_deref_array *arr = nir_deref_as_array(d);
-
-      nir_deref_array *narr = nir_deref_array_create(tail);
-      narr->deref.type = glsl_get_array_element(tail->type);
-      narr->deref_array_type = arr->deref_array_type;
-      narr->base_offset = arr->base_offset;
-
-      if (arr->deref_array_type == nir_deref_array_type_indirect)
-         nir_instr_move_src(instr, &narr->indirect, &arr->indirect);
-
-      assert(tail->child == NULL);
-      tail->child = &narr->deref;
-      tail = &narr->deref;
-   }
-
-   ralloc_steal(tail, strct->deref.child);
-   tail->child = strct->deref.child;
-
-   ralloc_free(*deref);
-   *deref = head;
-}
-
-static void
-rewrite_intrinsic_instr(nir_intrinsic_instr *intrin,
-                        struct hash_table *var_to_member_map)
-{
-   for (unsigned i = 0;
-        i < nir_intrinsic_infos[intrin->intrinsic].num_variables; i++) {
-      rewrite_deref_var(&intrin->instr, &intrin->variables[i],
-                        var_to_member_map);
-   }
-}
-
-static void
-rewrite_tex_instr(nir_tex_instr *tex, struct hash_table *var_to_member_map)
-{
-   if (tex->texture)
-      rewrite_deref_var(&tex->instr, &tex->texture, var_to_member_map);
-   if (tex->sampler)
-      rewrite_deref_var(&tex->instr, &tex->sampler, var_to_member_map);
-}
-
 bool
 nir_split_per_member_structs(nir_shader *shader)
 {
@@ -241,6 +176,8 @@ nir_split_per_member_structs(nir_shader *shader)
    struct hash_table *var_to_member_map =
       _mesa_hash_table_create(dead_ctx, _mesa_hash_pointer,
                               _mesa_key_pointer_equal);
+
+   nir_assert_unlowered_derefs(shader, nir_lower_all_derefs);
 
    progress |= split_variables_in_list(&shader->inputs, shader,
                                        var_to_member_map, dead_ctx);
@@ -259,26 +196,9 @@ nir_split_per_member_structs(nir_shader *shader)
       nir_builder_init(&b, function->impl);
       nir_foreach_block(block, function->impl) {
          nir_foreach_instr_safe(instr, block) {
-            switch (instr->type) {
-            case nir_instr_type_deref:
+            if (instr->type == nir_instr_type_deref) {
                rewrite_deref_instr(&b, nir_instr_as_deref(instr),
                                    var_to_member_map);
-               break;
-
-            case nir_instr_type_intrinsic:
-               rewrite_intrinsic_instr(nir_instr_as_intrinsic(instr),
-                                       var_to_member_map);
-               break;
-
-            case nir_instr_type_tex:
-               rewrite_tex_instr(nir_instr_as_tex(instr), var_to_member_map);
-               break;
-
-            case nir_instr_type_call:
-               unreachable("Functions must be inlined before this pass");
-
-            default:
-               break;
             }
          }
       }
