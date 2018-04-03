@@ -465,12 +465,46 @@ validate_deref_var(void *parent_mem_ctx, nir_deref_var *deref, validate_state *s
 static void
 validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
 {
-   unsigned bit_size = 0;
-   if (instr->intrinsic == nir_intrinsic_load_var ||
-       instr->intrinsic == nir_intrinsic_store_var) {
+   unsigned dest_bit_size = 0;
+   unsigned src_bit_sizes[NIR_INTRINSIC_MAX_INPUTS] = { 0, };
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_var: {
       const struct glsl_type *type =
          nir_deref_tail(&instr->variables[0]->deref)->type;
-      bit_size = glsl_get_bit_size(type);
+      validate_assert(state, glsl_type_is_vector_or_scalar(type) ||
+             (instr->variables[0]->var->data.mode == nir_var_uniform &&
+              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
+      validate_assert(state, instr->num_components ==
+                             glsl_get_vector_elements(type));
+      dest_bit_size = glsl_get_bit_size(type);
+      break;
+   }
+
+   case nir_intrinsic_store_var: {
+      const struct glsl_type *type =
+         nir_deref_tail(&instr->variables[0]->deref)->type;
+      validate_assert(state, glsl_type_is_vector_or_scalar(type) ||
+             (instr->variables[0]->var->data.mode == nir_var_uniform &&
+              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
+      validate_assert(state, instr->num_components == glsl_get_vector_elements(type));
+      src_bit_sizes[0] = glsl_get_bit_size(type);
+      validate_assert(state, instr->variables[0]->var->data.mode != nir_var_shader_in &&
+             instr->variables[0]->var->data.mode != nir_var_uniform &&
+             instr->variables[0]->var->data.mode != nir_var_shader_storage);
+      validate_assert(state, (nir_intrinsic_write_mask(instr) & ~((1 << instr->num_components) - 1)) == 0);
+      break;
+   }
+
+   case nir_intrinsic_copy_var:
+      validate_assert(state, nir_deref_tail(&instr->variables[0]->deref)->type ==
+             nir_deref_tail(&instr->variables[1]->deref)->type);
+      validate_assert(state, instr->variables[0]->var->data.mode != nir_var_shader_in &&
+             instr->variables[0]->var->data.mode != nir_var_uniform &&
+             instr->variables[0]->var->data.mode != nir_var_shader_storage);
+      break;
+
+   default:
+      break;
    }
 
    unsigned num_srcs = nir_intrinsic_infos[instr->intrinsic].num_srcs;
@@ -479,7 +513,7 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
 
       validate_assert(state, components_read > 0);
 
-      validate_src(&instr->src[i], state, bit_size, components_read);
+      validate_src(&instr->src[i], state, src_bit_sizes[i], components_read);
    }
 
    unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
@@ -492,41 +526,7 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
 
       validate_assert(state, components_written > 0);
 
-      validate_dest(&instr->dest, state, bit_size, components_written);
-   }
-
-   switch (instr->intrinsic) {
-   case nir_intrinsic_load_var: {
-      const struct glsl_type *type =
-         nir_deref_tail(&instr->variables[0]->deref)->type;
-      validate_assert(state, glsl_type_is_vector_or_scalar(type) ||
-             (instr->variables[0]->var->data.mode == nir_var_uniform &&
-              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
-      validate_assert(state, instr->num_components == glsl_get_vector_elements(type));
-      break;
-   }
-   case nir_intrinsic_store_var: {
-      const struct glsl_type *type =
-         nir_deref_tail(&instr->variables[0]->deref)->type;
-      validate_assert(state, glsl_type_is_vector_or_scalar(type) ||
-             (instr->variables[0]->var->data.mode == nir_var_uniform &&
-              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
-      validate_assert(state, instr->num_components == glsl_get_vector_elements(type));
-      validate_assert(state, instr->variables[0]->var->data.mode != nir_var_shader_in &&
-             instr->variables[0]->var->data.mode != nir_var_uniform &&
-             instr->variables[0]->var->data.mode != nir_var_shader_storage);
-      validate_assert(state, (nir_intrinsic_write_mask(instr) & ~((1 << instr->num_components) - 1)) == 0);
-      break;
-   }
-   case nir_intrinsic_copy_var:
-      validate_assert(state, nir_deref_tail(&instr->variables[0]->deref)->type ==
-             nir_deref_tail(&instr->variables[1]->deref)->type);
-      validate_assert(state, instr->variables[0]->var->data.mode != nir_var_shader_in &&
-             instr->variables[0]->var->data.mode != nir_var_uniform &&
-             instr->variables[0]->var->data.mode != nir_var_shader_storage);
-      break;
-   default:
-      break;
+      validate_dest(&instr->dest, state, dest_bit_size, components_written);
    }
 }
 
