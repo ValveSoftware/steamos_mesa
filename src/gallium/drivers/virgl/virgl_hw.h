@@ -83,6 +83,7 @@ enum virgl_formats {
    VIRGL_FORMAT_L8A8_SRGB               = 96,
    VIRGL_FORMAT_B8G8R8A8_SRGB           = 100,
    VIRGL_FORMAT_B8G8R8X8_SRGB           = 101,
+   VIRGL_FORMAT_R8G8B8A8_SRGB           = 104,
 
    /* compressed formats */
    VIRGL_FORMAT_DXT1_RGB                = 105,
