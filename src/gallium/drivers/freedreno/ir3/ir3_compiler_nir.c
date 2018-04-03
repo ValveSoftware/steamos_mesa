@@ -206,13 +206,13 @@ compile_init(struct ir3_compiler *compiler,
 		ctx->s = so->shader->nir;
 	}
 
-	NIR_PASS_V(ctx->s, nir_lower_deref_instrs, ~0);
-
 	/* this needs to be the last pass run, so do this here instead of
 	 * in ir3_optimize_nir():
 	 */
 	NIR_PASS_V(ctx->s, nir_lower_locals_to_regs);
 	NIR_PASS_V(ctx->s, nir_convert_from_ssa, true);
+
+	NIR_PASS_V(ctx->s, nir_lower_deref_instrs, ~0);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		DBG("dump nir%dv%d: type=%d, k={bp=%u,cts=%u,hp=%u}",

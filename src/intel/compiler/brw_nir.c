@@ -766,8 +766,6 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
    OPT(nir_opt_dce);
    OPT(nir_opt_move_comparisons);
 
-   OPT(nir_lower_deref_instrs, nir_lower_load_store_derefs);
-
    OPT(nir_lower_locals_to_regs);
 
    if (unlikely(debug_enabled)) {
