@@ -515,6 +515,7 @@ tegra_screen_resource_create_with_modifiers(struct pipe_screen *pscreen,
                                             int count)
 {
    struct tegra_screen *screen = to_tegra_screen(pscreen);
+   struct pipe_resource tmpl = *template;
    struct tegra_resource *resource;
    int err;
 
@@ -522,8 +523,18 @@ tegra_screen_resource_create_with_modifiers(struct pipe_screen *pscreen,
    if (!resource)
       return NULL;
 
+   /*
+    * Assume that resources created with modifiers will always be used for
+    * scanout. This is necessary because some of the APIs that are used to
+    * create resources with modifiers (e.g. gbm_bo_create_with_modifiers())
+    * can't pass along usage information. Adding that capability might be
+    * worth adding to remove this ambiguity. Not all future use-cases that
+    * involve modifiers may always be targetting scanout hardware.
+    */
+   tmpl.bind |= PIPE_BIND_SCANOUT;
+
    resource->gpu = screen->gpu->resource_create_with_modifiers(screen->gpu,
-                                                               template,
+                                                               &tmpl,
                                                                modifiers,
                                                                count);
    if (!resource->gpu)
