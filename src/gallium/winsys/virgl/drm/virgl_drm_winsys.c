@@ -800,7 +800,14 @@ virgl_drm_winsys_create(int drmFD)
 {
    struct virgl_drm_winsys *qdws;
    int ret;
+   int gl = 0;
    struct drm_virtgpu_getparam getparam = {0};
+
+   getparam.param = VIRTGPU_PARAM_3D_FEATURES;
+   getparam.value = (uint64_t)(uintptr_t)&gl;
+   ret = drmIoctl(drmFD, DRM_IOCTL_VIRTGPU_GETPARAM, &getparam);
+   if (ret < 0 || !gl)
+      return NULL;
 
    qdws = CALLOC_STRUCT(virgl_drm_winsys);
    if (!qdws)
@@ -914,6 +921,10 @@ virgl_drm_screen_create(int fd)
       int dup_fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
       vws = virgl_drm_winsys_create(dup_fd);
+      if (!vws) {
+         close(dup_fd);
+         goto unlock;
+      }
 
       pscreen = virgl_create_screen(vws);
       if (pscreen) {
