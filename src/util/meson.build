@@ -56,6 +56,8 @@ files_mesa_util = files(
   'ralloc.h',
   'rand_xor.c',
   'rand_xor.h',
+  'rb_tree.c',
+  'rb_tree.h',
   'register_allocate.c',
   'register_allocate.h',
   'rgtc.c',
