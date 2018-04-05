@@ -3742,9 +3742,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 	}
 
 	if (tex->dcc_offset) {
-		unsigned swap = si_translate_colorswap(pipe_format, false);
-
-		state[6] = S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
+		state[6] = S_008F28_ALPHA_IS_ON_MSB(vi_alpha_is_on_msb(pipe_format));
 	} else {
 		/* The last dword is unused by hw. The shader uses it to clear
 		 * bits in the first dword of sampler state.

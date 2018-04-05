@@ -93,7 +93,27 @@ static void si_set_clear_color(struct r600_texture *rtex,
 	memcpy(rtex->color_clear_value, &uc, 2 * sizeof(uint32_t));
 }
 
-static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
+/** Linearize and convert luminace/intensity to red. */
+enum pipe_format si_simplify_cb_format(enum pipe_format format)
+{
+	format = util_format_linear(format);
+	format = util_format_luminance_to_red(format);
+	return util_format_intensity_to_red(format);
+}
+
+bool vi_alpha_is_on_msb(enum pipe_format format)
+{
+	format = si_simplify_cb_format(format);
+
+	/* Formats with 3 channels can't have alpha. */
+	if (util_format_description(format)->nr_channels == 3)
+		return true; /* same as xxxA; is any value OK here? */
+
+	return si_translate_colorswap(format, false) <= 1;
+}
+
+static bool vi_get_fast_clear_parameters(enum pipe_format base_format,
+					 enum pipe_format surface_format,
 					 const union pipe_color_union *color,
 					 uint32_t* clear_value,
 					 bool *eliminate_needed)
@@ -103,17 +123,14 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	 * formats).
 	 */
 	bool values[4] = {}; /* whether to clear to 0 or 1 */
-	int i;
 	bool color_value = false; /* clear color to 0 or 1 */
 	bool alpha_value = false; /* clear alpha to 0 or 1 */
 	int alpha_channel; /* index of the alpha component */
+	bool has_color = false;
+	bool has_alpha = false;
 
-	/* Convert luminance to red. (the latter can't handle L8_SRGB,
-	 * so convert to linear) */
-	surface_format = util_format_linear(surface_format);
-	surface_format = util_format_luminance_to_red(surface_format);
-
-	const struct util_format_description *desc = util_format_description(surface_format);
+	const struct util_format_description *desc =
+		util_format_description(si_simplify_cb_format(surface_format));
 
 	/* 128-bit fast clear with different R,G,B values is unsupported. */
 	if (desc->block.bits == 128 &&
@@ -124,24 +141,22 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	*eliminate_needed = true;
 	*clear_value = 0x20202020U; /* use CB clear color registers */
 
-	if (surface_format == PIPE_FORMAT_R11G11B10_FLOAT ||
-	    surface_format == PIPE_FORMAT_B5G6R5_UNORM ||
-	    surface_format == PIPE_FORMAT_B5G6R5_SRGB ||
-	    util_format_is_alpha(surface_format)) {
-		alpha_channel = -1;
-	} else if (desc->layout == UTIL_FORMAT_LAYOUT_PLAIN) {
-		if (si_translate_colorswap(surface_format, false) <= 1)
-			alpha_channel = desc->nr_channels - 1;
-		else
-			alpha_channel = 0;
-	} else
+	if (desc->layout != UTIL_FORMAT_LAYOUT_PLAIN)
 		return true; /* need ELIMINATE_FAST_CLEAR */
 
-	for (i = 0; i < 4; ++i) {
-		int index = desc->swizzle[i] - PIPE_SWIZZLE_X;
+	bool base_alpha_is_on_msb = vi_alpha_is_on_msb(base_format);
+	bool surf_alpha_is_on_msb = vi_alpha_is_on_msb(surface_format);
 
-		if (desc->swizzle[i] < PIPE_SWIZZLE_X ||
-		    desc->swizzle[i] > PIPE_SWIZZLE_W)
+	/* Formats with 3 channels can't have alpha. */
+	if (desc->nr_channels == 3)
+		alpha_channel = -1;
+	else if (surf_alpha_is_on_msb)
+		alpha_channel = desc->nr_channels - 1;
+	else
+		alpha_channel = 0;
+
+	for (int i = 0; i < 4; ++i) {
+		if (desc->swizzle[i] >= PIPE_SWIZZLE_0)
 			continue;
 
 		if (desc->channel[i].pure_integer &&
@@ -166,18 +181,32 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 				return true; /* need ELIMINATE_FAST_CLEAR */
 		}
 
-		if (index == alpha_channel)
+		if (desc->swizzle[i] == alpha_channel) {
 			alpha_value = values[i];
-		else
+			has_alpha = true;
+		} else {
 			color_value = values[i];
+			has_color = true;
+		}
 	}
 
-	for (int i = 0; i < 4; ++i)
-		if (values[i] != color_value &&
-		    desc->swizzle[i] - PIPE_SWIZZLE_X != alpha_channel &&
-		    desc->swizzle[i] >= PIPE_SWIZZLE_X &&
-		    desc->swizzle[i] <= PIPE_SWIZZLE_W)
-			return true; /* need ELIMINATE_FAST_CLEAR */
+	/* If alpha isn't present, make it the same as color, and vice versa. */
+	if (!has_alpha)
+		alpha_value = color_value;
+	else if (!has_color)
+		color_value = alpha_value;
+
+	if (color_value != alpha_value &&
+	    base_alpha_is_on_msb != surf_alpha_is_on_msb)
+		return true; /* require ELIMINATE_FAST_CLEAR */
+
+	/* Check if all color values are equal if they are present. */
+	for (int i = 0; i < 4; ++i) {
+		if (desc->swizzle[i] <= PIPE_SWIZZLE_W &&
+		    desc->swizzle[i] != alpha_channel &&
+		    values[i] != color_value)
+			return true; /* require ELIMINATE_FAST_CLEAR */
+	}
 
 	/* This doesn't need ELIMINATE_FAST_CLEAR.
 	 * CB uses both the DCC clear codes and the CB clear color registers,
@@ -454,7 +483,8 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			    !tex->surface.u.legacy.level[level].dcc_fast_clear_size)
 				continue;
 
-			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
+			if (!vi_get_fast_clear_parameters(tex->resource.b.b.format,
+							  fb->cbufs[i]->format,
 							  color, &reset_value,
 							  &eliminate_needed))
 				continue;

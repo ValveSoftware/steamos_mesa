@@ -879,6 +879,8 @@ void si_init_screen_buffer_functions(struct si_screen *sscreen);
 void si_init_buffer_functions(struct si_context *sctx);
 
 /* si_clear.c */
+enum pipe_format si_simplify_cb_format(enum pipe_format format);
+bool vi_alpha_is_on_msb(enum pipe_format format);
 void vi_dcc_clear_level(struct si_context *sctx,
 			struct r600_texture *rtex,
 			unsigned level, unsigned clear_value);
