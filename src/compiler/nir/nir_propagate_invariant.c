@@ -74,12 +74,6 @@ var_is_invariant(nir_variable *var, struct set * invariants)
    return var->data.invariant || _mesa_set_search(invariants, var);
 }
 
-static nir_variable *
-intrinsic_get_var(nir_intrinsic_instr *intrin, unsigned i)
-{
-   return nir_deref_instr_get_variable(nir_src_as_deref(intrin->src[i]));
-}
-
 static void
 propagate_invariant_instr(nir_instr *instr, struct set *invariants)
 {
@@ -106,17 +100,17 @@ propagate_invariant_instr(nir_instr *instr, struct set *invariants)
       switch (intrin->intrinsic) {
       case nir_intrinsic_copy_deref:
          /* If the destination is invariant then so is the source */
-         if (var_is_invariant(intrinsic_get_var(intrin, 0), invariants))
-            add_var(intrinsic_get_var(intrin, 1), invariants);
+         if (var_is_invariant(nir_intrinsic_get_var(intrin, 0), invariants))
+            add_var(nir_intrinsic_get_var(intrin, 1), invariants);
          break;
 
       case nir_intrinsic_load_deref:
          if (dest_is_invariant(&intrin->dest, invariants))
-            add_var(intrinsic_get_var(intrin, 0), invariants);
+            add_var(nir_intrinsic_get_var(intrin, 0), invariants);
          break;
 
       case nir_intrinsic_store_deref:
-         if (var_is_invariant(intrinsic_get_var(intrin, 0), invariants))
+         if (var_is_invariant(nir_intrinsic_get_var(intrin, 0), invariants))
             add_src(&intrin->src[1], invariants);
          break;
 
