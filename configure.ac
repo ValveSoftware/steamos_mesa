@@ -445,9 +445,11 @@ if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" = x1; then
     AC_MSG_CHECKING(whether -latomic is needed)
     AC_LINK_IFELSE([AC_LANG_SOURCE([[
     #include <stdint.h>
-    uint64_t v;
+    struct {
+        uint64_t *v;
+    } x;
     int main() {
-        return (int)__atomic_load_n(&v, __ATOMIC_ACQUIRE);
+        return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
     }]])], GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC=no, GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC=yes)
     AC_MSG_RESULT($GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC)
     if test "x$GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC" = xyes; then

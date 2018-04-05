@@ -849,8 +849,10 @@ if cc.compiles('int main() { int n; return __atomic_load_n(&n, __ATOMIC_ACQUIRE)
   # as ARM.
   if not cc.links('''#include <stdint.h>
                      int main() {
-                       uint64_t n;
-                       return (int)__atomic_load_n(&n, __ATOMIC_ACQUIRE);
+                       struct {
+                         uint64_t *v;
+                       } x;
+                       return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
                      }''',
                   name : 'GCC atomic builtins required -latomic')
     dep_atomic = cc.find_library('atomic')
