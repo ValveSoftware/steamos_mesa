@@ -2048,8 +2048,6 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 				radv_optimize_nir(nir[i], false);
 			}
 		}
-
-		NIR_PASS_V(nir[i], nir_lower_deref_instrs, ~0);
 	}
 
 	if (nir[MESA_SHADER_TESS_CTRL]) {

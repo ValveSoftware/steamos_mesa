@@ -775,8 +775,6 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    const nir_shader_compiler_options *options =
       st->ctx->Const.ShaderCompilerOptions[prog->info.stage].NirOptions;
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
-
    NIR_PASS_V(nir, nir_split_var_copies);
    NIR_PASS_V(nir, nir_lower_var_copies);
    if (options->lower_all_io_to_temps ||
@@ -838,6 +836,8 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
                  (nir_lower_io_options)0);
       NIR_PASS_V(nir, st_nir_lower_uniforms_to_ubo);
    }
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
 
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, gl_nir_lower_samplers_as_deref, shader_program);
