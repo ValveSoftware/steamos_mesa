@@ -837,12 +837,12 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
       NIR_PASS_V(nir, st_nir_lower_uniforms_to_ubo);
    }
 
-   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
-
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, gl_nir_lower_samplers_as_deref, shader_program);
    else
-      NIR_PASS_V(nir, gl_nir_lower_samplers_legacy, shader_program);
+      NIR_PASS_V(nir, gl_nir_lower_samplers, shader_program);
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
 }
 
 } /* extern "C" */
