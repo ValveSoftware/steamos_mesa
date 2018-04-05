@@ -212,8 +212,6 @@ compile_init(struct ir3_compiler *compiler,
 	NIR_PASS_V(ctx->s, nir_lower_locals_to_regs);
 	NIR_PASS_V(ctx->s, nir_convert_from_ssa, true);
 
-	NIR_PASS_V(ctx->s, nir_lower_deref_instrs, ~0);
-
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		DBG("dump nir%dv%d: type=%d, k={bp=%u,cts=%u,hp=%u}",
 			so->shader->id, so->id, so->type,
@@ -1857,23 +1855,28 @@ emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
  * logic if we supported images in anything other than FS..
  */
 static unsigned
-get_image_slot(struct ir3_context *ctx, const nir_deref_var *deref)
+get_image_slot(struct ir3_context *ctx, nir_deref_instr *deref)
 {
-	const nir_variable *var = deref->var;
-	unsigned int loc = var->data.driver_location;
+	unsigned int loc = 0;
+	unsigned inner_size = 1;
 
-	for (const nir_deref *tail = &deref->deref; tail->child; tail = tail->child) {
-		compile_assert(ctx, tail->child->deref_type == nir_deref_type_array);
+	while (deref->deref_type != nir_deref_type_var) {
+		assert(deref->deref_type == nir_deref_type_array);
+		nir_const_value *const_index = nir_src_as_const_value(deref->arr.index);
+		assert(const_index);
 
-		const nir_deref_array *deref_array = nir_deref_as_array(tail->child);
-		compile_assert(ctx, deref_array->deref_array_type == nir_deref_array_type_direct);
+		/* Go to the next instruction */
+		deref = nir_deref_instr_parent(deref);
 
-		const unsigned elem_sz = glsl_count_attribute_slots(deref_array->deref.type, false);
-		const unsigned size = glsl_get_length(tail->type);
-		const unsigned base = MIN2(deref_array->base_offset, size - 1);
+		assert(glsl_type_is_array(deref->type));
+		const unsigned array_len = glsl_get_length(deref->type);
+		loc += MIN2(const_index->u32[0], array_len - 1) * inner_size;
 
-		loc += base * elem_sz;
+		/* Update the inner size */
+		inner_size *= array_len;
 	}
+
+	loc += deref->var->data.driver_location;
 
 	/* TODO figure out real limit per generation, and don't hardcode: */
 	const unsigned max_samplers = 16;
@@ -1988,12 +1991,12 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction **dst)
 {
 	struct ir3_block *b = ctx->block;
-	const nir_variable *var = intr->variables[0]->var;
+	const nir_variable *var = nir_intrinsic_get_var(intr, 0);
 	struct ir3_instruction *sam;
 	struct ir3_instruction * const *src0 = get_src(ctx, &intr->src[0]);
 	struct ir3_instruction *coords[4];
 	unsigned flags, ncoords = get_image_coords(var, &flags);
-	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
+	unsigned tex_idx = get_image_slot(ctx, var);
 	type_t type = get_image_type(var);
 
 	/* hmm, this seems a bit odd, but it is what blob does and (at least
@@ -2024,12 +2027,12 @@ static void
 emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
 	struct ir3_block *b = ctx->block;
-	const nir_variable *var = intr->variables[0]->var;
+	const nir_variable *var = nir_intrinsic_get_var(intr, 0);
 	struct ir3_instruction *stib, *offset;
 	struct ir3_instruction * const *value = get_src(ctx, &intr->src[2]);
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
 	unsigned ncoords = get_image_coords(var, NULL);
-	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
+	unsigned tex_idx = get_image_slot(ctx, var);
 
 	/* src0 is value
 	 * src1 is coords
@@ -2062,8 +2065,8 @@ emit_intrinsic_image_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction **dst)
 {
 	struct ir3_block *b = ctx->block;
-	const nir_variable *var = intr->variables[0]->var;
-	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
+	const nir_variable *var = nir_intrinsic_get_var(intr, 0);
+	unsigned tex_idx = get_image_slot(ctx, var);
 	struct ir3_instruction *sam, *lod;
 	unsigned flags, ncoords = get_image_coords(var, &flags);
 
@@ -2102,12 +2105,12 @@ static struct ir3_instruction *
 emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
 	struct ir3_block *b = ctx->block;
-	const nir_variable *var = intr->variables[0]->var;
+	const nir_variable *var = nir_intrinsic_get_var(intr, 0);
 	struct ir3_instruction *atomic, *image, *src0, *src1, *src2;
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
 	unsigned ncoords = get_image_coords(var, NULL);
 
-	image = create_immed(b, get_image_slot(ctx, intr->variables[0]));
+	image = create_immed(b, get_image_slot(ctx, var));
 
 	/* src0 is value (or uvec2(value, compare))
 	 * src1 is coords
@@ -2118,28 +2121,28 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	src2 = get_image_offset(ctx, var, coords, false);
 
 	switch (intr->intrinsic) {
-	case nir_intrinsic_image_var_atomic_add:
+	case nir_intrinsic_image_deref_atomic_add:
 		atomic = ir3_ATOMIC_ADD_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_min:
+	case nir_intrinsic_image_deref_atomic_min:
 		atomic = ir3_ATOMIC_MIN_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_max:
+	case nir_intrinsic_image_deref_atomic_max:
 		atomic = ir3_ATOMIC_MAX_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_and:
+	case nir_intrinsic_image_deref_atomic_and:
 		atomic = ir3_ATOMIC_AND_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_or:
+	case nir_intrinsic_image_deref_atomic_or:
 		atomic = ir3_ATOMIC_OR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_xor:
+	case nir_intrinsic_image_deref_atomic_xor:
 		atomic = ir3_ATOMIC_XOR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_exchange:
+	case nir_intrinsic_image_deref_atomic_exchange:
 		atomic = ir3_ATOMIC_XCHG_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_var_atomic_comp_swap:
+	case nir_intrinsic_image_deref_atomic_comp_swap:
 		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
 		src0 = create_collect(ctx, (struct ir3_instruction*[]){
 			src0,
@@ -2372,23 +2375,23 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_shared_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_shared(ctx, intr);
 		break;
-	case nir_intrinsic_image_var_load:
+	case nir_intrinsic_image_deref_load:
 		emit_intrinsic_load_image(ctx, intr, dst);
 		break;
-	case nir_intrinsic_image_var_store:
+	case nir_intrinsic_image_deref_store:
 		emit_intrinsic_store_image(ctx, intr);
 		break;
-	case nir_intrinsic_image_var_size:
+	case nir_intrinsic_image_deref_size:
 		emit_intrinsic_image_size(ctx, intr, dst);
 		break;
-	case nir_intrinsic_image_var_atomic_add:
-	case nir_intrinsic_image_var_atomic_min:
-	case nir_intrinsic_image_var_atomic_max:
-	case nir_intrinsic_image_var_atomic_and:
-	case nir_intrinsic_image_var_atomic_or:
-	case nir_intrinsic_image_var_atomic_xor:
-	case nir_intrinsic_image_var_atomic_exchange:
-	case nir_intrinsic_image_var_atomic_comp_swap:
+	case nir_intrinsic_image_deref_atomic_add:
+	case nir_intrinsic_image_deref_atomic_min:
+	case nir_intrinsic_image_deref_atomic_max:
+	case nir_intrinsic_image_deref_atomic_and:
+	case nir_intrinsic_image_deref_atomic_or:
+	case nir_intrinsic_image_deref_atomic_xor:
+	case nir_intrinsic_image_deref_atomic_exchange:
+	case nir_intrinsic_image_deref_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_image(ctx, intr);
 		break;
 	case nir_intrinsic_barrier:
@@ -2963,6 +2966,9 @@ emit_instr(struct ir3_context *ctx, nir_instr *instr)
 	switch (instr->type) {
 	case nir_instr_type_alu:
 		emit_alu(ctx, nir_instr_as_alu(instr));
+		break;
+	case nir_instr_type_deref:
+		/* ignored, handled as part of the intrinsic they are src to */
 		break;
 	case nir_instr_type_intrinsic:
 		emit_intrinsic(ctx, nir_instr_as_intrinsic(instr));
