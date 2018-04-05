@@ -41,6 +41,24 @@
 extern "C" {
 #endif
 
+struct _egl_xy
+{
+   EGLint x;
+   EGLint y;
+};
+
+struct _egl_hdr_metadata
+{
+   struct _egl_xy display_primary_r;
+   struct _egl_xy display_primary_g;
+   struct _egl_xy display_primary_b;
+   struct _egl_xy white_point;
+   EGLint max_luminance;
+   EGLint min_luminance;
+   EGLint max_cll;
+   EGLint max_fall;
+};
+
 /**
  * "Base" class for device driver surfaces.
  */
@@ -150,6 +168,8 @@ struct _egl_surface
    EGLBoolean BoundToTexture;
 
    EGLBoolean PostSubBufferSupportedNV;
+
+   struct _egl_hdr_metadata HdrMetadata;
 };
 
 

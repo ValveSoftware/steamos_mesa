@@ -86,6 +86,90 @@ _eglParseSurfaceAttribList(_EGLSurface *surf, const EGLint *attrib_list)
             break;
          surf->GLColorspace = val;
          break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_RX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_r.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_RY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_r.y = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_GX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_g.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_GY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_g.y = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_BX_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_b.x = val;
+         break;
+      case EGL_SMPTE2086_DISPLAY_PRIMARY_BY_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.display_primary_b.y = val;
+         break;
+      case EGL_SMPTE2086_WHITE_POINT_X_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.white_point.x = val;
+         break;
+      case EGL_SMPTE2086_WHITE_POINT_Y_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.white_point.y = val;
+         break;
+      case EGL_SMPTE2086_MAX_LUMINANCE_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_luminance = val;
+         break;
+      case EGL_SMPTE2086_MIN_LUMINANCE_EXT:
+         if (!dpy->Extensions.EXT_surface_SMPTE2086_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.min_luminance = val;
+         break;
+      case EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT:
+         if (!dpy->Extensions.EXT_surface_CTA861_3_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_cll = val;
+         break;
+      case EGL_CTA861_3_MAX_FRAME_AVERAGE_LEVEL_EXT:
+         if (!dpy->Extensions.EXT_surface_CTA861_3_metadata) {
+            err = EGL_BAD_ATTRIBUTE;
+            break;
+         }
+         surf->HdrMetadata.max_fall = val;
+         break;
       case EGL_VG_COLORSPACE:
          switch (val) {
          case EGL_VG_COLORSPACE_sRGB:
@@ -312,6 +396,19 @@ _eglInitSurface(_EGLSurface *surf, _EGLDisplay *dpy, EGLint type,
    /* the default swap interval is 1 */
    surf->SwapInterval = 1;
 
+   surf->HdrMetadata.display_primary_r.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_r.y = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_g.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_g.y = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_b.x = EGL_DONT_CARE;
+   surf->HdrMetadata.display_primary_b.y = EGL_DONT_CARE;
+   surf->HdrMetadata.white_point.x = EGL_DONT_CARE;
+   surf->HdrMetadata.white_point.y = EGL_DONT_CARE;
+   surf->HdrMetadata.max_luminance = EGL_DONT_CARE;
+   surf->HdrMetadata.min_luminance = EGL_DONT_CARE;
+   surf->HdrMetadata.max_cll = EGL_DONT_CARE;
+   surf->HdrMetadata.max_fall = EGL_DONT_CARE;
+
    err = _eglParseSurfaceAttribList(surf, attrib_list);
    if (err != EGL_SUCCESS)
       return _eglError(err, func);
@@ -438,6 +535,42 @@ _eglQuerySurface(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surface,
       *value = result;
       surface->BufferAgeRead = EGL_TRUE;
       break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_RX_EXT:
+      *value = surface->HdrMetadata.display_primary_r.x;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_RY_EXT:
+      *value = surface->HdrMetadata.display_primary_r.y;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_GX_EXT:
+      *value = surface->HdrMetadata.display_primary_g.x;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_GY_EXT:
+      *value = surface->HdrMetadata.display_primary_g.y;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_BX_EXT:
+      *value = surface->HdrMetadata.display_primary_b.x;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_BY_EXT:
+      *value = surface->HdrMetadata.display_primary_b.y;
+      break;
+   case EGL_SMPTE2086_WHITE_POINT_X_EXT:
+      *value = surface->HdrMetadata.white_point.x;
+      break;
+   case EGL_SMPTE2086_WHITE_POINT_Y_EXT:
+      *value = surface->HdrMetadata.white_point.y;
+      break;
+   case EGL_SMPTE2086_MAX_LUMINANCE_EXT:
+      *value = surface->HdrMetadata.max_luminance;
+      break;
+   case EGL_SMPTE2086_MIN_LUMINANCE_EXT:
+      *value = surface->HdrMetadata.min_luminance;
+      break;
+   case EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT:
+      *value = surface->HdrMetadata.max_cll;
+      break;
+   case EGL_CTA861_3_MAX_FRAME_AVERAGE_LEVEL_EXT:
+      *value = surface->HdrMetadata.max_fall;
+      break;
    default:
       return _eglError(EGL_BAD_ATTRIBUTE, "eglQuerySurface");
    }
@@ -526,6 +659,42 @@ _eglSurfaceAttrib(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surface,
       if (err != EGL_SUCCESS)
          break;
       surface->SwapBehavior = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_RX_EXT:
+      surface->HdrMetadata.display_primary_r.x = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_RY_EXT:
+      surface->HdrMetadata.display_primary_r.y = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_GX_EXT:
+      surface->HdrMetadata.display_primary_g.x = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_GY_EXT:
+      surface->HdrMetadata.display_primary_g.y = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_BX_EXT:
+      surface->HdrMetadata.display_primary_b.x = value;
+      break;
+   case EGL_SMPTE2086_DISPLAY_PRIMARY_BY_EXT:
+      surface->HdrMetadata.display_primary_b.y = value;
+      break;
+   case EGL_SMPTE2086_WHITE_POINT_X_EXT:
+      surface->HdrMetadata.white_point.x = value;
+      break;
+   case EGL_SMPTE2086_WHITE_POINT_Y_EXT:
+      surface->HdrMetadata.white_point.y = value;
+      break;
+   case EGL_SMPTE2086_MAX_LUMINANCE_EXT:
+      surface->HdrMetadata.max_luminance = value;
+      break;
+   case EGL_SMPTE2086_MIN_LUMINANCE_EXT:
+      surface->HdrMetadata.min_luminance = value;
+      break;
+   case EGL_CTA861_3_MAX_CONTENT_LIGHT_LEVEL_EXT:
+      surface->HdrMetadata.max_cll = value;
+      break;
+   case EGL_CTA861_3_MAX_FRAME_AVERAGE_LEVEL_EXT:
+      surface->HdrMetadata.max_fall = value;
       break;
    default:
       err = EGL_BAD_ATTRIBUTE;
