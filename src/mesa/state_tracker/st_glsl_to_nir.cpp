@@ -675,7 +675,6 @@ st_link_nir(struct gl_context *ctx,
 
       nir_shader *nir = shader->Program->nir;
       NIR_PASS_V(nir, nir_lower_io_to_scalar_early, mask);
-      NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
       st_nir_opts(nir, is_scalar[i]);
    }
 
@@ -775,6 +774,8 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    struct pipe_screen *screen = st->pipe->screen;
    const nir_shader_compiler_options *options =
       st->ctx->Const.ShaderCompilerOptions[prog->info.stage].NirOptions;
+
+   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
 
    NIR_PASS_V(nir, nir_split_var_copies);
    NIR_PASS_V(nir, nir_lower_var_copies);
