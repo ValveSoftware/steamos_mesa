@@ -327,6 +327,68 @@ get_ggtt_batch_bo(void *user_data, uint64_t address)
 
    return bo;
 }
+
+static struct phys_mem *
+ppgtt_walk(uint64_t pml4, uint64_t address)
+{
+   uint64_t shift = 39;
+   uint64_t addr = pml4;
+   for (int level = 4; level > 0; level--) {
+      struct phys_mem *table = search_phys_mem(addr);
+      if (!table)
+         return NULL;
+      int index = (address >> shift) & 0x1ff;
+      uint64_t entry = ((uint64_t *)table->data)[index];
+      if (!(entry & 1))
+         return NULL;
+      addr = entry & ~0xfff;
+      shift -= 9;
+   }
+   return search_phys_mem(addr);
+}
+
+static bool
+ppgtt_mapped(uint64_t pml4, uint64_t address)
+{
+   return ppgtt_walk(pml4, address) != NULL;
+}
+
+static struct gen_batch_decode_bo
+get_ppgtt_batch_bo(void *user_data, uint64_t address)
+{
+   struct gen_batch_decode_bo bo = {0};
+   uint64_t pml4 = *(uint64_t *)user_data;
+
+   address &= ~0xfff;
+
+   if (!ppgtt_mapped(pml4, address))
+      return bo;
+
+   /* Map everything until the first gap since we don't know how much the
+    * decoder actually needs.
+    */
+   uint64_t end = address;
+   while (ppgtt_mapped(pml4, end))
+      end += 4096;
+
+   bo.addr = address;
+   bo.size = end - address;
+   bo.map = mmap(NULL, bo.size, PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+   assert(bo.map != MAP_FAILED);
+
+   for (uint64_t page = address; page < end; page += 4096) {
+      struct phys_mem *phys_mem = ppgtt_walk(pml4, page);
+
+      void *res = mmap((uint8_t *)bo.map + (page - bo.addr), 4096, PROT_READ,
+                       MAP_SHARED | MAP_FIXED, mem_fd, phys_mem->fd_offset);
+      assert(res != MAP_FAILED);
+   }
+
+   add_gtt_bo_map(bo, true);
+
+   return bo;
+}
+
 #define GEN_ENGINE_RENDER 1
 #define GEN_ENGINE_BLITTER 2
 
@@ -368,6 +430,7 @@ handle_trace_block(uint32_t *p)
       }
 
       (void)engine; /* TODO */
+      batch_ctx.get_bo = get_ggtt_batch_bo;
       gen_print_batch(&batch_ctx, bo.map, bo.size, 0);
 
       clear_bo_maps();
@@ -393,7 +456,7 @@ aubinator_init(uint16_t aub_pci_id, const char *app_name)
    batch_flags |= GEN_BATCH_DECODE_FLOATS;
 
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, outfile, batch_flags,
-                             xml_path, get_ggtt_batch_bo, NULL, NULL);
+                             xml_path, NULL, NULL, NULL);
    batch_ctx.max_vbo_decoded_lines = max_vbo_lines;
 
    char *color = GREEN_HEADER, *reset_color = NORMAL;
@@ -533,11 +596,19 @@ handle_memtrace_reg_write(uint32_t *p)
    uint32_t ring_buffer_head = context[5];
    uint32_t ring_buffer_tail = context[7];
    uint32_t ring_buffer_start = context[9];
+   uint64_t pml4 = (uint64_t)context[49] << 32 | context[51];
 
    struct gen_batch_decode_bo ring_bo = get_ggtt_batch_bo(NULL,
                                                           ring_buffer_start);
    assert(ring_bo.size > 0);
    void *commands = (uint8_t *)ring_bo.map + (ring_bo.addr - ring_buffer_start);
+
+   if (context_descriptor & 0x100 /* ppgtt */) {
+      batch_ctx.get_bo = get_ppgtt_batch_bo;
+      batch_ctx.user_data = &pml4;
+   } else {
+      batch_ctx.get_bo = get_ggtt_batch_bo;
+   }
 
    (void)engine; /* TODO */
    gen_print_batch(&batch_ctx, commands, ring_buffer_tail - ring_buffer_head,
