@@ -155,12 +155,11 @@ brw_emit_surface_state(struct brw_context *brw,
    struct brw_bo *aux_bo = NULL;
    struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
-   struct intel_miptree_aux_buffer *aux_buf = intel_miptree_get_aux_buffer(mt);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
-      aux_surf = &aux_buf->surf;
-      aux_bo = aux_buf->bo;
-      aux_offset = aux_buf->offset;
+      aux_surf = &mt->aux_buf->surf;
+      aux_bo = mt->aux_buf->bo;
+      aux_offset = mt->aux_buf->offset;
 
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
@@ -178,8 +177,8 @@ brw_emit_surface_state(struct brw_context *brw,
    struct brw_bo *clear_bo = NULL;
    uint32_t clear_offset = 0;
    if (use_clear_address) {
-      clear_bo = aux_buf->clear_color_bo;
-      clear_offset = aux_buf->clear_color_offset;
+      clear_bo = mt->aux_buf->clear_color_bo;
+      clear_offset = mt->aux_buf->clear_color_offset;
    }
 
    isl_surf_fill_state(&brw->isl_dev, state, .surf = &surf, .view = &view,

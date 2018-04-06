@@ -950,7 +950,7 @@ create_ccs_buf_for_image(struct brw_context *brw,
    assert(mt->last_level == 0);
 
    /* We shouldn't already have a CCS */
-   assert(!mt->mcs_buf);
+   assert(!mt->aux_buf);
 
    if (!isl_surf_get_ccs_surf(&brw->isl_dev, &mt->surf, &temp_ccs_surf,
                               image->aux_pitch))
@@ -959,14 +959,14 @@ create_ccs_buf_for_image(struct brw_context *brw,
    assert(image->aux_offset < image->bo->size);
    assert(temp_ccs_surf.size <= image->bo->size - image->aux_offset);
 
-   mt->mcs_buf = calloc(sizeof(*mt->mcs_buf), 1);
-   if (mt->mcs_buf == NULL)
+   mt->aux_buf = calloc(sizeof(*mt->aux_buf), 1);
+   if (mt->aux_buf == NULL)
       return false;
 
    mt->aux_state = create_aux_state_map(mt, initial_state);
    if (!mt->aux_state) {
-      free(mt->mcs_buf);
-      mt->mcs_buf = NULL;
+      free(mt->aux_buf);
+      mt->aux_buf = NULL;
       return false;
    }
 
@@ -977,24 +977,24 @@ create_ccs_buf_for_image(struct brw_context *brw,
     */
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    if (devinfo->gen >= 10) {
-      mt->mcs_buf->clear_color_bo =
+      mt->aux_buf->clear_color_bo =
          brw_bo_alloc(brw->bufmgr, "clear_color_bo",
                       brw->isl_dev.ss.clear_color_state_size);
-      if (!mt->mcs_buf->clear_color_bo) {
-         free(mt->mcs_buf);
-         mt->mcs_buf = NULL;
+      if (!mt->aux_buf->clear_color_bo) {
+         free(mt->aux_buf);
+         mt->aux_buf = NULL;
          return false;
       }
    }
 
-   mt->mcs_buf->bo = image->bo;
+   mt->aux_buf->bo = image->bo;
    brw_bo_reference(image->bo);
 
-   mt->mcs_buf->offset = image->aux_offset;
-   mt->mcs_buf->size = image->bo->size - image->aux_offset;
-   mt->mcs_buf->pitch = image->aux_pitch;
-   mt->mcs_buf->qpitch = 0;
-   mt->mcs_buf->surf = temp_ccs_surf;
+   mt->aux_buf->offset = image->aux_offset;
+   mt->aux_buf->size = image->bo->size - image->aux_offset;
+   mt->aux_buf->pitch = image->aux_pitch;
+   mt->aux_buf->qpitch = 0;
+   mt->aux_buf->surf = temp_ccs_surf;
 
    return true;
 }
@@ -1249,7 +1249,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       brw_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
       intel_miptree_release(&(*mt)->r8stencil_mt);
-      intel_miptree_aux_buffer_free(intel_miptree_get_aux_buffer(*mt));
+      intel_miptree_aux_buffer_free((*mt)->aux_buf);
       free_aux_state_map((*mt)->aux_state);
 
       intel_miptree_release(&(*mt)->plane[0]);
@@ -1660,7 +1660,7 @@ intel_miptree_init_mcs(struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
                        int init_value)
 {
-   assert(mt->mcs_buf != NULL);
+   assert(mt->aux_buf != NULL);
 
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *
@@ -1672,16 +1672,16 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   void *map = brw_bo_map(brw, mt->mcs_buf->bo, MAP_WRITE | MAP_RAW);
+   void *map = brw_bo_map(brw, mt->aux_buf->bo, MAP_WRITE | MAP_RAW);
    if (unlikely(map == NULL)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
-      brw_bo_unreference(mt->mcs_buf->bo);
-      free(mt->mcs_buf);
+      brw_bo_unreference(mt->aux_buf->bo);
+      free(mt->aux_buf);
       return;
    }
    void *data = map;
-   memset(data, init_value, mt->mcs_buf->size);
-   brw_bo_unmap(mt->mcs_buf->bo);
+   memset(data, init_value, mt->aux_buf->size);
+   brw_bo_unmap(mt->aux_buf->bo);
 }
 
 static struct intel_miptree_aux_buffer *
@@ -1737,7 +1737,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                         GLuint num_samples)
 {
    assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
-   assert(mt->mcs_buf == NULL);
+   assert(mt->aux_buf == NULL);
    assert(mt->aux_usage == ISL_AUX_USAGE_MCS);
 
    /* Multisampled miptrees are only supported for single level. */
@@ -1759,9 +1759,9 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     * to be just used by the GPU.
     */
    const uint32_t alloc_flags = 0;
-   mt->mcs_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
                                         &temp_mcs_surf, alloc_flags, mt);
-   if (!mt->mcs_buf) {
+   if (!mt->aux_buf) {
       free(aux_state);
       return false;
    }
@@ -1777,7 +1777,7 @@ bool
 intel_miptree_alloc_ccs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt)
 {
-   assert(mt->mcs_buf == NULL);
+   assert(mt->aux_buf == NULL);
    assert(mt->aux_usage == ISL_AUX_USAGE_CCS_E ||
           mt->aux_usage == ISL_AUX_USAGE_CCS_D);
 
@@ -1808,9 +1808,9 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     */
    const uint32_t alloc_flags = mt->aux_usage == ISL_AUX_USAGE_CCS_E ?
                                 BO_ALLOC_ZEROED : BO_ALLOC_BUSY;
-   mt->mcs_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
                                         &temp_ccs_surf, alloc_flags, mt);
-   if (!mt->mcs_buf) {
+   if (!mt->aux_buf) {
       free(aux_state);
       return false;
    }
@@ -1832,7 +1832,7 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   assert(mt->hiz_buf);
+   assert(mt->aux_buf);
    assert(mt->surf.size > 0);
 
    if (devinfo->gen >= 8 || devinfo->is_haswell) {
@@ -1860,7 +1860,7 @@ bool
 intel_miptree_alloc_hiz(struct brw_context *brw,
 			struct intel_mipmap_tree *mt)
 {
-   assert(mt->hiz_buf == NULL);
+   assert(mt->aux_buf == NULL);
    assert(mt->aux_usage == ISL_AUX_USAGE_HIZ);
 
    enum isl_aux_state **aux_state =
@@ -1875,10 +1875,10 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    assert(ok);
 
    const uint32_t alloc_flags = BO_ALLOC_BUSY;
-   mt->hiz_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
                                         &temp_hiz_surf, alloc_flags, mt);
 
-   if (!mt->hiz_buf) {
+   if (!mt->aux_buf) {
       free(aux_state);
       return false;
    }
@@ -1951,7 +1951,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
       return false;
    }
 
-   if (!mt->hiz_buf) {
+   if (!mt->aux_buf) {
       return false;
    }
 
@@ -2031,7 +2031,7 @@ intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
 {
    assert(_mesa_is_format_color_format(mt->format));
 
-   if (!mt->mcs_buf)
+   if (!mt->aux_buf)
       return false;
 
    /* Clamp the level range to fit the miptree */
@@ -2058,7 +2058,7 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
                                   const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
 {
-   if (!mt->mcs_buf)
+   if (!mt->aux_buf)
       return;
 
    /* Fast color clear is supported for mipmapped surfaces only on Gen8+. */
@@ -2450,7 +2450,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
       break;
 
    case ISL_AUX_USAGE_MCS:
-      assert(mt->mcs_buf);
+      assert(mt->aux_buf);
       assert(start_level == 0 && num_levels == 1);
       const uint32_t level_layers =
          miptree_layer_range_length(mt, 0, start_layer, num_layers);
@@ -2462,7 +2462,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      if (!mt->mcs_buf)
+      if (!mt->aux_buf)
          return;
 
       for (uint32_t l = 0; l < num_levels; l++) {
@@ -2478,7 +2478,7 @@ intel_miptree_prepare_access(struct brw_context *brw,
       break;
 
    case ISL_AUX_USAGE_HIZ:
-      assert(mt->hiz_buf);
+      assert(mt->aux_buf);
       for (uint32_t l = 0; l < num_levels; l++) {
          const uint32_t level = start_level + l;
          if (!intel_miptree_level_has_hiz(mt, level))
@@ -2512,7 +2512,7 @@ intel_miptree_finish_write(struct brw_context *brw,
       break;
 
    case ISL_AUX_USAGE_MCS:
-      assert(mt->mcs_buf);
+      assert(mt->aux_buf);
       for (uint32_t a = 0; a < num_layers; a++) {
          intel_miptree_finish_mcs_write(brw, mt, start_layer + a,
                                         aux_usage);
@@ -2521,7 +2521,7 @@ intel_miptree_finish_write(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      if (!mt->mcs_buf)
+      if (!mt->aux_buf)
          return;
 
       for (uint32_t a = 0; a < num_layers; a++) {
@@ -2552,7 +2552,7 @@ intel_miptree_get_aux_state(const struct intel_mipmap_tree *mt,
    intel_miptree_check_level_layer(mt, level, layer);
 
    if (_mesa_is_format_color_format(mt->format)) {
-      assert(mt->mcs_buf != NULL);
+      assert(mt->aux_buf != NULL);
       assert(mt->surf.samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
@@ -2573,7 +2573,7 @@ intel_miptree_set_aux_state(struct brw_context *brw,
    num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
 
    if (_mesa_is_format_color_format(mt->format)) {
-      assert(mt->mcs_buf != NULL);
+      assert(mt->aux_buf != NULL);
       assert(mt->surf.samples == 1 ||
              mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
    } else if (mt->format == MESA_FORMAT_S_UINT8) {
@@ -2636,7 +2636,7 @@ intel_miptree_texture_aux_usage(struct brw_context *brw,
 
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      if (!mt->mcs_buf) {
+      if (!mt->aux_buf) {
          assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
          return ISL_AUX_USAGE_NONE;
       }
@@ -2724,12 +2724,12 @@ intel_miptree_render_aux_usage(struct brw_context *brw,
 
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_MCS:
-      assert(mt->mcs_buf);
+      assert(mt->aux_buf);
       return ISL_AUX_USAGE_MCS;
 
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      if (!mt->mcs_buf) {
+      if (!mt->aux_buf) {
          assert(mt->aux_usage == ISL_AUX_USAGE_CCS_D);
          return ISL_AUX_USAGE_NONE;
       }
@@ -2784,7 +2784,7 @@ intel_miptree_prepare_depth(struct brw_context *brw,
                             uint32_t start_layer, uint32_t layer_count)
 {
    intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
-                                mt->aux_usage, mt->hiz_buf != NULL);
+                                mt->aux_usage, mt->aux_buf != NULL);
 }
 
 void
@@ -2795,7 +2795,7 @@ intel_miptree_finish_depth(struct brw_context *brw,
 {
    if (depth_written) {
       intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
-                                 mt->hiz_buf != NULL);
+                                 mt->aux_buf != NULL);
    }
 }
 
@@ -2819,7 +2819,7 @@ intel_miptree_prepare_external(struct brw_context *brw,
       assert(mt->surf.logical_level0_px.depth == 1);
       assert(mt->surf.logical_level0_px.array_len == 1);
       assert(mt->surf.samples == 1);
-      assert(mt->mcs_buf != NULL);
+      assert(mt->aux_buf != NULL);
 
       aux_usage = mod_info->aux_usage;
       supports_fast_clear = mod_info->supports_clear_color;
@@ -2834,7 +2834,7 @@ void
 intel_miptree_finish_external(struct brw_context *brw,
                               struct intel_mipmap_tree *mt)
 {
-   if (!mt->mcs_buf)
+   if (!mt->aux_buf)
       return;
 
    /* We don't know the actual aux state of the aux surface.  The previous
@@ -2875,11 +2875,9 @@ intel_miptree_make_shareable(struct brw_context *brw,
                                 0, INTEL_REMAINING_LAYERS,
                                 ISL_AUX_USAGE_NONE, false);
 
-   struct intel_miptree_aux_buffer *aux_buf = intel_miptree_get_aux_buffer(mt);
-   if (aux_buf) {
-      intel_miptree_aux_buffer_free(aux_buf);
-      mt->mcs_buf = NULL;
-      mt->hiz_buf = NULL;
+   if (mt->aux_buf) {
+      intel_miptree_aux_buffer_free(mt->aux_buf);
+      mt->aux_buf = NULL;
 
       /* Make future calls of intel_miptree_level_has_hiz() return false. */
       for (uint32_t l = mt->first_level; l <= mt->last_level; ++l) {
