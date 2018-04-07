@@ -1493,20 +1493,7 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
 
    unbind = (cctx == NULL && ddraw == NULL && rdraw == NULL);
 
-   if (unbind || dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
-      dri2_destroy_surface(drv, disp, old_dsurf);
-      dri2_destroy_surface(drv, disp, old_rsurf);
-
-      if (!unbind)
-         dri2_dpy->ref_count++;
-      if (old_ctx) {
-         EGLDisplay old_disp = _eglGetDisplayHandle(old_ctx->Resource.Display);
-         dri2_destroy_context(drv, disp, old_ctx);
-         dri2_display_release(old_disp);
-      }
-
-      return EGL_TRUE;
-   } else {
+   if (!unbind && !dri2_dpy->core->bindContext(cctx, ddraw, rdraw)) {
       /* undo the previous _eglBindContext */
       _eglBindContext(old_ctx, old_dsurf, old_rsurf, &ctx, &tmp_dsurf, &tmp_rsurf);
       assert(&dri2_ctx->base == ctx &&
@@ -1527,6 +1514,20 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
        */
       return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
    }
+
+   dri2_destroy_surface(drv, disp, old_dsurf);
+   dri2_destroy_surface(drv, disp, old_rsurf);
+
+   if (!unbind)
+      dri2_dpy->ref_count++;
+
+   if (old_ctx) {
+      EGLDisplay old_disp = _eglGetDisplayHandle(old_ctx->Resource.Display);
+      dri2_destroy_context(drv, disp, old_ctx);
+      dri2_display_release(old_disp);
+   }
+
+   return EGL_TRUE;
 }
 
 __DRIdrawable *
