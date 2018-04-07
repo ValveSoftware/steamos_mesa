@@ -1289,12 +1289,6 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
          dri_config = dri2_config->dri_config[1][0];
       else
          dri_config = dri2_config->dri_config[0][0];
-
-      /* EGL_WINDOW_BIT is set only when there is a double-buffered dri_config.
-       * This makes sure the back buffer will always be used.
-       */
-      if (conf->SurfaceType & EGL_WINDOW_BIT)
-         dri2_ctx->base.WindowRenderBuffer = EGL_BACK_BUFFER;
    }
    else
       dri_config = NULL;

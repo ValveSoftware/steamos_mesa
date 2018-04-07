@@ -67,7 +67,33 @@ struct _egl_surface
    EGLenum TextureTarget;
    EGLBoolean MipmapTexture;
    EGLBoolean LargestPbuffer;
-   EGLenum RenderBuffer;
+
+   /**
+    * Value of EGL_RENDER_BUFFER selected at creation.
+    *
+    * The user may select, for window surfaces, the EGL_RENDER_BUFFER through
+    * the attribute list of eglCreateWindowSurface(). The EGL spec allows the
+    * implementation to ignore request, though; hence why we maintain both
+    * RequestedRenderBuffer and ActiveRenderBuffer. For pbuffer and pixmap
+    * surfaces, the EGL spec hard-codes the EGL_RENDER_BUFFER value and the
+    * user must not provide it in the attribute list.
+    *
+    * Refer to eglQuerySurface() in the EGL spec.
+    * eglQueryContext(EGL_RENDER_BUFFER) ignores this.
+    */
+   EGLenum RequestedRenderBuffer;
+
+   /**
+    * The EGL_RENDER_BUFFER in use by the context.
+    *
+    * This is valid only when bound as the draw surface.  This may differ from
+    * the RequestedRenderBuffer.
+    *
+    * Refer to eglQueryContext(EGL_RENDER_BUFFER) in the EGL spec.
+    * eglQuerySurface(EGL_RENDER_BUFFER) ignores this.
+    */
+   EGLenum ActiveRenderBuffer;
+
    EGLenum VGAlphaFormat;
    EGLenum VGColorspace;
    EGLenum GLColorspace;
