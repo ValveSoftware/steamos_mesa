@@ -420,6 +420,18 @@ The integer capabilities:
   by the driver, and the driver can throw assertion failures.
 * ``PIPE_CAP_PACKED_UNIFORMS``: True if the driver supports packed uniforms
   as opposed to padding to vec4s.
+* ``PIPE_CAP_CONSERVATIVE_RASTER_POST_SNAP_TRIANGLES``: Whether the
+  PIPE_CONSERVATIVE_RASTER_POST_SNAP mode is supported for triangles.
+* ``PIPE_CAP_CONSERVATIVE_RASTER_POST_SNAP_POINTS_LINES``: Whether the
+PIPE_CONSERVATIVE_RASTER_POST_SNAP mode is supported for points and lines.
+* ``PIPE_CAP_CONSERVATIVE_RASTER_PRE_SNAP_TRIANGLES``: Whether the
+PIPE_CONSERVATIVE_RASTER_PRE_SNAP mode is supported for triangles.
+* ``PIPE_CAP_CONSERVATIVE_RASTER_PRE_SNAP_POINTS_LINES``: Whether the
+PIPE_CONSERVATIVE_RASTER_PRE_SNAP mode is supported for points and lines.
+* ``PIPE_CAP_CONSERVATIVE_RASTER_POST_DEPTH_COVERAGE``: Whether PIPE_CAP_POST_DEPTH_COVERAGE
+works with conservative rasterization.
+* ``PIPE_CAP_MAX_CONSERVATIVE_RASTER_SUBPIXEL_PRECISION_BIAS``: The maximum
+subpixel precision bias in bits during conservative rasterization.
 
 
 .. _pipe_capf:
@@ -437,6 +449,12 @@ The floating-point capabilities are:
   applied to anisotropically filtered textures.
 * ``PIPE_CAPF_MAX_TEXTURE_LOD_BIAS``: The maximum :term:`LOD` bias that may be applied
   to filtered textures.
+* ``PIPE_CAPF_MIN_CONSERVATIVE_RASTER_DILATE``: The minimum conservative rasterization
+  dilation.
+* ``PIPE_CAPF_MAX_CONSERVATIVE_RASTER_DILATE``: The maximum conservative rasterization
+  dilation.
+* ``PIPE_CAPF_CONSERVATIVE_RASTER_DILATE_GRANULARITY``: The conservative rasterization
+  dilation granularity for values relative to the minimum dilation.
 
 
 .. _pipe_shader_cap:

@@ -910,6 +910,10 @@ static float r600_get_paramf(struct pipe_screen* pscreen,
 		return 16.0f;
 	case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
 		return 16.0f;
+    case PIPE_CAPF_MIN_CONSERVATIVE_RASTER_DILATE:
+    case PIPE_CAPF_MAX_CONSERVATIVE_RASTER_DILATE:
+    case PIPE_CAPF_CONSERVATIVE_RASTER_DILATE_GRANULARITY:
+        return 0.0f;
 	}
 	return 0.0f;
 }
