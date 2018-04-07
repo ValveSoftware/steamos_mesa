@@ -41,11 +41,20 @@ convert_block(nir_block *block, nir_builder *b)
       if (load_deref->intrinsic != nir_intrinsic_load_deref)
          continue;
 
-      nir_variable *var =
-         nir_deref_instr_get_variable(nir_src_as_deref(load_deref->src[0]));
-
-      if (var->data.mode != nir_var_system_value)
+      nir_deref_instr *deref = nir_src_as_deref(load_deref->src[0]);
+      if (deref->mode != nir_var_system_value)
          continue;
+
+      if (deref->deref_type != nir_deref_type_var) {
+         /* The only one system value that is an array and that is
+          * gl_SampleMask which is always an array of one element.
+          */
+         assert(deref->deref_type == nir_deref_type_array);
+         deref = nir_deref_instr_parent(deref);
+         assert(deref->deref_type == nir_deref_type_var);
+         assert(deref->var->data.location == SYSTEM_VALUE_SAMPLE_MASK_IN);
+      }
+      nir_variable *var = deref->var;
 
       b->cursor = nir_after_instr(&load_deref->instr);
 
