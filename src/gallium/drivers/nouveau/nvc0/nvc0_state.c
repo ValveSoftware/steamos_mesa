@@ -327,6 +327,20 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
 
     SB_IMMED_3D(so, PIXEL_CENTER_INTEGER, !cso->half_pixel_center);
 
+    if (class_3d >= GM200_3D_CLASS) {
+        if (cso->conservative_raster_mode != PIPE_CONSERVATIVE_RASTER_OFF) {
+            bool post_snap = cso->conservative_raster_mode ==
+                PIPE_CONSERVATIVE_RASTER_POST_SNAP;
+            uint32_t state = cso->subpixel_precision_x;
+            state |= cso->subpixel_precision_y << 4;
+            state |= (uint32_t)(cso->conservative_raster_dilate * 4) << 8;
+            state |= (post_snap || class_3d < GP100_3D_CLASS) ? 1 << 10 : 0;
+            SB_IMMED_3D(so, MACRO_CONSERVATIVE_RASTER_STATE, state);
+        } else {
+            SB_IMMED_3D(so, CONSERVATIVE_RASTER, 0);
+        }
+    }
+
     assert(so->size <= ARRAY_SIZE(so->state));
     return (void *)so;
 }
