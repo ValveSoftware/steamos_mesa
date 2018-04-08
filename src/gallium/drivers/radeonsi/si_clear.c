@@ -369,16 +369,23 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			continue;
 
 		unsigned level = fb->cbufs[i]->u.tex.level;
+		if (level > 0)
+			continue;
+
 		tex = (struct r600_texture *)fb->cbufs[i]->texture;
+
+		/* TODO: GFX9: Implement DCC fast clear for level 0 of
+		 * mipmapped textures. Mipmapped DCC has to clear a rectangular
+		 * area of DCC for level 0 (because the whole miptree is
+		 * organized in a 2D plane).
+		 */
+		if (sctx->chip_class >= GFX9 &&
+		    tex->resource.b.b.last_level > 0)
+			continue;
 
 		/* the clear is allowed if all layers are bound */
 		if (fb->cbufs[i]->u.tex.first_layer != 0 ||
 		    fb->cbufs[i]->u.tex.last_layer != util_max_layer(&tex->resource.b.b, 0)) {
-			continue;
-		}
-
-		/* cannot clear mipmapped textures */
-		if (fb->cbufs[i]->texture->last_level != 0) {
 			continue;
 		}
 

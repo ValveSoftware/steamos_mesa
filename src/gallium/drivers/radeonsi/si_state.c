@@ -2963,7 +2963,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
-		uint64_t cb_color_base, cb_color_fmask, cb_dcc_base;
+		uint64_t cb_color_base, cb_color_fmask, cb_color_cmask, cb_dcc_base;
 		unsigned cb_color_attrib;
 
 		if (!(sctx->framebuffer.dirty_cbufs & (1 << i)))
@@ -2998,9 +2998,13 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		/* Compute mutable surface parameters. */
 		cb_color_base = tex->resource.gpu_address >> 8;
 		cb_color_fmask = 0;
+		cb_color_cmask = tex->cmask.base_address_reg;
 		cb_dcc_base = 0;
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
 		cb_color_attrib = cb->cb_color_attrib;
+
+		if (cb->base.u.tex.level > 0)
+			cb_color_info &= C_028C70_FAST_CLEAR;
 
 		if (tex->fmask.size) {
 			cb_color_fmask = (tex->resource.gpu_address + tex->fmask.offset) >> 8;
@@ -3035,6 +3039,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			cb_color_base |= tex->surface.tile_swizzle;
 			if (!tex->fmask.size)
 				cb_color_fmask = cb_color_base;
+			if (cb->base.u.tex.level > 0)
+				cb_color_cmask = cb_color_base;
 			cb_color_attrib |= S_028C74_COLOR_SW_MODE(tex->surface.u.gfx9.surf.swizzle_mode) |
 					   S_028C74_FMASK_SW_MODE(tex->surface.u.gfx9.fmask.swizzle_mode) |
 					   S_028C74_RB_ALIGNED(meta.rb_aligned) |
@@ -3048,8 +3054,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			radeon_emit(cs, cb_color_info);		/* CB_COLOR0_INFO */
 			radeon_emit(cs, cb_color_attrib);	/* CB_COLOR0_ATTRIB */
 			radeon_emit(cs, cb->cb_dcc_control);	/* CB_COLOR0_DCC_CONTROL */
-			radeon_emit(cs, tex->cmask.base_address_reg); /* CB_COLOR0_CMASK */
-			radeon_emit(cs, S_028C80_BASE_256B(tex->cmask.base_address_reg >> 32)); /* CB_COLOR0_CMASK_BASE_EXT */
+			radeon_emit(cs, cb_color_cmask);	/* CB_COLOR0_CMASK */
+			radeon_emit(cs, S_028C80_BASE_256B(cb_color_cmask >> 32)); /* CB_COLOR0_CMASK_BASE_EXT */
 			radeon_emit(cs, cb_color_fmask);	/* CB_COLOR0_FMASK */
 			radeon_emit(cs, S_028C88_BASE_256B(cb_color_fmask >> 32)); /* CB_COLOR0_FMASK_BASE_EXT */
 			radeon_emit(cs, tex->color_clear_value[0]); /* CB_COLOR0_CLEAR_WORD0 */
@@ -3073,6 +3079,8 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 			if (!tex->fmask.size)
 				cb_color_fmask = cb_color_base;
+			if (cb->base.u.tex.level > 0)
+				cb_color_cmask = cb_color_base;
 			if (cb_dcc_base)
 				cb_dcc_base += level_info->dcc_offset >> 8;
 
@@ -3107,7 +3115,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			radeon_emit(cs, cb_color_info);		/* CB_COLOR0_INFO */
 			radeon_emit(cs, cb_color_attrib);	/* CB_COLOR0_ATTRIB */
 			radeon_emit(cs, cb->cb_dcc_control);	/* CB_COLOR0_DCC_CONTROL */
-			radeon_emit(cs, tex->cmask.base_address_reg);	/* CB_COLOR0_CMASK */
+			radeon_emit(cs, cb_color_cmask);	/* CB_COLOR0_CMASK */
 			radeon_emit(cs, tex->cmask.slice_tile_max);	/* CB_COLOR0_CMASK_SLICE */
 			radeon_emit(cs, cb_color_fmask);		/* CB_COLOR0_FMASK */
 			radeon_emit(cs, cb_color_fmask_slice);		/* CB_COLOR0_FMASK_SLICE */
