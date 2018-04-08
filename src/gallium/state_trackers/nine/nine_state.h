@@ -83,13 +83,12 @@
 #define NINE_STATE_FF_VSTRANSF (1 << 22)
 #define NINE_STATE_FF_PSSTAGES (1 << 23)
 #define NINE_STATE_FF_OTHER    (1 << 24)
-#define NINE_STATE_FOG_SHADER  (1 << 25)
-#define NINE_STATE_PS1X_SHADER (1 << 26)
-#define NINE_STATE_POINTSIZE_SHADER (1 << 27)
-#define NINE_STATE_MULTISAMPLE (1 << 28)
-#define NINE_STATE_SWVP        (1 << 29)
-#define NINE_STATE_ALL          0x3fffffff
-#define NINE_STATE_UNHANDLED   (1 << 30)
+#define NINE_STATE_VS_PARAMS_MISC  (1 << 25)
+#define NINE_STATE_PS_PARAMS_MISC (1 << 26)
+#define NINE_STATE_MULTISAMPLE (1 << 27)
+#define NINE_STATE_SWVP        (1 << 28)
+#define NINE_STATE_ALL          0x1fffffff
+#define NINE_STATE_UNHANDLED   (1 << 29)
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)

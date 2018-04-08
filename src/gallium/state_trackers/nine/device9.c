@@ -2538,7 +2538,7 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
 
     if (unlikely(This->is_recording)) {
         if (Type == D3DTSS_TEXTURETRANSFORMFLAGS)
-            state->changed.group |= NINE_STATE_PS1X_SHADER;
+            state->changed.group |= NINE_STATE_PS_PARAMS_MISC;
         state->changed.group |= NINE_STATE_FF_PSSTAGES;
         state->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
     } else
