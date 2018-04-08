@@ -228,13 +228,9 @@ brw_fast_clear_depth(struct gl_context *ctx)
       }
    }
 
-   /* Now, the HiZ buffer contains data that needs to be resolved to the depth
-    * buffer.
-    */
    intel_miptree_set_aux_state(brw, mt, depth_irb->mt_level,
                                depth_irb->mt_layer, num_layers,
                                ISL_AUX_STATE_CLEAR);
-
    return true;
 }
 
