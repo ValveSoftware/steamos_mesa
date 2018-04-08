@@ -3728,6 +3728,19 @@ intel_miptree_set_clear_color(struct brw_context *brw,
 {
    if (memcmp(&mt->fast_clear_color, &clear_color, sizeof(clear_color)) != 0) {
       mt->fast_clear_color = clear_color;
+      if (mt->aux_buf->clear_color_bo) {
+         /* We can't update the clear color while the hardware is still using
+          * the previous one for a resolve or sampling from it. Make sure that
+          * there are no pending commands at this point.
+          */
+         brw_emit_pipe_control_flush(brw, PIPE_CONTROL_CS_STALL);
+         for (int i = 0; i < 4; i++) {
+            brw_store_data_imm32(brw, mt->aux_buf->clear_color_bo,
+                                 mt->aux_buf->clear_color_offset + i * 4,
+                                 mt->fast_clear_color.u32[i]);
+         }
+         brw_emit_pipe_control_flush(brw, PIPE_CONTROL_STATE_CACHE_INVALIDATE);
+      }
       brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
       return true;
    }
