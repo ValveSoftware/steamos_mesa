@@ -90,7 +90,6 @@ static const struct debug_named_value debug_options[] = {
 	{ "nodccclear", DBG(NO_DCC_CLEAR), "Disable DCC fast clear." },
 	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
 	{ "nodccmsaa", DBG(NO_DCC_MSAA), "Disable DCC for MSAA" },
-	{ "dccmsaa", DBG(DCC_MSAA), "Enable DCC for MSAA" },
 	{ "nofmask", DBG(NO_FMASK), "Disable MSAA compression" },
 
 	/* Tests: */
@@ -984,9 +983,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	}
 
 	sscreen->dcc_msaa_allowed =
-		!(sscreen->debug_flags & DBG(NO_DCC_MSAA)) &&
-		(sscreen->debug_flags & DBG(DCC_MSAA) ||
-		 sscreen->info.chip_class == VI);
+		!(sscreen->debug_flags & DBG(NO_DCC_MSAA));
 
 	sscreen->cpdma_prefetch_writes_memory = sscreen->info.chip_class <= VI;
 

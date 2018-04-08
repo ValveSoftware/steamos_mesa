@@ -268,9 +268,18 @@ static int si_init_surface(struct si_screen *sscreen,
 	if (sscreen->info.chip_class >= VI &&
 	    (ptex->flags & SI_RESOURCE_FLAG_DISABLE_DCC ||
 	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT ||
-	     /* DCC MSAA array textures are disallowed due to incomplete clear impl. */
-	     (ptex->nr_samples >= 2 &&
-	      (!sscreen->dcc_msaa_allowed || ptex->array_size > 1))))
+	     (ptex->nr_samples >= 2 && !sscreen->dcc_msaa_allowed)))
+		flags |= RADEON_SURF_DISABLE_DCC;
+
+	/* VI: DCC clear for 4x and 8x MSAA array textures unimplemented. */
+	if (sscreen->info.chip_class == VI &&
+	    ptex->nr_samples >= 4 &&
+	    ptex->array_size > 1)
+		flags |= RADEON_SURF_DISABLE_DCC;
+
+	/* GFX9: DCC clear for 4x and 8x MSAA textures unimplemented. */
+	if (sscreen->info.chip_class >= GFX9 &&
+	    ptex->nr_samples >= 4)
 		flags |= RADEON_SURF_DISABLE_DCC;
 
 	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {

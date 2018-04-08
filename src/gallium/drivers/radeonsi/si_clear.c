@@ -211,19 +211,20 @@ void vi_dcc_clear_level(struct si_context *sctx,
 	if (sctx->chip_class >= GFX9) {
 		/* Mipmap level clears aren't implemented. */
 		assert(rtex->resource.b.b.last_level == 0);
-		/* MSAA needs a different clear size. */
-		assert(rtex->resource.b.b.nr_samples <= 1);
+		/* 4x and 8x MSAA needs a sophisticated compute shader for
+		 * the clear. See AMDVLK. */
+		assert(rtex->resource.b.b.nr_samples <= 2);
 		clear_size = rtex->surface.dcc_size;
 	} else {
 		unsigned num_layers = util_num_layers(&rtex->resource.b.b, level);
 
 		/* If this is 0, fast clear isn't possible. (can occur with MSAA) */
 		assert(rtex->surface.u.legacy.level[level].dcc_fast_clear_size);
-		/* Layered MSAA DCC fast clears need to clear dcc_fast_clear_size
-		 * bytes for each layer. This is not currently implemented, and
-		 * therefore MSAA DCC isn't even enabled with multiple layers.
+		/* Layered 4x and 8x MSAA DCC fast clears need to clear
+		 * dcc_fast_clear_size bytes for each layer. A compute shader
+		 * would be more efficient than separate per-layer clear operations.
 		 */
-		assert(rtex->resource.b.b.nr_samples <= 1 || num_layers == 1);
+		assert(rtex->resource.b.b.nr_samples <= 2 || num_layers == 1);
 
 		dcc_offset += rtex->surface.u.legacy.level[level].dcc_offset;
 		clear_size = rtex->surface.u.legacy.level[level].dcc_fast_clear_size *

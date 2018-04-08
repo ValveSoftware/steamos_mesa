@@ -154,7 +154,6 @@ enum {
 	DBG_NO_DCC_CLEAR,
 	DBG_NO_DCC_FB,
 	DBG_NO_DCC_MSAA,
-	DBG_DCC_MSAA,
 	DBG_NO_FMASK,
 
 	/* Tests: */
