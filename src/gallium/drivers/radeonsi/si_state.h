@@ -379,10 +379,6 @@ void si_bindless_descriptor_slab_free(void *priv, struct pb_slab *pslab);
 void si_rebind_buffer(struct si_context *sctx, struct pipe_resource *buf,
 		      uint64_t old_va);
 /* si_state.c */
-struct si_shader_selector;
-
-void si_init_atom(struct si_context *sctx, struct si_atom *atom,
-		  void (*emit_func)(struct si_context *ctx, struct si_atom *state));
 void si_init_state_functions(struct si_context *sctx);
 void si_init_screen_state_functions(struct si_screen *sscreen);
 void

@@ -2762,8 +2762,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.make_image_handle_resident = si_make_image_handle_resident;
 
 	/* Shader user data. */
-	si_init_atom(sctx, &sctx->atoms.s.shader_pointers,
-		     si_emit_graphics_shader_pointers);
+	sctx->atoms.s.shader_pointers.emit = si_emit_graphics_shader_pointers;
 
 	/* Set default and immutable mappings. */
 	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);

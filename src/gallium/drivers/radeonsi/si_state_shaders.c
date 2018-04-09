@@ -3409,9 +3409,8 @@ void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
 
 void si_init_shader_functions(struct si_context *sctx)
 {
-	si_init_atom(sctx, &sctx->atoms.s.spi_map, si_emit_spi_map);
-	si_init_atom(sctx, &sctx->atoms.s.scratch_state,
-		     si_emit_scratch_state);
+	sctx->atoms.s.spi_map.emit = si_emit_spi_map;
+	sctx->atoms.s.scratch_state.emit = si_emit_scratch_state;
 
 	sctx->b.create_vs_state = si_create_shader_selector;
 	sctx->b.create_tcs_state = si_create_shader_selector;
