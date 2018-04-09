@@ -316,6 +316,7 @@ struct si_compiler {
 	LLVMTargetMachineRef		tm;
 	const char			*triple;
 	LLVMTargetLibraryInfoRef	target_library_info;
+	LLVMPassManagerRef		passmgr;
 };
 
 /* State of the context creating the shader object. */

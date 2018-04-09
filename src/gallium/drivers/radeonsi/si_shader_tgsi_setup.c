@@ -39,11 +39,6 @@
 #include "util/u_debug.h"
 
 #include <stdio.h>
-#include <llvm-c/Transforms/IPO.h>
-#include <llvm-c/Transforms/Scalar.h>
-#if HAVE_LLVM >= 0x0700
-#include <llvm-c/Transforms/Utils.h>
-#endif
 
 enum si_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_VS = 87,
@@ -1212,41 +1207,14 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 
 void si_llvm_optimize_module(struct si_shader_context *ctx)
 {
-	struct gallivm_state *gallivm = &ctx->gallivm;
-
 	/* Dump LLVM IR before any optimization passes */
 	if (ctx->screen->debug_flags & DBG(PREOPT_IR) &&
 	    si_can_dump_shader(ctx->screen, ctx->type))
 		LLVMDumpModule(ctx->gallivm.module);
 
-	/* Create the pass manager */
-	gallivm->passmgr = LLVMCreatePassManager();
-
-	LLVMAddTargetLibraryInfo(ctx->compiler->target_library_info,
-				 gallivm->passmgr);
-
-	if (si_extra_shader_checks(ctx->screen, ctx->type))
-		LLVMAddVerifierPass(gallivm->passmgr);
-
-	LLVMAddAlwaysInlinerPass(gallivm->passmgr);
-
-	/* This pass should eliminate all the load and store instructions */
-	LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
-
-	/* Add some optimization passes */
-	LLVMAddScalarReplAggregatesPass(gallivm->passmgr);
-	LLVMAddLICMPass(gallivm->passmgr);
-	LLVMAddAggressiveDCEPass(gallivm->passmgr);
-	LLVMAddCFGSimplificationPass(gallivm->passmgr);
-	/* This is recommended by the instruction combining pass. */
-	LLVMAddEarlyCSEMemSSAPass(gallivm->passmgr);
-	LLVMAddInstructionCombiningPass(gallivm->passmgr);
-
 	/* Run the pass */
-	LLVMRunPassManager(gallivm->passmgr, ctx->gallivm.module);
-
+	LLVMRunPassManager(ctx->compiler->passmgr, ctx->gallivm.module);
 	LLVMDisposeBuilder(ctx->ac.builder);
-	LLVMDisposePassManager(gallivm->passmgr);
 }
 
 void si_llvm_dispose(struct si_shader_context *ctx)

@@ -41,6 +41,12 @@
 #include "vl/vl_decoder.h"
 #include "driver_ddebug/dd_util.h"
 
+#include <llvm-c/Transforms/IPO.h>
+#include <llvm-c/Transforms/Scalar.h>
+#if HAVE_LLVM >= 0x0700
+#include <llvm-c/Transforms/Utils.h>
+#endif
+
 static const struct debug_named_value debug_options[] = {
 	/* Shader logging options: */
 	{ "vs", DBG(VS), "Print vertex shaders" },
@@ -121,10 +127,34 @@ static void si_init_compiler(struct si_screen *sscreen,
 		gallivm_create_target_library_info(compiler->triple);
 	if (!compiler->target_library_info)
 		return;
+
+	compiler->passmgr = LLVMCreatePassManager();
+	if (!compiler->passmgr)
+		return;
+
+	LLVMAddTargetLibraryInfo(compiler->target_library_info,
+				 compiler->passmgr);
+
+	/* Add LLVM passes into the pass manager. */
+	if (sscreen->debug_flags & DBG(CHECK_IR))
+		LLVMAddVerifierPass(compiler->passmgr);
+
+	LLVMAddAlwaysInlinerPass(compiler->passmgr);
+	/* This pass should eliminate all the load and store instructions. */
+	LLVMAddPromoteMemoryToRegisterPass(compiler->passmgr);
+	LLVMAddScalarReplAggregatesPass(compiler->passmgr);
+	LLVMAddLICMPass(compiler->passmgr);
+	LLVMAddAggressiveDCEPass(compiler->passmgr);
+	LLVMAddCFGSimplificationPass(compiler->passmgr);
+	/* This is recommended by the instruction combining pass. */
+	LLVMAddEarlyCSEMemSSAPass(compiler->passmgr);
+	LLVMAddInstructionCombiningPass(compiler->passmgr);
 }
 
 static void si_destroy_compiler(struct si_compiler *compiler)
 {
+	if (compiler->passmgr)
+		LLVMDisposePassManager(compiler->passmgr);
 	if (compiler->target_library_info)
 		gallivm_dispose_target_library_info(compiler->target_library_info);
 	if (compiler->tm)

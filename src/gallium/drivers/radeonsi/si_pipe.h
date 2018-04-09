@@ -1391,13 +1391,6 @@ static inline bool si_can_dump_shader(struct si_screen *sscreen,
 	return sscreen->debug_flags & (1 << processor);
 }
 
-static inline bool si_extra_shader_checks(struct si_screen *sscreen,
-					  unsigned processor)
-{
-	return (sscreen->debug_flags & DBG(CHECK_IR)) ||
-	       si_can_dump_shader(sscreen, processor);
-}
-
 static inline bool si_get_strmout_en(struct si_context *sctx)
 {
 	return sctx->streamout.streamout_enabled ||
