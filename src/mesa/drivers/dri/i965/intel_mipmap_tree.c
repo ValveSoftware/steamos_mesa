@@ -627,6 +627,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    if (!bo) {
       mt->bo = brw_bo_alloc_tiled(brw->bufmgr, "isl-miptree",
                                   mt->surf.size,
+                                  BRW_MEMZONE_OTHER,
                                   isl_tiling_to_i915_tiling(
                                      mt->surf.tiling),
                                   mt->surf.row_pitch, alloc_flags);
@@ -990,7 +991,8 @@ create_ccs_buf_for_image(struct brw_context *brw,
       mt->aux_buf->clear_color_bo =
          brw_bo_alloc_tiled(brw->bufmgr, "clear_color_bo",
                             brw->isl_dev.ss.clear_color_state_size,
-                            I915_TILING_NONE, 0, BO_ALLOC_ZEROED);
+                            BRW_MEMZONE_OTHER, I915_TILING_NONE, 0,
+                            BO_ALLOC_ZEROED);
       if (!mt->aux_buf->clear_color_bo) {
          free(mt->aux_buf);
          mt->aux_buf = NULL;
@@ -1701,8 +1703,8 @@ intel_alloc_aux_buffer(struct brw_context *brw,
     * trying to recalculate based on different format block sizes.
     */
    buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "aux-miptree", size,
-                                I915_TILING_Y, aux_surf->row_pitch,
-                                alloc_flags);
+                                BRW_MEMZONE_OTHER, I915_TILING_Y,
+                                aux_surf->row_pitch, alloc_flags);
    if (!buf->bo) {
       free(buf);
       return NULL;

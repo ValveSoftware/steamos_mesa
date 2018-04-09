@@ -268,6 +268,7 @@ static struct brw_bo *
 bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   const char *name,
                   uint64_t size,
+                  enum brw_memory_zone memzone,
                   unsigned flags,
                   uint32_t tiling_mode,
                   uint32_t stride)
@@ -426,23 +427,27 @@ err:
 
 struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
-             const char *name, uint64_t size)
+             const char *name, uint64_t size,
+             enum brw_memory_zone memzone)
 {
-   return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0);
+   return bo_alloc_internal(bufmgr, name, size, memzone,
+                            0, I915_TILING_NONE, 0);
 }
 
 struct brw_bo *
 brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
-                   uint64_t size, uint32_t tiling_mode, uint32_t pitch,
+                   uint64_t size, enum brw_memory_zone memzone,
+                   uint32_t tiling_mode, uint32_t pitch,
                    unsigned flags)
 {
-   return bo_alloc_internal(bufmgr, name, size, flags, tiling_mode, pitch);
+   return bo_alloc_internal(bufmgr, name, size, memzone,
+                            flags, tiling_mode, pitch);
 }
 
 struct brw_bo *
 brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr, const char *name,
-                      int x, int y, int cpp, uint32_t tiling,
-                      uint32_t *pitch, unsigned flags)
+                      int x, int y, int cpp, enum brw_memory_zone memzone,
+                      uint32_t tiling, uint32_t *pitch, unsigned flags)
 {
    uint64_t size;
    uint32_t stride;
@@ -477,7 +482,8 @@ brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr, const char *name,
    if (tiling == I915_TILING_NONE)
       stride = 0;
 
-   return bo_alloc_internal(bufmgr, name, size, flags, tiling, stride);
+   return bo_alloc_internal(bufmgr, name, size, flags,
+                            memzone, tiling, stride);
 }
 
 /**

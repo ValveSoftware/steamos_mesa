@@ -745,6 +745,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
     */
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
                                   surf.size + aux_surf.size,
+                                  BRW_MEMZONE_OTHER,
                                   isl_tiling_to_i915_tiling(mod_info->tiling),
                                   surf.row_pitch, BO_ALLOC_ZEROED);
    if (image->bo == NULL) {
@@ -1834,7 +1835,7 @@ intel_detect_swizzling(struct intel_screen *screen)
    uint32_t swizzle_mode = 0;
    struct brw_bo *buffer =
       brw_bo_alloc_tiled(screen->bufmgr, "swizzle test", 32768,
-                         tiling, 512, 0);
+                         BRW_MEMZONE_OTHER, tiling, 512, 0);
    if (buffer == NULL)
       return false;
 
@@ -1909,11 +1910,11 @@ intel_detect_pipelined_register(struct intel_screen *screen,
    bool success = false;
 
    /* Create a zero'ed temporary buffer for reading our results */
-   results = brw_bo_alloc(screen->bufmgr, "registers", 4096);
+   results = brw_bo_alloc(screen->bufmgr, "registers", 4096, BRW_MEMZONE_OTHER);
    if (results == NULL)
       goto err;
 
-   bo = brw_bo_alloc(screen->bufmgr, "batchbuffer", 4096);
+   bo = brw_bo_alloc(screen->bufmgr, "batchbuffer", 4096, BRW_MEMZONE_OTHER);
    if (bo == NULL)
       goto err_results;
 
@@ -2721,6 +2722,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
                                            width,
                                            height,
                                            cpp,
+                                           BRW_MEMZONE_OTHER,
                                            I915_TILING_X, &pitch,
                                            BO_ALLOC_BUSY);
 

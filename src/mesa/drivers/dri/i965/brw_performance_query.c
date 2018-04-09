@@ -1181,7 +1181,8 @@ brw_begin_perf_query(struct gl_context *ctx,
       }
 
       obj->oa.bo =
-         brw_bo_alloc(brw->bufmgr, "perf. query OA MI_RPC bo", MI_RPC_BO_SIZE);
+         brw_bo_alloc(brw->bufmgr, "perf. query OA MI_RPC bo", MI_RPC_BO_SIZE,
+                      BRW_MEMZONE_OTHER);
 #ifdef DEBUG
       /* Pre-filling the BO helps debug whether writes landed. */
       void *map = brw_bo_map(brw, obj->oa.bo, MAP_WRITE);
@@ -1240,7 +1241,7 @@ brw_begin_perf_query(struct gl_context *ctx,
 
       obj->pipeline_stats.bo =
          brw_bo_alloc(brw->bufmgr, "perf. query pipeline stats bo",
-                      STATS_BO_SIZE);
+                      STATS_BO_SIZE, BRW_MEMZONE_OTHER);
 
       /* Take starting snapshots. */
       snapshot_statistics_registers(brw, obj, 0);

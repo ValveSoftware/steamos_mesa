@@ -225,17 +225,19 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 static void
 recreate_growing_buffer(struct brw_context *brw,
                         struct brw_growing_bo *grow,
-                        const char *name, unsigned size)
+                        const char *name, unsigned size,
+                        enum brw_memory_zone memzone)
 {
    struct intel_screen *screen = brw->screen;
    struct intel_batchbuffer *batch = &brw->batch;
    struct brw_bufmgr *bufmgr = screen->bufmgr;
 
-   grow->bo = brw_bo_alloc(bufmgr, name, size);
+   grow->bo = brw_bo_alloc(bufmgr, name, size, memzone);
    grow->bo->kflags |= can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
    grow->partial_bo = NULL;
    grow->partial_bo_map = NULL;
    grow->partial_bytes = 0;
+   grow->memzone = memzone;
 
    if (batch->use_shadow_copy)
       grow->map = realloc(grow->map, grow->bo->size);
@@ -254,10 +256,12 @@ intel_batchbuffer_reset(struct brw_context *brw)
    }
    batch->last_bo = batch->batch.bo;
 
-   recreate_growing_buffer(brw, &batch->batch, "batchbuffer", BATCH_SZ);
+   recreate_growing_buffer(brw, &batch->batch, "batchbuffer", BATCH_SZ,
+                           BRW_MEMZONE_OTHER);
    batch->map_next = batch->batch.map;
 
-   recreate_growing_buffer(brw, &batch->state, "statebuffer", STATE_SZ);
+   recreate_growing_buffer(brw, &batch->state, "statebuffer", STATE_SZ,
+                           BRW_MEMZONE_DYNAMIC);
 
    /* Avoid making 0 a valid state offset - otherwise the decoder will try
     * and decode data when we use offset 0 as a null pointer.
@@ -396,7 +400,8 @@ grow_buffer(struct brw_context *brw,
       finish_growing_bos(grow);
    }
 
-   struct brw_bo *new_bo = brw_bo_alloc(bufmgr, bo->name, new_size);
+   struct brw_bo *new_bo =
+      brw_bo_alloc(bufmgr, bo->name, new_size, grow->memzone);
 
    /* Copy existing data to the new larger buffer */
    grow->partial_bo_map = grow->map;

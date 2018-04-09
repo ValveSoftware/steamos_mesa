@@ -580,7 +580,8 @@ brw_init_pipe_control(struct brw_context *brw,
     * the gen6 workaround because it involves actually writing to
     * the buffer, and the kernel doesn't let us write to the batch.
     */
-   brw->workaround_bo = brw_bo_alloc(brw->bufmgr, "workaround", 4096);
+   brw->workaround_bo = brw_bo_alloc(brw->bufmgr, "workaround", 4096,
+                                     BRW_MEMZONE_OTHER);
    if (brw->workaround_bo == NULL)
       return -ENOMEM;
 

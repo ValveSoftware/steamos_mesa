@@ -479,6 +479,7 @@ struct brw_growing_bo {
    struct brw_bo *partial_bo;
    uint32_t *partial_bo_map;
    unsigned partial_bytes;
+   enum brw_memory_zone memzone;
 };
 
 struct intel_batchbuffer {
