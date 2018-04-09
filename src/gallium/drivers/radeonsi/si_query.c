@@ -29,6 +29,7 @@
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
 #include "util/os_time.h"
+#include "util/u_suballoc.h"
 #include "tgsi/tgsi_text.h"
 #include "amd/common/sid.h"
 

@@ -25,6 +25,7 @@
 #include "radeonsi/si_pipe.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_transfer.h"
 #include <inttypes.h>
 #include <stdio.h>
 

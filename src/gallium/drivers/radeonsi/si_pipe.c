@@ -29,6 +29,7 @@
 #include "sid.h"
 
 #include "radeon/radeon_uvd.h"
+#include "util/disk_cache.h"
 #include "util/hash_table.h"
 #include "util/u_log.h"
 #include "util/u_memory.h"

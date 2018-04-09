@@ -26,14 +26,13 @@
 #define SI_STATE_H
 
 #include "si_pm4.h"
-#include "radeon/r600_pipe_common.h"
 
 #include "pipebuffer/pb_slab.h"
+#include "util/u_blitter.h"
 
 #define SI_NUM_GRAPHICS_SHADERS (PIPE_SHADER_TESS_EVAL+1)
 #define SI_NUM_SHADERS (PIPE_SHADER_COMPUTE+1)
 
-#define SI_MAX_ATTRIBS			16
 #define SI_NUM_VERTEX_BUFFERS		SI_MAX_ATTRIBS
 #define SI_NUM_SAMPLERS			32 /* OpenGL textures units per shader */
 #define SI_NUM_CONST_BUFFERS		16
@@ -43,6 +42,15 @@
 struct si_screen;
 struct si_shader;
 struct si_shader_selector;
+struct r600_texture;
+struct si_qbo_state;
+
+/* This encapsulates a state or an operation which can emitted into the GPU
+ * command stream. */
+struct r600_atom {
+	void (*emit)(struct si_context *ctx, struct r600_atom *state);
+	unsigned short		id;
+};
 
 struct si_state_blend {
 	struct si_pm4_state	pm4;
@@ -447,15 +455,6 @@ void si_update_prims_generated_query_state(struct si_context *sctx,
 					   unsigned type, int diff);
 void si_init_streamout_functions(struct si_context *sctx);
 
-
-static inline unsigned
-si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
-{
-	if (stencil)
-		return rtex->surface.u.legacy.stencil_tiling_index[level];
-	else
-		return rtex->surface.u.legacy.tiling_index[level];
-}
 
 static inline unsigned si_get_constbuf_slot(unsigned slot)
 {

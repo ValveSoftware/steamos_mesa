@@ -25,6 +25,7 @@
 #include "si_build_pm4.h"
 
 #include "util/u_memory.h"
+#include "util/u_suballoc.h"
 
 static void si_set_streamout_enable(struct si_context *sctx, bool enable);
 

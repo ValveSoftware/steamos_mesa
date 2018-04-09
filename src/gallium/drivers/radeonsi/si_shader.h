@@ -134,14 +134,19 @@
 #include <llvm-c/Core.h> /* LLVMModuleRef */
 #include <llvm-c/TargetMachine.h>
 #include "tgsi/tgsi_scan.h"
+#include "util/u_inlines.h"
 #include "util/u_queue.h"
 
 #include "ac_binary.h"
 #include "ac_llvm_build.h"
-#include "si_state.h"
+
+#include <stdio.h>
 
 struct nir_shader;
+struct si_shader;
+struct si_context;
 
+#define SI_MAX_ATTRIBS		16
 #define SI_MAX_VS_OUTPUTS	40
 
 /* Shader IO unique indices are supported for TGSI_SEMANTIC_GENERIC with an
