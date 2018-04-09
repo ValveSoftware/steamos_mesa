@@ -236,20 +236,30 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
       return;
    }
 
+   struct gen_batch_decode_bo bo = ctx->surface_base;
    const uint32_t *pointers = ctx->surface_base.map + offset;
    for (int i = 0; i < count; i++) {
       if (pointers[i] == 0)
          continue;
 
-      if (pointers[i] % 32 != 0 ||
-          (pointers[i] + strct->dw_length * 4) >= ctx->surface_base.size) {
+      if (pointers[i] % 32 != 0) {
+         fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
+         continue;
+      }
+
+      uint64_t addr = ctx->surface_base.addr + pointers[i];
+      uint32_t size = strct->dw_length * 4;
+
+      if (addr < bo.addr || addr + size >= bo.addr + bo.size)
+         bo = ctx->get_bo(ctx->user_data, addr);
+
+      if (addr < bo.addr || addr + size >= bo.addr + bo.size) {
          fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
          continue;
       }
 
       fprintf(ctx->fp, "pointer %u: %08x\n", i, pointers[i]);
-      ctx_print_group(ctx, strct, ctx->surface_base.addr + pointers[i],
-                      ctx->surface_base.map + pointers[i]);
+      ctx_print_group(ctx, strct, addr, bo.map + (addr - bo.addr));
    }
 }
 
