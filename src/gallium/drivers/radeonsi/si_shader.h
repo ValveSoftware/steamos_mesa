@@ -314,6 +314,7 @@ struct si_shader;
 /* Per-thread persistent LLVM objects. */
 struct si_compiler {
 	LLVMTargetMachineRef		tm;
+	const char			*triple;
 };
 
 /* State of the context creating the shader object. */

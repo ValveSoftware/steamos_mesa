@@ -1009,7 +1009,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
-	LLVMSetTarget(ctx->gallivm.module, "amdgcn--");
+	LLVMSetTarget(ctx->gallivm.module, compiler->triple);
 
 	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(compiler->tm);
 	char *data_layout_str = LLVMCopyStringRepOfTargetData(data_layout);
