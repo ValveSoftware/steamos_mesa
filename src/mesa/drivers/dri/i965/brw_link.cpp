@@ -359,17 +359,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       }
    }
 
-   if (brw->ctx.Cache) {
-      for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
-         struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
-         if (!shader)
-            continue;
-
-         struct gl_program *prog = shader->Program;
-         brw_program_serialize_nir(ctx, prog);
-      }
-   }
-
    if (brw->precompile && !brw_shader_precompile(ctx, shProg))
       return false;
 

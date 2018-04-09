@@ -843,6 +843,9 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
 void
 brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 {
+   if (prog->driver_cache_blob)
+      return;
+
    struct blob writer;
    blob_init(&writer);
    nir_serialize(&writer, prog->nir);

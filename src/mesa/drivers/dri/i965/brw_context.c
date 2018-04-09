@@ -343,6 +343,10 @@ brw_init_driver_functions(struct brw_context *brw,
    functions->ProgramBinarySerializeDriverBlob = brw_program_serialize_nir;
    functions->ProgramBinaryDeserializeDriverBlob =
       brw_deserialize_program_binary;
+
+   if (brw->screen->disk_cache) {
+      functions->ShaderCacheSerializeDriverBlob = brw_program_serialize_nir;
+   }
 }
 
 static void
