@@ -1282,6 +1282,21 @@ struct dd_function_table {
                                 struct gl_semaphore_object *semObj,
                                 int fd);
    /*@}*/
+
+   /**
+    * \name Disk shader cache functions
+    */
+   /*@{*/
+   /**
+    * Called to initialize gl_program::driver_cache_blob (and size) with a
+    * ralloc allocated buffer.
+    *
+    * This buffer will be saved and restored as part of the gl_program
+    * serialization and deserialization.
+    */
+   void (*ShaderCacheSerializeDriverBlob)(struct gl_context *ctx,
+                                          struct gl_program *prog);
+   /*@}*/
 };
 
 
