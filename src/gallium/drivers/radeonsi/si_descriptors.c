@@ -2154,7 +2154,7 @@ static void si_emit_global_shader_pointers(struct si_context *sctx,
 }
 
 void si_emit_graphics_shader_pointers(struct si_context *sctx,
-                                      struct r600_atom *atom)
+                                      struct si_atom *atom)
 {
 	uint32_t *sh_base = sctx->shader_pointers.sh_base;
 

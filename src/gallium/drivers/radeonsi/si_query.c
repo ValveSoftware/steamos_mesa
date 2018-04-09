@@ -937,7 +937,7 @@ static void emit_set_predicate(struct si_context *ctx,
 }
 
 static void si_emit_query_predication(struct si_context *ctx,
-				      struct r600_atom *atom)
+				      struct si_atom *atom)
 {
 	struct si_query_hw *query = (struct si_query_hw *)ctx->render_cond;
 	struct si_query_buffer *qbuf;
@@ -1776,7 +1776,7 @@ static void si_render_condition(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_query_hw *rquery = (struct si_query_hw *)query;
-	struct r600_atom *atom = &sctx->render_cond_atom;
+	struct si_atom *atom = &sctx->render_cond_atom;
 
 	if (query) {
 		bool needs_workaround = false;

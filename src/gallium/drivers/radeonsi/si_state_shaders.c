@@ -2598,7 +2598,7 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 	return ps_input_cntl;
 }
 
-static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
+static void si_emit_spi_map(struct si_context *sctx, struct si_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	struct si_shader *ps = sctx->ps_shader.current;
@@ -3329,7 +3329,7 @@ bool si_update_shaders(struct si_context *sctx)
 }
 
 static void si_emit_scratch_state(struct si_context *sctx,
-				  struct r600_atom *atom)
+				  struct si_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 

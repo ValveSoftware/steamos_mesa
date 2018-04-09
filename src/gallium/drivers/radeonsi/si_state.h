@@ -47,8 +47,8 @@ struct si_qbo_state;
 
 /* This encapsulates a state or an operation which can emitted into the GPU
  * command stream. */
-struct r600_atom {
-	void (*emit)(struct si_context *ctx, struct r600_atom *state);
+struct si_atom {
+	void (*emit)(struct si_context *ctx, struct si_atom *state);
 	unsigned short		id;
 };
 
@@ -132,7 +132,7 @@ struct si_state_dsa {
 };
 
 struct si_stencil_ref {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	struct pipe_stencil_ref		state;
 	struct si_dsa_stencil_ref_part	dsa_part;
 };
@@ -178,33 +178,33 @@ union si_state {
 union si_state_atoms {
 	struct {
 		/* The order matters. */
-		struct r600_atom *render_cond;
-		struct r600_atom *streamout_begin;
-		struct r600_atom *streamout_enable; /* must be after streamout_begin */
-		struct r600_atom *framebuffer;
-		struct r600_atom *msaa_sample_locs;
-		struct r600_atom *db_render_state;
-		struct r600_atom *dpbb_state;
-		struct r600_atom *msaa_config;
-		struct r600_atom *sample_mask;
-		struct r600_atom *cb_render_state;
-		struct r600_atom *blend_color;
-		struct r600_atom *clip_regs;
-		struct r600_atom *clip_state;
-		struct r600_atom *shader_pointers;
-		struct r600_atom *scissors;
-		struct r600_atom *viewports;
-		struct r600_atom *stencil_ref;
-		struct r600_atom *spi_map;
-		struct r600_atom *scratch_state;
+		struct si_atom *render_cond;
+		struct si_atom *streamout_begin;
+		struct si_atom *streamout_enable; /* must be after streamout_begin */
+		struct si_atom *framebuffer;
+		struct si_atom *msaa_sample_locs;
+		struct si_atom *db_render_state;
+		struct si_atom *dpbb_state;
+		struct si_atom *msaa_config;
+		struct si_atom *sample_mask;
+		struct si_atom *cb_render_state;
+		struct si_atom *blend_color;
+		struct si_atom *clip_regs;
+		struct si_atom *clip_state;
+		struct si_atom *shader_pointers;
+		struct si_atom *scissors;
+		struct si_atom *viewports;
+		struct si_atom *stencil_ref;
+		struct si_atom *spi_map;
+		struct si_atom *scratch_state;
 	} s;
-	struct r600_atom *array[0];
+	struct si_atom *array[0];
 };
 
-#define SI_NUM_ATOMS (sizeof(union si_state_atoms)/sizeof(struct r600_atom*))
+#define SI_NUM_ATOMS (sizeof(union si_state_atoms)/sizeof(struct si_atom*))
 
 struct si_shader_data {
-	struct r600_atom	atom;
+	struct si_atom		atom;
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
@@ -364,7 +364,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx);
 void si_shader_change_notify(struct si_context *sctx);
 void si_update_needs_color_decompress_masks(struct si_context *sctx);
 void si_emit_graphics_shader_pointers(struct si_context *sctx,
-                                      struct r600_atom *atom);
+                                      struct si_atom *atom);
 void si_emit_compute_shader_pointers(struct si_context *sctx);
 void si_set_rw_buffer(struct si_context *sctx,
 		      uint slot, const struct pipe_constant_buffer *input);
@@ -383,9 +383,9 @@ void si_rebind_buffer(struct si_context *sctx, struct pipe_resource *buf,
 /* si_state.c */
 struct si_shader_selector;
 
-void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
-		  struct r600_atom **list_elem,
-		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state));
+void si_init_atom(struct si_context *sctx, struct si_atom *atom,
+		  struct si_atom **list_elem,
+		  void (*emit_func)(struct si_context *ctx, struct si_atom *state));
 void si_init_state_functions(struct si_context *sctx);
 void si_init_screen_state_functions(struct si_screen *sscreen);
 void
@@ -418,7 +418,7 @@ void si_set_occlusion_query_state(struct si_context *sctx,
 				  bool old_perfect_enable);
 
 /* si_state_binning.c */
-void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state);
+void si_emit_dpbb_state(struct si_context *sctx, struct si_atom *state);
 
 /* si_state_shaders.c */
 bool si_update_shaders(struct si_context *sctx);

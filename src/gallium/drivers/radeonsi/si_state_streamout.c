@@ -254,7 +254,7 @@ static void si_flush_vgt_streamout(struct si_context *sctx)
 	radeon_emit(cs, 4); /* poll interval */
 }
 
-static void si_emit_streamout_begin(struct si_context *sctx, struct r600_atom *atom)
+static void si_emit_streamout_begin(struct si_context *sctx, struct si_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	struct si_streamout_target **t = sctx->streamout.targets;
@@ -357,7 +357,7 @@ void si_emit_streamout_end(struct si_context *sctx)
  */
 
 static void si_emit_streamout_enable(struct si_context *sctx,
-				     struct r600_atom *atom)
+				     struct si_atom *atom)
 {
 	radeon_set_context_reg_seq(sctx->gfx_cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
 	radeon_emit(sctx->gfx_cs,

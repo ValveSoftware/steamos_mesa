@@ -539,7 +539,7 @@ struct si_screen {
 };
 
 struct si_blend_color {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	struct pipe_blend_color		state;
 	bool				any_nonzeros;
 };
@@ -594,7 +594,7 @@ struct si_images {
 };
 
 struct si_framebuffer {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	struct pipe_framebuffer_state	state;
 	unsigned			colorbuf_enabled_4bit;
 	unsigned			spi_shader_col_format;
@@ -622,13 +622,13 @@ struct si_signed_scissor {
 };
 
 struct si_scissors {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	unsigned			dirty_mask;
 	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
 };
 
 struct si_viewports {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	unsigned			dirty_mask;
 	unsigned			depth_range_dirty_mask;
 	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
@@ -636,18 +636,18 @@ struct si_viewports {
 };
 
 struct si_clip_state {
-	struct r600_atom		atom;
+	struct si_atom			atom;
 	struct pipe_clip_state		state;
 	bool				any_nonzeros;
 };
 
 struct si_sample_locs {
-	struct r600_atom	atom;
+	struct si_atom		atom;
 	unsigned		nr_samples;
 };
 
 struct si_sample_mask {
-	struct r600_atom	atom;
+	struct si_atom		atom;
 	uint16_t		sample_mask;
 };
 
@@ -663,7 +663,7 @@ struct si_streamout_target {
 };
 
 struct si_streamout {
-	struct r600_atom		begin_atom;
+	struct si_atom			begin_atom;
 	bool				begin_emitted;
 
 	unsigned			enabled_mask;
@@ -682,7 +682,7 @@ struct si_streamout {
 	unsigned			hw_enabled_mask;
 
 	/* The state of VGT_STRMOUT_(CONFIG|EN). */
-	struct r600_atom		enable_atom;
+	struct si_atom			enable_atom;
 	bool				streamout_enabled;
 	bool				prims_gen_query_enabled;
 	int				num_prims_gen_queries;
@@ -825,18 +825,18 @@ struct si_context {
 	/* Atom declarations. */
 	struct si_framebuffer		framebuffer;
 	struct si_sample_locs		msaa_sample_locs;
-	struct r600_atom		db_render_state;
-	struct r600_atom		dpbb_state;
-	struct r600_atom		msaa_config;
+	struct si_atom			db_render_state;
+	struct si_atom			dpbb_state;
+	struct si_atom			msaa_config;
 	struct si_sample_mask		sample_mask;
-	struct r600_atom		cb_render_state;
+	struct si_atom			cb_render_state;
 	unsigned			last_cb_target_mask;
 	struct si_blend_color		blend_color;
-	struct r600_atom		clip_regs;
+	struct si_atom			clip_regs;
 	struct si_clip_state		clip_state;
 	struct si_shader_data		shader_pointers;
 	struct si_stencil_ref		stencil_ref;
-	struct r600_atom		spi_map;
+	struct si_atom			spi_map;
 	struct si_scissors		scissors;
 	struct si_streamout		streamout;
 	struct si_viewports		viewports;
@@ -932,7 +932,7 @@ struct si_context {
 	enum pipe_prim_type	current_rast_prim; /* primitive type after TES, GS */
 
 	/* Scratch buffer */
-	struct r600_atom	scratch_state;
+	struct si_atom		scratch_state;
 	struct r600_resource	*scratch_buffer;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
@@ -1028,7 +1028,7 @@ struct si_context {
 	unsigned			num_cs_dw_queries_suspend;
 
 	/* Render condition. */
-	struct r600_atom		render_cond_atom;
+	struct si_atom			render_cond_atom;
 	struct pipe_query		*render_cond;
 	unsigned			render_cond_mode;
 	bool				render_cond_invert;
@@ -1358,7 +1358,7 @@ si_invalidate_draw_sh_constants(struct si_context *sctx)
 
 static inline void
 si_set_atom_dirty(struct si_context *sctx,
-		  struct r600_atom *atom, bool dirty)
+		  struct si_atom *atom, bool dirty)
 {
 	unsigned bit = 1 << atom->id;
 
@@ -1370,7 +1370,7 @@ si_set_atom_dirty(struct si_context *sctx,
 
 static inline bool
 si_is_atom_dirty(struct si_context *sctx,
-		  struct r600_atom *atom)
+		 struct si_atom *atom)
 {
 	unsigned bit = 1 << atom->id;
 
@@ -1379,7 +1379,7 @@ si_is_atom_dirty(struct si_context *sctx,
 
 static inline void
 si_mark_atom_dirty(struct si_context *sctx,
-		   struct r600_atom *atom)
+		   struct si_atom *atom)
 {
 	si_set_atom_dirty(sctx, atom, true);
 }
