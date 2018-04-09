@@ -1182,7 +1182,7 @@ static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_i
 	/* Emit state atoms. */
 	unsigned mask = sctx->dirty_atoms & ~skip_atom_mask;
 	while (mask) {
-		struct si_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
+		struct si_atom *atom = &sctx->atoms.array[u_bit_scan(&mask)];
 
 		atom->emit(sctx, atom);
 	}
@@ -1256,7 +1256,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		sctx->framebuffer.dirty_cbufs |=
 			((1 << sctx->framebuffer.state.nr_cbufs) - 1);
 		sctx->framebuffer.dirty_zsbuf = true;
-		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
 		si_update_all_texture_descriptors(sctx);
 	}
 
@@ -1282,7 +1282,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		bool new_is_poly = rast_prim >= PIPE_PRIM_TRIANGLES;
 		if (old_is_poly != new_is_poly) {
 			sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-			si_mark_atom_dirty(sctx, &sctx->scissors.atom);
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.scissors);
 		}
 
 		sctx->current_rast_prim = rast_prim;
@@ -1418,7 +1418,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * more involved alternative workaround.
 	 */
 	if ((sctx->family == CHIP_VEGA10 || sctx->family == CHIP_RAVEN) &&
-	    si_is_atom_dirty(sctx, &sctx->scissors.atom)) {
+	    si_is_atom_dirty(sctx, &sctx->atoms.s.scissors)) {
 		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
 		si_emit_cache_flush(sctx);
 	}
@@ -1436,7 +1436,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		unsigned masked_atoms = 0;
 
 		if (unlikely(sctx->flags & SI_CONTEXT_FLUSH_FOR_RENDER_COND))
-			masked_atoms |= 1u << sctx->render_cond_atom.id;
+			masked_atoms |= 1u << sctx->atoms.s.render_cond.id;
 
 		if (!si_upload_graphics_shader_descriptors(sctx))
 			return;
@@ -1446,8 +1446,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		si_emit_cache_flush(sctx);
 		/* <-- CUs are idle here. */
 
-		if (si_is_atom_dirty(sctx, &sctx->render_cond_atom))
-			sctx->render_cond_atom.emit(sctx, NULL);
+		if (si_is_atom_dirty(sctx, &sctx->atoms.s.render_cond))
+			sctx->atoms.s.render_cond.emit(sctx, NULL);
 		sctx->dirty_atoms = 0;
 
 		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);

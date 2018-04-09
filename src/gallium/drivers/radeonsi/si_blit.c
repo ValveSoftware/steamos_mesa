@@ -85,7 +85,7 @@ void si_blitter_end(struct si_context *sctx)
 	 * non-global VS user SGPRs. */
 	sctx->shader_pointers_dirty |= SI_DESCS_SHADER_MASK(VERTEX);
 	sctx->vertex_buffer_pointer_dirty = sctx->vb_descriptors_buffer != NULL;
-	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)
@@ -109,7 +109,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 		sctx->dbcb_depth_copy_enabled = true;
 	if (planes & PIPE_MASK_S)
 		sctx->dbcb_stencil_copy_enabled = true;
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 	assert(sctx->dbcb_depth_copy_enabled || sctx->dbcb_stencil_copy_enabled);
 
@@ -140,7 +140,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 			for (sample = first_sample; sample <= last_sample; sample++) {
 				if (sample != sctx->dbcb_copy_sample) {
 					sctx->dbcb_copy_sample = sample;
-					si_mark_atom_dirty(sctx, &sctx->db_render_state);
+					si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 				}
 
 				si_blitter_begin(sctx, SI_DECOMPRESS);
@@ -161,7 +161,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 	sctx->decompression_enabled = false;
 	sctx->dbcb_depth_copy_enabled = false;
 	sctx->dbcb_stencil_copy_enabled = false;
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 	return fully_copied_levels;
 }
@@ -210,7 +210,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 		sctx->db_flush_stencil_inplace = true;
 	if (planes & PIPE_MASK_Z)
 		sctx->db_flush_depth_inplace = true;
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 	surf_tmpl.format = texture->resource.b.b.format;
 
@@ -256,7 +256,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 	sctx->decompression_enabled = false;
 	sctx->db_flush_depth_inplace = false;
 	sctx->db_flush_stencil_inplace = false;
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 }
 
 /* Helper function of si_flush_depth_texture: decompress the given levels

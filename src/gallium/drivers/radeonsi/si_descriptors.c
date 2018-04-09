@@ -162,7 +162,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 		r600_resource_reference(&desc->buffer, NULL);
 		desc->gpu_list = NULL;
 		desc->gpu_address = si_desc_extract_buffer_address(descriptor);
-		si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 		return true;
 	}
 
@@ -192,7 +192,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	assert((desc->buffer->gpu_address >> 32) == sctx->screen->info.address32_hi);
 	assert((desc->gpu_address >> 32) == sctx->screen->info.address32_hi);
 
-	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 	return true;
 }
 
@@ -1172,7 +1172,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
-	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 	sctx->vertex_buffers_dirty = false;
 	sctx->vertex_buffer_pointer_dirty = true;
 	sctx->prefetch_L2_mask |= SI_PREFETCH_VBO_DESCRIPTORS;
@@ -1985,14 +1985,14 @@ static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 	if (shader == PIPE_SHADER_VERTEX)
 		sctx->vertex_buffer_pointer_dirty = sctx->vb_descriptors_buffer != NULL;
 
-	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 }
 
 static void si_shader_pointers_begin_new_cs(struct si_context *sctx)
 {
 	sctx->shader_pointers_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
 	sctx->vertex_buffer_pointer_dirty = sctx->vb_descriptors_buffer != NULL;
-	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.shader_pointers);
 	sctx->graphics_bindless_pointer_dirty = sctx->bindless_descriptors.buffer != NULL;
 	sctx->compute_bindless_pointer_dirty = sctx->bindless_descriptors.buffer != NULL;
 }
@@ -2762,7 +2762,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.make_image_handle_resident = si_make_image_handle_resident;
 
 	/* Shader user data. */
-	si_init_atom(sctx, &sctx->shader_pointers.atom, &sctx->atoms.s.shader_pointers,
+	si_init_atom(sctx, &sctx->atoms.s.shader_pointers,
 		     si_emit_graphics_shader_pointers);
 
 	/* Set default and immutable mappings. */

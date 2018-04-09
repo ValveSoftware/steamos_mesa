@@ -44,7 +44,7 @@ static void si_set_scissor_states(struct pipe_context *pctx,
 		return;
 
 	ctx->scissors.dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
-	si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+	si_mark_atom_dirty(ctx, &ctx->atoms.s.scissors);
 }
 
 /* Since the guard band disables clipping, we have to clip per-pixel
@@ -279,8 +279,8 @@ static void si_set_viewport_states(struct pipe_context *pctx,
 	ctx->viewports.dirty_mask |= mask;
 	ctx->viewports.depth_range_dirty_mask |= mask;
 	ctx->scissors.dirty_mask |= mask;
-	si_mark_atom_dirty(ctx, &ctx->viewports.atom);
-	si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+	si_mark_atom_dirty(ctx, &ctx->atoms.s.viewports);
+	si_mark_atom_dirty(ctx, &ctx->atoms.s.scissors);
 }
 
 static void si_emit_one_viewport(struct si_context *ctx,
@@ -415,8 +415,8 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 		ctx->vs_disables_clipping_viewport = vs_window_space;
 		ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 		ctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(ctx, &ctx->scissors.atom);
-		si_mark_atom_dirty(ctx, &ctx->viewports.atom);
+		si_mark_atom_dirty(ctx, &ctx->atoms.s.scissors);
+		si_mark_atom_dirty(ctx, &ctx->atoms.s.viewports);
 	}
 
 	/* Viewport index handling. */
@@ -425,17 +425,17 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 		return;
 
 	if (ctx->scissors.dirty_mask)
-	    si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+	    si_mark_atom_dirty(ctx, &ctx->atoms.s.scissors);
 
 	if (ctx->viewports.dirty_mask ||
 	    ctx->viewports.depth_range_dirty_mask)
-	    si_mark_atom_dirty(ctx, &ctx->viewports.atom);
+	    si_mark_atom_dirty(ctx, &ctx->atoms.s.viewports);
 }
 
 void si_init_viewport_functions(struct si_context *ctx)
 {
-	ctx->scissors.atom.emit = si_emit_scissors;
-	ctx->viewports.atom.emit = si_emit_viewport_states;
+	ctx->atoms.s.scissors.emit = si_emit_scissors;
+	ctx->atoms.s.viewports.emit = si_emit_viewport_states;
 
 	ctx->b.set_scissor_states = si_set_scissor_states;
 	ctx->b.set_viewport_states = si_set_viewport_states;

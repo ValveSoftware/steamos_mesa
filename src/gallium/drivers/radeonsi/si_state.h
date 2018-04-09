@@ -132,7 +132,6 @@ struct si_state_dsa {
 };
 
 struct si_stencil_ref {
-	struct si_atom			atom;
 	struct pipe_stencil_ref		state;
 	struct si_dsa_stencil_ref_part	dsa_part;
 };
@@ -178,33 +177,32 @@ union si_state {
 union si_state_atoms {
 	struct {
 		/* The order matters. */
-		struct si_atom *render_cond;
-		struct si_atom *streamout_begin;
-		struct si_atom *streamout_enable; /* must be after streamout_begin */
-		struct si_atom *framebuffer;
-		struct si_atom *msaa_sample_locs;
-		struct si_atom *db_render_state;
-		struct si_atom *dpbb_state;
-		struct si_atom *msaa_config;
-		struct si_atom *sample_mask;
-		struct si_atom *cb_render_state;
-		struct si_atom *blend_color;
-		struct si_atom *clip_regs;
-		struct si_atom *clip_state;
-		struct si_atom *shader_pointers;
-		struct si_atom *scissors;
-		struct si_atom *viewports;
-		struct si_atom *stencil_ref;
-		struct si_atom *spi_map;
-		struct si_atom *scratch_state;
+		struct si_atom render_cond;
+		struct si_atom streamout_begin;
+		struct si_atom streamout_enable; /* must be after streamout_begin */
+		struct si_atom framebuffer;
+		struct si_atom msaa_sample_locs;
+		struct si_atom db_render_state;
+		struct si_atom dpbb_state;
+		struct si_atom msaa_config;
+		struct si_atom sample_mask;
+		struct si_atom cb_render_state;
+		struct si_atom blend_color;
+		struct si_atom clip_regs;
+		struct si_atom clip_state;
+		struct si_atom shader_pointers;
+		struct si_atom scissors;
+		struct si_atom viewports;
+		struct si_atom stencil_ref;
+		struct si_atom spi_map;
+		struct si_atom scratch_state;
 	} s;
-	struct si_atom *array[0];
+	struct si_atom array[0];
 };
 
 #define SI_NUM_ATOMS (sizeof(union si_state_atoms)/sizeof(struct si_atom*))
 
 struct si_shader_data {
-	struct si_atom		atom;
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
@@ -384,7 +382,6 @@ void si_rebind_buffer(struct si_context *sctx, struct pipe_resource *buf,
 struct si_shader_selector;
 
 void si_init_atom(struct si_context *sctx, struct si_atom *atom,
-		  struct si_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct si_atom *state));
 void si_init_state_functions(struct si_context *sctx);
 void si_init_screen_state_functions(struct si_screen *sscreen);

@@ -35,21 +35,17 @@
 
 /* Initialize an external atom (owned by ../radeon). */
 static void
-si_init_external_atom(struct si_context *sctx, struct si_atom *atom,
-		      struct si_atom **list_elem)
+si_init_external_atom(struct si_context *sctx, struct si_atom *atom)
 {
-	atom->id = list_elem - sctx->atoms.array;
-	*list_elem = atom;
+	atom->id = atom - sctx->atoms.array;
 }
 
 /* Initialize an atom owned by radeonsi.  */
 void si_init_atom(struct si_context *sctx, struct si_atom *atom,
-		  struct si_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct si_atom *state))
 {
 	atom->emit = emit_func;
-	atom->id = list_elem - sctx->atoms.array;
-	*list_elem = atom;
+	atom->id = atom - sctx->atoms.array;
 }
 
 static unsigned si_map_swizzle(unsigned swizzle)
@@ -672,7 +668,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	    (old_blend->blend_enable_4bit != blend->blend_enable_4bit &&
 	     sctx->framebuffer.nr_samples >= 2 &&
 	     sctx->screen->dcc_msaa_allowed))
-		si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.cb_render_state);
 
 	if (!old_blend ||
 	    old_blend->cb_target_mask != blend->cb_target_mask ||
@@ -688,7 +684,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	     old_blend->alpha_to_coverage != blend->alpha_to_coverage ||
 	     old_blend->blend_enable_4bit != blend->blend_enable_4bit ||
 	     old_blend->cb_target_enabled_4bit != blend->cb_target_enabled_4bit))
-		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.dpbb_state);
 
 	if (sctx->screen->has_out_of_order_rast &&
 	    (!old_blend ||
@@ -696,7 +692,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	      old_blend->cb_target_enabled_4bit != blend->cb_target_enabled_4bit ||
 	      old_blend->commutative_4bit != blend->commutative_4bit ||
 	      old_blend->logicop_enable != blend->logicop_enable)))
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 }
 
 static void si_delete_blend_state(struct pipe_context *ctx, void *state)
@@ -713,7 +709,7 @@ static void si_set_blend_color(struct pipe_context *ctx,
 
 	sctx->blend_color.state = *state;
 	sctx->blend_color.any_nonzeros = memcmp(state, &zeros, sizeof(*state)) != 0;
-	si_mark_atom_dirty(sctx, &sctx->blend_color.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.blend_color);
 }
 
 static void si_emit_blend_color(struct si_context *sctx, struct si_atom *atom)
@@ -740,7 +736,7 @@ static void si_set_clip_state(struct pipe_context *ctx,
 
 	sctx->clip_state.state = *state;
 	sctx->clip_state.any_nonzeros = memcmp(state, &zeros, sizeof(*state)) != 0;
-	si_mark_atom_dirty(sctx, &sctx->clip_state.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.clip_state);
 
 	cb.buffer = NULL;
 	cb.user_buffer = state->ucp;
@@ -1006,12 +1002,12 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		return;
 
 	if (!old_rs || old_rs->multisample_enable != rs->multisample_enable) {
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 		/* Update the small primitive filter workaround if necessary. */
 		if (sctx->screen->has_msaa_sample_loc_bug &&
 		    sctx->framebuffer.nr_samples > 1)
-			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_sample_locs);
 	}
 
 	sctx->current_vs_state &= C_VS_STATE_CLAMP_VERTEX_COLOR;
@@ -1025,19 +1021,19 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	     old_rs->line_width != rs->line_width ||
 	     old_rs->max_point_size != rs->max_point_size)) {
 		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(sctx, &sctx->scissors.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.scissors);
 	}
 
 	if (!old_rs ||
 	    old_rs->clip_halfz != rs->clip_halfz) {
 		sctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(sctx, &sctx->viewports.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.viewports);
 	}
 
 	if (!old_rs ||
 	    old_rs->clip_plane_enable != rs->clip_plane_enable ||
 	    old_rs->pa_cl_clip_cntl != rs->pa_cl_clip_cntl)
-		si_mark_atom_dirty(sctx, &sctx->clip_regs);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.clip_regs);
 
 	sctx->ia_multi_vgt_param_key.u.line_stipple_enabled =
 		rs->line_stipple_enable;
@@ -1098,7 +1094,7 @@ static void si_set_stencil_ref(struct pipe_context *ctx,
 		return;
 
 	sctx->stencil_ref.state = *state;
-	si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.stencil_ref);
 }
 
 
@@ -1286,7 +1282,7 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 	if (memcmp(&dsa->stencil_ref, &sctx->stencil_ref.dsa_part,
 		   sizeof(struct si_dsa_stencil_ref_part)) != 0) {
 		sctx->stencil_ref.dsa_part = dsa->stencil_ref;
-		si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.stencil_ref);
 	}
 
 	if (!old_dsa || old_dsa->alpha_func != dsa->alpha_func)
@@ -1297,13 +1293,13 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 	     (old_dsa->depth_enabled != dsa->depth_enabled ||
 	      old_dsa->stencil_enabled != dsa->stencil_enabled ||
 	      old_dsa->db_can_write != dsa->db_can_write)))
-		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.dpbb_state);
 
 	if (sctx->screen->has_out_of_order_rast &&
 	    (!old_dsa ||
 	     memcmp(old_dsa->order_invariance, dsa->order_invariance,
 		    sizeof(old_dsa->order_invariance))))
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 }
 
 static void si_delete_dsa_state(struct pipe_context *ctx, void *state)
@@ -1337,19 +1333,19 @@ static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
 	/* Occlusion queries. */
 	if (sctx->occlusion_queries_disabled != !enable) {
 		sctx->occlusion_queries_disabled = !enable;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 	}
 }
 
 void si_set_occlusion_query_state(struct si_context *sctx,
 				  bool old_perfect_enable)
 {
-	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 	bool perfect_enable = sctx->num_perfect_occlusion_queries != 0;
 
 	if (perfect_enable != old_perfect_enable)
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 }
 
 void si_save_qbo_state(struct si_context *sctx, struct si_qbo_state *st)
@@ -2895,24 +2891,24 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	si_update_ps_colorbuf0_slot(sctx);
 	si_update_poly_offset_state(sctx);
-	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
-	si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.cb_render_state);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
 
 	if (sctx->screen->dpbb_allowed)
-		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.dpbb_state);
 
 	if (sctx->framebuffer.any_dst_linear != old_any_dst_linear)
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 
 	if (sctx->screen->has_out_of_order_rast &&
 	    (sctx->framebuffer.colorbuf_enabled_4bit != old_colorbuf_enabled_4bit ||
 	     !!sctx->framebuffer.state.zsbuf != old_has_zsbuf ||
 	     (zstex && zstex->surface.has_stencil != old_has_stencil)))
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 
 	if (sctx->framebuffer.nr_samples != old_nr_samples) {
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
 		/* Set sample locations as fragment shader constants. */
 		switch (sctx->framebuffer.nr_samples) {
@@ -2939,7 +2935,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		constbuf.buffer_size = sctx->framebuffer.nr_samples * 2 * 4;
 		si_set_rw_buffer(sctx, SI_PS_CONST_SAMPLE_POSITIONS, &constbuf);
 
-		si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_sample_locs);
 	}
 
 	sctx->do_update_shaders = true;
@@ -3416,9 +3412,9 @@ static void si_emit_msaa_config(struct si_context *sctx, struct si_atom *atom)
 void si_update_ps_iter_samples(struct si_context *sctx)
 {
 	if (sctx->framebuffer.nr_samples > 1)
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.msaa_config);
 	if (sctx->screen->dpbb_allowed)
-		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.dpbb_state);
 }
 
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
@@ -4174,7 +4170,7 @@ static void si_set_sample_mask(struct pipe_context *ctx, unsigned sample_mask)
 		return;
 
 	sctx->sample_mask.sample_mask = sample_mask;
-	si_mark_atom_dirty(sctx, &sctx->sample_mask.atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.sample_mask);
 }
 
 static void si_emit_sample_mask(struct si_context *sctx, struct si_atom *atom)
@@ -4530,23 +4526,23 @@ static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
 {
-	si_init_external_atom(sctx, &sctx->render_cond_atom, &sctx->atoms.s.render_cond);
-	si_init_external_atom(sctx, &sctx->streamout.begin_atom, &sctx->atoms.s.streamout_begin);
-	si_init_external_atom(sctx, &sctx->streamout.enable_atom, &sctx->atoms.s.streamout_enable);
-	si_init_external_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors);
-	si_init_external_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports);
+	si_init_external_atom(sctx, &sctx->atoms.s.render_cond);
+	si_init_external_atom(sctx, &sctx->atoms.s.streamout_begin);
+	si_init_external_atom(sctx, &sctx->atoms.s.streamout_enable);
+	si_init_external_atom(sctx, &sctx->atoms.s.scissors);
+	si_init_external_atom(sctx, &sctx->atoms.s.viewports);
 
-	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
-	si_init_atom(sctx, &sctx->msaa_sample_locs.atom, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
-	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state);
-	si_init_atom(sctx, &sctx->dpbb_state, &sctx->atoms.s.dpbb_state, si_emit_dpbb_state);
-	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config);
-	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask);
-	si_init_atom(sctx, &sctx->cb_render_state, &sctx->atoms.s.cb_render_state, si_emit_cb_render_state);
-	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color);
-	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs);
-	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state);
-	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref);
+	si_init_atom(sctx, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
+	si_init_atom(sctx, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
+	si_init_atom(sctx, &sctx->atoms.s.db_render_state, si_emit_db_render_state);
+	si_init_atom(sctx, &sctx->atoms.s.dpbb_state, si_emit_dpbb_state);
+	si_init_atom(sctx, &sctx->atoms.s.msaa_config, si_emit_msaa_config);
+	si_init_atom(sctx, &sctx->atoms.s.sample_mask, si_emit_sample_mask);
+	si_init_atom(sctx, &sctx->atoms.s.cb_render_state, si_emit_cb_render_state);
+	si_init_atom(sctx, &sctx->atoms.s.blend_color, si_emit_blend_color);
+	si_init_atom(sctx, &sctx->atoms.s.clip_regs, si_emit_clip_regs);
+	si_init_atom(sctx, &sctx->atoms.s.clip_state, si_emit_clip_state);
+	si_init_atom(sctx, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref);
 
 	sctx->b.create_blend_state = si_create_blend_state;
 	sctx->b.bind_blend_state = si_bind_blend_state;

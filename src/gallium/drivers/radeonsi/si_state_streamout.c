@@ -83,7 +83,7 @@ void si_streamout_buffers_dirty(struct si_context *sctx)
 	if (!sctx->streamout.enabled_mask)
 		return;
 
-	si_mark_atom_dirty(sctx, &sctx->streamout.begin_atom);
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.streamout_begin);
 	si_set_streamout_enable(sctx, true);
 }
 
@@ -169,7 +169,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 	if (num_targets) {
 		si_streamout_buffers_dirty(sctx);
 	} else {
-		si_set_atom_dirty(sctx, &sctx->streamout.begin_atom, false);
+		si_set_atom_dirty(sctx, &sctx->atoms.s.streamout_begin, false);
 		si_set_streamout_enable(sctx, false);
 	}
 
@@ -385,7 +385,7 @@ static void si_set_streamout_enable(struct si_context *sctx, bool enable)
 
 	if ((old_strmout_en != si_get_strmout_en(sctx)) ||
             (old_hw_enabled_mask != sctx->streamout.hw_enabled_mask))
-		si_mark_atom_dirty(sctx, &sctx->streamout.enable_atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.streamout_enable);
 }
 
 void si_update_prims_generated_query_state(struct si_context *sctx,
@@ -401,7 +401,7 @@ void si_update_prims_generated_query_state(struct si_context *sctx,
 			sctx->streamout.num_prims_gen_queries != 0;
 
 		if (old_strmout_en != si_get_strmout_en(sctx))
-			si_mark_atom_dirty(sctx, &sctx->streamout.enable_atom);
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.streamout_enable);
 	}
 }
 
@@ -410,6 +410,6 @@ void si_init_streamout_functions(struct si_context *sctx)
 	sctx->b.create_stream_output_target = si_create_so_target;
 	sctx->b.stream_output_target_destroy = si_so_target_destroy;
 	sctx->b.set_stream_output_targets = si_set_streamout_targets;
-	sctx->streamout.begin_atom.emit = si_emit_streamout_begin;
-	sctx->streamout.enable_atom.emit = si_emit_streamout_enable;
+	sctx->atoms.s.streamout_begin.emit = si_emit_streamout_begin;
+	sctx->atoms.s.streamout_enable.emit = si_emit_streamout_enable;
 }

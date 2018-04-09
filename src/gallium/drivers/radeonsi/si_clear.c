@@ -548,7 +548,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		si_set_clear_color(tex, fb->cbufs[i]->format, color);
 
 		sctx->framebuffer.dirty_cbufs |= 1 << i;
-		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
 		*buffers &= ~clear_bit;
 	}
 }
@@ -598,9 +598,9 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 
 			zstex->depth_clear_value = depth;
 			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer); /* updates DB_DEPTH_CLEAR */
 			sctx->db_depth_clear = true;
-			si_mark_atom_dirty(sctx, &sctx->db_render_state);
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 		}
 
 		/* TC-compatible HTILE only supports stencil clears to 0. */
@@ -616,9 +616,9 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 
 			zstex->stencil_clear_value = stencil;
 			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_STENCIL_CLEAR */
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer); /* updates DB_STENCIL_CLEAR */
 			sctx->db_stencil_clear = true;
-			si_mark_atom_dirty(sctx, &sctx->db_render_state);
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 		}
 
 		/* TODO: Find out what's wrong here. Fast depth clear leads to
@@ -647,14 +647,14 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		sctx->db_depth_clear = false;
 		sctx->db_depth_disable_expclear = false;
 		zstex->depth_cleared = true;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 	}
 
 	if (sctx->db_stencil_clear) {
 		sctx->db_stencil_clear = false;
 		sctx->db_stencil_disable_expclear = false;
 		zstex->stencil_cleared = true;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 	}
 }
 

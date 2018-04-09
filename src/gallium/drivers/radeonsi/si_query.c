@@ -1776,7 +1776,7 @@ static void si_render_condition(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_query_hw *rquery = (struct si_query_hw *)query;
-	struct si_atom *atom = &sctx->render_cond_atom;
+	struct si_atom *atom = &sctx->atoms.s.render_cond;
 
 	if (query) {
 		bool needs_workaround = false;
@@ -2053,7 +2053,7 @@ void si_init_query_functions(struct si_context *sctx)
 	sctx->b.end_query = si_end_query;
 	sctx->b.get_query_result = si_get_query_result;
 	sctx->b.get_query_result_resource = si_get_query_result_resource;
-	sctx->render_cond_atom.emit = si_emit_query_predication;
+	sctx->atoms.s.render_cond.emit = si_emit_query_predication;
 
 	if (((struct si_screen*)sctx->b.screen)->info.num_render_backends > 0)
 	    sctx->b.render_condition = si_render_condition;
