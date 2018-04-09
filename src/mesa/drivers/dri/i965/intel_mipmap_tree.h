@@ -485,6 +485,23 @@ enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo,
                    enum isl_tiling tiling, GLenum target);
 
+static inline struct intel_miptree_aux_buffer *
+intel_miptree_get_aux_buffer(const struct intel_mipmap_tree *mt)
+{
+   switch (mt->aux_usage) {
+   case ISL_AUX_USAGE_MCS:
+   case ISL_AUX_USAGE_CCS_D:
+   case ISL_AUX_USAGE_CCS_E:
+      return mt->mcs_buf;
+   case ISL_AUX_USAGE_HIZ:
+      return mt->hiz_buf;
+   case ISL_AUX_USAGE_NONE:
+      return NULL;
+   default:
+      unreachable("Invalid aux_usage!\n");
+   }
+}
+
 void
 intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);

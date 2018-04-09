@@ -1249,8 +1249,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       brw_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
       intel_miptree_release(&(*mt)->r8stencil_mt);
-      intel_miptree_aux_buffer_free((*mt)->hiz_buf);
-      intel_miptree_aux_buffer_free((*mt)->mcs_buf);
+      intel_miptree_aux_buffer_free(intel_miptree_get_aux_buffer(*mt));
       free_aux_state_map((*mt)->aux_state);
 
       intel_miptree_release(&(*mt)->plane[0]);
@@ -2876,31 +2875,17 @@ intel_miptree_make_shareable(struct brw_context *brw,
                                 0, INTEL_REMAINING_LAYERS,
                                 ISL_AUX_USAGE_NONE, false);
 
-   if (mt->mcs_buf) {
-      intel_miptree_aux_buffer_free(mt->mcs_buf);
+   struct intel_miptree_aux_buffer *aux_buf = intel_miptree_get_aux_buffer(mt);
+   if (aux_buf) {
+      intel_miptree_aux_buffer_free(aux_buf);
       mt->mcs_buf = NULL;
-
-      /* Any pending MCS/CCS operations are no longer needed. Trying to
-       * execute any will likely crash due to the missing aux buffer. So let's
-       * delete all pending ops.
-       */
-      free(mt->aux_state);
-      mt->aux_state = NULL;
-      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
-   }
-
-   if (mt->hiz_buf) {
-      intel_miptree_aux_buffer_free(mt->hiz_buf);
       mt->hiz_buf = NULL;
 
+      /* Make future calls of intel_miptree_level_has_hiz() return false. */
       for (uint32_t l = mt->first_level; l <= mt->last_level; ++l) {
          mt->level[l].has_hiz = false;
       }
 
-      /* Any pending HiZ operations are no longer needed. Trying to execute
-       * any will likely crash due to the missing aux buffer. So let's delete
-       * all pending ops.
-       */
       free(mt->aux_state);
       mt->aux_state = NULL;
       brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;

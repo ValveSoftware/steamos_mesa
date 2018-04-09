@@ -155,21 +155,7 @@ brw_emit_surface_state(struct brw_context *brw,
    struct brw_bo *aux_bo = NULL;
    struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
-   struct intel_miptree_aux_buffer *aux_buf = NULL;
-   switch (aux_usage) {
-   case ISL_AUX_USAGE_MCS:
-   case ISL_AUX_USAGE_CCS_D:
-   case ISL_AUX_USAGE_CCS_E:
-      aux_buf = mt->mcs_buf;
-      break;
-
-   case ISL_AUX_USAGE_HIZ:
-      aux_buf = mt->hiz_buf;
-      break;
-
-   case ISL_AUX_USAGE_NONE:
-      break;
-   }
+   struct intel_miptree_aux_buffer *aux_buf = intel_miptree_get_aux_buffer(mt);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
       aux_surf = &aux_buf->surf;
