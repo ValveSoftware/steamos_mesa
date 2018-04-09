@@ -179,7 +179,7 @@ struct si_shader_context {
 	/* CS */
 	int param_block_size;
 
-	LLVMTargetMachineRef tm;
+	struct si_compiler *compiler;
 
 	/* Preloaded descriptors. */
 	LLVMValueRef esgs_ring;
@@ -221,7 +221,7 @@ si_shader_context_from_abi(struct ac_shader_abi *abi)
 }
 
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
-			 LLVMTargetMachineRef tm,
+			 struct si_compiler *compiler,
 			 struct pipe_debug_callback *debug);
 
 LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
@@ -236,7 +236,7 @@ LLVMValueRef si_llvm_bound_index(struct si_shader_context *ctx,
 
 void si_llvm_context_init(struct si_shader_context *ctx,
 			  struct si_screen *sscreen,
-			  LLVMTargetMachineRef tm);
+			  struct si_compiler *compiler);
 void si_llvm_context_set_tgsi(struct si_shader_context *ctx,
 			      struct si_shader *shader);
 

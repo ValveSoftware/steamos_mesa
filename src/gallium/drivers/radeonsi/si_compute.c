@@ -86,13 +86,13 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	struct si_compute *program = (struct si_compute *)job;
 	struct si_shader *shader = &program->shader;
 	struct si_shader_selector sel;
-	LLVMTargetMachineRef tm;
+	struct si_compiler *compiler;
 	struct pipe_debug_callback *debug = &program->compiler_ctx_state.debug;
 
 	assert(!debug->debug_message || debug->async);
 	assert(thread_index >= 0);
-	assert(thread_index < ARRAY_SIZE(program->screen->tm));
-	tm = program->screen->tm[thread_index];
+	assert(thread_index < ARRAY_SIZE(program->screen->compiler));
+	compiler = &program->screen->compiler[thread_index];
 
 	memset(&sel, 0, sizeof(sel));
 
@@ -123,7 +123,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	program->uses_bindless_samplers = sel.info.uses_bindless_samplers;
 	program->uses_bindless_images = sel.info.uses_bindless_images;
 
-	if (si_shader_create(program->screen, tm, &program->shader, debug)) {
+	if (si_shader_create(program->screen, compiler, &program->shader, debug)) {
 		program->shader.compilation_failed = true;
 	} else {
 		bool scratch_enabled = shader->config.scratch_bytes_per_wave > 0;

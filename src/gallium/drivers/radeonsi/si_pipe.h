@@ -530,12 +530,12 @@ struct si_screen {
 	/* Use at most 3 normal compiler threads on quadcore and better.
 	 * Hyperthreaded CPUs report the number of threads, but we want
 	 * the number of cores. */
-	LLVMTargetMachineRef		tm[3]; /* used by the queue only */
+	struct si_compiler		compiler[3]; /* used by the queue only */
 
 	struct util_queue		shader_compiler_queue_low_priority;
 	/* Use at most 2 low priority threads on quadcore and better.
 	 * We want to minimize the impact on multithreaded Mesa. */
-	LLVMTargetMachineRef		tm_low_priority[2]; /* at most 2 threads */
+	struct si_compiler		compiler_lowp[2]; /* at most 2 threads */
 };
 
 struct si_blend_color {
@@ -776,7 +776,7 @@ struct si_context {
 	void				*vs_blit_texcoord;
 	struct si_screen		*screen;
 	struct pipe_debug_callback	debug;
-	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
+	struct si_compiler		compiler; /* only non-threaded compilation */
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	struct r600_resource		*wait_mem_scratch;
 	unsigned			wait_mem_number;

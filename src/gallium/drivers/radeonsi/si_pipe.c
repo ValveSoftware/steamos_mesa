@@ -102,6 +102,24 @@ static const struct debug_named_value debug_options[] = {
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
 
+static void si_init_compiler(struct si_screen *sscreen,
+			     struct si_compiler *compiler)
+{
+	enum ac_target_machine_options tm_options =
+		(sscreen->debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
+		(sscreen->info.chip_class >= GFX9 ? AC_TM_FORCE_ENABLE_XNACK : 0) |
+		(sscreen->info.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
+		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
+
+	compiler->tm = ac_create_target_machine(sscreen->info.family, tm_options);
+}
+
+static void si_destroy_compiler(struct si_compiler *compiler)
+{
+	if (compiler->tm)
+		LLVMDisposeTargetMachine(compiler->tm);
+}
+
 /*
  * pipe_context
  */
@@ -200,7 +218,7 @@ static void si_destroy_context(struct pipe_context *context)
 	sctx->ws->fence_reference(&sctx->last_sdma_fence, NULL);
 	r600_resource_reference(&sctx->eop_bug_scratch, NULL);
 
-	LLVMDisposeTargetMachine(sctx->tm);
+	si_destroy_compiler(&sctx->compiler);
 
 	si_saved_cs_reference(&sctx->current_saved_cs, NULL);
 
@@ -283,18 +301,6 @@ static void si_emit_string_marker(struct pipe_context *ctx,
 
 	if (sctx->log)
 		u_log_printf(sctx->log, "\nString marker: %*s\n", len, string);
-}
-
-static LLVMTargetMachineRef
-si_create_llvm_target_machine(struct si_screen *sscreen)
-{
-	enum ac_target_machine_options tm_options =
-		(sscreen->debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
-		(sscreen->info.chip_class >= GFX9 ? AC_TM_FORCE_ENABLE_XNACK : 0) |
-		(sscreen->info.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
-		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
-
-	return ac_create_target_machine(sscreen->info.family, tm_options);
 }
 
 static void si_set_debug_callback(struct pipe_context *ctx,
@@ -549,7 +555,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->scratch_waves = MAX2(32 * sscreen->info.num_good_compute_units,
 				   max_threads_per_block / 64);
 
-	sctx->tm = si_create_llvm_target_machine(sscreen);
+	si_init_compiler(sscreen, &sctx->compiler);
 
 	/* Bindless handles. */
 	sctx->tex_handles = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
@@ -624,13 +630,11 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	util_queue_destroy(&sscreen->shader_compiler_queue);
 	util_queue_destroy(&sscreen->shader_compiler_queue_low_priority);
 
-	for (i = 0; i < ARRAY_SIZE(sscreen->tm); i++)
-		if (sscreen->tm[i])
-			LLVMDisposeTargetMachine(sscreen->tm[i]);
+	for (i = 0; i < ARRAY_SIZE(sscreen->compiler); i++)
+		si_destroy_compiler(&sscreen->compiler[i]);
 
-	for (i = 0; i < ARRAY_SIZE(sscreen->tm_low_priority); i++)
-		if (sscreen->tm_low_priority[i])
-			LLVMDisposeTargetMachine(sscreen->tm_low_priority[i]);
+	for (i = 0; i < ARRAY_SIZE(sscreen->compiler_lowp); i++)
+		si_destroy_compiler(&sscreen->compiler_lowp[i]);
 
 	/* Free shader parts. */
 	for (i = 0; i < ARRAY_SIZE(parts); i++) {
@@ -837,9 +841,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	 */
 	num_threads = sysconf(_SC_NPROCESSORS_ONLN);
 	num_threads = MAX2(1, num_threads - 1);
-	num_compiler_threads = MIN2(num_threads, ARRAY_SIZE(sscreen->tm));
+	num_compiler_threads = MIN2(num_threads, ARRAY_SIZE(sscreen->compiler));
 	num_compiler_threads_lowprio =
-		MIN2(num_threads, ARRAY_SIZE(sscreen->tm_low_priority));
+		MIN2(num_threads, ARRAY_SIZE(sscreen->compiler_lowp));
 
 	if (!util_queue_init(&sscreen->shader_compiler_queue, "si_shader",
 			     32, num_compiler_threads,
@@ -1003,9 +1007,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		sscreen->debug_flags |= DBG_ALL_SHADERS;
 
 	for (i = 0; i < num_compiler_threads; i++)
-		sscreen->tm[i] = si_create_llvm_target_machine(sscreen);
+		si_init_compiler(sscreen, &sscreen->compiler[i]);
 	for (i = 0; i < num_compiler_threads_lowprio; i++)
-		sscreen->tm_low_priority[i] = si_create_llvm_target_machine(sscreen);
+		si_init_compiler(sscreen, &sscreen->compiler_lowp[i]);
 
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->aux_context = si_create_context(&sscreen->b, 0);

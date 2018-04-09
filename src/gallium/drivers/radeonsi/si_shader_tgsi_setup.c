@@ -99,7 +99,7 @@ static void si_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
  * @returns 0 for success, 1 for failure
  */
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
-			 LLVMTargetMachineRef tm,
+			 struct si_compiler *compiler,
 			 struct pipe_debug_callback *debug)
 {
 	struct si_llvm_diagnostics diag;
@@ -119,8 +119,9 @@ unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 	LLVMContextSetDiagnosticHandler(llvm_ctx, si_diagnostic_handler, &diag);
 
 	/* Compile IR*/
-	mem_err = LLVMTargetMachineEmitToMemoryBuffer(tm, M, LLVMObjectFile, &err,
-								 &out_buffer);
+	mem_err = LLVMTargetMachineEmitToMemoryBuffer(compiler->tm, M,
+						      LLVMObjectFile, &err,
+						      &out_buffer);
 
 	/* Process Errors/Warnings */
 	if (mem_err) {
@@ -992,7 +993,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 
 void si_llvm_context_init(struct si_shader_context *ctx,
 			  struct si_screen *sscreen,
-			  LLVMTargetMachineRef tm)
+			  struct si_compiler *compiler)
 {
 	struct lp_type type;
 
@@ -1003,14 +1004,14 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	 */
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->screen = sscreen;
-	ctx->tm = tm;
+	ctx->compiler = compiler;
 
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
 	LLVMSetTarget(ctx->gallivm.module, "amdgcn--");
 
-	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);
+	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(compiler->tm);
 	char *data_layout_str = LLVMCopyStringRepOfTargetData(data_layout);
 	LLVMSetDataLayout(ctx->gallivm.module, data_layout_str);
 	LLVMDisposeTargetData(data_layout);
