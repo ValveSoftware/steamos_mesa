@@ -1436,7 +1436,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		unsigned masked_atoms = 0;
 
 		if (unlikely(sctx->flags & SI_CONTEXT_FLUSH_FOR_RENDER_COND))
-			masked_atoms |= 1u << sctx->atoms.s.render_cond.id;
+			masked_atoms |= si_get_atom_bit(sctx, &sctx->atoms.s.render_cond);
 
 		if (!si_upload_graphics_shader_descriptors(sctx))
 			return;

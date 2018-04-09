@@ -33,19 +33,11 @@
 #include "util/u_resource.h"
 #include "util/u_upload_mgr.h"
 
-/* Initialize an external atom (owned by ../radeon). */
-static void
-si_init_external_atom(struct si_context *sctx, struct si_atom *atom)
-{
-	atom->id = atom - sctx->atoms.array;
-}
-
 /* Initialize an atom owned by radeonsi.  */
 void si_init_atom(struct si_context *sctx, struct si_atom *atom,
 		  void (*emit_func)(struct si_context *ctx, struct si_atom *state))
 {
 	atom->emit = emit_func;
-	atom->id = atom - sctx->atoms.array;
 }
 
 static unsigned si_map_swizzle(unsigned swizzle)
@@ -4526,12 +4518,6 @@ static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
 {
-	si_init_external_atom(sctx, &sctx->atoms.s.render_cond);
-	si_init_external_atom(sctx, &sctx->atoms.s.streamout_begin);
-	si_init_external_atom(sctx, &sctx->atoms.s.streamout_enable);
-	si_init_external_atom(sctx, &sctx->atoms.s.scissors);
-	si_init_external_atom(sctx, &sctx->atoms.s.viewports);
-
 	si_init_atom(sctx, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
 	si_init_atom(sctx, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
 	si_init_atom(sctx, &sctx->atoms.s.db_render_state, si_emit_db_render_state);

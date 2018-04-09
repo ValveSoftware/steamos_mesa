@@ -45,11 +45,11 @@ struct si_shader_selector;
 struct r600_texture;
 struct si_qbo_state;
 
-/* This encapsulates a state or an operation which can emitted into the GPU
- * command stream. */
+/* State atoms are callbacks which write a sequence of packets into a GPU
+ * command buffer (AKA indirect buffer, AKA IB, AKA command stream, AKA CS).
+ */
 struct si_atom {
 	void (*emit)(struct si_context *ctx, struct si_atom *state);
-	unsigned short		id;
 };
 
 struct si_state_blend {

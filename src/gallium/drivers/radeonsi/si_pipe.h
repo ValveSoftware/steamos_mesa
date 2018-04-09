@@ -1339,11 +1339,16 @@ si_invalidate_draw_sh_constants(struct si_context *sctx)
 	sctx->last_base_vertex = SI_BASE_VERTEX_UNKNOWN;
 }
 
-static inline void
-si_set_atom_dirty(struct si_context *sctx,
-		  struct si_atom *atom, bool dirty)
+static inline unsigned
+si_get_atom_bit(struct si_context *sctx, struct si_atom *atom)
 {
-	unsigned bit = 1 << atom->id;
+	return 1 << (atom - sctx->atoms.array);
+}
+
+static inline void
+si_set_atom_dirty(struct si_context *sctx, struct si_atom *atom, bool dirty)
+{
+	unsigned bit = si_get_atom_bit(sctx, atom);
 
 	if (dirty)
 		sctx->dirty_atoms |= bit;
@@ -1352,17 +1357,13 @@ si_set_atom_dirty(struct si_context *sctx,
 }
 
 static inline bool
-si_is_atom_dirty(struct si_context *sctx,
-		 struct si_atom *atom)
+si_is_atom_dirty(struct si_context *sctx, struct si_atom *atom)
 {
-	unsigned bit = 1 << atom->id;
-
-	return sctx->dirty_atoms & bit;
+	return (sctx->dirty_atoms & si_get_atom_bit(sctx, atom)) != 0;
 }
 
 static inline void
-si_mark_atom_dirty(struct si_context *sctx,
-		   struct si_atom *atom)
+si_mark_atom_dirty(struct si_context *sctx, struct si_atom *atom)
 {
 	si_set_atom_dirty(sctx, atom, true);
 }
