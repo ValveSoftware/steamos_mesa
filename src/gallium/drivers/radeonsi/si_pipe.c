@@ -149,10 +149,19 @@ static void si_init_compiler(struct si_screen *sscreen,
 	/* This is recommended by the instruction combining pass. */
 	LLVMAddEarlyCSEMemSSAPass(compiler->passmgr);
 	LLVMAddInstructionCombiningPass(compiler->passmgr);
+
+	/* Get the data layout. */
+	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(compiler->tm);
+	if (!data_layout)
+		return;
+	compiler->data_layout = LLVMCopyStringRepOfTargetData(data_layout);
+	LLVMDisposeTargetData(data_layout);
 }
 
 static void si_destroy_compiler(struct si_compiler *compiler)
 {
+	if (compiler->data_layout)
+		LLVMDisposeMessage((char*)compiler->data_layout);
 	if (compiler->passmgr)
 		LLVMDisposePassManager(compiler->passmgr);
 	if (compiler->target_library_info)

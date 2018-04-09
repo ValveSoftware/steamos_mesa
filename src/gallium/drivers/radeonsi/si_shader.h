@@ -315,6 +315,7 @@ struct si_shader;
 struct si_compiler {
 	LLVMTargetMachineRef		tm;
 	const char			*triple;
+	const char			*data_layout;
 	LLVMTargetLibraryInfoRef	target_library_info;
 	LLVMPassManagerRef		passmgr;
 };
