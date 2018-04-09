@@ -1213,7 +1213,6 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 void si_llvm_optimize_module(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	const char *triple = LLVMGetTarget(gallivm->module);
 	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Dump LLVM IR before any optimization passes */
@@ -1224,7 +1223,8 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 	/* Create the pass manager */
 	gallivm->passmgr = LLVMCreatePassManager();
 
-	target_library_info = gallivm_create_target_library_info(triple);
+	target_library_info =
+		gallivm_create_target_library_info(ctx->compiler->triple);
 	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
 	if (si_extra_shader_checks(ctx->screen, ctx->type))
