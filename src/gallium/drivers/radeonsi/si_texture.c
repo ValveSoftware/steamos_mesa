@@ -58,8 +58,8 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 		return false;
 
 	/* MSAA: Blits don't exist in the real world. */
-	if (rsrc->resource.b.b.nr_samples > 1 ||
-	    rdst->resource.b.b.nr_samples > 1)
+	if (rsrc->buffer.b.b.nr_samples > 1 ||
+	    rdst->buffer.b.b.nr_samples > 1)
 		return false;
 
 	/* Depth-stencil surfaces:
@@ -85,7 +85,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 	if (rdst->cmask.size && rdst->dirty_level_mask & (1 << dst_level)) {
 		/* The CMASK clear is only enabled for the first level. */
 		assert(dst_level == 0);
-		if (!util_texrange_covers_whole_level(&rdst->resource.b.b, dst_level,
+		if (!util_texrange_covers_whole_level(&rdst->buffer.b.b, dst_level,
 						      dstx, dsty, dstz, src_box->width,
 						      src_box->height, src_box->depth))
 			return false;
@@ -95,7 +95,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 
 	/* All requirements are met. Prepare textures for SDMA. */
 	if (rsrc->cmask.size && rsrc->dirty_level_mask & (1 << src_level))
-		sctx->b.flush_resource(&sctx->b, &rsrc->resource.b.b);
+		sctx->b.flush_resource(&sctx->b, &rsrc->buffer.b.b);
 
 	assert(!(rsrc->dirty_level_mask & (1 << src_level)));
 	assert(!(rdst->dirty_level_mask & (1 << dst_level)));
@@ -401,7 +401,7 @@ void si_eliminate_fast_color_clear(struct si_context *sctx,
 		mtx_lock(&sscreen->aux_context_lock);
 
 	unsigned n = sctx->num_decompress_calls;
-	ctx->flush_resource(ctx, &rtex->resource.b.b);
+	ctx->flush_resource(ctx, &rtex->buffer.b.b);
 
 	/* Flush only if any fast clear elimination took place. */
 	if (n != sctx->num_decompress_calls)
@@ -417,16 +417,16 @@ void si_texture_discard_cmask(struct si_screen *sscreen,
 	if (!rtex->cmask.size)
 		return;
 
-	assert(rtex->resource.b.b.nr_samples <= 1);
+	assert(rtex->buffer.b.b.nr_samples <= 1);
 
 	/* Disable CMASK. */
 	memset(&rtex->cmask, 0, sizeof(rtex->cmask));
-	rtex->cmask.base_address_reg = rtex->resource.gpu_address >> 8;
+	rtex->cmask.base_address_reg = rtex->buffer.gpu_address >> 8;
 	rtex->dirty_level_mask = 0;
 
 	rtex->cb_color_info &= ~S_028C70_FAST_CLEAR(1);
 
-	if (rtex->cmask_buffer != &rtex->resource)
+	if (rtex->cmask_buffer != &rtex->buffer)
 	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 
 	/* Notify all contexts about the change. */
@@ -438,8 +438,8 @@ static bool si_can_disable_dcc(struct r600_texture *rtex)
 {
 	/* We can't disable DCC if it can be written by another process. */
 	return rtex->dcc_offset &&
-	       (!rtex->resource.b.is_shared ||
-		!(rtex->resource.external_usage & PIPE_HANDLE_USAGE_WRITE));
+	       (!rtex->buffer.b.is_shared ||
+		!(rtex->buffer.external_usage & PIPE_HANDLE_USAGE_WRITE));
 }
 
 static bool si_texture_discard_dcc(struct si_screen *sscreen,
@@ -507,12 +507,12 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 {
 	struct pipe_screen *screen = sctx->b.screen;
 	struct r600_texture *new_tex;
-	struct pipe_resource templ = rtex->resource.b.b;
+	struct pipe_resource templ = rtex->buffer.b.b;
 	unsigned i;
 
 	templ.bind |= new_bind_flag;
 
-	if (rtex->resource.b.is_shared)
+	if (rtex->buffer.b.is_shared)
 		return;
 
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
@@ -538,8 +538,8 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 				 u_minify(templ.width0, i), u_minify(templ.height0, i),
 				 util_num_layers(&templ, i), &box);
 
-			sctx->dma_copy(&sctx->b, &new_tex->resource.b.b, i, 0, 0, 0,
-				       &rtex->resource.b.b, i, &box);
+			sctx->dma_copy(&sctx->b, &new_tex->buffer.b.b, i, 0, 0, 0,
+				       &rtex->buffer.b.b, i, &box);
 		}
 	}
 
@@ -549,15 +549,15 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 	}
 
 	/* Replace the structure fields of rtex. */
-	rtex->resource.b.b.bind = templ.bind;
-	pb_reference(&rtex->resource.buf, new_tex->resource.buf);
-	rtex->resource.gpu_address = new_tex->resource.gpu_address;
-	rtex->resource.vram_usage = new_tex->resource.vram_usage;
-	rtex->resource.gart_usage = new_tex->resource.gart_usage;
-	rtex->resource.bo_size = new_tex->resource.bo_size;
-	rtex->resource.bo_alignment = new_tex->resource.bo_alignment;
-	rtex->resource.domains = new_tex->resource.domains;
-	rtex->resource.flags = new_tex->resource.flags;
+	rtex->buffer.b.b.bind = templ.bind;
+	pb_reference(&rtex->buffer.buf, new_tex->buffer.buf);
+	rtex->buffer.gpu_address = new_tex->buffer.gpu_address;
+	rtex->buffer.vram_usage = new_tex->buffer.vram_usage;
+	rtex->buffer.gart_usage = new_tex->buffer.gart_usage;
+	rtex->buffer.bo_size = new_tex->buffer.bo_size;
+	rtex->buffer.bo_alignment = new_tex->buffer.bo_alignment;
+	rtex->buffer.domains = new_tex->buffer.domains;
+	rtex->buffer.flags = new_tex->buffer.flags;
 	rtex->size = new_tex->size;
 	rtex->db_render_format = new_tex->db_render_format;
 	rtex->db_compatible = new_tex->db_compatible;
@@ -597,7 +597,7 @@ static void si_query_opaque_metadata(struct si_screen *sscreen,
 				     struct r600_texture *rtex,
 			             struct radeon_bo_metadata *md)
 {
-	struct pipe_resource *res = &rtex->resource.b.b;
+	struct pipe_resource *res = &rtex->buffer.b.b;
 	static const unsigned char swizzle[] = {
 		PIPE_SWIZZLE_X,
 		PIPE_SWIZZLE_Y,
@@ -711,7 +711,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 		/* Move a suballocated texture into a non-suballocated allocation. */
 		if (sscreen->ws->buffer_is_suballocated(res->buf) ||
 		    rtex->surface.tile_swizzle ||
-		    (rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+		    (rtex->buffer.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
 		     sscreen->info.has_local_buffers &&
 		     whandle->type != DRM_API_HANDLE_TYPE_KMS)) {
 			assert(!res->b.is_shared);
@@ -774,7 +774,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 		/* Move a suballocated buffer into a non-suballocated allocation. */
 		if (sscreen->ws->buffer_is_suballocated(res->buf) ||
 		    /* A DMABUF export always fails if the BO is local. */
-		    (rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+		    (rtex->buffer.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
 		     sscreen->info.has_local_buffers)) {
 			assert(!res->b.is_shared);
 
@@ -830,11 +830,11 @@ static void si_texture_destroy(struct pipe_screen *screen,
 			       struct pipe_resource *ptex)
 {
 	struct r600_texture *rtex = (struct r600_texture*)ptex;
-	struct r600_resource *resource = &rtex->resource;
+	struct r600_resource *resource = &rtex->buffer;
 
 	r600_texture_reference(&rtex->flushed_depth_texture, NULL);
 
-	if (rtex->cmask_buffer != &rtex->resource) {
+	if (rtex->cmask_buffer != &rtex->buffer) {
 	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 	}
 	pb_reference(&resource->buf, NULL);
@@ -852,7 +852,7 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 			       struct r600_fmask_info *out)
 {
 	/* FMASK is allocated like an ordinary texture. */
-	struct pipe_resource templ = rtex->resource.b.b;
+	struct pipe_resource templ = rtex->buffer.b.b;
 	struct radeon_surf fmask = {};
 	unsigned flags, bpe;
 
@@ -905,7 +905,7 @@ static void si_texture_allocate_fmask(struct si_screen *sscreen,
 				      struct r600_texture *rtex)
 {
 	si_texture_get_fmask_info(sscreen, rtex,
-				    rtex->resource.b.b.nr_samples, &rtex->fmask);
+				    rtex->buffer.b.b.nr_samples, &rtex->fmask);
 
 	rtex->fmask.offset = align64(rtex->size, rtex->fmask.alignment);
 	rtex->size = rtex->fmask.offset + rtex->fmask.size;
@@ -949,8 +949,8 @@ void si_texture_get_cmask_info(struct si_screen *sscreen,
 
 	unsigned base_align = num_pipes * pipe_interleave_bytes;
 
-	unsigned width = align(rtex->resource.b.b.width0, cl_width*8);
-	unsigned height = align(rtex->resource.b.b.height0, cl_height*8);
+	unsigned width = align(rtex->buffer.b.b.width0, cl_width*8);
+	unsigned height = align(rtex->buffer.b.b.height0, cl_height*8);
 	unsigned slice_elements = (width * height) / (8*8);
 
 	/* Each element of CMASK is a nibble. */
@@ -961,7 +961,7 @@ void si_texture_get_cmask_info(struct si_screen *sscreen,
 		out->slice_tile_max -= 1;
 
 	out->alignment = MAX2(256, base_align);
-	out->size = util_num_layers(&rtex->resource.b.b, 0) *
+	out->size = util_num_layers(&rtex->buffer.b.b, 0) *
 		    align(slice_bytes, base_align);
 }
 
@@ -1029,8 +1029,8 @@ static void si_texture_get_htile_size(struct si_screen *sscreen,
 		return;
 	}
 
-	width = align(rtex->resource.b.b.width0, cl_width * 8);
-	height = align(rtex->resource.b.b.height0, cl_height * 8);
+	width = align(rtex->buffer.b.b.width0, cl_width * 8);
+	height = align(rtex->buffer.b.b.height0, cl_height * 8);
 
 	slice_elements = (width * height) / (8 * 8);
 	slice_bytes = slice_elements * 4;
@@ -1040,7 +1040,7 @@ static void si_texture_get_htile_size(struct si_screen *sscreen,
 
 	rtex->surface.htile_alignment = base_align;
 	rtex->surface.htile_size =
-		util_num_layers(&rtex->resource.b.b, 0) *
+		util_num_layers(&rtex->buffer.b.b, 0) *
 		align(slice_bytes, base_align);
 }
 
@@ -1066,12 +1066,12 @@ void si_print_texture_info(struct si_screen *sscreen,
 	u_log_printf(log, "  Info: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
 		"blk_h=%u, array_size=%u, last_level=%u, "
 		"bpe=%u, nsamples=%u, flags=0x%x, %s\n",
-		rtex->resource.b.b.width0, rtex->resource.b.b.height0,
-		rtex->resource.b.b.depth0, rtex->surface.blk_w,
+		rtex->buffer.b.b.width0, rtex->buffer.b.b.height0,
+		rtex->buffer.b.b.depth0, rtex->surface.blk_w,
 		rtex->surface.blk_h,
-		rtex->resource.b.b.array_size, rtex->resource.b.b.last_level,
-		rtex->surface.bpe, rtex->resource.b.b.nr_samples,
-		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
+		rtex->buffer.b.b.array_size, rtex->buffer.b.b.last_level,
+		rtex->surface.bpe, rtex->buffer.b.b.nr_samples,
+		rtex->surface.flags, util_format_short_name(rtex->buffer.b.b.format));
 
 	if (sscreen->info.chip_class >= GFX9) {
 		u_log_printf(log, "  Surf: size=%"PRIu64", slice_size=%"PRIu64", "
@@ -1162,7 +1162,7 @@ void si_print_texture_info(struct si_screen *sscreen,
 		u_log_printf(log, "  DCC: offset=%"PRIu64", size=%u, alignment=%u\n",
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
-		for (i = 0; i <= rtex->resource.b.b.last_level; i++)
+		for (i = 0; i <= rtex->buffer.b.b.last_level; i++)
 			u_log_printf(log, "  DCCLevel[%i]: enabled=%u, offset=%u, "
 				"fast_clear_size=%u\n",
 				i, i < rtex->surface.num_dcc_levels,
@@ -1170,15 +1170,15 @@ void si_print_texture_info(struct si_screen *sscreen,
 				rtex->surface.u.legacy.level[i].dcc_fast_clear_size);
 	}
 
-	for (i = 0; i <= rtex->resource.b.b.last_level; i++)
+	for (i = 0; i <= rtex->buffer.b.b.last_level; i++)
 		u_log_printf(log, "  Level[%i]: offset=%"PRIu64", slice_size=%"PRIu64", "
 			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 			"mode=%u, tiling_index = %u\n",
 			i, rtex->surface.u.legacy.level[i].offset,
 			(uint64_t)rtex->surface.u.legacy.level[i].slice_size_dw * 4,
-			u_minify(rtex->resource.b.b.width0, i),
-			u_minify(rtex->resource.b.b.height0, i),
-			u_minify(rtex->resource.b.b.depth0, i),
+			u_minify(rtex->buffer.b.b.width0, i),
+			u_minify(rtex->buffer.b.b.height0, i),
+			u_minify(rtex->buffer.b.b.depth0, i),
 			rtex->surface.u.legacy.level[i].nblk_x,
 			rtex->surface.u.legacy.level[i].nblk_y,
 			rtex->surface.u.legacy.level[i].mode,
@@ -1187,16 +1187,16 @@ void si_print_texture_info(struct si_screen *sscreen,
 	if (rtex->surface.has_stencil) {
 		u_log_printf(log, "  StencilLayout: tilesplit=%u\n",
 			rtex->surface.u.legacy.stencil_tile_split);
-		for (i = 0; i <= rtex->resource.b.b.last_level; i++) {
+		for (i = 0; i <= rtex->buffer.b.b.last_level; i++) {
 			u_log_printf(log, "  StencilLevel[%i]: offset=%"PRIu64", "
 				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 				"mode=%u, tiling_index = %u\n",
 				i, rtex->surface.u.legacy.stencil_level[i].offset,
 				(uint64_t)rtex->surface.u.legacy.stencil_level[i].slice_size_dw * 4,
-				u_minify(rtex->resource.b.b.width0, i),
-				u_minify(rtex->resource.b.b.height0, i),
-				u_minify(rtex->resource.b.b.depth0, i),
+				u_minify(rtex->buffer.b.b.width0, i),
+				u_minify(rtex->buffer.b.b.height0, i),
+				u_minify(rtex->buffer.b.b.depth0, i),
 				rtex->surface.u.legacy.stencil_level[i].nblk_x,
 				rtex->surface.u.legacy.stencil_level[i].nblk_y,
 				rtex->surface.u.legacy.stencil_level[i].mode,
@@ -1220,7 +1220,7 @@ si_texture_create_object(struct pipe_screen *screen,
 	if (!rtex)
 		return NULL;
 
-	resource = &rtex->resource;
+	resource = &rtex->buffer;
 	resource->b.b = *base;
 	resource->b.b.next = NULL;
 	resource->b.vtbl = &si_texture_vtbl;
@@ -1228,7 +1228,7 @@ si_texture_create_object(struct pipe_screen *screen,
 	resource->b.b.screen = screen;
 
 	/* don't include stencil-only formats which we don't support for rendering */
-	rtex->is_depth = util_format_has_depth(util_format_description(rtex->resource.b.b.format));
+	rtex->is_depth = util_format_has_depth(util_format_description(rtex->buffer.b.b.format));
 
 	rtex->surface = *surface;
 	rtex->size = rtex->surface.surf_size;
@@ -1284,7 +1284,7 @@ si_texture_create_object(struct pipe_screen *screen,
 		    !(sscreen->debug_flags & DBG(NO_FMASK))) {
 			si_texture_allocate_fmask(sscreen, rtex);
 			si_texture_allocate_cmask(sscreen, rtex);
-			rtex->cmask_buffer = &rtex->resource;
+			rtex->cmask_buffer = &rtex->buffer;
 
 			if (!rtex->fmask.size || !rtex->cmask.size) {
 				FREE(rtex);
@@ -1338,7 +1338,7 @@ si_texture_create_object(struct pipe_screen *screen,
 		if (sscreen->info.chip_class >= GFX9 || rtex->tc_compatible_htile)
 			clear_value = 0x0000030F;
 
-		si_screen_clear_buffer(sscreen, &rtex->resource.b.b,
+		si_screen_clear_buffer(sscreen, &rtex->buffer.b.b,
 					 rtex->htile_offset,
 					 rtex->surface.htile_size,
 					 clear_value);
@@ -1346,7 +1346,7 @@ si_texture_create_object(struct pipe_screen *screen,
 
 	/* Initialize DCC only if the texture is not being imported. */
 	if (!buf && rtex->dcc_offset) {
-		si_screen_clear_buffer(sscreen, &rtex->resource.b.b,
+		si_screen_clear_buffer(sscreen, &rtex->buffer.b.b,
 					 rtex->dcc_offset,
 					 rtex->surface.dcc_size,
 					 0xFFFFFFFF);
@@ -1354,12 +1354,12 @@ si_texture_create_object(struct pipe_screen *screen,
 
 	/* Initialize the CMASK base register value. */
 	rtex->cmask.base_address_reg =
-		(rtex->resource.gpu_address + rtex->cmask.offset) >> 8;
+		(rtex->buffer.gpu_address + rtex->cmask.offset) >> 8;
 
 	if (sscreen->debug_flags & DBG(VM)) {
 		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Texture %ix%ix%i, %i levels, %i samples, %s\n",
-			rtex->resource.gpu_address,
-			rtex->resource.gpu_address + rtex->resource.buf->size,
+			rtex->buffer.gpu_address,
+			rtex->buffer.gpu_address + rtex->buffer.buf->size,
 			base->width0, base->height0, util_num_layers(base, 0), base->last_level+1,
 			base->nr_samples ? base->nr_samples : 1, util_format_short_name(base->format));
 	}
@@ -1517,13 +1517,13 @@ static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
 	if (!rtex)
 		return NULL;
 
-	rtex->resource.b.is_shared = true;
-	rtex->resource.external_usage = usage;
+	rtex->buffer.b.is_shared = true;
+	rtex->buffer.external_usage = usage;
 
 	si_apply_opaque_metadata(sscreen, rtex, &metadata);
 
 	assert(rtex->surface.tile_swizzle == 0);
-	return &rtex->resource.b.b;
+	return &rtex->buffer.b.b;
 }
 
 bool si_init_flushed_depth_texture(struct pipe_context *ctx,
@@ -1626,10 +1626,10 @@ static bool si_can_invalidate_texture(struct si_screen *sscreen,
 				      unsigned transfer_usage,
 				      const struct pipe_box *box)
 {
-	return !rtex->resource.b.is_shared &&
+	return !rtex->buffer.b.is_shared &&
 		!(transfer_usage & PIPE_TRANSFER_READ) &&
-		rtex->resource.b.b.last_level == 0 &&
-		util_texrange_covers_whole_level(&rtex->resource.b.b, 0,
+		rtex->buffer.b.b.last_level == 0 &&
+		util_texrange_covers_whole_level(&rtex->buffer.b.b, 0,
 						 box->x, box->y, box->z,
 						 box->width, box->height,
 						 box->depth);
@@ -1645,11 +1645,11 @@ static void si_texture_invalidate_storage(struct si_context *sctx,
 	assert(rtex->surface.is_linear);
 
 	/* Reallocate the buffer in the same pipe_resource. */
-	si_alloc_resource(sscreen, &rtex->resource);
+	si_alloc_resource(sscreen, &rtex->buffer);
 
 	/* Initialize the CMASK base address (needed even without CMASK). */
 	rtex->cmask.base_address_reg =
-		(rtex->resource.gpu_address + rtex->cmask.offset) >> 8;
+		(rtex->buffer.gpu_address + rtex->cmask.offset) >> 8;
 
 	p_atomic_inc(&sscreen->dirty_tex_counter);
 
@@ -1706,12 +1706,12 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			use_staging_texture = true;
 		else if (usage & PIPE_TRANSFER_READ)
 			use_staging_texture =
-				rtex->resource.domains & RADEON_DOMAIN_VRAM ||
-				rtex->resource.flags & RADEON_FLAG_GTT_WC;
+				rtex->buffer.domains & RADEON_DOMAIN_VRAM ||
+				rtex->buffer.flags & RADEON_FLAG_GTT_WC;
 		/* Write & linear only: */
-		else if (si_rings_is_buffer_referenced(sctx, rtex->resource.buf,
+		else if (si_rings_is_buffer_referenced(sctx, rtex->buffer.buf,
 						       RADEON_USAGE_READWRITE) ||
-			 !sctx->ws->buffer_wait(rtex->resource.buf, 0,
+			 !sctx->ws->buffer_wait(rtex->buffer.buf, 0,
 						RADEON_USAGE_READWRITE)) {
 			/* It's busy. */
 			if (si_can_invalidate_texture(sctx->screen, rtex,
@@ -1733,7 +1733,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 	if (rtex->is_depth) {
 		struct r600_texture *staging_depth;
 
-		if (rtex->resource.b.b.nr_samples > 1) {
+		if (rtex->buffer.b.b.nr_samples > 1) {
 			/* MSAA depth buffers need to be converted to single sample buffers.
 			 *
 			 * Mapping MSAA depth buffers can occur if ReadPixels is called
@@ -1789,7 +1789,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 							 &trans->b.b.layer_stride);
 		}
 
-		trans->staging = &staging_depth->resource;
+		trans->staging = &staging_depth->buffer;
 		buf = trans->staging;
 	} else if (use_staging_texture) {
 		struct pipe_resource resource;
@@ -1806,7 +1806,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
 			goto fail_trans;
 		}
-		trans->staging = &staging->resource;
+		trans->staging = &staging->buffer;
 
 		/* Just get the strides. */
 		si_texture_get_offset(sctx->screen, staging, 0, NULL,
@@ -1824,7 +1824,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		offset = si_texture_get_offset(sctx->screen, rtex, level, box,
 						 &trans->b.b.stride,
 						 &trans->b.b.layer_stride);
-		buf = &rtex->resource;
+		buf = &rtex->buffer;
 	}
 
 	if (!(map = si_buffer_map_sync_with_rings(sctx, buf, usage)))
@@ -1849,7 +1849,7 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx,
 	struct r600_texture *rtex = (struct r600_texture*)texture;
 
 	if ((transfer->usage & PIPE_TRANSFER_WRITE) && rtransfer->staging) {
-		if (rtex->is_depth && rtex->resource.b.b.nr_samples <= 1) {
+		if (rtex->is_depth && rtex->buffer.b.b.nr_samples <= 1) {
 			ctx->resource_copy_region(ctx, texture, transfer->level,
 						  transfer->box.x, transfer->box.y, transfer->box.z,
 						  &rtransfer->staging->b.b, transfer->level,
@@ -2147,7 +2147,7 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 	/* Remove zombie textures (textures kept alive by this array only). */
 	for (i = 0; i < ARRAY_SIZE(sctx->dcc_stats); i++)
 		if (sctx->dcc_stats[i].tex &&
-		    sctx->dcc_stats[i].tex->resource.b.b.reference.count == 1)
+		    sctx->dcc_stats[i].tex->buffer.b.b.reference.count == 1)
 			vi_dcc_clean_up_context_slot(sctx, i);
 
 	/* Find the texture. */
@@ -2242,10 +2242,10 @@ void vi_separate_dcc_try_enable(struct si_context *sctx,
 	/* The intent is to use this with shared displayable back buffers,
 	 * but it's not strictly limited only to them.
 	 */
-	if (!tex->resource.b.is_shared ||
-	    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) ||
-	    tex->resource.b.b.target != PIPE_TEXTURE_2D ||
-	    tex->resource.b.b.last_level > 0 ||
+	if (!tex->buffer.b.is_shared ||
+	    !(tex->buffer.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) ||
+	    tex->buffer.b.b.target != PIPE_TEXTURE_2D ||
+	    tex->buffer.b.b.last_level > 0 ||
 	    !tex->surface.dcc_size)
 		return;
 
@@ -2317,7 +2317,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		/* Compute the approximate number of fullscreen draws. */
 		tex->ps_draw_ratio =
 			result.pipeline_statistics.ps_invocations /
-			(tex->resource.b.b.width0 * tex->resource.b.b.height0);
+			(tex->buffer.b.b.width0 * tex->buffer.b.b.height0);
 		sctx->last_tex_ps_draw_ratio = tex->ps_draw_ratio;
 
 		disable = tex->dcc_separate_buffer &&
@@ -2454,12 +2454,12 @@ si_texture_from_memobj(struct pipe_screen *screen,
 	 */
 	pb_reference(&buf, memobj->buf);
 
-	rtex->resource.b.is_shared = true;
-	rtex->resource.external_usage = PIPE_HANDLE_USAGE_READ_WRITE;
+	rtex->buffer.b.is_shared = true;
+	rtex->buffer.external_usage = PIPE_HANDLE_USAGE_READ_WRITE;
 
 	si_apply_opaque_metadata(sscreen, rtex, &metadata);
 
-	return &rtex->resource.b.b;
+	return &rtex->buffer.b.b;
 }
 
 static bool si_check_resource_capability(struct pipe_screen *screen,

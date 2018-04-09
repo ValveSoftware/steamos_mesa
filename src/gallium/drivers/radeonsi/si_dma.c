@@ -163,7 +163,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	tiled_y = detile ? src_y : dst_y;
 	tiled_z = detile ? src_z : dst_z;
 
-	assert(!util_format_is_depth_and_stencil(rtiled->resource.b.b.format));
+	assert(!util_format_is_depth_and_stencil(rtiled->buffer.b.b.format));
 
 	array_mode = G_009910_ARRAY_MODE(tile_mode);
 	slice_tile_max = (rtiled->surface.u.legacy.level[tiled_lvl].nblk_x *
@@ -184,14 +184,14 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	/* Non-depth modes don't have TILE_SPLIT set. */
 	tile_split = util_logbase2(rtiled->surface.u.legacy.tile_split >> 6);
 	nbanks = G_009910_NUM_BANKS(tile_mode);
-	base += rtiled->resource.gpu_address;
-	addr += rlinear->resource.gpu_address;
+	base += rtiled->buffer.gpu_address;
+	addr += rlinear->buffer.gpu_address;
 
 	pipe_config = G_009910_PIPE_CONFIG(tile_mode);
 	mt = G_009910_MICRO_TILE_MODE(tile_mode);
 	size = copy_height * pitch;
 	ncopy = DIV_ROUND_UP(size, SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE);
-	si_need_dma_space(ctx, ncopy * 9, &rdst->resource, &rsrc->resource);
+	si_need_dma_space(ctx, ncopy * 9, &rdst->buffer, &rsrc->buffer);
 
 	for (i = 0; i < ncopy; i++) {
 		cheight = copy_height;
@@ -271,16 +271,16 @@ static void si_dma_copy(struct pipe_context *ctx,
 	bpp = rdst->surface.bpe;
 	dst_pitch = rdst->surface.u.legacy.level[dst_level].nblk_x * rdst->surface.bpe;
 	src_pitch = rsrc->surface.u.legacy.level[src_level].nblk_x * rsrc->surface.bpe;
-	src_w = u_minify(rsrc->resource.b.b.width0, src_level);
-	dst_w = u_minify(rdst->resource.b.b.width0, dst_level);
+	src_w = u_minify(rsrc->buffer.b.b.width0, src_level);
+	dst_w = u_minify(rdst->buffer.b.b.width0, dst_level);
 
 	dst_mode = rdst->surface.u.legacy.level[dst_level].mode;
 	src_mode = rsrc->surface.u.legacy.level[src_level].mode;
 
 	if (src_pitch != dst_pitch || src_box->x || dst_x || src_w != dst_w ||
 	    src_box->width != src_w ||
-	    src_box->height != u_minify(rsrc->resource.b.b.height0, src_level) ||
-	    src_box->height != u_minify(rdst->resource.b.b.height0, dst_level) ||
+	    src_box->height != u_minify(rsrc->buffer.b.b.height0, src_level) ||
+	    src_box->height != u_minify(rdst->buffer.b.b.height0, dst_level) ||
 	    rsrc->surface.u.legacy.level[src_level].nblk_y !=
 	    rdst->surface.u.legacy.level[dst_level].nblk_y) {
 		/* FIXME si can do partial blit */

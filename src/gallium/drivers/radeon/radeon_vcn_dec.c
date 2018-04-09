@@ -986,7 +986,7 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 	if (dec->ctx.res)
 		decode->hw_ctxt_size = dec->ctx.res->buf->size;
 
-	return luma->resource.buf;
+	return luma->buffer.buf;
 }
 
 static void rvcn_dec_message_destroy(struct radeon_decoder *dec)

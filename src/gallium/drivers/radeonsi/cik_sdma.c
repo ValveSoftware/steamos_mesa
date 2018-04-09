@@ -147,9 +147,9 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned bpp = rdst->surface.bpe;
-	uint64_t dst_address = rdst->resource.gpu_address +
+	uint64_t dst_address = rdst->buffer.gpu_address +
 			       rdst->surface.u.legacy.level[dst_level].offset;
-	uint64_t src_address = rsrc->resource.gpu_address +
+	uint64_t src_address = rsrc->buffer.gpu_address +
 			       rsrc->surface.u.legacy.level[src_level].offset;
 	unsigned dst_mode = rdst->surface.u.legacy.level[dst_level].mode;
 	unsigned src_mode = rsrc->surface.u.legacy.level[src_level].mode;
@@ -167,13 +167,13 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	unsigned src_pitch = rsrc->surface.u.legacy.level[src_level].nblk_x;
 	uint64_t dst_slice_pitch = ((uint64_t)rdst->surface.u.legacy.level[dst_level].slice_size_dw * 4) / bpp;
 	uint64_t src_slice_pitch = ((uint64_t)rsrc->surface.u.legacy.level[src_level].slice_size_dw * 4) / bpp;
-	unsigned dst_width = minify_as_blocks(rdst->resource.b.b.width0,
+	unsigned dst_width = minify_as_blocks(rdst->buffer.b.b.width0,
 					      dst_level, rdst->surface.blk_w);
-	unsigned src_width = minify_as_blocks(rsrc->resource.b.b.width0,
+	unsigned src_width = minify_as_blocks(rsrc->buffer.b.b.width0,
 					      src_level, rsrc->surface.blk_w);
-	unsigned dst_height = minify_as_blocks(rdst->resource.b.b.height0,
+	unsigned dst_height = minify_as_blocks(rdst->buffer.b.b.height0,
 					       dst_level, rdst->surface.blk_h);
-	unsigned src_height = minify_as_blocks(rsrc->resource.b.b.height0,
+	unsigned src_height = minify_as_blocks(rsrc->buffer.b.b.height0,
 					       src_level, rsrc->surface.blk_h);
 	unsigned srcx = src_box->x / rsrc->surface.blk_w;
 	unsigned srcy = src_box->y / rsrc->surface.blk_h;
@@ -186,10 +186,10 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	assert(dst_level <= dst->last_level);
 	assert(rdst->surface.u.legacy.level[dst_level].offset +
 	       dst_slice_pitch * bpp * (dstz + src_box->depth) <=
-	       rdst->resource.buf->size);
+	       rdst->buffer.buf->size);
 	assert(rsrc->surface.u.legacy.level[src_level].offset +
 	       src_slice_pitch * bpp * (srcz + src_box->depth) <=
-	       rsrc->resource.buf->size);
+	       rsrc->buffer.buf->size);
 
 	if (!si_prepare_for_dma_blit(sctx, rdst, dst_level, dstx, dsty,
 				     dstz, rsrc, src_level, src_box))
@@ -232,7 +232,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	      srcy + copy_height != (1 << 14)))) {
 		struct radeon_winsys_cs *cs = sctx->dma_cs;
 
-		si_need_dma_space(sctx, 13, &rdst->resource, &rsrc->resource);
+		si_need_dma_space(sctx, 13, &rdst->buffer, &rsrc->buffer);
 
 		radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
 						CIK_SDMA_COPY_SUB_OPCODE_LINEAR_SUB_WINDOW, 0) |
@@ -395,7 +395,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 			struct radeon_winsys_cs *cs = sctx->dma_cs;
 			uint32_t direction = linear == rdst ? 1u << 31 : 0;
 
-			si_need_dma_space(sctx, 14, &rdst->resource, &rsrc->resource);
+			si_need_dma_space(sctx, 14, &rdst->buffer, &rsrc->buffer);
 
 			radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
 							CIK_SDMA_COPY_SUB_OPCODE_TILED_SUB_WINDOW, 0) |
@@ -489,7 +489,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 		      dstx + copy_width != (1 << 14)))) {
 			struct radeon_winsys_cs *cs = sctx->dma_cs;
 
-			si_need_dma_space(sctx, 15, &rdst->resource, &rsrc->resource);
+			si_need_dma_space(sctx, 15, &rdst->buffer, &rsrc->buffer);
 
 			radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
 							CIK_SDMA_COPY_SUB_OPCODE_T2T_SUB_WINDOW, 0));

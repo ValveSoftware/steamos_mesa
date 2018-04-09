@@ -120,7 +120,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
-		max_layer = util_max_layer(&src->resource.b.b, level);
+		max_layer = util_max_layer(&src->buffer.b.b, level);
 		checked_last_layer = MIN2(last_layer, max_layer);
 
 		surf_tmpl.u.tex.level = level;
@@ -128,14 +128,14 @@ si_blit_dbcb_copy(struct si_context *sctx,
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			struct pipe_surface *zsurf, *cbsurf;
 
-			surf_tmpl.format = src->resource.b.b.format;
+			surf_tmpl.format = src->buffer.b.b.format;
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
 
-			zsurf = sctx->b.create_surface(&sctx->b, &src->resource.b.b, &surf_tmpl);
+			zsurf = sctx->b.create_surface(&sctx->b, &src->buffer.b.b, &surf_tmpl);
 
-			surf_tmpl.format = dst->resource.b.b.format;
-			cbsurf = sctx->b.create_surface(&sctx->b, &dst->resource.b.b, &surf_tmpl);
+			surf_tmpl.format = dst->buffer.b.b.format;
+			cbsurf = sctx->b.create_surface(&sctx->b, &dst->buffer.b.b, &surf_tmpl);
 
 			for (sample = first_sample; sample <= last_sample; sample++) {
 				if (sample != sctx->dbcb_copy_sample) {
@@ -154,7 +154,7 @@ si_blit_dbcb_copy(struct si_context *sctx,
 		}
 
 		if (first_layer == 0 && last_layer >= max_layer &&
-		    first_sample == 0 && last_sample >= u_max_sample(&src->resource.b.b))
+		    first_sample == 0 && last_sample >= u_max_sample(&src->buffer.b.b))
 			fully_copied_levels |= 1u << level;
 	}
 
@@ -178,7 +178,7 @@ void si_blit_decompress_depth(struct pipe_context *ctx,
 
 	assert(staging != NULL && "use si_blit_decompress_zs_in_place instead");
 
-	desc = util_format_description(staging->resource.b.b.format);
+	desc = util_format_description(staging->buffer.b.b.format);
 
 	if (util_format_has_depth(desc))
 		planes |= PIPE_MASK_Z;
@@ -212,7 +212,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 		sctx->db_flush_depth_inplace = true;
 	si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 
-	surf_tmpl.format = texture->resource.b.b.format;
+	surf_tmpl.format = texture->buffer.b.b.format;
 
 	sctx->decompression_enabled = true;
 
@@ -223,14 +223,14 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
-		max_layer = util_max_layer(&texture->resource.b.b, level);
+		max_layer = util_max_layer(&texture->buffer.b.b, level);
 		checked_last_layer = MIN2(last_layer, max_layer);
 
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
 
-			zsurf = sctx->b.create_surface(&sctx->b, &texture->resource.b.b, &surf_tmpl);
+			zsurf = sctx->b.create_surface(&sctx->b, &texture->buffer.b.b, &surf_tmpl);
 
 			si_blitter_begin(sctx, SI_DECOMPRESS);
 			util_blitter_custom_depth_stencil(sctx->blitter, zsurf, NULL, ~0,
@@ -341,14 +341,14 @@ si_decompress_depth(struct si_context *sctx,
 	 */
 	if (copy_planes &&
 	    (tex->flushed_depth_texture ||
-	     si_init_flushed_depth_texture(&sctx->b, &tex->resource.b.b, NULL))) {
+	     si_init_flushed_depth_texture(&sctx->b, &tex->buffer.b.b, NULL))) {
 		struct r600_texture *dst = tex->flushed_depth_texture;
 		unsigned fully_copied_levels;
 		unsigned levels = 0;
 
 		assert(tex->flushed_depth_texture);
 
-		if (util_format_is_depth_and_stencil(dst->resource.b.b.format))
+		if (util_format_is_depth_and_stencil(dst->buffer.b.b.format))
 			copy_planes = PIPE_MASK_Z | PIPE_MASK_S;
 
 		if (copy_planes & PIPE_MASK_Z) {
@@ -363,7 +363,7 @@ si_decompress_depth(struct si_context *sctx,
 		fully_copied_levels = si_blit_dbcb_copy(
 			sctx, tex, dst, copy_planes, levels,
 			first_layer, last_layer,
-			0, u_max_sample(&tex->resource.b.b));
+			0, u_max_sample(&tex->buffer.b.b));
 
 		if (copy_planes & PIPE_MASK_Z)
 			tex->dirty_level_mask &= ~fully_copied_levels;
@@ -398,15 +398,15 @@ si_decompress_depth(struct si_context *sctx,
 		/* Only in-place decompression needs to flush DB caches, or
 		 * when we don't decompress but TC-compatible planes are dirty.
 		 */
-		si_make_DB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
+		si_make_DB_shader_coherent(sctx, tex->buffer.b.b.nr_samples,
 					   inplace_planes & PIPE_MASK_S,
 					   tc_compat_htile);
 	}
 	/* set_framebuffer_state takes care of coherency for single-sample.
 	 * The DB->CB copy uses CB for the final writes.
 	 */
-	if (copy_planes && tex->resource.b.b.nr_samples > 1)
-		si_make_CB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
+	if (copy_planes && tex->buffer.b.b.nr_samples > 1)
+		si_make_CB_shader_coherent(sctx, tex->buffer.b.b.nr_samples,
 					   false);
 }
 
@@ -434,7 +434,7 @@ si_decompress_sampler_depth_textures(struct si_context *sctx,
 		si_decompress_depth(sctx, tex,
 				    sview->is_stencil_sampler ? PIPE_MASK_S : PIPE_MASK_Z,
 				    view->u.tex.first_level, view->u.tex.last_level,
-				    0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+				    0, util_max_layer(&tex->buffer.b.b, view->u.tex.first_level));
 	}
 }
 
@@ -483,17 +483,17 @@ static void si_blit_decompress_color(struct si_context *sctx,
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
-		max_layer = util_max_layer(&rtex->resource.b.b, level);
+		max_layer = util_max_layer(&rtex->buffer.b.b, level);
 		checked_last_layer = MIN2(last_layer, max_layer);
 
 		for (layer = first_layer; layer <= checked_last_layer; layer++) {
 			struct pipe_surface *cbsurf, surf_tmpl;
 
-			surf_tmpl.format = rtex->resource.b.b.format;
+			surf_tmpl.format = rtex->buffer.b.b.format;
 			surf_tmpl.u.tex.level = level;
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
-			cbsurf = sctx->b.create_surface(&sctx->b, &rtex->resource.b.b, &surf_tmpl);
+			cbsurf = sctx->b.create_surface(&sctx->b, &rtex->buffer.b.b, &surf_tmpl);
 
 			/* Required before and after FMASK and DCC_DECOMPRESS. */
 			if (custom_blend == sctx->custom_blend_fmask_decompress ||
@@ -519,7 +519,7 @@ static void si_blit_decompress_color(struct si_context *sctx,
 	}
 
 	sctx->decompression_enabled = false;
-	si_make_CB_shader_coherent(sctx, rtex->resource.b.b.nr_samples,
+	si_make_CB_shader_coherent(sctx, rtex->buffer.b.b.nr_samples,
 				   vi_dcc_enabled(rtex, first_level));
 }
 
@@ -532,7 +532,7 @@ si_decompress_color_texture(struct si_context *sctx, struct r600_texture *tex,
 		return;
 
 	si_blit_decompress_color(sctx, tex, first_level, last_level, 0,
-				 util_max_layer(&tex->resource.b.b, first_level),
+				 util_max_layer(&tex->buffer.b.b, first_level),
 				 false);
 }
 
@@ -750,7 +750,7 @@ static void si_decompress_resident_textures(struct si_context *sctx)
 		si_decompress_depth(sctx, tex,
 			sview->is_stencil_sampler ? PIPE_MASK_S : PIPE_MASK_Z,
 			view->u.tex.first_level, view->u.tex.last_level,
-			0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+			0, util_max_layer(&tex->buffer.b.b, view->u.tex.first_level));
 	}
 }
 
@@ -1328,8 +1328,8 @@ void si_decompress_dcc(struct si_context *sctx, struct r600_texture *rtex)
 	if (!rtex->dcc_offset)
 		return;
 
-	si_blit_decompress_color(sctx, rtex, 0, rtex->resource.b.b.last_level,
-				 0, util_max_layer(&rtex->resource.b.b, 0),
+	si_blit_decompress_color(sctx, rtex, 0, rtex->buffer.b.b.last_level,
+				 0, util_max_layer(&rtex->buffer.b.b, 0),
 				 true);
 }
 

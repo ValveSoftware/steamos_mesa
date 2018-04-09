@@ -234,19 +234,19 @@ void vi_dcc_clear_level(struct si_context *sctx,
 		dcc_buffer = &rtex->dcc_separate_buffer->b.b;
 		dcc_offset = 0;
 	} else {
-		dcc_buffer = &rtex->resource.b.b;
+		dcc_buffer = &rtex->buffer.b.b;
 		dcc_offset = rtex->dcc_offset;
 	}
 
 	if (sctx->chip_class >= GFX9) {
 		/* Mipmap level clears aren't implemented. */
-		assert(rtex->resource.b.b.last_level == 0);
+		assert(rtex->buffer.b.b.last_level == 0);
 		/* 4x and 8x MSAA needs a sophisticated compute shader for
 		 * the clear. See AMDVLK. */
-		assert(rtex->resource.b.b.nr_samples <= 2);
+		assert(rtex->buffer.b.b.nr_samples <= 2);
 		clear_size = rtex->surface.dcc_size;
 	} else {
-		unsigned num_layers = util_num_layers(&rtex->resource.b.b, level);
+		unsigned num_layers = util_num_layers(&rtex->buffer.b.b, level);
 
 		/* If this is 0, fast clear isn't possible. (can occur with MSAA) */
 		assert(rtex->surface.u.legacy.level[level].dcc_fast_clear_size);
@@ -254,7 +254,7 @@ void vi_dcc_clear_level(struct si_context *sctx,
 		 * dcc_fast_clear_size bytes for each layer. A compute shader
 		 * would be more efficient than separate per-layer clear operations.
 		 */
-		assert(rtex->resource.b.b.nr_samples <= 2 || num_layers == 1);
+		assert(rtex->buffer.b.b.nr_samples <= 2 || num_layers == 1);
 
 		dcc_offset += rtex->surface.u.legacy.level[level].dcc_offset;
 		clear_size = rtex->surface.u.legacy.level[level].dcc_fast_clear_size *
@@ -272,14 +272,14 @@ void vi_dcc_clear_level(struct si_context *sctx,
 static void si_set_optimal_micro_tile_mode(struct si_screen *sscreen,
 					   struct r600_texture *rtex)
 {
-	if (rtex->resource.b.is_shared ||
-	    rtex->resource.b.b.nr_samples <= 1 ||
+	if (rtex->buffer.b.is_shared ||
+	    rtex->buffer.b.b.nr_samples <= 1 ||
 	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
 		return;
 
 	assert(sscreen->info.chip_class >= GFX9 ||
 	       rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
-	assert(rtex->resource.b.b.last_level == 0);
+	assert(rtex->buffer.b.b.last_level == 0);
 
 	if (sscreen->info.chip_class >= GFX9) {
 		/* 4K or larger tiles only. 0 is linear. 1-3 are 256B tiles. */
@@ -411,12 +411,12 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 * organized in a 2D plane).
 		 */
 		if (sctx->chip_class >= GFX9 &&
-		    tex->resource.b.b.last_level > 0)
+		    tex->buffer.b.b.last_level > 0)
 			continue;
 
 		/* the clear is allowed if all layers are bound */
 		if (fb->cbufs[i]->u.tex.first_layer != 0 ||
-		    fb->cbufs[i]->u.tex.last_layer != util_max_layer(&tex->resource.b.b, 0)) {
+		    fb->cbufs[i]->u.tex.last_layer != util_max_layer(&tex->buffer.b.b, 0)) {
 			continue;
 		}
 
@@ -429,8 +429,8 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 * because there is no way to communicate the clear color among
 		 * all clients
 		 */
-		if (tex->resource.b.is_shared &&
-		    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
+		if (tex->buffer.b.is_shared &&
+		    !(tex->buffer.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
 			continue;
 
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
@@ -466,9 +466,9 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 *
 		 * This helps on both dGPUs and APUs, even small APUs like Mullins.
 		 */
-		bool too_small = tex->resource.b.b.nr_samples <= 1 &&
-				 tex->resource.b.b.width0 *
-				 tex->resource.b.b.height0 <= 512 * 512;
+		bool too_small = tex->buffer.b.b.nr_samples <= 1 &&
+				 tex->buffer.b.b.width0 *
+				 tex->buffer.b.b.height0 <= 512 * 512;
 
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
@@ -483,7 +483,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			    !tex->surface.u.legacy.level[level].dcc_fast_clear_size)
 				continue;
 
-			if (!vi_get_fast_clear_parameters(tex->resource.b.b.format,
+			if (!vi_get_fast_clear_parameters(tex->buffer.b.b.format,
 							  fb->cbufs[i]->format,
 							  color, &reset_value,
 							  &eliminate_needed))
@@ -493,7 +493,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 				continue;
 
 			/* DCC fast clear with MSAA should clear CMASK to 0xC. */
-			if (tex->resource.b.b.nr_samples >= 2 && tex->cmask.size) {
+			if (tex->buffer.b.b.nr_samples >= 2 && tex->cmask.size) {
 				/* TODO: This doesn't work with MSAA. */
 				if (eliminate_needed)
 					continue;
@@ -585,7 +585,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 	if (zstex &&
 	    si_htile_enabled(zstex, zsbuf->u.tex.level) &&
 	    zsbuf->u.tex.first_layer == 0 &&
-	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
+	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->buffer.b.b, 0)) {
 		/* TC-compatible HTILE only supports depth clears to 0 or 1. */
 		if (buffers & PIPE_CLEAR_DEPTH &&
 		    (!zstex->tc_compatible_htile ||

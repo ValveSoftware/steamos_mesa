@@ -259,7 +259,7 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 		struct r600_texture *tex = (struct r600_texture*)resource;
 
 		if (tex->is_depth && !si_can_sample_zs(tex, is_stencil_sampler))
-			resource = &tex->flushed_depth_texture->resource.b.b;
+			resource = &tex->flushed_depth_texture->buffer.b.b;
 	}
 
 	rres = r600_resource(resource);
@@ -330,7 +330,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		is_stencil = false;
 	}
 
-	va = tex->resource.gpu_address;
+	va = tex->buffer.gpu_address;
 
 	if (sscreen->info.chip_class >= GFX9) {
 		/* Only stencil_offset needs to be added here. */
@@ -358,7 +358,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		state[7] = 0;
 
 		if (vi_dcc_enabled(tex, first_level)) {
-			meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
+			meta_va = (!tex->dcc_separate_buffer ? tex->buffer.gpu_address : 0) +
 				  tex->dcc_offset;
 
 			if (sscreen->info.chip_class == VI) {
@@ -368,7 +368,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 
 			meta_va |= (uint32_t)tex->surface.tile_swizzle << 8;
 		} else if (vi_tc_compat_htile_enabled(tex, first_level)) {
-			meta_va = tex->resource.gpu_address + tex->htile_offset;
+			meta_va = tex->buffer.gpu_address + tex->htile_offset;
 		}
 
 		if (meta_va) {
@@ -437,7 +437,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 {
 	struct pipe_sampler_view *view = &sview->base;
 	struct r600_texture *rtex = (struct r600_texture *)view->texture;
-	bool is_buffer = rtex->resource.b.b.target == PIPE_BUFFER;
+	bool is_buffer = rtex->buffer.b.b.target == PIPE_BUFFER;
 
 	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
 		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
@@ -451,7 +451,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 	memcpy(desc, sview->state, 8*4);
 
 	if (is_buffer) {
-		si_set_buf_desc_address(&rtex->resource,
+		si_set_buf_desc_address(&rtex->buffer,
 					sview->base.u.buf.offset,
 					desc + 4);
 	} else {
@@ -517,8 +517,8 @@ static void si_set_sampler_view(struct si_context *sctx,
 		si_set_sampler_view_desc(sctx, rview,
 					 samplers->sampler_states[slot], desc);
 
-		if (rtex->resource.b.b.target == PIPE_BUFFER) {
-			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
+		if (rtex->buffer.b.b.target == PIPE_BUFFER) {
+			rtex->buffer.bind_history |= PIPE_BIND_SAMPLER_VIEW;
 			samplers->needs_depth_decompress_mask &= ~(1u << slot);
 			samplers->needs_color_decompress_mask &= ~(1u << slot);
 		} else {
@@ -906,9 +906,9 @@ void si_update_ps_colorbuf0_slot(struct si_context *sctx)
 		 */
 		si_texture_disable_dcc(sctx, tex);
 
-		if (tex->resource.b.b.nr_samples <= 1 && tex->cmask_buffer) {
+		if (tex->buffer.b.b.nr_samples <= 1 && tex->cmask_buffer) {
 			/* Disable CMASK. */
-			assert(tex->cmask_buffer != &tex->resource);
+			assert(tex->cmask_buffer != &tex->buffer);
 			si_eliminate_fast_color_clear(sctx, tex);
 			si_texture_discard_cmask(sctx->screen, tex);
 		}
@@ -925,9 +925,9 @@ void si_update_ps_colorbuf0_slot(struct si_context *sctx)
 		memset(desc, 0, 16 * 4);
 		si_set_shader_image_desc(sctx, &view, true, desc, desc + 8);
 
-		pipe_resource_reference(&buffers->buffers[slot], &tex->resource.b.b);
+		pipe_resource_reference(&buffers->buffers[slot], &tex->buffer.b.b);
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-					  &tex->resource, RADEON_USAGE_READ,
+					  &tex->buffer, RADEON_USAGE_READ,
 					  RADEON_PRIO_SHADER_RW_IMAGE);
 		buffers->enabled_mask |= 1u << slot;
 	} else {

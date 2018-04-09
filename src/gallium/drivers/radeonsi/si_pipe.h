@@ -250,7 +250,7 @@ struct r600_cmask_info {
 };
 
 struct r600_texture {
-	struct r600_resource		resource;
+	struct r600_resource		buffer;
 
 	struct radeon_surf		surface;
 	uint64_t			size;
@@ -1296,7 +1296,7 @@ r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 static inline void
 r600_texture_reference(struct r600_texture **ptr, struct r600_texture *res)
 {
-	pipe_resource_reference((struct pipe_resource **)ptr, &res->resource.b.b);
+	pipe_resource_reference((struct pipe_resource **)ptr, &res->buffer.b.b);
 }
 
 static inline bool
