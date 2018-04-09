@@ -472,7 +472,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->blitter->draw_rectangle = si_draw_rectangle;
 	sctx->blitter->skip_viewport_restore = true;
 
-	sctx->sample_mask.sample_mask = 0xffff;
+	sctx->sample_mask = 0xffff;
 
 	if (sctx->chip_class >= GFX9) {
 		sctx->wait_mem_scratch = (struct r600_resource*)

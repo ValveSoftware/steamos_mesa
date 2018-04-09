@@ -263,11 +263,11 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 	/* CLEAR_STATE sets zeros. */
 	if (!has_clear_state || ctx->clip_state.any_nonzeros)
 		si_mark_atom_dirty(ctx, &ctx->atoms.s.clip_state);
-	ctx->msaa_sample_locs.nr_samples = 0;
+	ctx->sample_locs_num_samples = 0;
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.msaa_sample_locs);
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.msaa_config);
 	/* CLEAR_STATE sets 0xffff. */
-	if (!has_clear_state || ctx->sample_mask.sample_mask != 0xffff)
+	if (!has_clear_state || ctx->sample_mask != 0xffff)
 		si_mark_atom_dirty(ctx, &ctx->atoms.s.sample_mask);
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.cb_render_state);
 	/* CLEAR_STATE sets zeros. */

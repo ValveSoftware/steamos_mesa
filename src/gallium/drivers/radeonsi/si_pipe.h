@@ -636,14 +636,6 @@ struct si_clip_state {
 	bool				any_nonzeros;
 };
 
-struct si_sample_locs {
-	unsigned		nr_samples;
-};
-
-struct si_sample_mask {
-	uint16_t		sample_mask;
-};
-
 struct si_streamout_target {
 	struct pipe_stream_output_target b;
 
@@ -815,8 +807,8 @@ struct si_context {
 
 	/* Atom declarations. */
 	struct si_framebuffer		framebuffer;
-	struct si_sample_locs		msaa_sample_locs;
-	struct si_sample_mask		sample_mask;
+	unsigned			sample_locs_num_samples;
+	uint16_t			sample_mask;
 	unsigned			last_cb_target_mask;
 	struct si_blend_color		blend_color;
 	struct si_clip_state		clip_state;

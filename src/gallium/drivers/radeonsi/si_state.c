@@ -3209,8 +3209,8 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	if (has_msaa_sample_loc_bug)
 		nr_samples = MAX2(nr_samples, 1);
 
-	if (nr_samples != sctx->msaa_sample_locs.nr_samples) {
-		sctx->msaa_sample_locs.nr_samples = nr_samples;
+	if (nr_samples != sctx->sample_locs_num_samples) {
+		sctx->sample_locs_num_samples = nr_samples;
 		si_emit_sample_locations(cs, nr_samples);
 	}
 
@@ -4151,17 +4151,17 @@ static void si_set_sample_mask(struct pipe_context *ctx, unsigned sample_mask)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	if (sctx->sample_mask.sample_mask == (uint16_t)sample_mask)
+	if (sctx->sample_mask == (uint16_t)sample_mask)
 		return;
 
-	sctx->sample_mask.sample_mask = sample_mask;
+	sctx->sample_mask = sample_mask;
 	si_mark_atom_dirty(sctx, &sctx->atoms.s.sample_mask);
 }
 
 static void si_emit_sample_mask(struct si_context *sctx, struct si_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
-	unsigned mask = sctx->sample_mask.sample_mask;
+	unsigned mask = sctx->sample_mask;
 
 	/* Needed for line and polygon smoothing as well as for the Polaris
 	 * small primitive filter. We expect the state tracker to take care of
