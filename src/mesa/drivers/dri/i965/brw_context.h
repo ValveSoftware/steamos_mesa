@@ -966,6 +966,9 @@ struct brw_context
        * These bitfields indicate which workarounds are needed.
        */
       uint8_t attrib_wa_flags[VERT_ATTRIB_MAX];
+
+      /* High bits of the last seen vertex buffer address (for workarounds). */
+      uint16_t last_bo_high_bits[33];
    } vb;
 
    struct {
@@ -986,6 +989,9 @@ struct brw_context
        * referencing the same index buffer.
        */
       unsigned int start_vertex_offset;
+
+      /* High bits of the last seen index buffer address (for workarounds). */
+      uint16_t last_bo_high_bits;
    } ib;
 
    /* Active vertex program:
