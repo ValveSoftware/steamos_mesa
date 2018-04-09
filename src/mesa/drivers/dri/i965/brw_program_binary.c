@@ -68,11 +68,73 @@ enum driver_cache_blob_part {
    NIR_PART,
 };
 
+static bool
+blob_parts_valid(void *blob, uint32_t size)
+{
+   struct blob_reader reader;
+   blob_reader_init(&reader, blob, size);
+
+   do {
+      uint32_t part_type = blob_read_uint32(&reader);
+      if (reader.overrun)
+         return false;
+      if (part_type == END_PART)
+         return reader.current == reader.end;
+      switch ((enum driver_cache_blob_part)part_type) {
+      case GEN_PART:
+      case NIR_PART:
+         /* Read the uint32_t part-size and skip over it */
+         blob_skip_bytes(&reader, blob_read_uint32(&reader));
+         if (reader.overrun)
+            return false;
+         break;
+      default:
+         return false;
+      }
+   } while (true);
+}
+
+static bool
+blob_has_part(void *blob, uint32_t size, enum driver_cache_blob_part part)
+{
+   struct blob_reader reader;
+   blob_reader_init(&reader, blob, size);
+
+   assert(blob_parts_valid(blob, size));
+   do {
+      uint32_t part_type = blob_read_uint32(&reader);
+      if (part_type == END_PART)
+         return false;
+      if (part_type == part)
+         return true;
+      blob_skip_bytes(&reader, blob_read_uint32(&reader));
+   } while (true);
+}
+
+static bool
+driver_blob_is_ready(void *blob, uint32_t size, bool with_gen_program)
+{
+   if (!blob) {
+      return false;
+   } else if (!blob_parts_valid(blob, size)) {
+      unreachable("Driver blob format is bad!");
+      return false;
+   } else if (blob_has_part(blob, size, GEN_PART) == with_gen_program) {
+      return true;
+   } else {
+      return false;
+   }
+}
+
 void
 brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
 {
-   if (prog->driver_cache_blob)
+   if (driver_blob_is_ready(prog->driver_cache_blob,
+                            prog->driver_cache_blob_size, false))
       return;
+
+   if (prog->driver_cache_blob)
+      ralloc_free(prog->driver_cache_blob);
 
    struct blob writer;
    blob_init(&writer);
