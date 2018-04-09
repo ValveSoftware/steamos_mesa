@@ -1213,7 +1213,6 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 void si_llvm_optimize_module(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Dump LLVM IR before any optimization passes */
 	if (ctx->screen->debug_flags & DBG(PREOPT_IR) &&
@@ -1223,9 +1222,8 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 	/* Create the pass manager */
 	gallivm->passmgr = LLVMCreatePassManager();
 
-	target_library_info =
-		gallivm_create_target_library_info(ctx->compiler->triple);
-	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
+	LLVMAddTargetLibraryInfo(ctx->compiler->target_library_info,
+				 gallivm->passmgr);
 
 	if (si_extra_shader_checks(ctx->screen, ctx->type))
 		LLVMAddVerifierPass(gallivm->passmgr);
@@ -1249,7 +1247,6 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 
 	LLVMDisposeBuilder(ctx->ac.builder);
 	LLVMDisposePassManager(gallivm->passmgr);
-	gallivm_dispose_target_library_info(target_library_info);
 }
 
 void si_llvm_dispose(struct si_shader_context *ctx)

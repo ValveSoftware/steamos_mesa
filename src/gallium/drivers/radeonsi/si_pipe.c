@@ -29,6 +29,7 @@
 #include "sid.h"
 
 #include "radeon/radeon_uvd.h"
+#include "gallivm/lp_bld_misc.h"
 #include "util/disk_cache.h"
 #include "util/hash_table.h"
 #include "util/u_log.h"
@@ -113,10 +114,19 @@ static void si_init_compiler(struct si_screen *sscreen,
 
 	compiler->tm = ac_create_target_machine(sscreen->info.family,
 						tm_options, &compiler->triple);
+	if (!compiler->tm)
+		return;
+
+	compiler->target_library_info =
+		gallivm_create_target_library_info(compiler->triple);
+	if (!compiler->target_library_info)
+		return;
 }
 
 static void si_destroy_compiler(struct si_compiler *compiler)
 {
+	if (compiler->target_library_info)
+		gallivm_dispose_target_library_info(compiler->target_library_info);
 	if (compiler->tm)
 		LLVMDisposeTargetMachine(compiler->tm);
 }
