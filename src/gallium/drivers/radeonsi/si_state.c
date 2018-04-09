@@ -3852,7 +3852,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	/* Buffer resource. */
 	if (texture->target == PIPE_BUFFER) {
 		si_make_buffer_descriptor(sctx->screen,
-					  (struct r600_resource *)texture,
+					  r600_resource(texture),
 					  state->format,
 					  state->u.buf.offset,
 					  state->u.buf.size,

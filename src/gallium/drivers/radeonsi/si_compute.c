@@ -356,11 +356,11 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 	if (scratch_bo_size < scratch_needed) {
 		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
-		sctx->compute_scratch_buffer = (struct r600_resource*)
+		sctx->compute_scratch_buffer =
 			si_aligned_buffer_create(&sctx->screen->b,
-						   SI_RESOURCE_FLAG_UNMAPPABLE,
-						   PIPE_USAGE_DEFAULT,
-						   scratch_needed, 256);
+						 SI_RESOURCE_FLAG_UNMAPPABLE,
+						 PIPE_USAGE_DEFAULT,
+						 scratch_needed, 256);
 
 		if (!sctx->compute_scratch_buffer)
 			return false;
@@ -703,7 +703,7 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 			int i;
 
 			radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-					 (struct r600_resource *)info->indirect,
+					 r600_resource(info->indirect),
 					 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 			for (i = 0; i < 3; ++i) {
@@ -774,7 +774,7 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
 
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-		                 (struct r600_resource *)info->indirect,
+		                 r600_resource(info->indirect),
 		                 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 		radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0) |
@@ -877,7 +877,7 @@ static void si_launch_grid(
 	/* Global buffers */
 	for (i = 0; i < MAX_GLOBAL_BUFFERS; i++) {
 		struct r600_resource *buffer =
-				(struct r600_resource*)program->global_buffers[i];
+			r600_resource(program->global_buffers[i]);
 		if (!buffer) {
 			continue;
 		}

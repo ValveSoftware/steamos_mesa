@@ -5352,8 +5352,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	assert(!epilog || !epilog->rodata_size);
 
 	r600_resource_reference(&shader->bo, NULL);
-	shader->bo = (struct r600_resource*)
-		     si_aligned_buffer_create(&sscreen->b,
+	shader->bo = si_aligned_buffer_create(&sscreen->b,
 					      sscreen->cpdma_prefetch_writes_memory ?
 						0 : SI_RESOURCE_FLAG_READ_ONLY,
                                               PIPE_USAGE_IMMUTABLE,

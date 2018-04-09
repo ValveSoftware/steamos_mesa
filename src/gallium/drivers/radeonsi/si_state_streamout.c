@@ -43,7 +43,7 @@ si_create_so_target(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_streamout_target *t;
-	struct r600_resource *rbuffer = (struct r600_resource*)buffer;
+	struct r600_resource *rbuffer = r600_resource(buffer);
 
 	t = CALLOC_STRUCT(si_streamout_target);
 	if (!t) {
@@ -201,7 +201,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						buffer);
 			radeon_add_to_gfx_buffer_list_check_mem(sctx,
-							    (struct r600_resource*)buffer,
+							    r600_resource(buffer),
 							    buffers->shader_usage,
 							    RADEON_PRIO_SHADER_RW_BUFFER,
 							    true);

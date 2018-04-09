@@ -1084,11 +1084,12 @@ void si_init_resource_fields(struct si_screen *sscreen,
 			     uint64_t size, unsigned alignment);
 bool si_alloc_resource(struct si_screen *sscreen,
 		       struct r600_resource *res);
-struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
-					       unsigned flags,
-					       unsigned usage,
-					       unsigned size,
-					       unsigned alignment);
+struct pipe_resource *pipe_aligned_buffer_create(struct pipe_screen *screen,
+						 unsigned flags, unsigned usage,
+						 unsigned size, unsigned alignment);
+struct r600_resource *si_aligned_buffer_create(struct pipe_screen *screen,
+					       unsigned flags, unsigned usage,
+					       unsigned size, unsigned alignment);
 void si_replace_buffer_storage(struct pipe_context *ctx,
 			       struct pipe_resource *dst,
 			       struct pipe_resource *src);
@@ -1316,12 +1317,10 @@ si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
 static inline void
 si_context_add_resource_size(struct si_context *sctx, struct pipe_resource *r)
 {
-	struct r600_resource *res = (struct r600_resource *)r;
-
-	if (res) {
+	if (r) {
 		/* Add memory usage for need_gfx_cs_space */
-		sctx->vram += res->vram_usage;
-		sctx->gtt += res->gart_usage;
+		sctx->vram += r600_resource(r)->vram_usage;
+		sctx->gtt += r600_resource(r)->gart_usage;
 	}
 }
 

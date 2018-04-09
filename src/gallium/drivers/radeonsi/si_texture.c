@@ -691,7 +691,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct si_context *sctx;
-	struct r600_resource *res = (struct r600_resource*)resource;
+	struct r600_resource *res = r600_resource(resource);
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 	bool update_metadata = false;
@@ -1789,7 +1789,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 							 &trans->b.b.layer_stride);
 		}
 
-		trans->staging = (struct r600_resource*)staging_depth;
+		trans->staging = &staging_depth->resource;
 		buf = trans->staging;
 	} else if (use_staging_texture) {
 		struct pipe_resource resource;
@@ -2273,7 +2273,7 @@ void vi_separate_dcc_try_enable(struct si_context *sctx,
 		tex->dcc_separate_buffer = tex->last_dcc_separate_buffer;
 		tex->last_dcc_separate_buffer = NULL;
 	} else {
-		tex->dcc_separate_buffer = (struct r600_resource*)
+		tex->dcc_separate_buffer =
 			si_aligned_buffer_create(sctx->b.screen,
 						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,

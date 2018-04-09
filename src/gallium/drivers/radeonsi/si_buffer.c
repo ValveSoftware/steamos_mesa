@@ -478,9 +478,9 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 		struct r600_resource *staging;
 
 		assert(!(usage & TC_TRANSFER_MAP_THREADED_UNSYNC));
-		staging = (struct r600_resource*) pipe_buffer_create(
+		staging = r600_resource(pipe_buffer_create(
 				ctx->screen, 0, PIPE_USAGE_STAGING,
-				box->width + (box->x % SI_MAP_BUFFER_ALIGNMENT));
+				box->width + (box->x % SI_MAP_BUFFER_ALIGNMENT)));
 		if (staging) {
 			/* Copy the VRAM buffer to the staging buffer. */
 			sctx->dma_copy(ctx, &staging->b.b, 0,
@@ -648,11 +648,9 @@ static struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
 	return &rbuffer->b.b;
 }
 
-struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
-					       unsigned flags,
-					       unsigned usage,
-					       unsigned size,
-					       unsigned alignment)
+struct pipe_resource *pipe_aligned_buffer_create(struct pipe_screen *screen,
+						 unsigned flags, unsigned usage,
+						 unsigned size, unsigned alignment)
 {
 	struct pipe_resource buffer;
 
@@ -667,6 +665,14 @@ struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
 	buffer.depth0 = 1;
 	buffer.array_size = 1;
 	return si_buffer_create(screen, &buffer, alignment);
+}
+
+struct r600_resource *si_aligned_buffer_create(struct pipe_screen *screen,
+					       unsigned flags, unsigned usage,
+					       unsigned size, unsigned alignment)
+{
+	return r600_resource(pipe_aligned_buffer_create(screen, flags, usage,
+							size, alignment));
 }
 
 static struct pipe_resource *

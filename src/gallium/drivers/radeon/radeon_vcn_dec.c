@@ -853,8 +853,8 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 	decode->bsd_size = align(dec->bs_size, 128);
 	decode->dpb_size = dec->dpb.res->buf->size;
 	decode->dt_size =
-		((struct r600_resource *)((struct vl_video_buffer *)target)->resources[0])->buf->size +
-		((struct r600_resource *)((struct vl_video_buffer *)target)->resources[1])->buf->size;
+		r600_resource(((struct vl_video_buffer *)target)->resources[0])->buf->size +
+		r600_resource(((struct vl_video_buffer *)target)->resources[1])->buf->size;
 
 	decode->sct_size = 0;
 	decode->sc_coeff_size = 0;

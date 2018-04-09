@@ -530,9 +530,9 @@ static struct r600_resource *si_new_query_buffer(struct si_screen *sscreen,
 	 * being written by the gpu, hence staging is probably a good
 	 * usage pattern.
 	 */
-	struct r600_resource *buf = (struct r600_resource*)
+	struct r600_resource *buf = r600_resource(
 		pipe_buffer_create(&sscreen->b, 0,
-				   PIPE_USAGE_STAGING, buf_size);
+				   PIPE_USAGE_STAGING, buf_size));
 	if (!buf)
 		return NULL;
 
@@ -1742,7 +1742,7 @@ static void si_query_hw_get_result_resource(struct si_context *sctx,
 			ssbo[2].buffer_offset = offset;
 			ssbo[2].buffer_size = 8;
 
-			((struct r600_resource *)resource)->TC_L2_dirty = true;
+			r600_resource(resource)->TC_L2_dirty = true;
 		}
 
 		sctx->b.set_shader_buffers(&sctx->b, PIPE_SHADER_COMPUTE, 0, 3, ssbo);

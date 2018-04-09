@@ -2720,7 +2720,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	if (update_esgs) {
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
 		sctx->esgs_ring =
-			si_aligned_buffer_create(sctx->b.screen,
+			pipe_aligned_buffer_create(sctx->b.screen,
 						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   esgs_ring_size, alignment);
@@ -2731,7 +2731,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	if (update_gsvs) {
 		pipe_resource_reference(&sctx->gsvs_ring, NULL);
 		sctx->gsvs_ring =
-			si_aligned_buffer_create(sctx->b.screen,
+			pipe_aligned_buffer_create(sctx->b.screen,
 						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   gsvs_ring_size, alignment);
@@ -2972,7 +2972,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			/* Create a bigger scratch buffer */
 			r600_resource_reference(&sctx->scratch_buffer, NULL);
 
-			sctx->scratch_buffer = (struct r600_resource*)
+			sctx->scratch_buffer =
 				si_aligned_buffer_create(&sctx->screen->b,
 							   SI_RESOURCE_FLAG_UNMAPPABLE,
 							   PIPE_USAGE_DEFAULT,
@@ -3009,7 +3009,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	/* The address must be aligned to 2^19, because the shader only
 	 * receives the high 13 bits.
 	 */
-	sctx->tess_rings = si_aligned_buffer_create(sctx->b.screen,
+	sctx->tess_rings = pipe_aligned_buffer_create(sctx->b.screen,
 						    SI_RESOURCE_FLAG_32BIT,
 						    PIPE_USAGE_DEFAULT,
 						    sctx->screen->tess_offchip_ring_size +

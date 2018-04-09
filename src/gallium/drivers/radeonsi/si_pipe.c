@@ -367,9 +367,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sctx->chip_class == CIK ||
 	    sctx->chip_class == VI ||
 	    sctx->chip_class == GFX9) {
-		sctx->eop_bug_scratch = (struct r600_resource*)
-					  pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT,
-							     16 * sscreen->info.num_render_backends);
+		sctx->eop_bug_scratch = r600_resource(
+			pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT,
+					   16 * sscreen->info.num_render_backends));
 		if (!sctx->eop_bug_scratch)
 			goto fail;
 	}
@@ -438,10 +438,10 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (!sctx->border_color_table)
 		goto fail;
 
-	sctx->border_color_buffer = (struct r600_resource*)
+	sctx->border_color_buffer = r600_resource(
 		pipe_buffer_create(screen, 0, PIPE_USAGE_DEFAULT,
 				   SI_MAX_BORDER_COLORS *
-				   sizeof(*sctx->border_color_table));
+				   sizeof(*sctx->border_color_table)));
 	if (!sctx->border_color_buffer)
 		goto fail;
 
@@ -475,8 +475,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->sample_mask = 0xffff;
 
 	if (sctx->chip_class >= GFX9) {
-		sctx->wait_mem_scratch = (struct r600_resource*)
-			pipe_buffer_create(screen, 0, PIPE_USAGE_DEFAULT, 4);
+		sctx->wait_mem_scratch = r600_resource(
+			pipe_buffer_create(screen, 0, PIPE_USAGE_DEFAULT, 4));
 		if (!sctx->wait_mem_scratch)
 			goto fail;
 
@@ -497,8 +497,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */
 	if (sctx->chip_class == CIK) {
 		sctx->null_const_buf.buffer =
-			si_aligned_buffer_create(screen,
-						 SI_RESOURCE_FLAG_32BIT,
+			pipe_aligned_buffer_create(screen,
+						   SI_RESOURCE_FLAG_32BIT,
 						   PIPE_USAGE_DEFAULT, 16,
 						   sctx->screen->info.tcc_cache_line_size);
 		if (!sctx->null_const_buf.buffer)

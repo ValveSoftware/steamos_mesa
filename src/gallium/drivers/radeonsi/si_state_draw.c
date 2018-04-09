@@ -720,7 +720,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		index_va = r600_resource(indexbuf)->gpu_address + index_offset;
 
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-				      (struct r600_resource *)indexbuf,
+				      r600_resource(indexbuf),
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 	} else {
 		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
@@ -743,7 +743,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, indirect_va >> 32);
 
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-				      (struct r600_resource *)indirect->buffer,
+				      r600_resource(indirect->buffer),
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 		unsigned di_src_sel = index_size ? V_0287F0_DI_SRC_SEL_DMA
@@ -773,7 +773,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 			if (indirect->indirect_draw_count) {
 				struct r600_resource *params_buf =
-					(struct r600_resource *)indirect->indirect_draw_count;
+					r600_resource(indirect->indirect_draw_count);
 
 				radeon_add_to_buffer_list(
 					sctx, sctx->gfx_cs, params_buf,

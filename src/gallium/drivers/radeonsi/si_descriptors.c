@@ -262,7 +262,7 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 			resource = &tex->flushed_depth_texture->resource.b.b;
 	}
 
-	rres = (struct r600_resource*)resource;
+	rres = r600_resource(resource);
 	priority = si_get_sampler_view_priority(rres);
 
 	radeon_add_to_gfx_buffer_list_check_mem(sctx, rres, usage, priority,
@@ -673,7 +673,7 @@ si_disable_shader_image(struct si_context *ctx, unsigned shader, unsigned slot)
 static void
 si_mark_image_range_valid(const struct pipe_image_view *view)
 {
-	struct r600_resource *res = (struct r600_resource *)view->resource;
+	struct r600_resource *res = r600_resource(view->resource);
 
 	assert(res && res->b.b.target == PIPE_BUFFER);
 
@@ -690,7 +690,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 	struct si_screen *screen = ctx->screen;
 	struct r600_resource *res;
 
-	res = (struct r600_resource *)view->resource;
+	res = r600_resource(view->resource);
 
 	if (res->b.b.target == PIPE_BUFFER) {
 		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
@@ -786,7 +786,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		return;
 	}
 
-	res = (struct r600_resource *)view->resource;
+	res = r600_resource(view->resource);
 
 	if (&images->views[slot] != view)
 		util_copy_image_view(&images->views[slot], view);
@@ -1077,7 +1077,7 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 			continue;
 
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer.resource,
+				      r600_resource(sctx->vertex_buffer[vb].buffer.resource),
 				      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 	}
 
@@ -1137,7 +1137,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		uint32_t *desc = &ptr[i*4];
 
 		vb = &sctx->vertex_buffer[vbo_index];
-		rbuffer = (struct r600_resource*)vb->buffer.resource;
+		rbuffer = r600_resource(vb->buffer.resource);
 		if (!rbuffer) {
 			memset(desc, 0, 16);
 			continue;
@@ -1163,7 +1163,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 
 		if (first_vb_use_mask & (1 << i)) {
 			radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-					      (struct r600_resource*)vb->buffer.resource,
+					      r600_resource(vb->buffer.resource),
 					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 		}
 	}
@@ -1262,7 +1262,7 @@ static void si_set_constant_buffer(struct si_context *sctx,
 
 		buffers->buffers[slot] = buffer;
 		radeon_add_to_gfx_buffer_list_check_mem(sctx,
-							(struct r600_resource*)buffer,
+							r600_resource(buffer),
 							buffers->shader_usage_constbuf,
 							buffers->priority_constbuf, true);
 		buffers->enabled_mask |= 1u << slot;
@@ -1344,7 +1344,7 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 			continue;
 		}
 
-		buf = (struct r600_resource *)sbuffer->buffer;
+		buf = r600_resource(sbuffer->buffer);
 		va = buf->gpu_address + sbuffer->buffer_offset;
 
 		desc[0] = va;
@@ -1474,7 +1474,7 @@ void si_set_ring_buffer(struct si_context *sctx, uint slot,
 
 		pipe_resource_reference(&buffers->buffers[slot], buffer);
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
-				      (struct r600_resource*)buffer,
+				      r600_resource(buffer),
 				      buffers->shader_usage, buffers->priority);
 		buffers->enabled_mask |= 1u << slot;
 	} else {
@@ -1599,7 +1599,7 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 			sctx->descriptors_dirty |= 1u << descriptors_idx;
 
 			radeon_add_to_gfx_buffer_list_check_mem(sctx,
-								(struct r600_resource *)buf,
+								r600_resource(buf),
 								usage, priority, true);
 		}
 	}
@@ -2569,7 +2569,7 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 
 	img_handle = (struct si_image_handle *)entry->data;
 	view = &img_handle->view;
-	res = (struct r600_resource *)view->resource;
+	res = r600_resource(view->resource);
 
 	if (resident) {
 		if (res->b.b.target != PIPE_BUFFER) {
