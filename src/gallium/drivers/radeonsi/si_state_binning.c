@@ -334,7 +334,7 @@ static void si_emit_dpbb_disable(struct si_context *sctx)
 			       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
 }
 
-void si_emit_dpbb_state(struct si_context *sctx, struct si_atom *state)
+void si_emit_dpbb_state(struct si_context *sctx)
 {
 	struct si_screen *sscreen = sctx->screen;
 	struct si_state_blend *blend = sctx->queued.named.blend;

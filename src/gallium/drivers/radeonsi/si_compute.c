@@ -864,8 +864,7 @@ static void si_launch_grid(
 	si_emit_compute_shader_pointers(sctx);
 
 	if (si_is_atom_dirty(sctx, &sctx->atoms.s.render_cond)) {
-		sctx->atoms.s.render_cond.emit(sctx,
-					       &sctx->atoms.s.render_cond);
+		sctx->atoms.s.render_cond.emit(sctx);
 		si_set_atom_dirty(sctx, &sctx->atoms.s.render_cond, false);
 	}
 

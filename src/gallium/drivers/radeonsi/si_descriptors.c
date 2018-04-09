@@ -2153,8 +2153,7 @@ static void si_emit_global_shader_pointers(struct si_context *sctx,
 			       R_00B530_SPI_SHADER_USER_DATA_LS_0);
 }
 
-void si_emit_graphics_shader_pointers(struct si_context *sctx,
-                                      struct si_atom *atom)
+void si_emit_graphics_shader_pointers(struct si_context *sctx)
 {
 	uint32_t *sh_base = sctx->shader_pointers.sh_base;
 

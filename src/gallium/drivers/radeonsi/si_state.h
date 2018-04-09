@@ -49,7 +49,7 @@ struct si_qbo_state;
  * command buffer (AKA indirect buffer, AKA IB, AKA command stream, AKA CS).
  */
 struct si_atom {
-	void (*emit)(struct si_context *ctx, struct si_atom *state);
+	void (*emit)(struct si_context *ctx);
 };
 
 struct si_state_blend {
@@ -361,8 +361,7 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 void si_update_all_texture_descriptors(struct si_context *sctx);
 void si_shader_change_notify(struct si_context *sctx);
 void si_update_needs_color_decompress_masks(struct si_context *sctx);
-void si_emit_graphics_shader_pointers(struct si_context *sctx,
-                                      struct si_atom *atom);
+void si_emit_graphics_shader_pointers(struct si_context *sctx);
 void si_emit_compute_shader_pointers(struct si_context *sctx);
 void si_set_rw_buffer(struct si_context *sctx,
 		      uint slot, const struct pipe_constant_buffer *input);
@@ -411,7 +410,7 @@ void si_set_occlusion_query_state(struct si_context *sctx,
 				  bool old_perfect_enable);
 
 /* si_state_binning.c */
-void si_emit_dpbb_state(struct si_context *sctx, struct si_atom *state);
+void si_emit_dpbb_state(struct si_context *sctx);
 
 /* si_state_shaders.c */
 bool si_update_shaders(struct si_context *sctx);

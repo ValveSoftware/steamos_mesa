@@ -1181,11 +1181,9 @@ static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_i
 {
 	/* Emit state atoms. */
 	unsigned mask = sctx->dirty_atoms & ~skip_atom_mask;
-	while (mask) {
-		struct si_atom *atom = &sctx->atoms.array[u_bit_scan(&mask)];
+	while (mask)
+		sctx->atoms.array[u_bit_scan(&mask)].emit(sctx);
 
-		atom->emit(sctx, atom);
-	}
 	sctx->dirty_atoms &= skip_atom_mask;
 
 	/* Emit states. */
@@ -1447,7 +1445,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		/* <-- CUs are idle here. */
 
 		if (si_is_atom_dirty(sctx, &sctx->atoms.s.render_cond))
-			sctx->atoms.s.render_cond.emit(sctx, NULL);
+			sctx->atoms.s.render_cond.emit(sctx);
 		sctx->dirty_atoms = 0;
 
 		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);

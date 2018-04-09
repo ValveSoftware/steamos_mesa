@@ -936,8 +936,7 @@ static void emit_set_predicate(struct si_context *ctx,
 				  RADEON_PRIO_QUERY);
 }
 
-static void si_emit_query_predication(struct si_context *ctx,
-				      struct si_atom *atom)
+static void si_emit_query_predication(struct si_context *ctx)
 {
 	struct si_query_hw *query = (struct si_query_hw *)ctx->render_cond;
 	struct si_query_buffer *qbuf;

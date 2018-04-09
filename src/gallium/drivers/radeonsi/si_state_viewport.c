@@ -210,7 +210,7 @@ static void si_emit_guardband(struct si_context *ctx,
 	radeon_emit(cs, fui(discard_x));   /* R_028BF4_PA_CL_GB_HORZ_DISC_ADJ */
 }
 
-static void si_emit_scissors(struct si_context *ctx, struct si_atom *atom)
+static void si_emit_scissors(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	struct pipe_scissor_state *states = ctx->scissors.states;
@@ -382,8 +382,7 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 	ctx->viewports.depth_range_dirty_mask = 0;
 }
 
-static void si_emit_viewport_states(struct si_context *ctx,
-				    struct si_atom *atom)
+static void si_emit_viewport_states(struct si_context *ctx)
 {
 	si_emit_viewports(ctx);
 	si_emit_depth_ranges(ctx);
