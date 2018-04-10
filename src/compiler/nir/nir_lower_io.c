@@ -280,6 +280,7 @@ lower_atomic(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    OP(atomic_and)
    OP(atomic_or)
    OP(atomic_xor)
+   OP(atomic_fadd)
 #undef OP
    default:
       unreachable("Invalid atomic");
@@ -380,6 +381,7 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_deref_atomic_xor:
       case nir_intrinsic_deref_atomic_exchange:
       case nir_intrinsic_deref_atomic_comp_swap:
+      case nir_intrinsic_deref_atomic_fadd:
          /* We can lower the io for this nir instrinsic */
          break;
       case nir_intrinsic_interp_deref_at_centroid:
@@ -441,6 +443,7 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_deref_atomic_xor:
       case nir_intrinsic_deref_atomic_exchange:
       case nir_intrinsic_deref_atomic_comp_swap:
+      case nir_intrinsic_deref_atomic_fadd:
          assert(vertex_index == NULL);
          replacement = lower_atomic(intrin, state, var, offset);
          break;

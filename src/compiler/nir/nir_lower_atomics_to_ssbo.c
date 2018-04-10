@@ -57,6 +57,7 @@ lower_instr(nir_intrinsic_instr *instr, unsigned ssbo_offset, nir_builder *b)
    case nir_intrinsic_ssbo_atomic_xor:
    case nir_intrinsic_ssbo_atomic_exchange:
    case nir_intrinsic_ssbo_atomic_comp_swap:
+   case nir_intrinsic_ssbo_atomic_fadd:
    case nir_intrinsic_store_ssbo:
    case nir_intrinsic_load_ssbo:
    case nir_intrinsic_get_buffer_size:
