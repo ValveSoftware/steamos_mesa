@@ -90,7 +90,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_texture_sRGB = true;
       ctx->Extensions.EXT_texture_sRGB_decode = true;
       ctx->Extensions.EXT_stencil_two_side = true;
-      ctx->Extensions.ATI_separate_stencil = true;
       ctx->Extensions.ATI_texture_env_combine3 = true;
       ctx->Extensions.NV_texture_env_combine4 = true;
 
