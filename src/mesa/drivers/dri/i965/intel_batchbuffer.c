@@ -191,7 +191,7 @@ recreate_growing_buffer(struct brw_context *brw,
    struct brw_bufmgr *bufmgr = screen->bufmgr;
 
    grow->bo = brw_bo_alloc(bufmgr, name, size);
-   grow->bo->kflags = can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
+   grow->bo->kflags |= can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
    grow->partial_bo = NULL;
    grow->partial_bo_map = NULL;
    grow->partial_bytes = 0;
