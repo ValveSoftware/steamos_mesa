@@ -1511,6 +1511,11 @@ fs_visitor::nir_emit_load_const(const fs_builder &bld,
    fs_reg reg = bld.vgrf(reg_type, instr->def.num_components);
 
    switch (instr->def.bit_size) {
+   case 16:
+      for (unsigned i = 0; i < instr->def.num_components; i++)
+         bld.MOV(offset(reg, bld, i), brw_imm_w(instr->value.i16[i]));
+      break;
+
    case 32:
       for (unsigned i = 0; i < instr->def.num_components; i++)
          bld.MOV(offset(reg, bld, i), brw_imm_d(instr->value.i32[i]));
