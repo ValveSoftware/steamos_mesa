@@ -1732,6 +1732,16 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
                             4096, _4GB);
          util_vma_heap_init(&bufmgr->vma_allocator[BRW_MEMZONE_OTHER],
                             1 * _4GB, gtt_size - 1 * _4GB);
+      } else if (devinfo->gen >= 10) {
+         /* Softpin landed in 4.5, but GVT used an aliasing PPGTT until
+          * kernel commit 6b3816d69628becb7ff35978aa0751798b4a940a in
+          * 4.14.  Gen10+ GVT hasn't landed yet, so it's not actually a
+          * problem - but extending this requirement back to earlier gens
+          * might actually mean requiring 4.14.
+          */
+         fprintf(stderr, "i965 requires softpin (Kernel 4.5) on Gen10+.");
+         free(bufmgr);
+         return NULL;
       }
    }
 
