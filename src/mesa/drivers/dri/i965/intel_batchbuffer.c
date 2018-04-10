@@ -55,7 +55,7 @@
 static void
 intel_batchbuffer_reset(struct brw_context *brw);
 
-UNUSED static void
+static void
 dump_validation_list(struct intel_batchbuffer *batch)
 {
    fprintf(stderr, "Validation list (length %d):\n", batch->exec_count);
@@ -880,6 +880,8 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
               (float) brw->batch.aperture_space / (1024 * 1024),
               brw->batch.batch_relocs.reloc_count,
               brw->batch.state_relocs.reloc_count);
+
+      dump_validation_list(&brw->batch);
    }
 
    ret = submit_batch(brw, in_fence_fd, out_fence_fd);
