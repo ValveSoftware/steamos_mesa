@@ -54,12 +54,15 @@
 #endif
 #include "common/gen_clflush.h"
 #include "common/gen_debug.h"
+#include "common/gen_gem.h"
 #include "dev/gen_device_info.h"
 #include "libdrm_macros.h"
 #include "main/macros.h"
 #include "util/macros.h"
 #include "util/hash_table.h"
 #include "util/list.h"
+#include "util/u_dynarray.h"
+#include "util/vma.h"
 #include "brw_bufmgr.h"
 #include "brw_context.h"
 #include "string.h"
@@ -98,9 +101,41 @@ atomic_add_unless(int *v, int add, int unless)
    return c == unless;
 }
 
+/**
+ * i965 fixed-size bucketing VMA allocator.
+ *
+ * The BO cache maintains "cache buckets" for buffers of various sizes.
+ * All buffers in a given bucket are identically sized - when allocating,
+ * we always round up to the bucket size.  This means that virtually all
+ * allocations are fixed-size; only buffers which are too large to fit in
+ * a bucket can be variably-sized.
+ *
+ * We create an allocator for each bucket.  Each contains a free-list, where
+ * each node contains a <starting address, 64-bit bitmap> pair.  Each bit
+ * represents a bucket-sized block of memory.  (At the first level, each
+ * bit corresponds to a page.  For the second bucket, bits correspond to
+ * two pages, and so on.)  1 means a block is free, and 0 means it's in-use.
+ * The lowest bit in the bitmap is for the first block.
+ *
+ * This makes allocations cheap - any bit of any node will do.  We can pick
+ * the head of the list and use ffs() to find a free block.  If there are
+ * none, we allocate 64 blocks from a larger allocator - either a bigger
+ * bucketing allocator, or a fallback top-level allocator for large objects.
+ */
+struct vma_bucket_node {
+   uint64_t start_address;
+   uint64_t bitmap;
+};
+
 struct bo_cache_bucket {
+   /** List of cached BOs. */
    struct list_head head;
+
+   /** Size of this bucket, in bytes. */
    uint64_t size;
+
+   /** List of vma_bucket_nodes. */
+   struct util_dynarray vma_list[BRW_MEMZONE_COUNT];
 };
 
 struct brw_bufmgr {
@@ -116,6 +151,8 @@ struct brw_bufmgr {
    struct hash_table *name_table;
    struct hash_table *handle_table;
 
+   struct util_vma_heap vma_allocator[BRW_MEMZONE_COUNT];
+
    bool has_llc:1;
    bool has_mmap_wc:1;
    bool bo_reuse:1;
@@ -127,6 +164,10 @@ static int bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode,
                                   uint32_t stride);
 
 static void bo_free(struct brw_bo *bo);
+
+static uint64_t vma_alloc(struct brw_bufmgr *bufmgr,
+                          enum brw_memory_zone memzone,
+                          uint64_t size, uint64_t alignment);
 
 static uint32_t
 key_hash_uint(const void *key)
@@ -220,6 +261,187 @@ bucket_for_size(struct brw_bufmgr *bufmgr, uint64_t size)
 
    return (index < bufmgr->num_buckets) ?
           &bufmgr->cache_bucket[index] : NULL;
+}
+
+static enum brw_memory_zone
+memzone_for_address(uint64_t address)
+{
+   const uint64_t _4GB = 1ull << 32;
+
+   if (address >= _4GB)
+      return BRW_MEMZONE_OTHER;
+
+   return BRW_MEMZONE_LOW_4G;
+}
+
+static uint64_t
+bucket_vma_alloc(struct brw_bufmgr *bufmgr,
+                 struct bo_cache_bucket *bucket,
+                 enum brw_memory_zone memzone)
+{
+   struct util_dynarray *vma_list = &bucket->vma_list[memzone];
+   struct vma_bucket_node *node;
+
+   if (vma_list->size == 0) {
+      /* This bucket allocator is out of space - allocate a new block of
+       * memory for 64 blocks from a larger allocator (either a larger
+       * bucket or util_vma).
+       *
+       * We align the address to the node size (64 blocks) so that
+       * bucket_vma_free can easily compute the starting address of this
+       * block by rounding any address we return down to the node size.
+       *
+       * Set the first bit used, and return the start address.
+       */
+      uint64_t node_size = 64ull * bucket->size;
+      node = util_dynarray_grow(vma_list, sizeof(struct vma_bucket_node));
+
+      if (unlikely(!node))
+         return 0ull;
+
+      uint64_t addr = vma_alloc(bufmgr, memzone, node_size, node_size);
+      node->start_address = gen_48b_address(addr);
+      node->bitmap = ~1ull;
+      return node->start_address;
+   }
+
+   /* Pick any bit from any node - they're all the right size and free. */
+   node = util_dynarray_top_ptr(vma_list, struct vma_bucket_node);
+   int bit = ffsll(node->bitmap) - 1;
+   assert(bit >= 0 && bit <= 63);
+
+   /* Reserve the memory by clearing the bit. */
+   assert((node->bitmap & (1ull << bit)) != 0ull);
+   node->bitmap &= ~(1ull << bit);
+
+   uint64_t addr = node->start_address + bit * bucket->size;
+
+   /* If this node is now completely full, remove it from the free list. */
+   if (node->bitmap == 0ull) {
+      (void) util_dynarray_pop(vma_list, struct vma_bucket_node);
+   }
+
+   return addr;
+}
+
+static void
+bucket_vma_free(struct bo_cache_bucket *bucket, uint64_t address)
+{
+   enum brw_memory_zone memzone = memzone_for_address(address);
+   struct util_dynarray *vma_list = &bucket->vma_list[memzone];
+   const uint64_t node_bytes = 64ull * bucket->size;
+   struct vma_bucket_node *node = NULL;
+
+   /* bucket_vma_alloc allocates 64 blocks at a time, and aligns it to
+    * that 64 block size.  So, we can round down to get the starting address.
+    */
+   uint64_t start = (address / node_bytes) * node_bytes;
+
+   /* Dividing the offset from start by bucket size gives us the bit index. */
+   int bit = (address - start) / bucket->size;
+
+   assert(start + bit * bucket->size == address);
+
+   util_dynarray_foreach(vma_list, struct vma_bucket_node, cur) {
+      if (cur->start_address == start) {
+         node = cur;
+         break;
+      }
+   }
+
+   if (!node) {
+      /* No node - the whole group of 64 blocks must have been in-use. */
+      node = util_dynarray_grow(vma_list, sizeof(struct vma_bucket_node));
+
+      if (unlikely(!node))
+         return; /* bogus, leaks some GPU VMA, but nothing we can do... */
+
+      node->start_address = start;
+      node->bitmap = 0ull;
+   }
+
+   /* Set the bit to return the memory. */
+   assert((node->bitmap & (1ull << bit)) == 0ull);
+   node->bitmap |= 1ull << bit;
+
+   /* The block might be entirely free now, and if so, we could return it
+    * to the larger allocator.  But we may as well hang on to it, in case
+    * we get more allocations at this block size.
+    */
+}
+
+static struct bo_cache_bucket *
+get_bucket_allocator(struct brw_bufmgr *bufmgr, uint64_t size)
+{
+   /* Skip using the bucket allocator for very large sizes, as it allocates
+    * 64 of them and this can balloon rather quickly.
+    */
+   if (size > 1024 * PAGE_SIZE)
+      return NULL;
+
+   struct bo_cache_bucket *bucket = bucket_for_size(bufmgr, size);
+
+   if (bucket && bucket->size == size)
+      return bucket;
+
+   return NULL;
+}
+
+/**
+ * Allocate a section of virtual memory for a buffer, assigning an address.
+ *
+ * This uses either the bucket allocator for the given size, or the large
+ * object allocator (util_vma).
+ */
+static uint64_t
+vma_alloc(struct brw_bufmgr *bufmgr,
+          enum brw_memory_zone memzone,
+          uint64_t size,
+          uint64_t alignment)
+{
+   /* Without softpin support, we let the kernel assign addresses. */
+   assert(brw_using_softpin(bufmgr));
+
+   struct bo_cache_bucket *bucket = get_bucket_allocator(bufmgr, size);
+   uint64_t addr;
+
+   if (bucket) {
+      addr = bucket_vma_alloc(bufmgr, bucket, memzone);
+   } else {
+      addr = util_vma_heap_alloc(&bufmgr->vma_allocator[memzone], size,
+                                 alignment);
+   }
+
+   assert((addr >> 48ull) == 0);
+   assert((addr % alignment) == 0);
+
+   return gen_canonical_address(addr);
+}
+
+/**
+ * Free a virtual memory area, allowing the address to be reused.
+ */
+static void
+vma_free(struct brw_bufmgr *bufmgr,
+         uint64_t address,
+         uint64_t size)
+{
+   assert(brw_using_softpin(bufmgr));
+
+   /* Un-canonicalize the address. */
+   address = gen_48b_address(address);
+
+   if (address == 0ull)
+      return;
+
+   struct bo_cache_bucket *bucket = get_bucket_allocator(bufmgr, size);
+
+   if (bucket) {
+      bucket_vma_free(bucket, address);
+   } else {
+      enum brw_memory_zone memzone = memzone_for_address(address);
+      util_vma_heap_free(&bufmgr->vma_allocator[memzone], address, size);
+   }
 }
 
 int
@@ -360,7 +582,16 @@ retry:
       }
    }
 
-   if (!alloc_from_cache) {
+   if (alloc_from_cache) {
+      /* If the cache BO isn't in the right memory zone, free the old
+       * memory and assign it a new address.
+       */
+      if ((bo->kflags & EXEC_OBJECT_PINNED) &&
+          memzone != memzone_for_address(bo->gtt_offset)) {
+         vma_free(bufmgr, bo->gtt_offset, bo->size);
+         bo->gtt_offset = 0ull;
+      }
+   } else {
       bo = calloc(1, sizeof(*bo));
       if (!bo)
          goto err;
@@ -410,6 +641,13 @@ retry:
    bo->cache_coherent = bufmgr->has_llc;
    bo->index = -1;
    bo->kflags = bufmgr->initial_kflags;
+
+   if ((bo->kflags & EXEC_OBJECT_PINNED) && bo->gtt_offset == 0ull) {
+      bo->gtt_offset = vma_alloc(bufmgr, memzone, bo->size, 1);
+
+      if (bo->gtt_offset == 0ull)
+         goto err_free;
+   }
 
    mtx_unlock(&bufmgr->lock);
 
@@ -545,6 +783,9 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
    bo->external = true;
    bo->kflags = bufmgr->initial_kflags;
 
+   if (bo->kflags & EXEC_OBJECT_PINNED)
+      bo->gtt_offset = vma_alloc(bufmgr, BRW_MEMZONE_OTHER, bo->size, 1);
+
    _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
    _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
 
@@ -605,6 +846,10 @@ bo_free(struct brw_bo *bo)
       DBG("DRM_IOCTL_GEM_CLOSE %d failed (%s): %s\n",
           bo->gem_handle, bo->name, strerror(errno));
    }
+
+   if (bo->kflags & EXEC_OBJECT_PINNED)
+      vma_free(bo->bufmgr, bo->gtt_offset, bo->size);
+
    free(bo);
 }
 
@@ -1063,10 +1308,22 @@ brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
 
          bo_free(bo);
       }
+
+      if (brw_using_softpin(bufmgr)) {
+         for (int z = 0; z < BRW_MEMZONE_COUNT; z++) {
+            util_dynarray_fini(&bucket->vma_list[z]);
+         }
+      }
    }
 
    _mesa_hash_table_destroy(bufmgr->name_table, NULL);
    _mesa_hash_table_destroy(bufmgr->handle_table, NULL);
+
+   if (brw_using_softpin(bufmgr)) {
+      for (int z = 0; z < BRW_MEMZONE_COUNT; z++) {
+         util_vma_heap_finish(&bufmgr->vma_allocator[z]);
+      }
+   }
 
    free(bufmgr);
 }
@@ -1164,6 +1421,11 @@ brw_bo_gem_create_from_prime_internal(struct brw_bufmgr *bufmgr, int prime_fd,
    bo->reusable = false;
    bo->external = true;
    bo->kflags = bufmgr->initial_kflags;
+
+   if (bo->kflags & EXEC_OBJECT_PINNED) {
+      assert(bo->size > 0);
+      bo->gtt_offset = vma_alloc(bufmgr, BRW_MEMZONE_OTHER, bo->size, 1);
+   }
 
    if (tiling_mode < 0) {
       struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
@@ -1291,6 +1553,10 @@ add_bucket(struct brw_bufmgr *bufmgr, int size)
    assert(i < ARRAY_SIZE(bufmgr->cache_bucket));
 
    list_inithead(&bufmgr->cache_bucket[i].head);
+   if (brw_using_softpin(bufmgr)) {
+      for (int z = 0; z < BRW_MEMZONE_COUNT; z++)
+         util_dynarray_init(&bufmgr->cache_bucket[i].vma_list[z], NULL);
+   }
    bufmgr->cache_bucket[i].size = size;
    bufmgr->num_buckets++;
 
@@ -1408,6 +1674,12 @@ gem_context_getparam(int fd, uint32_t context, uint64_t param, uint64_t *value)
    return 0;
 }
 
+bool
+brw_using_softpin(struct brw_bufmgr *bufmgr)
+{
+   return bufmgr->initial_kflags & EXEC_OBJECT_PINNED;
+}
+
 /**
  * Initializes the GEM buffer manager, which uses the kernel to allocate, map,
  * and manage map buffer objections.
@@ -1450,6 +1722,17 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
 
    if (devinfo->gen >= 8 && gtt_size > _4GB) {
       bufmgr->initial_kflags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+      /* Allocate VMA in userspace if we have softpin and full PPGTT. */
+      if (false && gem_param(fd, I915_PARAM_HAS_EXEC_SOFTPIN) > 0 &&
+          gem_param(fd, I915_PARAM_HAS_ALIASING_PPGTT) > 1) {
+         bufmgr->initial_kflags |= EXEC_OBJECT_PINNED;
+
+         util_vma_heap_init(&bufmgr->vma_allocator[BRW_MEMZONE_LOW_4G],
+                            4096, _4GB);
+         util_vma_heap_init(&bufmgr->vma_allocator[BRW_MEMZONE_OTHER],
+                            1 * _4GB, gtt_size - 1 * _4GB);
+      }
    }
 
    init_cache_buckets(bufmgr);

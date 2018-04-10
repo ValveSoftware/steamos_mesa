@@ -370,6 +370,8 @@ uint32_t brw_bo_export_gem_handle(struct brw_bo *bo);
 int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset,
                  uint64_t *result);
 
+bool brw_using_softpin(struct brw_bufmgr *bufmgr);
+
 /** @{ */
 
 #if defined(__cplusplus)
