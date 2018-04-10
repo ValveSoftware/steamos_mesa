@@ -865,7 +865,7 @@ void radv_GetPhysicalDeviceProperties(
 		.maxViewports                             = MAX_VIEWPORTS,
 		.maxViewportDimensions                    = { (1 << 14), (1 << 14) },
 		.viewportBoundsRange                      = { INT16_MIN, INT16_MAX },
-		.viewportSubPixelBits                     = 13, /* We take a float? */
+		.viewportSubPixelBits                     = 8,
 		.minMemoryMapAlignment                    = 4096, /* A page */
 		.minTexelBufferOffsetAlignment            = 1,
 		.minUniformBufferOffsetAlignment          = 4,
