@@ -223,7 +223,7 @@ brw_cache_new_bo(struct brw_cache *cache, uint32_t new_size)
 
    new_bo = brw_bo_alloc(brw->bufmgr, "program cache", new_size);
    if (can_do_exec_capture(brw->screen))
-      new_bo->kflags = EXEC_OBJECT_CAPTURE;
+      new_bo->kflags |= EXEC_OBJECT_CAPTURE;
 
    void *map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE |
                                        MAP_ASYNC | MAP_PERSISTENT);
@@ -390,7 +390,7 @@ brw_init_caches(struct brw_context *brw)
 
    cache->bo = brw_bo_alloc(brw->bufmgr, "program cache", 16384);
    if (can_do_exec_capture(brw->screen))
-      cache->bo->kflags = EXEC_OBJECT_CAPTURE;
+      cache->bo->kflags |= EXEC_OBJECT_CAPTURE;
 
    cache->map = brw_bo_map(brw, cache->bo, MAP_READ | MAP_WRITE |
                                            MAP_ASYNC | MAP_PERSISTENT);
