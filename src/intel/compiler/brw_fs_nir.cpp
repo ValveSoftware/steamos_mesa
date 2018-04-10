@@ -4322,7 +4322,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              */
             emit_byte_scattered_write(bld, surf_index, offset_reg,
                                       write_src,
-                                      1 /* dims */, 1,
+                                      1 /* dims */,
                                       bit_size,
                                       BRW_PREDICATE_NONE);
          } else {

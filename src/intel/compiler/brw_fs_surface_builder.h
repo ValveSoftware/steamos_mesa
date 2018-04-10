@@ -74,7 +74,7 @@ namespace brw {
       void
       emit_byte_scattered_write(const fs_builder &bld, const fs_reg &surface,
                                 const fs_reg &addr, const fs_reg &src,
-                                unsigned dims, unsigned size,
+                                unsigned dims,
                                 unsigned bit_size,
                                 brw_predicate pred = BRW_PREDICATE_NONE);
    }
