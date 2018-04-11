@@ -791,6 +791,18 @@ struct brw_context
     */
    bool front_buffer_dirty;
 
+   /**
+    * True if the __DRIdrawable's current __DRIimageBufferMask is
+    * __DRI_IMAGE_BUFFER_SHARED.
+    */
+   bool is_shared_buffer_bound;
+
+   /**
+    * True if a shared buffer is bound and it has received any rendering since
+    * the previous __DRImutableRenderBufferLoaderExtension::displaySharedBuffer().
+    */
+   bool is_shared_buffer_dirty;
+
    /** Framerate throttling: @{ */
    struct brw_bo *throttle_batch[2];
 
