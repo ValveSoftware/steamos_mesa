@@ -95,50 +95,47 @@ static void si_set_clear_color(struct r600_texture *rtex,
 
 static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 					 const union pipe_color_union *color,
-					 uint32_t* reset_value,
-					 bool* clear_words_needed)
+					 uint32_t* clear_value,
+					 bool *eliminate_needed)
 {
-	bool values[4] = {};
-	int i;
-	bool main_value = false;
-	bool extra_value = false;
-	int extra_channel;
-
-	/* This is needed to get the correct DCC clear value for luminance formats.
-	 * 1) Get the linear format (because the next step can't handle L8_SRGB).
-	 * 2) Convert luminance to red. (the real hw format for luminance)
+	/* If we want to clear without needing a fast clear eliminate step, we
+	 * can set color and alpha independently to 0 or 1 (or 0/max for integer
+	 * formats).
 	 */
+	bool values[4] = {}; /* whether to clear to 0 or 1 */
+	int i;
+	bool color_value = false; /* clear color to 0 or 1 */
+	bool alpha_value = false; /* clear alpha to 0 or 1 */
+	int alpha_channel; /* index of the alpha component */
+
+	/* Convert luminance to red. (the latter can't handle L8_SRGB,
+	 * so convert to linear) */
 	surface_format = util_format_linear(surface_format);
 	surface_format = util_format_luminance_to_red(surface_format);
 
 	const struct util_format_description *desc = util_format_description(surface_format);
 
+	/* 128-bit fast clear with different R,G,B values is unsupported. */
 	if (desc->block.bits == 128 &&
 	    (color->ui[0] != color->ui[1] ||
 	     color->ui[0] != color->ui[2]))
 		return false;
 
-	*clear_words_needed = true;
-	*reset_value = 0x20202020U;
-
-	/* If we want to clear without needing a fast clear eliminate step, we
-	 * can set each channel to 0 or 1 (or 0/max for integer formats). We
-	 * have two sets of flags, one for the last or first channel(extra) and
-	 * one for the other channels(main).
-	 */
+	*eliminate_needed = true;
+	*clear_value = 0x20202020U; /* use CB clear color registers */
 
 	if (surface_format == PIPE_FORMAT_R11G11B10_FLOAT ||
 	    surface_format == PIPE_FORMAT_B5G6R5_UNORM ||
 	    surface_format == PIPE_FORMAT_B5G6R5_SRGB ||
 	    util_format_is_alpha(surface_format)) {
-		extra_channel = -1;
+		alpha_channel = -1;
 	} else if (desc->layout == UTIL_FORMAT_LAYOUT_PLAIN) {
 		if (si_translate_colorswap(surface_format, false) <= 1)
-			extra_channel = desc->nr_channels - 1;
+			alpha_channel = desc->nr_channels - 1;
 		else
-			extra_channel = 0;
+			alpha_channel = 0;
 	} else
-		return true;
+		return true; /* need ELIMINATE_FAST_CLEAR */
 
 	for (i = 0; i < 4; ++i) {
 		int index = desc->swizzle[i] - PIPE_SWIZZLE_X;
@@ -154,7 +151,7 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 			values[i] = color->i[i] != 0;
 			if (color->i[i] != 0 && MIN2(color->i[i], max) != max)
-				return true;
+				return true; /* need ELIMINATE_FAST_CLEAR */
 		} else if (desc->channel[i].pure_integer &&
 			   desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
 			/* Use the maximum value for clamping the clear color. */
@@ -162,32 +159,36 @@ static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 			values[i] = color->ui[i] != 0U;
 			if (color->ui[i] != 0U && MIN2(color->ui[i], max) != max)
-				return true;
+				return true; /* need ELIMINATE_FAST_CLEAR */
 		} else {
 			values[i] = color->f[i] != 0.0F;
 			if (color->f[i] != 0.0F && color->f[i] != 1.0F)
-				return true;
+				return true; /* need ELIMINATE_FAST_CLEAR */
 		}
 
-		if (index == extra_channel)
-			extra_value = values[i];
+		if (index == alpha_channel)
+			alpha_value = values[i];
 		else
-			main_value = values[i];
+			color_value = values[i];
 	}
 
 	for (int i = 0; i < 4; ++i)
-		if (values[i] != main_value &&
-		    desc->swizzle[i] - PIPE_SWIZZLE_X != extra_channel &&
+		if (values[i] != color_value &&
+		    desc->swizzle[i] - PIPE_SWIZZLE_X != alpha_channel &&
 		    desc->swizzle[i] >= PIPE_SWIZZLE_X &&
 		    desc->swizzle[i] <= PIPE_SWIZZLE_W)
-			return true;
+			return true; /* need ELIMINATE_FAST_CLEAR */
 
-	*clear_words_needed = false;
-	if (main_value)
-		*reset_value |= 0x80808080U;
+	/* This doesn't need ELIMINATE_FAST_CLEAR.
+	 * CB uses both the DCC clear codes and the CB clear color registers,
+	 * so they must match.
+	 */
+	*eliminate_needed = false;
 
-	if (extra_value)
-		*reset_value |= 0x40404040U;
+	if (color_value)
+		*clear_value |= 0x80808080U;
+	if (alpha_value)
+		*clear_value |= 0x40404040U;
 	return true;
 }
 
@@ -443,7 +444,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
-			bool clear_words_needed;
+			bool eliminate_needed;
 
 			if (sctx->screen->debug_flags & DBG(NO_DCC_CLEAR))
 				continue;
@@ -455,16 +456,16 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
 							  color, &reset_value,
-							  &clear_words_needed))
+							  &eliminate_needed))
 				continue;
 
-			if (clear_words_needed && too_small)
+			if (eliminate_needed && too_small)
 				continue;
 
 			/* DCC fast clear with MSAA should clear CMASK to 0xC. */
 			if (tex->resource.b.b.nr_samples >= 2 && tex->cmask.size) {
 				/* TODO: This doesn't work with MSAA. */
-				if (clear_words_needed)
+				if (eliminate_needed)
 					continue;
 
 				si_clear_buffer(sctx, &tex->cmask_buffer->b.b,
@@ -475,7 +476,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 			vi_dcc_clear_level(sctx, tex, 0, reset_value);
 
-			if (clear_words_needed)
+			if (eliminate_needed)
 				need_decompress_pass = true;
 
 			tex->separate_dcc_dirty = true;
