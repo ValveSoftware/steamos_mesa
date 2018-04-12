@@ -731,6 +731,8 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
         if (!rsc->bo)
                 goto fail;
 
+        rsc->internal_format = prsc->format;
+
         vc5_setup_slices(rsc);
         vc5_debug_resource_layout(rsc, "import");
 
