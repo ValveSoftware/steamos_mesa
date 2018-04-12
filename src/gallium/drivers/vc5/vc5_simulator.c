@@ -594,7 +594,11 @@ vc5_simulator_init_global(const struct v3d_device_info *devinfo)
                 v3d_hw_get_mem(sim_state.v3d, &sim_state.mem_size,
                                &sim_state.mem);
 
-        sim_state.heap = u_mmInit(0, sim_state.mem_size);
+        /* Allocate from anywhere from 4096 up.  We don't allocate at 0,
+         * because for OQs and some other addresses in the HW, 0 means
+         * disabled.
+         */
+        sim_state.heap = u_mmInit(4096, sim_state.mem_size - 4096);
 
         /* Make a block of 0xd0 at address 0 to make sure we don't screw up
          * and land there.
