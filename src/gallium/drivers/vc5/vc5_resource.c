@@ -694,6 +694,7 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
 
         switch (whandle->modifier) {
         case DRM_FORMAT_MOD_LINEAR:
+        case DRM_FORMAT_MOD_INVALID:
                 rsc->tiled = false;
                 break;
         /* XXX: UIF */
