@@ -1014,7 +1014,7 @@ template<typename T> Value* FetchJit::GetSimdValidIndicesHelper(Value* pIndices,
 
     {
         // store 0 index on stack to be used to conditionally load from if index address is OOB
-        Value* pZeroIndex = ALLOCA(Ty);
+        Value* pZeroIndex = ALLOCA(Ty->getPointerElementType());
         STORE(C((T)0), pZeroIndex);
 
         // Load a SIMD of index pointers
