@@ -1894,77 +1894,63 @@ static const struct u_resource_vtbl si_texture_vtbl =
 	si_texture_transfer_unmap,	/* transfer_unmap */
 };
 
-/* DCC channel type categories within which formats can be reinterpreted
- * while keeping the same DCC encoding. The swizzle must also match. */
-enum dcc_channel_type {
-	dcc_channel_float,
-	/* uint and sint can be merged if we never use TC-compatible DCC clear
-	 * encoding with the clear value of 1. */
-	dcc_channel_uint,
-	dcc_channel_sint,
-	dcc_channel_uint_10_10_10_2,
-	dcc_channel_incompatible,
-};
-
-/* Return the type of DCC encoding. */
-static enum dcc_channel_type
-vi_get_dcc_channel_type(const struct util_format_description *desc)
-{
-	int i;
-
-	/* Find the first non-void channel. */
-	for (i = 0; i < desc->nr_channels; i++)
-		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID)
-			break;
-	if (i == desc->nr_channels)
-		return dcc_channel_incompatible;
-
-	switch (desc->channel[i].size) {
-	case 32:
-	case 16:
-	case 8:
-		if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT)
-			return dcc_channel_float;
-		if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED)
-			return dcc_channel_uint;
-		return dcc_channel_sint;
-	case 10:
-		return dcc_channel_uint_10_10_10_2;
-	default:
-		return dcc_channel_incompatible;
-	}
-}
-
-/* Return if it's allowed to reinterpret one format as another with DCC enabled. */
+/* Return if it's allowed to reinterpret one format as another with DCC enabled.
+ */
 bool vi_dcc_formats_compatible(enum pipe_format format1,
 			       enum pipe_format format2)
 {
 	const struct util_format_description *desc1, *desc2;
-	enum dcc_channel_type type1, type2;
-	int i;
 
+	/* No format change - exit early. */
+	if (format1 == format2)
+		return true;
+
+	format1 = si_simplify_cb_format(format1);
+	format2 = si_simplify_cb_format(format2);
+
+	/* Check again after format adjustments. */
 	if (format1 == format2)
 		return true;
 
 	desc1 = util_format_description(format1);
 	desc2 = util_format_description(format2);
 
-	if (desc1->nr_channels != desc2->nr_channels)
+	if (desc1->layout != UTIL_FORMAT_LAYOUT_PLAIN ||
+	    desc2->layout != UTIL_FORMAT_LAYOUT_PLAIN)
 		return false;
 
-	/* Swizzles must be the same. */
-	for (i = 0; i < desc1->nr_channels; i++)
-		if (desc1->swizzle[i] <= PIPE_SWIZZLE_W &&
-		    desc2->swizzle[i] <= PIPE_SWIZZLE_W &&
-		    desc1->swizzle[i] != desc2->swizzle[i])
-			return false;
+	/* Float and non-float are totally incompatible. */
+	if ((desc1->channel[0].type == UTIL_FORMAT_TYPE_FLOAT) !=
+	    (desc2->channel[0].type == UTIL_FORMAT_TYPE_FLOAT))
+		return false;
 
-	type1 = vi_get_dcc_channel_type(desc1);
-	type2 = vi_get_dcc_channel_type(desc2);
+	/* Channel sizes must match across DCC formats.
+	 * Comparing just the first 2 channels should be enough.
+	 */
+	if (desc1->channel[0].size != desc2->channel[0].size ||
+	    (desc1->nr_channels >= 2 &&
+	     desc1->channel[1].size != desc2->channel[1].size))
+		return false;
 
-	return type1 != dcc_channel_incompatible &&
-	       type2 != dcc_channel_incompatible &&
-	       type1 == type2;
+	/* Everything below is not needed if the driver never uses the DCC
+	 * clear code with the value of 1.
+	 */
+
+	/* If the clear values are all 1 or all 0, this constraint can be
+	 * ignored. */
+	if (vi_alpha_is_on_msb(format1) != vi_alpha_is_on_msb(format2))
+		return false;
+
+	/* Channel types must match if the clear value of 1 is used.
+	 * The type categories are only float, signed, unsigned.
+	 * NORM and INT are always compatible.
+	 */
+	if (desc1->channel[0].type != desc2->channel[0].type ||
+	    (desc1->nr_channels >= 2 &&
+	     desc1->channel[1].type != desc2->channel[1].type))
+		return false;
+
+	return true;
 }
 
 bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex,
