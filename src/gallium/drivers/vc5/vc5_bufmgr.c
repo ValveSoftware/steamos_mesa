@@ -348,6 +348,12 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         bo->name = "winsys";
         bo->private = false;
 
+#ifdef USE_VC5_SIMULATOR
+        vc5_simulator_open_from_handle(screen->fd, winsys_stride,
+                                       bo->handle, bo->size);
+        bo->map = malloc(bo->size);
+#endif
+
         struct drm_vc5_get_bo_offset get = {
                 .handle = handle,
         };
@@ -355,16 +361,11 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         if (ret) {
                 fprintf(stderr, "Failed to get BO offset: %s\n",
                         strerror(errno));
+                free(bo->map);
                 free(bo);
                 return NULL;
         }
         bo->offset = get.offset;
-
-#ifdef USE_VC5_SIMULATOR
-        vc5_simulator_open_from_handle(screen->fd, winsys_stride,
-                                       bo->handle, bo->size);
-        bo->map = malloc(bo->size);
-#endif
 
         util_hash_table_set(screen->bo_handles, (void *)(uintptr_t)handle, bo);
 

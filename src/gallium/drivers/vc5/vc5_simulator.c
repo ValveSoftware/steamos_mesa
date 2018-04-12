@@ -511,6 +511,18 @@ vc5_simulator_mmap_bo_ioctl(int fd, struct drm_vc5_mmap_bo *args)
 }
 
 static int
+vc5_simulator_get_bo_offset_ioctl(int fd, struct drm_vc5_get_bo_offset *args)
+{
+        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
+        struct vc5_simulator_bo *sim_bo = vc5_get_simulator_bo(file,
+                                                               args->handle);
+
+        args->offset = sim_bo->block->ofs;
+
+        return 0;
+}
+
+static int
 vc5_simulator_gem_close_ioctl(int fd, struct drm_gem_close *args)
 {
         /* Free the simulator's internal tracking. */
@@ -541,6 +553,8 @@ vc5_simulator_ioctl(int fd, unsigned long request, void *args)
                 return vc5_simulator_create_bo_ioctl(fd, args);
         case DRM_IOCTL_VC5_MMAP_BO:
                 return vc5_simulator_mmap_bo_ioctl(fd, args);
+        case DRM_IOCTL_VC5_GET_BO_OFFSET:
+                return vc5_simulator_get_bo_offset_ioctl(fd, args);
 
         case DRM_IOCTL_VC5_WAIT_BO:
                 /* We do all of the vc5 rendering synchronously, so we just
