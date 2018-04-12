@@ -366,6 +366,7 @@ vc5_bo_open_handle(struct vc5_screen *screen,
                 return NULL;
         }
         bo->offset = get.offset;
+        assert(bo->offset != 0);
 
         util_hash_table_set(screen->bo_handles, (void *)(uintptr_t)handle, bo);
 
