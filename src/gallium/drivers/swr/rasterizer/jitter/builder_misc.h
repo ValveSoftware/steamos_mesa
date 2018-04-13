@@ -55,6 +55,18 @@ Constant *CA(LLVMContext& ctx, ArrayRef<Ty> constList)
     return ConstantDataArray::get(ctx, constList);
 }
 
+template<typename Ty>
+Constant *CInc(uint32_t base, uint32_t count)
+{
+    std::vector<Constant*> vConsts;
+
+    for(uint32_t i = 0; i < count; i++) {
+        vConsts.push_back(C((Ty)base));
+        base++;
+    }
+    return ConstantVector::get(vConsts);
+}
+
 Constant *PRED(bool pred);
 
 Value *VIMMED1(int i);

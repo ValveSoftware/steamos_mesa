@@ -115,7 +115,7 @@ namespace SwrJit
         {"meta.intrinsic.VGATHERPD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERPS",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
         {"meta.intrinsic.VGATHERDD",   {{Intrinsic::not_intrinsic,                   Intrinsic::not_intrinsic},                      VGATHER_EMU}},
-        {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          Intrinsic::not_intrinsic},                      NO_EMU}},
+        {"meta.intrinsic.VCVTPD2PS",   {{Intrinsic::x86_avx_cvt_pd2_ps_256,          DOUBLE},                                        NO_EMU}},
         {"meta.intrinsic.VCVTPH2PS",   {{Intrinsic::x86_vcvtph2ps_256,               Intrinsic::not_intrinsic},                      NO_EMU}},
         {"meta.intrinsic.VROUND",      {{Intrinsic::x86_avx_round_ps_256,            DOUBLE},                                        NO_EMU}},
         {"meta.intrinsic.VHSUBPS",     {{Intrinsic::x86_avx_hsub_ps_256,             DOUBLE},                                        NO_EMU}},
@@ -166,10 +166,18 @@ namespace SwrJit
         // across all intrinsics, and will have to be rethought. Probably need something
         // similar to llvm's getDeclaration() utility to map a set of inputs to a specific typed
         // intrinsic.
-        void GetRequestedWidthAndType(CallInst* pCallInst, TargetWidth* pWidth, Type** pTy)
+        void GetRequestedWidthAndType(CallInst* pCallInst, const StringRef intrinName, TargetWidth* pWidth, Type** pTy)
         {
             uint32_t vecWidth;
             Type* pVecTy = pCallInst->getType();
+
+            // Check for intrinsic specific types
+            // VCVTPD2PS type comes from src, not dst
+            if (intrinName.equals("meta.intrinsic.VCVTPD2PS"))
+            {
+                pVecTy = pCallInst->getOperand(0)->getType();
+            }
+
             if (!pVecTy->isVectorTy())
             {
                 for (auto& op : pCallInst->arg_operands())
@@ -231,7 +239,7 @@ namespace SwrJit
             auto& intrinsic = intrinsicMap2[mTarget][pFunc->getName()];
             TargetWidth vecWidth;
             Type* pElemTy;
-            GetRequestedWidthAndType(pCallInst, &vecWidth, &pElemTy);
+            GetRequestedWidthAndType(pCallInst, pFunc->getName(), &vecWidth, &pElemTy);
 
             // Check if there is a native intrinsic for this instruction
             Intrinsic::ID id = intrinsic.intrin[vecWidth];
@@ -460,7 +468,9 @@ namespace SwrJit
                 // Double pump 4-wide for 64bit elements
                 if (vSrc->getType()->getVectorElementType() == B->mDoubleTy)
                 {
-                    auto v64Mask = B->S_EXT(pThis->VectorMask(vi1Mask), B->mInt64Ty);
+                    auto v64Mask = pThis->VectorMask(vi1Mask);
+                    v64Mask = B->S_EXT(v64Mask,
+                                       VectorType::get(B->mInt64Ty, v64Mask->getType()->getVectorNumElements()));
                     v64Mask = B->BITCAST(v64Mask, vSrc->getType());
 
                     Value* src0 = B->VSHUFFLE(vSrc, vSrc, B->C({ 0, 1, 2, 3 }));
@@ -472,10 +482,15 @@ namespace SwrJit
                     Value* mask0 = B->VSHUFFLE(v64Mask, v64Mask, B->C({ 0, 1, 2, 3 }));
                     Value* mask1 = B->VSHUFFLE(v64Mask, v64Mask, B->C({ 4, 5, 6, 7 }));
 
+                    src0 = B->BITCAST(src0, VectorType::get(B->mInt64Ty, src0->getType()->getVectorNumElements()));
+                    mask0 = B->BITCAST(mask0, VectorType::get(B->mInt64Ty, mask0->getType()->getVectorNumElements()));
                     Value* gather0 = B->CALL(pX86IntrinFunc, { src0, pBase, indices0, mask0, i8Scale });
+                    src1 = B->BITCAST(src1, VectorType::get(B->mInt64Ty, src1->getType()->getVectorNumElements()));
+                    mask1 = B->BITCAST(mask1, VectorType::get(B->mInt64Ty, mask1->getType()->getVectorNumElements()));
                     Value* gather1 = B->CALL(pX86IntrinFunc, { src1, pBase, indices1, mask1, i8Scale });
 
                     v32Gather = B->VSHUFFLE(gather0, gather1, B->C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
+                    v32Gather = B->BITCAST(v32Gather, vSrc->getType());
                 }
                 else
                 {
@@ -603,11 +618,34 @@ namespace SwrJit
             SmallVector<Value*, 8> args;
             for (auto& arg : pCallInst->arg_operands())
             {
-                args.push_back(arg.get()->getType()->isVectorTy() ? B->EXTRACT_16(arg.get(), i) : arg.get());
+                auto argType = arg.get()->getType();
+                if (argType->isVectorTy())
+                {
+                    uint32_t vecWidth = argType->getVectorNumElements();
+                    Value *lanes = B->CInc<int>(i*vecWidth/2, vecWidth/2);
+                    Value *argToPush = B->VSHUFFLE(arg.get(), B->VUNDEF(argType->getVectorElementType(), vecWidth), lanes);
+                    args.push_back(argToPush);
+                }
+                else
+                {
+                    args.push_back(arg.get());
+                }
             }
             result[i] = B->CALLA(pX86IntrinFunc, args);
         }
-        return cast<Instruction>(B->JOIN_16(result[0], result[1]));
+        uint32_t vecWidth;
+        if (result[0]->getType()->isVectorTy())
+        {
+            assert(result[1]->getType()->isVectorTy());
+            vecWidth = result[0]->getType()->getVectorNumElements() +
+                result[1]->getType()->getVectorNumElements();
+        }
+        else
+        {
+            vecWidth = 2;
+        }
+        Value *lanes = B->CInc<int>(0, vecWidth);
+        return cast<Instruction>(B->VSHUFFLE(result[0], result[1], lanes));
     }
 
 }
