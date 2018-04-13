@@ -107,15 +107,11 @@ intel_batchbuffer_init(struct brw_context *brw)
 
    batch->use_shadow_copy = !devinfo->has_llc;
 
-   if (batch->use_shadow_copy) {
-      batch->batch.map = malloc(BATCH_SZ);
-      batch->map_next = batch->batch.map;
-      batch->state.map = malloc(STATE_SZ);
-   }
-
    init_reloc_list(&batch->batch_relocs, 250);
    init_reloc_list(&batch->state_relocs, 250);
 
+   batch->batch.map = NULL;
+   batch->state.map = NULL;
    batch->exec_count = 0;
    batch->exec_array_size = 100;
    batch->exec_bos =
@@ -196,7 +192,9 @@ recreate_growing_buffer(struct brw_context *brw,
    grow->partial_bo_map = NULL;
    grow->partial_bytes = 0;
 
-   if (!batch->use_shadow_copy)
+   if (batch->use_shadow_copy)
+      grow->map = realloc(grow->map, grow->bo->size);
+   else
       grow->map = brw_bo_map(brw, grow->bo, MAP_READ | MAP_WRITE);
 }
 
