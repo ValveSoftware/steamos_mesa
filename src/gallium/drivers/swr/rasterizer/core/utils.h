@@ -30,6 +30,7 @@
 #include <string.h>
 #include <type_traits>
 #include <algorithm>
+#include <array>
 #include "common/os.h"
 #include "common/intrin.h"
 #include "common/swr_assert.h"
