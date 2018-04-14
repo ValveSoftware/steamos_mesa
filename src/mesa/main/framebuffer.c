@@ -617,6 +617,12 @@ update_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
          _mesa_drawbuffers(ctx, fb, ctx->Const.MaxDrawBuffers,
                            ctx->Color.DrawBuffer, NULL);
       }
+
+      /* Call device driver function if fb is the bound draw buffer. */
+      if (fb == ctx->DrawBuffer) {
+         if (ctx->Driver.DrawBufferAllocate)
+            ctx->Driver.DrawBufferAllocate(ctx);
+      }
    }
    else {
       /* This is a user-created framebuffer.
