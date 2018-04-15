@@ -128,4 +128,46 @@ namespace SwrJit
 
         return (pAlloca->getMetadata("is_temp_alloca") != nullptr);
     }
+
+    // Returns true if able to find an intrinsic to mark
+    bool Builder::SetTexelMaskEvaluate(Instruction* inst)
+    {
+        CallInst* pGenIntrin = dyn_cast<CallInst>(inst);
+        if (pGenIntrin)
+        {
+            MDNode* N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, "is_evaluate"));
+            pGenIntrin->setMetadata("is_evaluate", N);
+            return true;
+        }
+        else
+        {
+            // Follow use def chain back up
+            for (Use& u : inst->operands())
+            {
+                Instruction* srcInst = dyn_cast<Instruction>(u.get());
+                if (srcInst)
+                {
+                    if (SetTexelMaskEvaluate(srcInst))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool Builder::IsTexelMaskEvaluate(Instruction* genSampleOrLoadIntrinsic)
+    {
+        CallInst* pGenIntrin = dyn_cast<CallInst>(genSampleOrLoadIntrinsic);
+
+        if (!pGenIntrin)
+        {
+            return false;
+        }
+
+        return (pGenIntrin->getMetadata("is_evaluate") != nullptr);
+    }
+
 }

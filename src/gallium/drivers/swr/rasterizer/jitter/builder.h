@@ -121,6 +121,8 @@ namespace SwrJit
         void SetTargetWidth(uint32_t width);
         void SetTempAlloca(Value* inst);
         bool IsTempAlloca(Value* inst);
+        bool SetTexelMaskEvaluate(Instruction* inst);
+        bool IsTexelMaskEvaluate(Instruction* inst);
 
 #include "gen_builder.hpp"
 #include "gen_builder_meta.hpp"
