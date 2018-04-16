@@ -1143,6 +1143,13 @@ if with_llvm
     '-DHAVE_LLVM=0x0@0@0@1@'.format(_llvm_version[0], _llvm_version[1]),
     '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
   ]
+
+  # LLVM can be built without rtti, turning off rtti changes the ABI of C++
+  # programs, so we need to build all C++ code in mesa without rtti as well to
+  # ensure that linking works.
+  if dep_llvm.get_configtool_variable('has-rtti') == 'NO'
+    cpp_args('-fno-rtti')
+  endif
 elif with_amd_vk or with_gallium_radeonsi or with_gallium_swr
   error('The following drivers require LLVM: Radv, RadeonSI, SWR. One of these is enabled, but LLVM is disabled.')
 endif
