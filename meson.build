@@ -1309,14 +1309,6 @@ endif
 
 # TODO: gallium driver dirs
 
-# FIXME: this is a workaround for #2326
-prog_touch = find_program('touch')
-dummy_cpp = custom_target(
-  'dummy_cpp',
-  output : 'dummy.cpp',
-  command : [prog_touch, '@OUTPUT@'],
-)
-
 foreach a : pre_args
   add_project_arguments(a, language : ['c', 'cpp'])
 endforeach

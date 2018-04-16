@@ -220,7 +220,7 @@ if with_tests
       'anv_@0@'.format(t),
       executable(
         t,
-        ['tests/@0@.c'.format(t), dummy_cpp, anv_entrypoints[0]],
+        ['tests/@0@.c'.format(t), anv_entrypoints[0]],
         link_with : libvulkan_intel_test,
         dependencies : [dep_libdrm, dep_thread, dep_m, dep_valgrind],
         include_directories : [
