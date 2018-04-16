@@ -58,7 +58,7 @@ if with_tools.contains('all')
 endif
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
-  message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
+  warning('Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
 endif
 
 dri_drivers_path = get_option('dri-drivers-path')
