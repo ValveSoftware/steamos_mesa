@@ -558,8 +558,6 @@ struct BlendJit : public Builder
         ppoMask->setName("ppoMask");
         Value* ppMask = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_pMask });
         ppMask->setName("pMask");
-        Value* AlphaTest1 = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaBlended });
-        ppMask->setName("AlphaTest1");
 
         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
         Value* dst[4];

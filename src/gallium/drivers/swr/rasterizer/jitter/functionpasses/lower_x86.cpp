@@ -168,7 +168,6 @@ namespace SwrJit
         // intrinsic.
         void GetRequestedWidthAndType(CallInst* pCallInst, const StringRef intrinName, TargetWidth* pWidth, Type** pTy)
         {
-            uint32_t vecWidth;
             Type* pVecTy = pCallInst->getType();
 
             // Check for intrinsic specific types
@@ -210,6 +209,7 @@ namespace SwrJit
             {
             case W256: numElem = 8; break;
             case W512: numElem = 16; break;
+	    default: SWR_ASSERT(false, "Unhandled vector width type %d\n", width);
             }
 
             return ConstantVector::getNullValue(VectorType::get(pTy, numElem));
@@ -222,6 +222,7 @@ namespace SwrJit
             {
             case W256: mask = B->C((uint8_t)-1); break;
             case W512: mask = B->C((uint16_t)-1); break;
+	    default: SWR_ASSERT(false, "Unhandled vector width type %d\n", width);
             }
             return mask;
         }

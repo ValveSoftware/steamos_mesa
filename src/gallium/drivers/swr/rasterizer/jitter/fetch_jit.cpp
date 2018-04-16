@@ -1070,7 +1070,6 @@ Value* FetchJit::GetSimdValid16bitIndices(Value* pIndices, Value* pLastIndex)
 Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
 {
     DataLayout dL(JM()->mpCurrentModule);
-    unsigned int ptrSize = dL.getPointerSize() * 8;  // ptr size in bits
     Value* iLastIndex = pLastIndex; 
     Value* iIndices = pIndices;
 
