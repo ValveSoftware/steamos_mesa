@@ -992,7 +992,7 @@ nv50_screen_create(struct nouveau_device *dev)
    nouveau_getparam(dev, NOUVEAU_GETPARAM_GRAPH_UNITS, &value);
 
    screen->TPs = util_bitcount(value & 0xffff);
-   screen->MPsInTP = util_bitcount((value >> 24) & 0xf);
+   screen->MPsInTP = util_bitcount(value & 0x0f000000);
 
    screen->mp_count = screen->TPs * screen->MPsInTP;
 
