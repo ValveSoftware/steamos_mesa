@@ -1314,6 +1314,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_pack_64_2x32_split:
+   case nir_op_pack_32_2x16_split:
       bld.emit(FS_OPCODE_PACK, result, op[0], op[1]);
       break;
 
@@ -1323,6 +1324,15 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 0));
       else
          bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 1));
+      break;
+   }
+
+   case nir_op_unpack_32_2x16_split_x:
+   case nir_op_unpack_32_2x16_split_y: {
+      if (instr->op == nir_op_unpack_32_2x16_split_x)
+         bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UW, 0));
+      else
+         bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UW, 1));
       break;
    }
 
