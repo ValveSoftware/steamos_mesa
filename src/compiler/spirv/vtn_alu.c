@@ -251,10 +251,17 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
       vtn_assert(src_bit_size % dest_bit_size == 0);
       unsigned divisor = src_bit_size / dest_bit_size;
       for (unsigned comp = 0; comp < src_components; comp++) {
-         vtn_assert(src_bit_size == 64);
-         vtn_assert(dest_bit_size == 32);
-         nir_ssa_def *split =
-            nir_unpack_64_2x32(&b->nb, nir_channel(&b->nb, src, comp));
+         nir_ssa_def *split;
+         if (src_bit_size == 64) {
+            assert(dest_bit_size == 32 || dest_bit_size == 16);
+            split = dest_bit_size == 32 ?
+               nir_unpack_64_2x32(&b->nb, nir_channel(&b->nb, src, comp)) :
+               nir_unpack_64_4x16(&b->nb, nir_channel(&b->nb, src, comp));
+         } else {
+            vtn_assert(src_bit_size == 32);
+            vtn_assert(dest_bit_size == 16);
+            split = nir_unpack_32_2x16(&b->nb, nir_channel(&b->nb, src, comp));
+         }
          for (unsigned i = 0; i < divisor; i++)
             dest_chan[divisor * comp + i] = nir_channel(&b->nb, split, i);
       }
@@ -263,11 +270,17 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
       unsigned divisor = dest_bit_size / src_bit_size;
       for (unsigned comp = 0; comp < dest_components; comp++) {
          unsigned channels = ((1 << divisor) - 1) << (comp * divisor);
-         nir_ssa_def *src_chan =
-            nir_channels(&b->nb, src, channels);
-         vtn_assert(dest_bit_size == 64);
-         vtn_assert(src_bit_size == 32);
-         dest_chan[comp] = nir_pack_64_2x32(&b->nb, src_chan);
+         nir_ssa_def *src_chan = nir_channels(&b->nb, src, channels);
+         if (dest_bit_size == 64) {
+            assert(src_bit_size == 32 || src_bit_size == 16);
+            dest_chan[comp] = src_bit_size == 32 ?
+               nir_pack_64_2x32(&b->nb, src_chan) :
+               nir_pack_64_4x16(&b->nb, src_chan);
+         } else {
+            vtn_assert(dest_bit_size == 32);
+            vtn_assert(src_bit_size == 16);
+            dest_chan[comp] = nir_pack_32_2x16(&b->nb, src_chan);
+         }
       }
    }
    dest->def = nir_vec(&b->nb, dest_chan, dest_components);
