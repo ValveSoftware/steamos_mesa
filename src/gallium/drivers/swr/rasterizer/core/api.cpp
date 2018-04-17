@@ -976,14 +976,14 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
 
     if (pState->state.soState.soEnable)
     {
-        uint32_t streamMasks = 0;
+        uint64_t streamMasks = 0;
         for (uint32_t i = 0; i < 4; ++i)
         {
             streamMasks |= pState->state.soState.streamMasks[i];
         }
 
         DWORD maxAttrib;
-        if (_BitScanReverse(&maxAttrib, streamMasks))
+        if (_BitScanReverse64(&maxAttrib, streamMasks))
         {
             pState->state.feNumAttributes = std::max(pState->state.feNumAttributes, (uint32_t)(maxAttrib + 1));
         }

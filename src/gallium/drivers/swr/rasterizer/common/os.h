@@ -209,6 +209,9 @@ unsigned char _BitScanReverse(unsigned int *Index, unsigned int Mask)
     return (Mask != 0);
 }
 
+#define _BitScanForward64 _BitScanForward
+#define _BitScanReverse64 _BitScanReverse
+
 inline
 void *AlignedMalloc(size_t size, size_t alignment)
 {

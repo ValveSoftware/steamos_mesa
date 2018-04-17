@@ -313,6 +313,7 @@ struct StreamOutJit : public Builder
 
         JitManager::DumpToFile(soFunc, "SoFunc_optimized");
 
+
         return soFunc;
     }
 };
@@ -332,6 +333,7 @@ PFN_SO_FUNC JitStreamoutFunc(HANDLE hJitMgr, const HANDLE hFunc)
     pJitMgr->mIsModuleFinalized = true;
 
     pJitMgr->DumpAsm(func, "SoFunc_optimized");
+
 
     return pfnStreamOut;
 }

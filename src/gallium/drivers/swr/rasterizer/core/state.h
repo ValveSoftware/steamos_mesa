@@ -702,7 +702,7 @@ struct SWR_STREAMOUT_STATE
     // The stream masks specify which attributes are sent to which streams.
     // These masks help the FE to setup the pPrimData buffer that is passed
     // the Stream Output Shader (SOS) function.
-    uint32_t streamMasks[MAX_SO_STREAMS];
+    uint64_t streamMasks[MAX_SO_STREAMS];
 
     // Number of attributes, including position, per vertex that are streamed out.
     // This should match number of bits in stream mask.

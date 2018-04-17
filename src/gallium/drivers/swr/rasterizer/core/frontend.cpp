@@ -528,10 +528,10 @@ static void StreamOut(
     for (uint32_t primIndex = 0; primIndex < numPrims; ++primIndex)
     {
         DWORD slot = 0;
-        uint32_t soMask = soState.streamMasks[streamIndex];
+        uint64_t soMask = soState.streamMasks[streamIndex];
 
         // Write all entries into primitive data buffer for SOS.
-        while (_BitScanForward(&slot, soMask))
+        while (_BitScanForward64(&slot, soMask))
         {
             simd4scalar attrib[MAX_NUM_VERTS_PER_PRIM];    // prim attribs (always 4 wide)
             uint32_t paSlot = slot + soState.vertexAttribOffset[streamIndex];
@@ -551,7 +551,7 @@ static void StreamOut(
                 _mm_store_ps((float*)pPrimDataAttrib, attrib[v]);
             }
 
-            soMask &= ~(1 << slot);
+            soMask &= ~(uint64_t(1) << slot);
         }
 
         // Update pPrimData pointer 
