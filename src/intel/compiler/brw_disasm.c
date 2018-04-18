@@ -406,7 +406,7 @@ static const char *const dp_dc0_msg_type_gen7[16] = {
    [GEN7_DATAPORT_DC_UNTYPED_SURFACE_WRITE] = "DC untyped surface write",
 };
 
-static const char *const dp_dc1_msg_type_hsw[16] = {
+static const char *const dp_dc1_msg_type_hsw[32] = {
    [HSW_DATAPORT_DC_PORT1_UNTYPED_SURFACE_READ] = "untyped surface read",
    [HSW_DATAPORT_DC_PORT1_UNTYPED_ATOMIC_OP] = "DC untyped atomic op",
    [HSW_DATAPORT_DC_PORT1_UNTYPED_ATOMIC_OP_SIMD4X2] =
