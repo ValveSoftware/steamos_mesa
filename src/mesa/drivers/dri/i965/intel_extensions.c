@@ -306,6 +306,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_stencil_export = true;
       ctx->Extensions.EXT_shader_framebuffer_fetch = true;
       ctx->Extensions.INTEL_conservative_rasterization = true;
+      ctx->Extensions.INTEL_shader_atomic_float_minmax = true;
       ctx->Extensions.KHR_blend_equation_advanced_coherent = true;
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
