@@ -37,9 +37,13 @@
 #include "util/u_debug.h"
 
 #include "pipe/p_config.h"
-#ifdef PIPE_OS_UNIX
+#if defined(PIPE_OS_UNIX)
 #include <unistd.h>
 #include <sys/stat.h>
+#elif defined(PIPE_OS_WINDOWS)
+#include <direct.h>
+#include <process.h>
+#define mkdir(dir, mode) _mkdir(dir)
 #endif
 
 
