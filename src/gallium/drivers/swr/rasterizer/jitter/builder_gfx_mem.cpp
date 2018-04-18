@@ -160,14 +160,6 @@ namespace SwrJit
         return Builder::LOAD(Ptr, Name);
     }
 
-    LoadInst* BuilderGfxMem::LOAD(Type *Ty, Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
-    {
-        AssertGFXMemoryParams(Ptr, usage);
-
-        Ptr = TranslationHelper(Ptr, Ty);
-        return Builder::LOAD(Ty, Ptr, Name);
-    }
-    
     LoadInst* BuilderGfxMem::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(Ptr, usage);
@@ -180,12 +172,25 @@ namespace SwrJit
     {
         AssertGFXMemoryParams(BasePtr, usage);
 
-        // This call is just a pass through to the base class.
-        // It needs to be here to compile due to the combination of virtual overrides and signature overloads.
-        // It doesn't do anything meaningful because the implementation in the base class is going to call 
-        // another version of LOAD inside itself where the actual per offset translation will take place 
-        // and we can't just translate the BasePtr once, each address needs individual translation.
-        return Builder::LOAD(BasePtr, offset, name, Ty, usage);
+        bool bNeedTranslation = false;
+        if (BasePtr->getType() == mInt64Ty)
+        {
+            SWR_ASSERT(Ty);
+            BasePtr = INT_TO_PTR(BasePtr, Ty, name);
+            bNeedTranslation = true;
+        }
+        std::vector<Value*> valIndices;
+        for (auto i : offset)
+        {
+            valIndices.push_back(C(i));
+        }
+        BasePtr = Builder::GEPA(BasePtr, valIndices, name);
+        if (bNeedTranslation)
+        {
+            BasePtr = PTR_TO_INT(BasePtr, mInt64Ty, name);
+        }
+
+        return LOAD(BasePtr, name, Ty, usage);
     }
 
     CallInst* BuilderGfxMem::MASKED_LOAD(Value *Ptr, unsigned Align, Value *Mask, Value *PassThru, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
@@ -196,8 +201,12 @@ namespace SwrJit
         return Builder::MASKED_LOAD(Ptr, Align, Mask, PassThru, Name, Ty, usage);
     }
 
-    Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress)
+    Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy, const Twine &Name)
     {
-        return INT_TO_PTR(xpGfxAddress, PointerType::get(mInt8Ty, 0));
+        if (PtrTy == nullptr)
+        {
+            PtrTy = mInt8PtrTy;
+        }
+        return INT_TO_PTR(xpGfxAddress, PtrTy, Name);
     }
 }

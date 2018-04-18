@@ -48,7 +48,6 @@ namespace SwrJit
 
         virtual LoadInst* LOAD(Value *Ptr, const char *Name, Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
         virtual LoadInst* LOAD(Value *Ptr, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-        virtual LoadInst* LOAD(Type *Ty, Value *Ptr, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
         virtual LoadInst* LOAD(Value *Ptr, bool isVolatile, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
         virtual LoadInst* LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
@@ -58,7 +57,7 @@ namespace SwrJit
 
         virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
-        Value* TranslateGfxAddress(Value* xpGfxAddress);
+        Value* TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy = nullptr, const Twine &Name = "");
 
 
     protected:
