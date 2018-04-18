@@ -359,6 +359,9 @@ intrinsic("deref_atomic_xor",  src_comp=[1, 1], dest_comp=1)
 intrinsic("deref_atomic_exchange", src_comp=[1, 1], dest_comp=1)
 intrinsic("deref_atomic_comp_swap", src_comp=[1, 1, 1], dest_comp=1)
 intrinsic("deref_atomic_fadd",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_fmin",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_fmax",  src_comp=[1, 1], dest_comp=1)
+intrinsic("deref_atomic_fcomp_swap", src_comp=[1, 1, 1], dest_comp=1)
 
 # SSBO atomic intrinsics
 #
@@ -385,7 +388,10 @@ intrinsic("ssbo_atomic_or",   src_comp=[1, 1, 1], dest_comp=1)
 intrinsic("ssbo_atomic_xor",  src_comp=[1, 1, 1], dest_comp=1)
 intrinsic("ssbo_atomic_exchange", src_comp=[1, 1, 1], dest_comp=1)
 intrinsic("ssbo_atomic_comp_swap", src_comp=[1, 1, 1, 1], dest_comp=1)
-intrinsic("ssbo_atomic_fadd",  src_comp=[1, 1, 1], dest_comp=1)
+intrinsic("ssbo_atomic_fadd", src_comp=[1, 1, 1], dest_comp=1)
+intrinsic("ssbo_atomic_fmin", src_comp=[1, 1, 1], dest_comp=1)
+intrinsic("ssbo_atomic_fmax", src_comp=[1, 1, 1], dest_comp=1)
+intrinsic("ssbo_atomic_fcomp_swap", src_comp=[1, 1, 1, 1], dest_comp=1)
 
 # CS shared variable atomic intrinsics
 #
@@ -412,6 +418,9 @@ intrinsic("shared_atomic_xor",  src_comp=[1, 1], dest_comp=1, indices=[BASE])
 intrinsic("shared_atomic_exchange", src_comp=[1, 1], dest_comp=1, indices=[BASE])
 intrinsic("shared_atomic_comp_swap", src_comp=[1, 1, 1], dest_comp=1, indices=[BASE])
 intrinsic("shared_atomic_fadd",  src_comp=[1, 1], dest_comp=1, indices=[BASE])
+intrinsic("shared_atomic_fmin",  src_comp=[1, 1], dest_comp=1, indices=[BASE])
+intrinsic("shared_atomic_fmax",  src_comp=[1, 1], dest_comp=1, indices=[BASE])
+intrinsic("shared_atomic_fcomp_swap", src_comp=[1, 1, 1], dest_comp=1, indices=[BASE])
 
 def system_value(name, dest_comp, indices=[]):
     intrinsic("load_" + name, [], dest_comp, indices,
