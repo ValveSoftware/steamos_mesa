@@ -302,13 +302,13 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (devinfo->gen >= 9) {
       ctx->Extensions.ANDROID_extension_pack_es31a = true;
+      ctx->Extensions.ARB_post_depth_coverage = true;
       ctx->Extensions.ARB_shader_stencil_export = true;
+      ctx->Extensions.EXT_shader_framebuffer_fetch = true;
+      ctx->Extensions.INTEL_conservative_rasterization = true;
       ctx->Extensions.KHR_blend_equation_advanced_coherent = true;
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
-      ctx->Extensions.INTEL_conservative_rasterization = true;
-      ctx->Extensions.EXT_shader_framebuffer_fetch = true;
-      ctx->Extensions.ARB_post_depth_coverage = true;
    }
 
    if (gen_device_info_is_9lp(devinfo))
