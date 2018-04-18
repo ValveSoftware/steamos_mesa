@@ -21,10 +21,9 @@
 libgraw_xlib = shared_library(
   'graw_xlib',
   ['graw_xlib.c'],
-  c_args : ['-DGALLIUM_TRACE', '-DGALLIUM_RBUG'],
   include_directories : [inc_common, inc_gallium_drivers, inc_gallium_winsys],
   link_with : [
-    libgraw_util, libtrace, librbug, libmesa_util, libgallium, libws_xlib
+    libgraw_util, libmesa_util, libgallium, libws_xlib
   ],
   dependencies : [dep_thread, driver_swrast],
   version : '1.0',
