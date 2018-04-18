@@ -421,6 +421,8 @@ static const char *const dp_dc1_msg_type_hsw[32] = {
    [HSW_DATAPORT_DC_PORT1_ATOMIC_COUNTER_OP_SIMD4X2] =
       "DC 4x2 atomic counter op",
    [HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_WRITE] = "DC typed surface write",
+   [GEN9_DATAPORT_DC_PORT1_UNTYPED_ATOMIC_FLOAT_OP] =
+      "DC untyped atomic float op",
 };
 
 static const char *const aop[16] = {
@@ -439,6 +441,12 @@ static const char *const aop[16] = {
    [BRW_AOP_UMIN]   = "umin",
    [BRW_AOP_CMPWR]  = "cmpwr",
    [BRW_AOP_PREDEC] = "predec",
+};
+
+static const char *const aop_float[4] = {
+   [BRW_AOP_FMAX]   = "fmax",
+   [BRW_AOP_FMIN]   = "fmin",
+   [BRW_AOP_FCMPWR] = "fcmpwr",
 };
 
 static const char * const pixel_interpolator_msg_types[4] = {
@@ -1797,6 +1805,11 @@ brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
                          simd_modes[msg_ctrl >> 4], msg_ctrl & 0xf);
                   break;
                }
+               case GEN9_DATAPORT_DC_PORT1_UNTYPED_ATOMIC_FLOAT_OP:
+                  format(file, "SIMD%d,", (msg_ctrl & (1 << 4)) ? 8 : 16);
+                  control(file, "atomic float op", aop_float, msg_ctrl & 0xf,
+                          &space);
+                  break;
                default:
                   format(file, "0x%x", msg_ctrl);
                }

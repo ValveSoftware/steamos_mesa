@@ -111,6 +111,30 @@ namespace brw {
       }
 
       /**
+       * Emit an untyped surface atomic float opcode.  \p dims determines the
+       * number of components of the address and \p rsize the number of
+       * components of the returned value (either zero or one).
+       */
+      fs_reg
+      emit_untyped_atomic_float(const fs_builder &bld,
+                                const fs_reg &surface, const fs_reg &addr,
+                                const fs_reg &src0, const fs_reg &src1,
+                                unsigned dims, unsigned rsize, unsigned op,
+                                brw_predicate pred)
+      {
+         /* FINISHME: Factor out this frequently recurring pattern into a
+          * helper function.
+          */
+         const unsigned n = (src0.file != BAD_FILE) + (src1.file != BAD_FILE);
+         const fs_reg srcs[] = { src0, src1 };
+         const fs_reg tmp = bld.vgrf(src0.type, n);
+         bld.LOAD_PAYLOAD(tmp, srcs, n, 0);
+
+         return emit_send(bld, SHADER_OPCODE_UNTYPED_ATOMIC_FLOAT_LOGICAL,
+                          addr, tmp, surface, dims, op, rsize, pred);
+      }
+
+      /**
        * Emit a typed surface read opcode.  \p dims determines the number of
        * components of the address and \p size the number of components of the
        * returned value.

@@ -3689,6 +3689,15 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
    case nir_intrinsic_shared_atomic_comp_swap:
       nir_emit_shared_atomic(bld, BRW_AOP_CMPWR, instr);
       break;
+   case nir_intrinsic_shared_atomic_fmin:
+      nir_emit_shared_atomic_float(bld, BRW_AOP_FMIN, instr);
+      break;
+   case nir_intrinsic_shared_atomic_fmax:
+      nir_emit_shared_atomic_float(bld, BRW_AOP_FMAX, instr);
+      break;
+   case nir_intrinsic_shared_atomic_fcomp_swap:
+      nir_emit_shared_atomic_float(bld, BRW_AOP_FCMPWR, instr);
+      break;
 
    case nir_intrinsic_load_shared: {
       assert(devinfo->gen >= 7);
@@ -4398,6 +4407,15 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_ssbo_atomic_comp_swap:
       nir_emit_ssbo_atomic(bld, BRW_AOP_CMPWR, instr);
       break;
+   case nir_intrinsic_ssbo_atomic_fmin:
+      nir_emit_ssbo_atomic_float(bld, BRW_AOP_FMIN, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_fmax:
+      nir_emit_ssbo_atomic_float(bld, BRW_AOP_FMAX, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_fcomp_swap:
+      nir_emit_ssbo_atomic_float(bld, BRW_AOP_FCMPWR, instr);
+      break;
 
    case nir_intrinsic_get_buffer_size: {
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
@@ -4887,6 +4905,54 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
 }
 
 void
+fs_visitor::nir_emit_ssbo_atomic_float(const fs_builder &bld,
+                                       int op, nir_intrinsic_instr *instr)
+{
+   if (stage == MESA_SHADER_FRAGMENT)
+      brw_wm_prog_data(prog_data)->has_side_effects = true;
+
+   fs_reg dest;
+   if (nir_intrinsic_infos[instr->intrinsic].has_dest)
+      dest = get_nir_dest(instr->dest);
+
+   fs_reg surface;
+   nir_const_value *const_surface = nir_src_as_const_value(instr->src[0]);
+   if (const_surface) {
+      unsigned surf_index = stage_prog_data->binding_table.ssbo_start +
+                            const_surface->u32[0];
+      surface = brw_imm_ud(surf_index);
+      brw_mark_surface_used(prog_data, surf_index);
+   } else {
+      surface = vgrf(glsl_type::uint_type);
+      bld.ADD(surface, get_nir_src(instr->src[0]),
+              brw_imm_ud(stage_prog_data->binding_table.ssbo_start));
+
+      /* Assume this may touch any SSBO. This is the same we do for other
+       * UBO/SSBO accesses with non-constant surface.
+       */
+      brw_mark_surface_used(prog_data,
+                            stage_prog_data->binding_table.ssbo_start +
+                            nir->info.num_ssbos - 1);
+   }
+
+   fs_reg offset = get_nir_src(instr->src[1]);
+   fs_reg data1 = get_nir_src(instr->src[2]);
+   fs_reg data2;
+   if (op == BRW_AOP_FCMPWR)
+      data2 = get_nir_src(instr->src[3]);
+
+   /* Emit the actual atomic operation */
+
+   fs_reg atomic_result = emit_untyped_atomic_float(bld, surface, offset,
+                                                    data1, data2,
+                                                    1 /* dims */, 1 /* rsize */,
+                                                    op,
+                                                    BRW_PREDICATE_NONE);
+   dest.type = atomic_result.type;
+   bld.MOV(dest, atomic_result);
+}
+
+void
 fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
                                    int op, nir_intrinsic_instr *instr)
 {
@@ -4919,6 +4985,43 @@ fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
                                               1 /* dims */, 1 /* rsize */,
                                               op,
                                               BRW_PREDICATE_NONE);
+   dest.type = atomic_result.type;
+   bld.MOV(dest, atomic_result);
+}
+
+void
+fs_visitor::nir_emit_shared_atomic_float(const fs_builder &bld,
+                                         int op, nir_intrinsic_instr *instr)
+{
+   fs_reg dest;
+   if (nir_intrinsic_infos[instr->intrinsic].has_dest)
+      dest = get_nir_dest(instr->dest);
+
+   fs_reg surface = brw_imm_ud(GEN7_BTI_SLM);
+   fs_reg offset;
+   fs_reg data1 = get_nir_src(instr->src[1]);
+   fs_reg data2;
+   if (op == BRW_AOP_FCMPWR)
+      data2 = get_nir_src(instr->src[2]);
+
+   /* Get the offset */
+   nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+   if (const_offset) {
+      offset = brw_imm_ud(instr->const_index[0] + const_offset->u32[0]);
+   } else {
+      offset = vgrf(glsl_type::uint_type);
+      bld.ADD(offset,
+              retype(get_nir_src(instr->src[0]), BRW_REGISTER_TYPE_UD),
+              brw_imm_ud(instr->const_index[0]));
+   }
+
+   /* Emit the actual atomic operation operation */
+
+   fs_reg atomic_result = emit_untyped_atomic_float(bld, surface, offset,
+                                                    data1, data2,
+                                                    1 /* dims */, 1 /* rsize */,
+                                                    op,
+                                                    BRW_PREDICATE_NONE);
    dest.type = atomic_result.type;
    bld.MOV(dest, atomic_result);
 }
