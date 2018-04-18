@@ -4271,6 +4271,7 @@ struct gl_extensions
    GLboolean GREMEDY_string_marker;
    GLboolean INTEL_conservative_rasterization;
    GLboolean INTEL_performance_query;
+   GLboolean INTEL_shader_atomic_float_minmax;
    GLboolean KHR_blend_equation_advanced;
    GLboolean KHR_blend_equation_advanced_coherent;
    GLboolean KHR_robustness;

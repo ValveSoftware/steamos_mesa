@@ -313,6 +313,7 @@ EXT(INGR_blend_func_separate                , EXT_blend_func_separate           
 
 EXT(INTEL_conservative_rasterization        , INTEL_conservative_rasterization       ,  x , GLC,  x ,  31, 2013)
 EXT(INTEL_performance_query                 , INTEL_performance_query                , GLL, GLC,  x , ES2, 2013)
+EXT(INTEL_shader_atomic_float_minmax        , INTEL_shader_atomic_float_minmax       , GLL, GLC,  x ,  x , 2018)
 
 EXT(KHR_blend_equation_advanced             , KHR_blend_equation_advanced            , GLL, GLC,  x , ES2, 2014)
 EXT(KHR_blend_equation_advanced_coherent    , KHR_blend_equation_advanced_coherent   , GLL, GLC,  x , ES2, 2014)
