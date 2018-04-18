@@ -676,7 +676,20 @@ shader_atomic_float_add(const _mesa_glsl_parse_state *state)
 static bool
 shader_atomic_float_exchange(const _mesa_glsl_parse_state *state)
 {
-   return state->NV_shader_atomic_float_enable;
+   return state->NV_shader_atomic_float_enable ||
+          state->INTEL_shader_atomic_float_minmax_enable;
+}
+
+static bool
+INTEL_shader_atomic_float_minmax_supported(const _mesa_glsl_parse_state *state)
+{
+   return state->extensions->INTEL_shader_atomic_float_minmax;
+}
+
+static bool
+shader_atomic_float_minmax(const _mesa_glsl_parse_state *state)
+{
+   return state->INTEL_shader_atomic_float_minmax_enable;
 }
 /** @} */
 
@@ -1178,6 +1191,9 @@ builtin_builder::create_intrinsics()
                 _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type,
                                    ir_intrinsic_generic_atomic_min),
+                _atomic_intrinsic2(INTEL_shader_atomic_float_minmax_supported,
+                                   glsl_type::float_type,
+                                   ir_intrinsic_generic_atomic_min),
                 _atomic_counter_intrinsic1(shader_atomic_counter_ops_or_v460_desktop,
                                            ir_intrinsic_atomic_counter_min),
                 NULL);
@@ -1187,6 +1203,9 @@ builtin_builder::create_intrinsics()
                                    ir_intrinsic_generic_atomic_max),
                 _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_max),
+                _atomic_intrinsic2(INTEL_shader_atomic_float_minmax_supported,
+                                   glsl_type::float_type,
                                    ir_intrinsic_generic_atomic_max),
                 _atomic_counter_intrinsic1(shader_atomic_counter_ops_or_v460_desktop,
                                            ir_intrinsic_atomic_counter_max),
@@ -1240,6 +1259,9 @@ builtin_builder::create_intrinsics()
                                    ir_intrinsic_generic_atomic_comp_swap),
                 _atomic_intrinsic3(buffer_atomics_supported,
                                    glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_comp_swap),
+                _atomic_intrinsic3(INTEL_shader_atomic_float_minmax_supported,
+                                   glsl_type::float_type,
                                    ir_intrinsic_generic_atomic_comp_swap),
                 _atomic_counter_intrinsic2(shader_atomic_counter_ops_or_v460_desktop,
                                            ir_intrinsic_atomic_counter_comp_swap),
@@ -3186,6 +3208,9 @@ builtin_builder::create_builtins()
                 _atomic_op2("__intrinsic_atomic_min",
                             buffer_atomics_supported,
                             glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_min",
+                            shader_atomic_float_minmax,
+                            glsl_type::float_type),
                 NULL);
    add_function("atomicMax",
                 _atomic_op2("__intrinsic_atomic_max",
@@ -3194,6 +3219,9 @@ builtin_builder::create_builtins()
                 _atomic_op2("__intrinsic_atomic_max",
                             buffer_atomics_supported,
                             glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_max",
+                            shader_atomic_float_minmax,
+                            glsl_type::float_type),
                 NULL);
    add_function("atomicAnd",
                 _atomic_op2("__intrinsic_atomic_and",
@@ -3237,6 +3265,9 @@ builtin_builder::create_builtins()
                 _atomic_op3("__intrinsic_atomic_comp_swap",
                             buffer_atomics_supported,
                             glsl_type::int_type),
+                _atomic_op3("__intrinsic_atomic_comp_swap",
+                            shader_atomic_float_minmax,
+                            glsl_type::float_type),
                 NULL);
 
    add_function("min3",
