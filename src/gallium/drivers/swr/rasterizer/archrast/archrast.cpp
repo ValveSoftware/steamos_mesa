@@ -121,7 +121,10 @@ namespace ArchRast
     class EventHandlerWorkerStats : public EventHandlerFile
     {
     public:
-        EventHandlerWorkerStats(uint32_t id) : EventHandlerFile(id), mNeedFlush(false) {}
+        EventHandlerWorkerStats(uint32_t id) : EventHandlerFile(id), mNeedFlush(false)
+        {
+            memset(mShaderStats, 0, sizeof(mShaderStats));
+        }
 
         virtual void Handle(const EarlyDepthStencilInfoSingleSample& event)
         {
