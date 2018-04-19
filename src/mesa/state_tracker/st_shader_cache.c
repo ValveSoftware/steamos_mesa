@@ -74,6 +74,9 @@ static void
 st_serialise_ir_program(struct gl_context *ctx, struct gl_program *prog,
                         bool nir)
 {
+   if (prog->driver_cache_blob)
+      return;
+
    struct blob blob;
    blob_init(&blob);
 
