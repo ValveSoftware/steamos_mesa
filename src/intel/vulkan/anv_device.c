@@ -58,23 +58,8 @@ compiler_perf_log(void *data, const char *fmt, ...)
 }
 
 static VkResult
-anv_compute_heap_size(int fd, uint64_t *heap_size)
+anv_compute_heap_size(int fd, uint64_t gtt_size, uint64_t *heap_size)
 {
-   uint64_t gtt_size;
-   if (anv_gem_get_context_param(fd, 0, I915_CONTEXT_PARAM_GTT_SIZE,
-                                 &gtt_size) == -1) {
-      /* If, for whatever reason, we can't actually get the GTT size from the
-       * kernel (too old?) fall back to the aperture size.
-       */
-      anv_perf_warn(NULL, NULL,
-                    "Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
-
-      if (anv_gem_get_aperture(fd, &gtt_size) == -1) {
-         return vk_errorf(NULL, NULL, VK_ERROR_INITIALIZATION_FAILED,
-                          "failed to get aperture size: %m");
-      }
-   }
-
    /* Query the total ram from the system */
    struct sysinfo info;
    sysinfo(&info);
@@ -103,15 +88,26 @@ anv_compute_heap_size(int fd, uint64_t *heap_size)
 static VkResult
 anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
 {
-   /* The kernel query only tells us whether or not the kernel supports the
-    * EXEC_OBJECT_SUPPORTS_48B_ADDRESS flag and not whether or not the
-    * hardware has actual 48bit address support.
-    */
-   device->supports_48bit_addresses =
-      (device->info.gen >= 8) && anv_gem_supports_48b_addresses(fd);
+   uint64_t gtt_size;
+   if (anv_gem_get_context_param(fd, 0, I915_CONTEXT_PARAM_GTT_SIZE,
+                                 &gtt_size) == -1) {
+      /* If, for whatever reason, we can't actually get the GTT size from the
+       * kernel (too old?) fall back to the aperture size.
+       */
+      anv_perf_warn(NULL, NULL,
+                    "Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
+
+      if (anv_gem_get_aperture(fd, &gtt_size) == -1) {
+         return vk_errorf(NULL, NULL, VK_ERROR_INITIALIZATION_FAILED,
+                          "failed to get aperture size: %m");
+      }
+   }
+
+   device->supports_48bit_addresses = (device->info.gen >= 8) &&
+      gtt_size > (4ULL << 30 /* GiB */);
 
    uint64_t heap_size = 0;
-   VkResult result = anv_compute_heap_size(fd, &heap_size);
+   VkResult result = anv_compute_heap_size(fd, gtt_size, &heap_size);
    if (result != VK_SUCCESS)
       return result;
 

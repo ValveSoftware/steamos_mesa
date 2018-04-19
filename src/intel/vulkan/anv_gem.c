@@ -377,24 +377,6 @@ anv_gem_get_aperture(int fd, uint64_t *size)
    return 0;
 }
 
-bool
-anv_gem_supports_48b_addresses(int fd)
-{
-   struct drm_i915_gem_exec_object2 obj = {
-      .flags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS,
-   };
-
-   struct drm_i915_gem_execbuffer2 execbuf = {
-      .buffers_ptr = (uintptr_t)&obj,
-      .buffer_count = 1,
-      .rsvd1 = 0xffffffu,
-   };
-
-   int ret = anv_ioctl(fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, &execbuf);
-
-   return ret == -1 && errno == ENOENT;
-}
-
 int
 anv_gem_gpu_get_reset_stats(struct anv_device *device,
                             uint32_t *active, uint32_t *pending)

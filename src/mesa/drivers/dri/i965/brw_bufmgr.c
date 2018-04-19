@@ -1385,22 +1385,20 @@ gem_param(int fd, int name)
    return v;
 }
 
-static bool
-gem_supports_48b_addresses(int fd)
+static int
+gem_context_getparam(int fd, uint32_t context, uint64_t param, uint64_t *value)
 {
-   struct drm_i915_gem_exec_object2 obj = {
-      .flags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS,
+   struct drm_i915_gem_context_param gp = {
+      .ctx_id = context,
+      .param = param,
    };
 
-   struct drm_i915_gem_execbuffer2 execbuf = {
-      .buffers_ptr = (uintptr_t)&obj,
-      .buffer_count = 1,
-      .rsvd1 = 0xffffffu,
-   };
+   if (drmIoctl(fd, DRM_IOCTL_I915_GEM_CONTEXT_GETPARAM, &gp))
+      return -1;
 
-   int ret = drmIoctl(fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, &execbuf);
+   *value = gp.value;
 
-   return ret == -1 && errno == ENOENT;
+   return 0;
 }
 
 /**
@@ -1434,10 +1432,14 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
       return NULL;
    }
 
+   uint64_t gtt_size;
+   if (gem_context_getparam(fd, 0, I915_CONTEXT_PARAM_GTT_SIZE, &gtt_size))
+      gtt_size = 0;
+
    bufmgr->has_llc = devinfo->has_llc;
    bufmgr->has_mmap_wc = gem_param(fd, I915_PARAM_MMAP_VERSION) > 0;
-   bufmgr->supports_48b_addresses =
-      devinfo->gen >= 8 && gem_supports_48b_addresses(fd);
+   bufmgr->supports_48b_addresses = devinfo->gen >= 8 &&
+      gtt_size > (4ULL << 30 /* GiB */);
 
    init_cache_buckets(bufmgr);
 
