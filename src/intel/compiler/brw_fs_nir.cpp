@@ -1018,9 +1018,11 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_feq:
    case nir_op_fne: {
       fs_reg dest = result;
-      if (nir_src_bit_size(instr->src[0].src) > 32) {
-         dest = bld.vgrf(BRW_REGISTER_TYPE_DF, 1);
-      }
+
+      const uint32_t bit_size =  nir_src_bit_size(instr->src[0].src);
+      if (bit_size != 32)
+         dest = bld.vgrf(op[0].type, 1);
+
       brw_conditional_mod cond;
       switch (instr->op) {
       case nir_op_flt:
@@ -1038,9 +1040,19 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       default:
          unreachable("bad opcode");
       }
+
       bld.CMP(dest, op[0], op[1], cond);
-      if (nir_src_bit_size(instr->src[0].src) > 32) {
+
+      if (bit_size > 32) {
          bld.MOV(result, subscript(dest, BRW_REGISTER_TYPE_UD, 0));
+      } else if(bit_size < 32) {
+         /* When we convert the result to 32-bit we need to be careful and do
+          * it as a signed conversion to get sign extension (for 32-bit true)
+          */
+         const brw_reg_type src_type =
+            brw_reg_type_from_bit_size(bit_size, BRW_REGISTER_TYPE_D);
+
+         bld.MOV(retype(result, BRW_REGISTER_TYPE_D), retype(dest, src_type));
       }
       break;
    }
@@ -1052,9 +1064,10 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_ieq:
    case nir_op_ine: {
       fs_reg dest = result;
-      if (nir_src_bit_size(instr->src[0].src) > 32) {
-         dest = bld.vgrf(BRW_REGISTER_TYPE_UQ, 1);
-      }
+
+      const uint32_t bit_size = nir_src_bit_size(instr->src[0].src);
+      if (bit_size != 32)
+         dest = bld.vgrf(op[0].type, 1);
 
       brw_conditional_mod cond;
       switch (instr->op) {
@@ -1076,8 +1089,17 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          unreachable("bad opcode");
       }
       bld.CMP(dest, op[0], op[1], cond);
-      if (nir_src_bit_size(instr->src[0].src) > 32) {
+
+      if (bit_size > 32) {
          bld.MOV(result, subscript(dest, BRW_REGISTER_TYPE_UD, 0));
+      } else if (bit_size < 32) {
+         /* When we convert the result to 32-bit we need to be careful and do
+          * it as a signed conversion to get sign extension (for 32-bit true)
+          */
+         const brw_reg_type src_type =
+            brw_reg_type_from_bit_size(bit_size, BRW_REGISTER_TYPE_D);
+
+         bld.MOV(retype(result, BRW_REGISTER_TYPE_D), retype(dest, src_type));
       }
       break;
    }
