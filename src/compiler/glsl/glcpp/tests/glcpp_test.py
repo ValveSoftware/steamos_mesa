@@ -78,7 +78,8 @@ def _valgrind(glcpp, filename):
     extra_args = parse_test_file(filename, nl_format='\n')
 
     try:
-        _, tmpfile = tempfile.mkstemp()
+        fd, tmpfile = tempfile.mkstemp()
+        os.close(fd)
         with open(filename, 'rb') as f:
             proc = subprocess.Popen(
                 ['valgrind', '--error-exitcode=31', '--log-file', tmpfile, glcpp] + extra_args,
@@ -135,7 +136,8 @@ def _replace_test(args, replace):
         total += 1
         testfile = os.path.join(args.testdir, filename)
         try:
-            _, tmpfile = tempfile.mkstemp()
+            fd, tmpfile = tempfile.mkstemp()
+            os.close(fd)
             with io.open(testfile, 'rt') as f:
                 contents = f.read()
             with io.open(tmpfile, 'wt') as f:
