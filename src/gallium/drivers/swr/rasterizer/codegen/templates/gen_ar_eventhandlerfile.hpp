@@ -56,7 +56,8 @@ namespace ArchRast
             const char* pBaseName = strrchr(procname, '\\');
             std::stringstream outDir;
             outDir << KNOB_DEBUG_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
-            CreateDirectory(outDir.str().c_str(), NULL);
+            mOutputDir = outDir.str();
+            CreateDirectory(mOutputDir.c_str(), NULL);
 
             // There could be multiple threads creating thread pools. We
             // want to make sure they are uniquly identified by adding in
@@ -152,6 +153,7 @@ namespace ArchRast
         }
 
         std::string mFilename;
+        std::string mOutputDir;
 
         static const uint32_t mBufferSize = 1024;
         uint8_t mBuffer[mBufferSize];

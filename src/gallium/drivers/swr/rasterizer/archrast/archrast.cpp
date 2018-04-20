@@ -93,7 +93,35 @@ namespace ArchRast
     class EventHandlerApiStats : public EventHandlerFile
     {
     public:
-        EventHandlerApiStats(uint32_t id) : EventHandlerFile(id) {}
+        EventHandlerApiStats(uint32_t id) : EventHandlerFile(id) {
+#if defined(_WIN32)
+            // Attempt to copy the events.proto file to the ArchRast output dir. It's common for tools to place the events.proto file
+            // in the DEBUG_OUTPUT_DIR when launching AR. If it exists, this will attempt to copy it the first time we get here to package
+            // it with the stats. Otherwise, the user would need to specify the events.proto location when parsing the stats in post.
+            std::stringstream eventsProtoSrcFilename, eventsProtoDstFilename;
+            eventsProtoSrcFilename << KNOB_DEBUG_OUTPUT_DIR << "\\events.proto" << std::ends;
+            eventsProtoDstFilename << mOutputDir.substr(0, mOutputDir.size() - 1) << "\\events.proto" << std::ends;
+
+            // If event.proto already exists, we're done; else do the copy
+            struct stat buf; // Use a Posix stat for file existence check
+            if (!stat(eventsProtoDstFilename.str().c_str(), &buf) == 0) {
+                // Now check to make sure the events.proto source exists
+                if (stat(eventsProtoSrcFilename.str().c_str(), &buf) == 0) {
+                    std::ifstream srcFile;
+                    srcFile.open(eventsProtoSrcFilename.str().c_str(), std::ios::binary);
+                    if (srcFile.is_open())
+                    {
+                        // Just do a binary buffer copy
+                        std::ofstream dstFile;
+                        dstFile.open(eventsProtoDstFilename.str().c_str(), std::ios::binary);
+                        dstFile << srcFile.rdbuf();
+                        dstFile.close();
+                    }
+                    srcFile.close();
+                }
+            }
+#endif
+        }
 
         virtual void Handle(const DrawInstancedEvent& event)
         {
