@@ -213,7 +213,11 @@ bool CodeEmitterNVC0::isLIMM(const ValueRef& ref, DataType ty)
 {
    const ImmediateValue *imm = ref.get()->asImm();
 
-   return imm && (imm->reg.data.u32 & ((ty == TYPE_F32) ? 0xfff : 0xfff00000));
+   if (ty == TYPE_F32)
+      return imm && imm->reg.data.u32 & 0xfff;
+   else
+      return imm && (imm->reg.data.s32 > 0x7ffff ||
+                     imm->reg.data.s32 < -0x80000);
 }
 
 void
@@ -352,7 +356,7 @@ CodeEmitterNVC0::setImmediate(const Instruction *i, const int s)
    } else
    if ((code[0] & 0xf) == 0x3 || (code[0] & 0xf) == 4) {
       // integer immediate
-      assert((u32 & 0xfff00000) == 0 || (u32 & 0xfff00000) == 0xfff00000);
+      assert((u32 & 0xfff80000) == 0 || (u32 & 0xfff80000) == 0xfff80000);
       assert(!(code[1] & 0xc000));
       u32 &= 0xfffff;
       code[0] |= (u32 & 0x3f) << 26;
@@ -641,7 +645,7 @@ void
 CodeEmitterNVC0::emitUMUL(const Instruction *i)
 {
    if (i->encSize == 8) {
-      if (i->src(1).getFile() == FILE_IMMEDIATE) {
+      if (isLIMM(i->src(1), TYPE_U32)) {
          emitForm_A(i, HEX64(10000000, 00000002));
       } else {
          emitForm_A(i, HEX64(50000000, 00000003));
@@ -2069,7 +2073,7 @@ CodeEmitterNVC0::emitMOV(const Instruction *i)
             assert(!(imm & 0x000fffff));
             code[0] = 0x00000318 | imm;
          } else {
-            assert(imm < 0x800 || ((int32_t)imm >= -0x800));
+            assert(imm < 0x800 && ((int32_t)imm >= -0x800));
             code[0] = 0x00000118 | (imm << 20);
          }
       } else {

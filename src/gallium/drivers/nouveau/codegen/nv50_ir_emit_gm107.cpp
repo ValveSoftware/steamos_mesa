@@ -321,14 +321,10 @@ CodeEmitterGM107::longIMMD(const ValueRef &ref)
 {
    if (ref.getFile() == FILE_IMMEDIATE) {
       const ImmediateValue *imm = ref.get()->asImm();
-      if (isFloatType(insn->sType)) {
-         if ((imm->reg.data.u32 & 0x00000fff) != 0x00000000)
-            return true;
-      } else {
-         if ((imm->reg.data.u32 & 0xfff00000) != 0x00000000 &&
-             (imm->reg.data.u32 & 0xfff00000) != 0xfff00000)
-            return true;
-      }
+      if (isFloatType(insn->sType))
+         return imm->reg.data.u32 & 0xfff;
+      else
+         return imm->reg.data.s32 > 0x7ffff || imm->reg.data.s32 < -0x80000;
    }
    return false;
 }
@@ -346,8 +342,9 @@ CodeEmitterGM107::emitIMMD(int pos, int len, const ValueRef &ref)
       } else if (insn->sType == TYPE_F64) {
          assert(!(imm->reg.data.u64 & 0x00000fffffffffffULL));
          val = imm->reg.data.u64 >> 44;
+      } else {
+         assert(!(val & 0xfff80000) || (val & 0xfff80000) == 0xfff80000);
       }
-      assert(!(val & 0xfff00000) || (val & 0xfff00000) == 0xfff00000);
       emitField( 56,   1, (val & 0x80000) >> 19);
       emitField(pos, len, (val & 0x7ffff));
    } else {
@@ -1658,7 +1655,7 @@ CodeEmitterGM107::emitLOP()
       break;
    }
 
-   if (insn->src(1).getFile() != FILE_IMMEDIATE) {
+   if (!longIMMD(insn->src(1))) {
       switch (insn->src(1).getFile()) {
       case FILE_GPR:
          emitInsn(0x5c400000);
@@ -1731,7 +1728,7 @@ CodeEmitterGM107::emitNOT()
 void
 CodeEmitterGM107::emitIADD()
 {
-   if (insn->src(1).getFile() != FILE_IMMEDIATE) {
+   if (!longIMMD(insn->src(1))) {
       switch (insn->src(1).getFile()) {
       case FILE_GPR:
          emitInsn(0x5c100000);
@@ -1773,7 +1770,7 @@ CodeEmitterGM107::emitIADD()
 void
 CodeEmitterGM107::emitIMUL()
 {
-   if (insn->src(1).getFile() != FILE_IMMEDIATE) {
+   if (!longIMMD(insn->src(1))) {
       switch (insn->src(1).getFile()) {
       case FILE_GPR:
          emitInsn(0x5c380000);
