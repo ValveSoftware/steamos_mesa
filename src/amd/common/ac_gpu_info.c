@@ -521,3 +521,36 @@ void ac_print_gpu_info(struct radeon_info *info)
 		       G_0098F8_NUM_LOWER_PIPES(info->gb_addr_config));
 	}
 }
+
+int
+ac_get_gs_table_depth(enum chip_class chip_class, enum radeon_family family)
+{
+	if (chip_class >= GFX9)
+		return -1;
+
+	switch (family) {
+	case CHIP_OLAND:
+	case CHIP_HAINAN:
+	case CHIP_KAVERI:
+	case CHIP_KABINI:
+	case CHIP_MULLINS:
+	case CHIP_ICELAND:
+	case CHIP_CARRIZO:
+	case CHIP_STONEY:
+		return 16;
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+	case CHIP_VERDE:
+	case CHIP_BONAIRE:
+	case CHIP_HAWAII:
+	case CHIP_TONGA:
+	case CHIP_FIJI:
+	case CHIP_POLARIS10:
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+	case CHIP_VEGAM:
+		return 32;
+	default:
+		unreachable("Unknown GPU");
+	}
+}
