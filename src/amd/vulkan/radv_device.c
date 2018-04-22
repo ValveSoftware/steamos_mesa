@@ -1353,6 +1353,9 @@ static void radv_bo_list_remove(struct radv_device *device,
 static void
 radv_device_init_gs_info(struct radv_device *device)
 {
+	if (device->physical_device->rad_info.chip_class >= GFX9)
+		return;
+
 	switch (device->physical_device->rad_info.family) {
 	case CHIP_OLAND:
 	case CHIP_HAINAN:
@@ -1375,9 +1378,6 @@ radv_device_init_gs_info(struct radv_device *device)
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
 	case CHIP_VEGAM:
-	case CHIP_VEGA10:
-	case CHIP_VEGA12:
-	case CHIP_RAVEN:
 		device->gs_table_depth = 32;
 		return;
 	default:
