@@ -659,11 +659,11 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	FREE(sscreen);
 }
 
-static bool si_init_gs_info(struct si_screen *sscreen)
+static void si_init_gs_info(struct si_screen *sscreen)
 {
 	/* gs_table_depth is not used by GFX9 */
 	if (sscreen->info.chip_class >= GFX9)
-		return true;
+		return;
 
 	switch (sscreen->info.family) {
 	case CHIP_OLAND:
@@ -675,7 +675,7 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_CARRIZO:
 	case CHIP_STONEY:
 		sscreen->gs_table_depth = 16;
-		return true;
+		return;
 	case CHIP_TAHITI:
 	case CHIP_PITCAIRN:
 	case CHIP_VERDE:
@@ -688,9 +688,9 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_POLARIS12:
 	case CHIP_VEGAM:
 		sscreen->gs_table_depth = 32;
-		return true;
+		return;
 	default:
-		return false;
+		unreachable("unknown GPU");
 	}
 }
 
@@ -853,8 +853,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	(void) mtx_init(&sscreen->aux_context_lock, mtx_plain);
 	(void) mtx_init(&sscreen->gpu_load_mutex, mtx_plain);
 
-	if (!si_init_gs_info(sscreen) ||
-	    !si_init_shader_cache(sscreen)) {
+	si_init_gs_info(sscreen);
+	if (!si_init_shader_cache(sscreen)) {
 		FREE(sscreen);
 		return NULL;
 	}
