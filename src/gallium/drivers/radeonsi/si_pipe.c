@@ -661,37 +661,8 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 
 static void si_init_gs_info(struct si_screen *sscreen)
 {
-	/* gs_table_depth is not used by GFX9 */
-	if (sscreen->info.chip_class >= GFX9)
-		return;
-
-	switch (sscreen->info.family) {
-	case CHIP_OLAND:
-	case CHIP_HAINAN:
-	case CHIP_KAVERI:
-	case CHIP_KABINI:
-	case CHIP_MULLINS:
-	case CHIP_ICELAND:
-	case CHIP_CARRIZO:
-	case CHIP_STONEY:
-		sscreen->gs_table_depth = 16;
-		return;
-	case CHIP_TAHITI:
-	case CHIP_PITCAIRN:
-	case CHIP_VERDE:
-	case CHIP_BONAIRE:
-	case CHIP_HAWAII:
-	case CHIP_TONGA:
-	case CHIP_FIJI:
-	case CHIP_POLARIS10:
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12:
-	case CHIP_VEGAM:
-		sscreen->gs_table_depth = 32;
-		return;
-	default:
-		unreachable("unknown GPU");
-	}
+	sscreen->gs_table_depth = ac_get_gs_table_depth(sscreen->info.chip_class,
+							sscreen->info.family);
 }
 
 static void si_handle_env_var_force_family(struct si_screen *sscreen)
