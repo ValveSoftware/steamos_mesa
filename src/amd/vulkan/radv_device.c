@@ -1353,36 +1353,8 @@ static void radv_bo_list_remove(struct radv_device *device,
 static void
 radv_device_init_gs_info(struct radv_device *device)
 {
-	if (device->physical_device->rad_info.chip_class >= GFX9)
-		return;
-
-	switch (device->physical_device->rad_info.family) {
-	case CHIP_OLAND:
-	case CHIP_HAINAN:
-	case CHIP_KAVERI:
-	case CHIP_KABINI:
-	case CHIP_MULLINS:
-	case CHIP_ICELAND:
-	case CHIP_CARRIZO:
-	case CHIP_STONEY:
-		device->gs_table_depth = 16;
-		return;
-	case CHIP_TAHITI:
-	case CHIP_PITCAIRN:
-	case CHIP_VERDE:
-	case CHIP_BONAIRE:
-	case CHIP_HAWAII:
-	case CHIP_TONGA:
-	case CHIP_FIJI:
-	case CHIP_POLARIS10:
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12:
-	case CHIP_VEGAM:
-		device->gs_table_depth = 32;
-		return;
-	default:
-		unreachable("unknown GPU");
-	}
+	device->gs_table_depth = ac_get_gs_table_depth(device->physical_device->rad_info.chip_class,
+						       device->physical_device->rad_info.family);
 }
 
 static int radv_get_device_extension_index(const char *name)
