@@ -604,7 +604,7 @@ gallivm_compile_module(struct gallivm_state *gallivm)
 
    if (gallivm_debug & GALLIVM_DEBUG_PERF) {
       int64_t time_end = os_time_get();
-      int time_msec = (int)(time_end - time_begin) / 1000;
+      int time_msec = (int)((time_end - time_begin) / 1000);
       assert(gallivm->module_name);
       debug_printf("optimizing module %s took %d msec\n",
                    gallivm->module_name, time_msec);
