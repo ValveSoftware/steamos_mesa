@@ -647,3 +647,116 @@ ac_get_raster_config(struct radeon_info *info,
 	*raster_config_p = raster_config;
 	*raster_config_1_p = raster_config_1;
 }
+
+void
+ac_get_harvested_configs(struct radeon_info *info,
+			 unsigned raster_config,
+			 unsigned *cik_raster_config_1_p,
+			 unsigned *raster_config_se)
+{
+	unsigned sh_per_se = MAX2(info->max_sh_per_se, 1);
+	unsigned num_se = MAX2(info->max_se, 1);
+	unsigned rb_mask = info->enabled_rb_mask;
+	unsigned num_rb = MIN2(info->num_render_backends, 16);
+	unsigned rb_per_pkr = MIN2(num_rb / num_se / sh_per_se, 2);
+	unsigned rb_per_se = num_rb / num_se;
+	unsigned se_mask[4];
+	unsigned se;
+
+	se_mask[0] = ((1 << rb_per_se) - 1) & rb_mask;
+	se_mask[1] = (se_mask[0] << rb_per_se) & rb_mask;
+	se_mask[2] = (se_mask[1] << rb_per_se) & rb_mask;
+	se_mask[3] = (se_mask[2] << rb_per_se) & rb_mask;
+
+	assert(num_se == 1 || num_se == 2 || num_se == 4);
+	assert(sh_per_se == 1 || sh_per_se == 2);
+	assert(rb_per_pkr == 1 || rb_per_pkr == 2);
+
+
+	if (info->chip_class >= CIK) {
+		unsigned raster_config_1 = *cik_raster_config_1_p;
+		if ((num_se > 2) && ((!se_mask[0] && !se_mask[1]) ||
+				     (!se_mask[2] && !se_mask[3]))) {
+			raster_config_1 &= C_028354_SE_PAIR_MAP;
+
+			if (!se_mask[0] && !se_mask[1]) {
+				raster_config_1 |=
+					S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_3);
+			} else {
+				raster_config_1 |=
+					S_028354_SE_PAIR_MAP(V_028354_RASTER_CONFIG_SE_PAIR_MAP_0);
+			}
+			*cik_raster_config_1_p = raster_config_1;
+		}
+	}
+
+	for (se = 0; se < num_se; se++) {
+		unsigned pkr0_mask = ((1 << rb_per_pkr) - 1) << (se * rb_per_se);
+		unsigned pkr1_mask = pkr0_mask << rb_per_pkr;
+		int idx = (se / 2) * 2;
+
+		raster_config_se[se] = raster_config;
+		if ((num_se > 1) && (!se_mask[idx] || !se_mask[idx + 1])) {
+			raster_config_se[se] &= C_028350_SE_MAP;
+
+			if (!se_mask[idx]) {
+				raster_config_se[se] |=
+					S_028350_SE_MAP(V_028350_RASTER_CONFIG_SE_MAP_3);
+			} else {
+				raster_config_se[se] |=
+					S_028350_SE_MAP(V_028350_RASTER_CONFIG_SE_MAP_0);
+			}
+		}
+
+		pkr0_mask &= rb_mask;
+		pkr1_mask &= rb_mask;
+		if (rb_per_se > 2 && (!pkr0_mask || !pkr1_mask)) {
+			raster_config_se[se] &= C_028350_PKR_MAP;
+
+			if (!pkr0_mask) {
+				raster_config_se[se] |=
+					S_028350_PKR_MAP(V_028350_RASTER_CONFIG_PKR_MAP_3);
+			} else {
+				raster_config_se[se] |=
+					S_028350_PKR_MAP(V_028350_RASTER_CONFIG_PKR_MAP_0);
+			}
+		}
+
+		if (rb_per_se >= 2) {
+			unsigned rb0_mask = 1 << (se * rb_per_se);
+			unsigned rb1_mask = rb0_mask << 1;
+
+			rb0_mask &= rb_mask;
+			rb1_mask &= rb_mask;
+			if (!rb0_mask || !rb1_mask) {
+				raster_config_se[se] &= C_028350_RB_MAP_PKR0;
+
+				if (!rb0_mask) {
+					raster_config_se[se] |=
+						S_028350_RB_MAP_PKR0(V_028350_RASTER_CONFIG_RB_MAP_3);
+				} else {
+					raster_config_se[se] |=
+						S_028350_RB_MAP_PKR0(V_028350_RASTER_CONFIG_RB_MAP_0);
+				}
+			}
+
+			if (rb_per_se > 2) {
+				rb0_mask = 1 << (se * rb_per_se + rb_per_pkr);
+				rb1_mask = rb0_mask << 1;
+				rb0_mask &= rb_mask;
+				rb1_mask &= rb_mask;
+				if (!rb0_mask || !rb1_mask) {
+					raster_config_se[se] &= C_028350_RB_MAP_PKR1;
+
+					if (!rb0_mask) {
+						raster_config_se[se] |=
+							S_028350_RB_MAP_PKR1(V_028350_RASTER_CONFIG_RB_MAP_3);
+					} else {
+						raster_config_se[se] |=
+							S_028350_RB_MAP_PKR1(V_028350_RASTER_CONFIG_RB_MAP_0);
+					}
+				}
+			}
+		}
+	}
+}

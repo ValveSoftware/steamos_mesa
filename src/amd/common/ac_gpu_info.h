@@ -134,6 +134,10 @@ int ac_get_gs_table_depth(enum chip_class chip_class, enum radeon_family family)
 void ac_get_raster_config(struct radeon_info *info,
 			  uint32_t *raster_config_p,
 			  uint32_t *raster_config_1_p);
+void ac_get_harvested_configs(struct radeon_info *info,
+			      unsigned raster_config,
+			      unsigned *cik_raster_config_1_p,
+			      unsigned *raster_config_se);
 
 static inline unsigned ac_get_max_simd_waves(enum radeon_family family)
 {
