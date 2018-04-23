@@ -36,6 +36,7 @@
 #include "${event_header}"
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <thread>
 
 namespace ArchRast
@@ -57,7 +58,9 @@ namespace ArchRast
             std::stringstream outDir;
             outDir << KNOB_DEBUG_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
             mOutputDir = outDir.str();
-            CreateDirectory(mOutputDir.c_str(), NULL);
+            if (CreateDirectory(mOutputDir.c_str(), NULL)) {
+                std::cout << "ArchRast Dir:      " << mOutputDir << std::endl << std::endl << std::flush;
+            }
 
             // There could be multiple threads creating thread pools. We
             // want to make sure they are uniquly identified by adding in
