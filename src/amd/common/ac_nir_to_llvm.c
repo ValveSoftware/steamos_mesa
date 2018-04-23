@@ -3397,6 +3397,13 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 	}
 
 	/* Texture coordinates fixups */
+	if (instr->coord_components > 1 &&
+	    instr->sampler_dim == GLSL_SAMPLER_DIM_1D &&
+	    instr->is_array &&
+	    instr->op != nir_texop_txf) {
+		args.coords[1] = apply_round_slice(&ctx->ac, args.coords[1]);
+	}
+
 	if (instr->coord_components > 2 &&
 	    (instr->sampler_dim == GLSL_SAMPLER_DIM_2D ||
 	     instr->sampler_dim == GLSL_SAMPLER_DIM_MS ||
