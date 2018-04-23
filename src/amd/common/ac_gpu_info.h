@@ -134,6 +134,22 @@ int ac_get_gs_table_depth(enum chip_class chip_class, enum radeon_family family)
 void ac_get_raster_config(struct radeon_info *info,
 			  uint32_t *raster_config_p,
 			  uint32_t *raster_config_1_p);
+
+static inline unsigned ac_get_max_simd_waves(enum radeon_family family)
+{
+
+	switch (family) {
+	/* These always have 8 waves: */
+	case CHIP_POLARIS10:
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+	case CHIP_VEGAM:
+		return 8;
+	default:
+		return 10;
+	}
+}
+
 #ifdef __cplusplus
 }
 #endif

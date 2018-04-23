@@ -5459,17 +5459,7 @@ static void si_calculate_max_simd_waves(struct si_shader *shader)
 	unsigned lds_per_wave = 0;
 	unsigned max_simd_waves;
 
-	switch (sscreen->info.family) {
-	/* These always have 8 waves: */
-	case CHIP_POLARIS10:
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12:
-	case CHIP_VEGAM:
-		max_simd_waves = 8;
-		break;
-	default:
-		max_simd_waves = 10;
-	}
+	max_simd_waves = ac_get_max_simd_waves(sscreen->info.family);
 
 	/* Compute LDS usage for PS. */
 	switch (shader->selector->type) {
