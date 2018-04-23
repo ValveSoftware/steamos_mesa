@@ -416,9 +416,20 @@ namespace SwrJit
                     {
                         tempStr.insert(pos, std::string("%d "));
                         pos += 3;
-                        printCallArgs.push_back(VEXTRACT(pArg, C(i)));
+                        printCallArgs.push_back(S_EXT(VEXTRACT(pArg, C(i)), Type::getInt32Ty(JM()->mContext)));
                     }
-                    printCallArgs.push_back(VEXTRACT(pArg, C(i)));
+                    printCallArgs.push_back(S_EXT(VEXTRACT(pArg, C(i)), Type::getInt32Ty(JM()->mContext)));
+                }
+                else if ((tempStr[pos + 1] == 'u') && (pContainedType->isIntegerTy()))
+                {
+                    uint32_t i = 0;
+                    for (; i < (pArg->getType()->getVectorNumElements()) - 1; i++)
+                    {
+                        tempStr.insert(pos, std::string("%d "));
+                        pos += 3;
+                        printCallArgs.push_back(Z_EXT(VEXTRACT(pArg, C(i)), Type::getInt32Ty(JM()->mContext)));
+                    }
+                    printCallArgs.push_back(Z_EXT(VEXTRACT(pArg, C(i)), Type::getInt32Ty(JM()->mContext)));
                 }
             }
             else
