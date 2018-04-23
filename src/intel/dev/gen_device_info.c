@@ -1044,11 +1044,7 @@ gen_device_info_update_from_topology(struct gen_device_info *devinfo,
    for (int b = 0; b < eu_mask_len; b++)
       n_eus += __builtin_popcount(devinfo->eu_masks[b]);
 
-   /* We expect the total number of EUs to be uniformly distributed throughout
-    * the subslices.
-    */
-   assert(n_subslices && (n_eus % n_subslices) == 0);
-   devinfo->num_eu_per_subslice = n_eus / n_subslices;
+   devinfo->num_eu_per_subslice = DIV_ROUND_UP(n_eus, n_subslices);
 }
 
 bool
