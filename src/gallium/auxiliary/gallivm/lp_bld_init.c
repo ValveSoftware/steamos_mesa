@@ -144,7 +144,15 @@ create_pass_manager(struct gallivm_state *gallivm)
       LLVMAddScalarReplAggregatesPass(gallivm->passmgr);
       LLVMAddEarlyCSEPass(gallivm->passmgr);
       LLVMAddCFGSimplificationPass(gallivm->passmgr);
-      LLVMAddLICMPass(gallivm->passmgr);
+      /*
+       * FIXME: LICM is potentially quite useful. However, for some
+       * rather crazy shaders the compile time can reach _hours_ per shader,
+       * due to licm implying lcssa (since llvm 3.5), which can take forever.
+       * Even for sane shaders, the cost of licm is rather high (and not just
+       * due to lcssa, licm itself too), though mostly only in cases when it
+       * can actually move things, so having to disable it is a pity.
+       * LLVMAddLICMPass(gallivm->passmgr);
+       */
       LLVMAddReassociatePass(gallivm->passmgr);
       LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
       LLVMAddConstantPropagationPass(gallivm->passmgr);
