@@ -201,7 +201,7 @@ namespace SwrJit
         return Builder::MASKED_LOAD(Ptr, Align, Mask, PassThru, Name, Ty, usage);
     }
 
-    Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy, const Twine &Name)
+    Value* BuilderGfxMem::TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy, const Twine &Name, JIT_MEM_CLIENT /* usage */)
     {
         if (PtrTy == nullptr)
         {

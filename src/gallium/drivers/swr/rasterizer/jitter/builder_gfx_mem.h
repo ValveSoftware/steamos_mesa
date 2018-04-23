@@ -57,7 +57,22 @@ namespace SwrJit
 
         virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
-        Value* TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy = nullptr, const Twine &Name = "");
+        Value* TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy = nullptr, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+        template <typename T>
+        Value* TranslateGfxAddress(Value* xpGfxBaseAddress, const std::initializer_list<T> &offset, Type* PtrTy = nullptr, const Twine &Name = "", JIT_MEM_CLIENT usage = GFX_MEM_CLIENT_SHADER)
+        {
+            AssertGFXMemoryParams(xpGfxBaseAddress, usage);
+            SWR_ASSERT(xpGfxBaseAddress->getType()->isPointerTy() == false);
+
+            if (!PtrTy)
+            {
+                PtrTy = mInt8PtrTy;
+            }
+
+            Value* ptr = INT_TO_PTR(xpGfxBaseAddress, PtrTy);
+            ptr = GEP(ptr, offset);
+            return TranslateGfxAddress(PTR_TO_INT(ptr, mInt64Ty), PtrTy, Name, usage);
+        }
 
 
     protected:
