@@ -141,6 +141,10 @@ create_pass_manager(struct gallivm_state *gallivm)
        * TODO: Evaluate passes some more - keeping in mind
        * both quality of generated code and compile times.
        */
+      /*
+       * NOTE: if you change this, don't forget to change the output
+       * with GALLIVM_DEBUG_DUMP_BC in gallivm_compile_module.
+       */
       LLVMAddScalarReplAggregatesPass(gallivm->passmgr);
       LLVMAddEarlyCSEPass(gallivm->passmgr);
       LLVMAddCFGSimplificationPass(gallivm->passmgr);
@@ -577,6 +581,22 @@ gallivm_compile_module(struct gallivm_state *gallivm)
       gallivm->builder = NULL;
    }
 
+   /* Dump bitcode to a file */
+   if (gallivm_debug & GALLIVM_DEBUG_DUMP_BC) {
+      char filename[256];
+      assert(gallivm->module_name);
+      util_snprintf(filename, sizeof(filename), "ir_%s.bc", gallivm->module_name);
+      LLVMWriteBitcodeToFile(gallivm->module, filename);
+      debug_printf("%s written\n", filename);
+      debug_printf("Invoke as \"opt %s %s | llc -O%d %s%s\"\n",
+                   gallivm_debug & GALLIVM_DEBUG_NO_OPT ? "-mem2reg" :
+                   "-sroa -early-cse -simplifycfg -reassociate "
+                   "-mem2reg -constprop -instcombine -gvn",
+                   filename, gallivm_debug & GALLIVM_DEBUG_NO_OPT ? 0 : 2,
+                   (HAVE_LLVM >= 0x0305) ? "[-mcpu=<-mcpu option>] " : "",
+                   "[-mattr=<-mattr option(s)>]");
+   }
+
    if (gallivm_debug & GALLIVM_DEBUG_PERF)
       time_begin = os_time_get();
 
@@ -608,19 +628,6 @@ gallivm_compile_module(struct gallivm_state *gallivm)
       assert(gallivm->module_name);
       debug_printf("optimizing module %s took %d msec\n",
                    gallivm->module_name, time_msec);
-   }
-
-   /* Dump byte code to a file */
-   if (gallivm_debug & GALLIVM_DEBUG_DUMP_BC) {
-      char filename[256];
-      assert(gallivm->module_name);
-      util_snprintf(filename, sizeof(filename), "ir_%s.bc", gallivm->module_name);
-      LLVMWriteBitcodeToFile(gallivm->module, filename);
-      debug_printf("%s written\n", filename);
-      debug_printf("Invoke as \"llc %s%s -o - %s\"\n",
-                   (HAVE_LLVM >= 0x0305) ? "[-mcpu=<-mcpu option>] " : "",
-                   "[-mattr=<-mattr option(s)>]",
-                   filename);
    }
 
    if (use_mcjit) {
