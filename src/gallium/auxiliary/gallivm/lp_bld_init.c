@@ -137,13 +137,14 @@ create_pass_manager(struct gallivm_state *gallivm)
    }
 
    if ((gallivm_debug & GALLIVM_DEBUG_NO_OPT) == 0) {
-      /* These are the passes currently listed in llvm-c/Transforms/Scalar.h,
-       * but there are more on SVN.
-       * TODO: Add more passes.
+      /*
+       * TODO: Evaluate passes some more - keeping in mind
+       * both quality of generated code and compile times.
        */
       LLVMAddScalarReplAggregatesPass(gallivm->passmgr);
-      LLVMAddLICMPass(gallivm->passmgr);
+      LLVMAddEarlyCSEPass(gallivm->passmgr);
       LLVMAddCFGSimplificationPass(gallivm->passmgr);
+      LLVMAddLICMPass(gallivm->passmgr);
       LLVMAddReassociatePass(gallivm->passmgr);
       LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
       LLVMAddConstantPropagationPass(gallivm->passmgr);
