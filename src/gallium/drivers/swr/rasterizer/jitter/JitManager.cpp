@@ -82,13 +82,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     hostCPUName = sys::getHostCPUName();
 
-#if defined(_WIN32)
-    // Needed for MCJIT on windows
-    Triple hostTriple(sys::getProcessTriple());
-    hostTriple.setObjectFormat(Triple::COFF);
-    mpCurrentModule->setTargetTriple(hostTriple.getTriple());
-#endif // _WIN32
-
     auto optLevel = CodeGenOpt::Aggressive;
 
     if (KNOB_JIT_OPTIMIZATION_LEVEL >= CodeGenOpt::None &&
@@ -97,6 +90,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
         optLevel = CodeGenOpt::Level(KNOB_JIT_OPTIMIZATION_LEVEL);
     }
 
+    mpCurrentModule->setTargetTriple(sys::getProcessTriple());
     mpExec = EngineBuilder(std::move(newModule))
         .setTargetOptions(tOpts)
         .setOptLevel(optLevel)
@@ -163,13 +157,7 @@ void JitManager::SetupNewModule()
 
     std::unique_ptr<Module> newModule(new Module("", mContext));
     mpCurrentModule = newModule.get();
-#if defined(_WIN32)
-    // Needed for MCJIT on windows
-    Triple hostTriple(sys::getProcessTriple());
-    hostTriple.setObjectFormat(Triple::COFF);
-    newModule->setTargetTriple(hostTriple.getTriple());
-#endif // _WIN32
-
+    mpCurrentModule->setTargetTriple(sys::getProcessTriple());
     mpExec->addModule(std::move(newModule));
     mIsModuleFinalized = false;
 }
@@ -537,9 +525,7 @@ JitCache::JitCache()
 
 int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::string* pStdErr)
 {
-    static const char *g_pEnv = "RASTY_DISABLE_HOOK=1\0";
-
-    return ExecCmd(CmdLine, g_pEnv, pStdOut, pStdErr);
+    return ExecCmd(CmdLine, "", pStdOut, pStdErr);
 }
 
 
