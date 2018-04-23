@@ -131,7 +131,9 @@ void ac_compute_driver_uuid(char *uuid, size_t size);
 void ac_compute_device_uuid(struct radeon_info *info, char *uuid, size_t size);
 void ac_print_gpu_info(struct radeon_info *info);
 int ac_get_gs_table_depth(enum chip_class chip_class, enum radeon_family family);
-
+void ac_get_raster_config(struct radeon_info *info,
+			  uint32_t *raster_config_p,
+			  uint32_t *raster_config_1_p);
 #ifdef __cplusplus
 }
 #endif

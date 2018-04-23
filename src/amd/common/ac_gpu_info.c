@@ -554,3 +554,96 @@ ac_get_gs_table_depth(enum chip_class chip_class, enum radeon_family family)
 		unreachable("Unknown GPU");
 	}
 }
+
+void
+ac_get_raster_config(struct radeon_info *info,
+		     uint32_t *raster_config_p,
+		     uint32_t *raster_config_1_p)
+{
+	unsigned num_rb = MIN2(info->num_render_backends, 16);
+	unsigned raster_config, raster_config_1;
+	switch (info->family) {
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+		raster_config = 0x2a00126a;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_VERDE:
+		raster_config = 0x0000124a;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_OLAND:
+		raster_config = 0x00000082;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_HAINAN:
+		raster_config = 0x00000000;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_BONAIRE:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_HAWAII:
+		raster_config = 0x3a00161a;
+		raster_config_1 = 0x0000002e;
+		break;
+	case CHIP_FIJI:
+		if (info->cik_macrotile_mode_array[0] == 0x000000e8) {
+			/* old kernels with old tiling config */
+			raster_config = 0x16000012;
+			raster_config_1 = 0x0000002a;
+		} else {
+			raster_config = 0x3a00161a;
+			raster_config_1 = 0x0000002e;
+		}
+		break;
+	case CHIP_POLARIS10:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x0000002a;
+		break;
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_VEGAM:
+		raster_config = 0x3a00161a;
+		raster_config_1 = 0x0000002e;
+		break;
+	case CHIP_TONGA:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x0000002a;
+		break;
+	case CHIP_ICELAND:
+		if (num_rb == 1)
+			raster_config = 0x00000000;
+		else
+			raster_config = 0x00000002;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_CARRIZO:
+		raster_config = 0x00000002;
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_KAVERI:
+		/* KV should be 0x00000002, but that causes problems with radeon */
+		raster_config = 0x00000000; /* 0x00000002 */
+		raster_config_1 = 0x00000000;
+		break;
+	case CHIP_KABINI:
+	case CHIP_MULLINS:
+	case CHIP_STONEY:
+		raster_config = 0x00000000;
+		raster_config_1 = 0x00000000;
+		break;
+	default:
+		fprintf(stderr,
+			"ac: Unknown GPU, using 0 for raster_config\n");
+		raster_config = 0x00000000;
+		raster_config_1 = 0x00000000;
+		break;
+	}
+	*raster_config_p = raster_config;
+	*raster_config_1_p = raster_config_1;
+}
