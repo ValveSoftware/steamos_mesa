@@ -209,6 +209,77 @@ vc5_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
         return true;
 }
 
+/* Implement stencil blits by reinterpreting the stencil data as an RGBA8888
+ * or R8 texture.
+ */
+static void
+vc5_stencil_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
+{
+        struct vc5_context *vc5 = vc5_context(ctx);
+        struct vc5_resource *src = vc5_resource(info->src.resource);
+        struct vc5_resource *dst = vc5_resource(info->dst.resource);
+        enum pipe_format src_format, dst_format;
+
+        if (src->separate_stencil) {
+                src = src->separate_stencil;
+                src_format = PIPE_FORMAT_R8_UNORM;
+        } else {
+                src_format = PIPE_FORMAT_RGBA8888_UNORM;
+        }
+
+        if (dst->separate_stencil) {
+                dst = dst->separate_stencil;
+                dst_format = PIPE_FORMAT_R8_UNORM;
+        } else {
+                dst_format = PIPE_FORMAT_RGBA8888_UNORM;
+        }
+
+        /* Initialize the surface. */
+        struct pipe_surface dst_tmpl = {
+                .u.tex = {
+                        .level = info->dst.level,
+                        .first_layer = info->dst.box.z,
+                        .last_layer = info->dst.box.z,
+                },
+                .format = dst_format,
+        };
+        struct pipe_surface *dst_surf =
+                ctx->create_surface(ctx, &dst->base, &dst_tmpl);
+
+        /* Initialize the sampler view. */
+        struct pipe_sampler_view src_tmpl = {
+                .target = src->base.target,
+                .format = src_format,
+                .u.tex = {
+                        .first_level = info->src.level,
+                        .last_level = info->src.level,
+                        .first_layer = 0,
+                        .last_layer = (PIPE_TEXTURE_3D ?
+                                       u_minify(src->base.depth0,
+                                                info->src.level) - 1 :
+                                       src->base.array_size - 1),
+                },
+                .swizzle_r = PIPE_SWIZZLE_X,
+                .swizzle_g = PIPE_SWIZZLE_Y,
+                .swizzle_b = PIPE_SWIZZLE_Z,
+                .swizzle_a = PIPE_SWIZZLE_W,
+        };
+        struct pipe_sampler_view *src_view =
+                ctx->create_sampler_view(ctx, &src->base, &src_tmpl);
+
+        vc5_blitter_save(vc5);
+        util_blitter_blit_generic(vc5->blitter, dst_surf, &info->dst.box,
+                                  src_view, &info->src.box,
+                                  src->base.width0, src->base.height0,
+                                  PIPE_MASK_R,
+                                  PIPE_TEX_FILTER_NEAREST,
+                                  info->scissor_enable ? &info->scissor : NULL,
+                                  info->alpha_blend);
+
+        pipe_surface_reference(&dst_surf, NULL);
+        pipe_sampler_view_reference(&src_view, NULL);
+}
+
 /* Optimal hardware path for blitting pixels.
  * Scaling, format conversion, up- and downsampling (resolve) are allowed.
  */
@@ -216,6 +287,11 @@ void
 vc5_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 {
         struct pipe_blit_info info = *blit_info;
+
+        if (info.mask & PIPE_MASK_S) {
+                vc5_stencil_blit(pctx, blit_info);
+                info.mask &= ~PIPE_MASK_S;
+        }
 
 #if 0
         if (vc5_tile_blit(pctx, blit_info))

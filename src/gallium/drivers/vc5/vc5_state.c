@@ -760,9 +760,14 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                          * ARB_texture_view spec, but in HW we lay them out as
                          * 32bpp RGBA8 and 64bpp RGBA16F.  Just assert for now
                          * to catch failures.
+                         *
+                         * We explicitly allow remapping S8Z24 to RGBA8888 for
+                         * vc5_blit.c's stencil blits.
                          */
-                        assert(util_format_linear(cso->format) ==
-                               util_format_linear(prsc->format));
+                        assert((util_format_linear(cso->format) ==
+                                util_format_linear(prsc->format)) ||
+                               (prsc->format == PIPE_FORMAT_S8_UINT_Z24_UNORM &&
+                                cso->format == PIPE_FORMAT_R8G8B8A8_UNORM));
                         uint32_t output_image_format =
                                 vc5_get_rt_format(&screen->devinfo, cso->format);
                         uint32_t internal_type;
