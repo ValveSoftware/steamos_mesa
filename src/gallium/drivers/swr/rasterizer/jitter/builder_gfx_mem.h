@@ -89,6 +89,7 @@ namespace SwrJit
         Value* GetTranslationFunction() { return mpfnTranslateGfxAddress; }
         Value* GetParamSimDC() { return mpParamSimDC; }
 
+
     private:
 
         FunctionType* mpTranslationFuncTy;

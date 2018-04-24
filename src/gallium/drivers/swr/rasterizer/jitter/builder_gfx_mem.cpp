@@ -55,6 +55,7 @@ namespace SwrJit
         SWR_ASSERT(!(ptr->getType() == mInt64Ty && usage == MEM_CLIENT_INTERNAL), "Internal memory should not be gfxptr_t.");
     }
 
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it with loads
@@ -63,17 +64,15 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *BuilderGfxMem::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
+    Value* BuilderGfxMem::GATHERPS(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
-        Value *vGather;
-
         // address may be coming in as 64bit int now so get the pointer
         if (pBase->getType() == mInt64Ty)
         {
             pBase = INT_TO_PTR(pBase, PointerType::get(mInt8Ty, 0));
         }
 
-        vGather = Builder::GATHERPS(vSrc, pBase, vIndices, vMask, scale);
+        Value* vGather = Builder::GATHERPS(vSrc, pBase, vIndices, vMask, scale);
         return vGather;
     }
 
@@ -85,10 +84,8 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *BuilderGfxMem::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
+    Value* BuilderGfxMem::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
-        Value* vGather = VIMMED1(0.0f);
-
 
         // address may be coming in as 64bit int now so get the pointer
         if (pBase->getType() == mInt64Ty)
@@ -96,7 +93,7 @@ namespace SwrJit
             pBase = INT_TO_PTR(pBase, PointerType::get(mInt8Ty, 0));
         }
 
-        vGather = Builder::GATHERDD(vSrc, pBase, vIndices, vMask, scale);
+        Value* vGather = Builder::GATHERDD(vSrc, pBase, vIndices, vMask, scale);
         return vGather;
     }
 
@@ -106,31 +103,31 @@ namespace SwrJit
         return ADD(base, offset);
     }
     
-    Value *BuilderGfxMem::GEP(Value *Ptr, Value *Idx, Type *Ty, const Twine &Name)
+    Value* BuilderGfxMem::GEP(Value* Ptr, Value* Idx, Type *Ty, const Twine &Name)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, Idx, nullptr, Name);
     }
 
-    Value *BuilderGfxMem::GEP(Type *Ty, Value *Ptr, Value *Idx, const Twine &Name)
+    Value* BuilderGfxMem::GEP(Type *Ty, Value* Ptr, Value* Idx, const Twine &Name)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ty, Ptr, Idx, Name);
     }
 
-    Value *BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<Value*> &indexList, Type *Ty)
+    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<Value*> &indexList, Type *Ty)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, indexList);
     }
 
-    Value *BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty)
+    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, indexList);
     }
 
-    Value* BuilderGfxMem::TranslationHelper(Value *Ptr, Type *Ty)
+    Value* BuilderGfxMem::TranslationHelper(Value* Ptr, Type *Ty)
     {
         SWR_ASSERT(!(Ptr->getType() == mInt64Ty && Ty == nullptr), "Access of GFX pointers must have non-null type specified.");
 
@@ -144,7 +141,7 @@ namespace SwrJit
         return Ptr;
     }
 
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const char *Name, Type *Ty, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value* Ptr, const char *Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(Ptr, usage);
 
@@ -152,7 +149,7 @@ namespace SwrJit
         return Builder::LOAD(Ptr, Name);
     }
 
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value* Ptr, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(Ptr, usage);
 
@@ -160,7 +157,7 @@ namespace SwrJit
         return Builder::LOAD(Ptr, Name);
     }
 
-    LoadInst* BuilderGfxMem::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value* Ptr, bool isVolatile, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(Ptr, usage);
 
@@ -168,7 +165,7 @@ namespace SwrJit
         return Builder::LOAD(Ptr, isVolatile, Name);
     }
 
-    LoadInst *BuilderGfxMem::LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name, Type *Ty, JIT_MEM_CLIENT usage)
+    LoadInst* BuilderGfxMem::LOAD(Value* BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(BasePtr, usage);
 
@@ -193,7 +190,7 @@ namespace SwrJit
         return LOAD(BasePtr, name, Ty, usage);
     }
 
-    CallInst* BuilderGfxMem::MASKED_LOAD(Value *Ptr, unsigned Align, Value *Mask, Value *PassThru, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
+    CallInst* BuilderGfxMem::MASKED_LOAD(Value* Ptr, unsigned Align, Value* Mask, Value* PassThru, const Twine &Name, Type *Ty, JIT_MEM_CLIENT usage)
     {
         AssertGFXMemoryParams(Ptr, usage);
 

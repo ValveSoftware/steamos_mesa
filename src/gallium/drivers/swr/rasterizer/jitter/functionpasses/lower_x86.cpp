@@ -408,7 +408,7 @@ namespace SwrJit
         auto vi1Mask = pCallInst->getArgOperand(3);
         auto i8Scale = pCallInst->getArgOperand(4);
 
-        pBase = B->INT_TO_PTR(pBase, PointerType::get(B->mInt8Ty, 0));
+        pBase = B->POINTER_CAST(pBase, PointerType::get(B->mInt8Ty, 0));
         uint32_t numElem = vSrc->getType()->getVectorNumElements();
         auto i32Scale = B->Z_EXT(i8Scale, B->mInt32Ty);
         auto srcTy = vSrc->getType()->getVectorElementType();
