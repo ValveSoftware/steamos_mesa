@@ -3583,6 +3583,34 @@ static void visit_jump(struct ac_llvm_context *ctx,
 	}
 }
 
+static void visit_deref(struct ac_nir_context *ctx,
+                        nir_deref_instr *instr)
+{
+	if (instr->mode != nir_var_shared)
+		return;
+
+	LLVMValueRef result = NULL;
+	switch(instr->deref_type) {
+	case nir_deref_type_var: {
+		struct hash_entry *entry = _mesa_hash_table_search(ctx->vars, instr->var);
+		result = entry->data;
+		break;
+	}
+	case nir_deref_type_struct:
+		result = ac_build_gep0(&ctx->ac, get_src(ctx, instr->parent),
+		                       LLVMConstInt(ctx->ac.i32, instr->strct.index, 0));
+		break;
+	case nir_deref_type_array:
+		result = ac_build_gep0(&ctx->ac, get_src(ctx, instr->parent),
+		                       get_src(ctx, instr->arr.index));
+		break;
+	default:
+		unreachable("Unhandled deref_instr deref type");
+	}
+
+	ctx->ssa_defs[instr->dest.ssa.index] = result;
+}
+
 static void visit_cf_list(struct ac_nir_context *ctx,
                           struct exec_list *list);
 
@@ -3612,6 +3640,9 @@ static void visit_block(struct ac_nir_context *ctx, nir_block *block)
 			break;
 		case nir_instr_type_jump:
 			visit_jump(&ctx->ac, nir_instr_as_jump(instr));
+			break;
+		case nir_instr_type_deref:
+			visit_deref(ctx, nir_instr_as_deref(instr));
 			break;
 		default:
 			fprintf(stderr, "Unknown NIR instr type: ");
