@@ -408,6 +408,9 @@ struct vc4_context {
 
         struct vc4_hwperfmon *perfmon;
         /** @} */
+
+        /** Handle of syncobj containing the last submitted job fence. */
+        uint32_t job_syncobj;
 };
 
 struct vc4_rasterizer_state {
@@ -502,7 +505,7 @@ void vc4_write_uniforms(struct vc4_context *vc4,
                         struct vc4_texture_stateobj *texstate);
 
 void vc4_flush(struct pipe_context *pctx);
-void vc4_job_init(struct vc4_context *vc4);
+int vc4_job_init(struct vc4_context *vc4);
 struct vc4_job *vc4_get_job(struct vc4_context *vc4,
                             struct pipe_surface *cbuf,
                             struct pipe_surface *zsbuf);

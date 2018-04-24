@@ -124,6 +124,9 @@ vc4_context_destroy(struct pipe_context *pctx)
 
         vc4_program_fini(pctx);
 
+        if (vc4->screen->has_syncobj)
+                drmSyncobjDestroy(vc4->fd, vc4->job_syncobj);
+
         ralloc_free(vc4);
 }
 
@@ -132,6 +135,7 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_context *vc4;
+        int err;
 
         /* Prevent dumping of the shaders built during context setup. */
         uint32_t saved_shaderdb_flag = vc4_debug & VC4_DEBUG_SHADERDB;
@@ -157,9 +161,11 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
         vc4_query_init(pctx);
         vc4_resource_context_init(pctx);
 
-        vc4_job_init(vc4);
-
         vc4->fd = screen->fd;
+
+        err = vc4_job_init(vc4);
+        if (err)
+                goto fail;
 
         slab_create_child(&vc4->transfer_pool, &screen->transfer_pool);
 
