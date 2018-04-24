@@ -87,17 +87,17 @@ VkResult anv_CreateRenderPass(
    pass->subpass_flushes = subpass_flushes;
 
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      struct anv_render_pass_attachment *att = &pass->attachments[i];
-
-      att->format = pCreateInfo->pAttachments[i].format;
-      att->samples = pCreateInfo->pAttachments[i].samples;
-      att->usage = 0;
-      att->load_op = pCreateInfo->pAttachments[i].loadOp;
-      att->store_op = pCreateInfo->pAttachments[i].storeOp;
-      att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
-      att->initial_layout = pCreateInfo->pAttachments[i].initialLayout;
-      att->final_layout = pCreateInfo->pAttachments[i].finalLayout;
-      att->first_subpass_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+      pass->attachments[i] = (struct anv_render_pass_attachment) {
+         .format                 = pCreateInfo->pAttachments[i].format,
+         .samples                = pCreateInfo->pAttachments[i].samples,
+         .usage                  = 0,
+         .load_op                = pCreateInfo->pAttachments[i].loadOp,
+         .store_op               = pCreateInfo->pAttachments[i].storeOp,
+         .stencil_load_op        = pCreateInfo->pAttachments[i].stencilLoadOp,
+         .initial_layout         = pCreateInfo->pAttachments[i].initialLayout,
+         .final_layout           = pCreateInfo->pAttachments[i].finalLayout,
+         .first_subpass_layout   = VK_IMAGE_LAYOUT_UNDEFINED,
+      };
    }
 
    bool has_color = false, has_depth = false, has_input = false;
