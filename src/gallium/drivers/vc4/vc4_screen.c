@@ -659,7 +659,9 @@ struct pipe_screen *
 vc4_screen_create(int fd, struct renderonly *ro)
 {
         struct vc4_screen *screen = rzalloc(NULL, struct vc4_screen);
+        uint64_t syncobj_cap = 0;
         struct pipe_screen *pscreen;
+        int err;
 
         pscreen = &screen->base;
 
@@ -694,6 +696,10 @@ vc4_screen_create(int fd, struct renderonly *ro)
                 vc4_has_feature(screen, DRM_VC4_PARAM_SUPPORTS_MADVISE);
         screen->has_perfmon_ioctl =
                 vc4_has_feature(screen, DRM_VC4_PARAM_SUPPORTS_PERFMON);
+
+        err = drmGetCap(fd, DRM_CAP_SYNCOBJ, &syncobj_cap);
+        if (err == 0 && syncobj_cap)
+                screen->has_syncobj = true;
 
         if (!vc4_get_chip_info(screen))
                 goto fail;

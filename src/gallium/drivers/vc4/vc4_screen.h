@@ -98,6 +98,7 @@ struct vc4_screen {
         bool has_madvise;
         bool has_tiling_ioctl;
         bool has_perfmon_ioctl;
+        bool has_syncobj;
 
         struct vc4_simulator_file *sim_file;
 };
