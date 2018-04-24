@@ -85,7 +85,11 @@ load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
                         load.height_in_ub_or_stride = slice->stride;
                 }
 
-                /* XXX: MSAA */
+                if (psurf->texture->nr_samples > 1)
+                        load.decimate_mode = V3D_DECIMATE_MODE_ALL_SAMPLES;
+                else
+                        load.decimate_mode = V3D_DECIMATE_MODE_SAMPLE_0;
+
 #else /* V3D_VERSION < 40 */
                 /* Can't do raw ZSTENCIL loads -- need to load/store them to
                  * separate buffers for Z and stencil.
@@ -147,6 +151,12 @@ store_general(struct vc5_job *job,
                                 &rsc->slices[psurf->u.tex.level];
                         store.height_in_ub_or_stride = slice->stride;
                 }
+
+                if (psurf->texture->nr_samples > 1)
+                        store.decimate_mode = V3D_DECIMATE_MODE_ALL_SAMPLES;
+                else
+                        store.decimate_mode = V3D_DECIMATE_MODE_SAMPLE_0;
+
 #else /* V3D_VERSION < 40 */
                 /* Can't do raw ZSTENCIL stores -- need to load/store them to
                  * separate buffers for Z and stencil.
