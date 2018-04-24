@@ -574,7 +574,7 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    memset(&whandle, 0, sizeof(struct winsys_handle));
    whandle.type = DRM_API_HANDLE_TYPE_FD;
    whandle.handle = memory_attibute->buffers[index];
-   whandle.stride = memory_attibute->pitches[index];
+   whandle.stride = memory_attibute->pitches[0];
 
    resource = pscreen->resource_from_handle(pscreen, &res_templ, &whandle,
                                             PIPE_HANDLE_USAGE_READ_WRITE);
