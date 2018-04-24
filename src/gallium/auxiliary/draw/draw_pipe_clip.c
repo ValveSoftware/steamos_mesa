@@ -47,11 +47,6 @@
 /** Set to 1 to enable printing of coords before/after clipping */
 #define DEBUG_CLIP 0
 
-
-#ifndef DIFFERENT_SIGNS
-#define DIFFERENT_SIGNS(x, y) ((x) * (y) <= 0.0F && (x) - (y) != 0.0F)
-#endif
-
 #define MAX_CLIPPED_VERTICES ((2 * (6 + PIPE_MAX_CLIP_PLANES))+1)
 
 
@@ -291,8 +286,8 @@ static void emit_poly(struct draw_stage *stage,
       /*
        * If we ever generated a tri (regardless if it had area or not),
        * skip all subsequent null tris.
-       * FIXME: it is unclear why we always have to emit at least one
-       * tri. Maybe this is hiding bugs elsewhere.
+       * FIXME: I think this logic was hiding bugs elsewhere. It should
+       * be possible now to always emit all tris.
        */
       if (tri_null && tri_emitted) {
          continue;
@@ -478,6 +473,7 @@ do_clip_tri(struct draw_stage *stage,
       for (i = 1; i <= n; i++) {
          struct vertex_header *vert = inlist[i];
          boolean *edge = &inEdges[i];
+         boolean different_sign;
 
          float dp = getclipdist(clipper, vert, plane_idx);
 
@@ -490,9 +486,12 @@ do_clip_tri(struct draw_stage *stage,
                return;
             outEdges[outcount] = *edge_prev;
             outlist[outcount++] = vert_prev;
+            different_sign = dp < 0.0f;
+         } else {
+            different_sign = !(dp < 0.0f);
          }
 
-         if (DIFFERENT_SIGNS(dp, dp_prev)) {
+         if (different_sign) {
             struct vertex_header *new_vert;
             boolean *new_edge;
 
@@ -510,7 +509,7 @@ do_clip_tri(struct draw_stage *stage,
 
             if (dp < 0.0f) {
                /* Going out of bounds.  Avoid division by zero as we
-                * know dp != dp_prev from DIFFERENT_SIGNS, above.
+                * know dp != dp_prev from different_sign, above.
                 */
                float t = dp / (dp - dp_prev);
                interp( clipper, new_vert, t, vert, vert_prev, viewport_index );
