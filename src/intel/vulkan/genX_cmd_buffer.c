@@ -3892,6 +3892,15 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer_begin_subpass(cmd_buffer, 0);
 }
 
+void genX(CmdBeginRenderPass2KHR)(
+    VkCommandBuffer                             commandBuffer,
+    const VkRenderPassBeginInfo*                pRenderPassBeginInfo,
+    const VkSubpassBeginInfoKHR*                pSubpassBeginInfo)
+{
+   genX(CmdBeginRenderPass)(commandBuffer, pRenderPassBeginInfo,
+                            pSubpassBeginInfo->contents);
+}
+
 void genX(CmdNextSubpass)(
     VkCommandBuffer                             commandBuffer,
     VkSubpassContents                           contents)
@@ -3906,6 +3915,14 @@ void genX(CmdNextSubpass)(
    uint32_t prev_subpass = anv_get_subpass_id(&cmd_buffer->state);
    cmd_buffer_end_subpass(cmd_buffer);
    cmd_buffer_begin_subpass(cmd_buffer, prev_subpass + 1);
+}
+
+void genX(CmdNextSubpass2KHR)(
+    VkCommandBuffer                             commandBuffer,
+    const VkSubpassBeginInfoKHR*                pSubpassBeginInfo,
+    const VkSubpassEndInfoKHR*                  pSubpassEndInfo)
+{
+   genX(CmdNextSubpass)(commandBuffer, pSubpassBeginInfo->contents);
 }
 
 void genX(CmdEndRenderPass)(
@@ -3930,4 +3947,11 @@ void genX(CmdEndRenderPass)(
    cmd_buffer->state.framebuffer = NULL;
    cmd_buffer->state.pass = NULL;
    cmd_buffer->state.subpass = NULL;
+}
+
+void genX(CmdEndRenderPass2KHR)(
+    VkCommandBuffer                             commandBuffer,
+    const VkSubpassEndInfoKHR*                  pSubpassEndInfo)
+{
+   genX(CmdEndRenderPass)(commandBuffer);
 }
