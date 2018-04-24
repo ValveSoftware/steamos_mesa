@@ -302,18 +302,11 @@ struct v3d_key {
                 uint8_t swizzle[4];
                 uint8_t return_size;
                 uint8_t return_channels;
-                union {
-                        struct {
-                                unsigned compare_mode:1;
-                                unsigned compare_func:3;
-                                bool clamp_s:1;
-                                bool clamp_t:1;
-                                bool clamp_r:1;
-                        };
-                        struct {
-                                uint16_t msaa_width, msaa_height;
-                        };
-                };
+                unsigned compare_mode:1;
+                unsigned compare_func:3;
+                bool clamp_s:1;
+                bool clamp_t:1;
+                bool clamp_r:1;
         } tex[V3D_MAX_TEXTURE_SAMPLERS];
         uint8_t ucp_enables;
 };

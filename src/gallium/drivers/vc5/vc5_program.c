@@ -363,10 +363,7 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                         key->tex[i].swizzle[3] = PIPE_SWIZZLE_W;
                 }
 
-                if (sampler->texture->nr_samples > 1) {
-                        key->tex[i].msaa_width = sampler->texture->width0;
-                        key->tex[i].msaa_height = sampler->texture->height0;
-                } else if (sampler){
+                if (sampler) {
                         key->tex[i].compare_mode = sampler_state->compare_mode;
                         key->tex[i].compare_func = sampler_state->compare_func;
                         key->tex[i].clamp_s =
