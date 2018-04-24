@@ -752,7 +752,7 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 #endif
                 tex.array_stride_64_byte_aligned = rsc->cube_map_stride / 64;
 
-                if (prsc->nr_samples > 1) {
+                if (prsc->nr_samples > 1 && V3D_VERSION < 40) {
                         /* Using texture views to reinterpret formats on our
                          * MSAA textures won't work, because we don't lay out
                          * the bits in memory as it's expected -- for example,
