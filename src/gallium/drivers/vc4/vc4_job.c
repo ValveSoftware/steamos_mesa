@@ -477,8 +477,18 @@ vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job)
         }
         submit.flags |= job->flags;
 
-        if (vc4->screen->has_syncobj)
+        if (vc4->screen->has_syncobj) {
                 submit.out_sync = vc4->job_syncobj;
+
+                if (vc4->in_fence_fd >= 0) {
+                        /* This replaces the fence in the syncobj. */
+                        drmSyncobjImportSyncFile(vc4->fd, vc4->in_syncobj,
+                                                 vc4->in_fence_fd);
+                        submit.in_sync = vc4->in_syncobj;
+                        close(vc4->in_fence_fd);
+                        vc4->in_fence_fd = -1;
+                }
+        }
 
         if (!(vc4_debug & VC4_DEBUG_NORAST)) {
                 int ret;
