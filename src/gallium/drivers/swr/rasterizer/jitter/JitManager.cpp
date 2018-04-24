@@ -80,7 +80,55 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     StringRef hostCPUName;
 
-    hostCPUName = sys::getHostCPUName();
+    // force JIT to use the same CPU arch as the rest of swr
+    if(mArch.AVX512F())
+    {
+#if USE_SIMD16_SHADERS
+        if(mArch.AVX512ER())
+        {
+            hostCPUName = StringRef("knl");
+        }
+        else
+        {
+            hostCPUName = StringRef("skylake-avx512");
+        }
+        mUsingAVX512 = true;
+#else
+        hostCPUName = StringRef("core-avx2");
+#endif
+        if (mVWidth == 0)
+        {
+            mVWidth = 8;
+        }
+    }
+    else if(mArch.AVX2())
+    {
+        hostCPUName = StringRef("core-avx2");
+        if (mVWidth == 0)
+        {
+            mVWidth = 8;
+        }
+    }
+    else if(mArch.AVX())
+    {
+        if (mArch.F16C())
+        {
+            hostCPUName = StringRef("core-avx-i");
+        }
+        else
+        {
+            hostCPUName = StringRef("corei7-avx");
+        }
+        if (mVWidth == 0)
+        {
+            mVWidth = 8;
+        }
+    }
+    else
+    {
+        SWR_INVALID("Jitting requires at least AVX ISA support");
+    }
+
 
     auto optLevel = CodeGenOpt::Aggressive;
 

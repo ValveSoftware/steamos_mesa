@@ -69,6 +69,7 @@ public:
 
     bool AVX2(void) { return bForceAVX ? 0 : InstructionSet::AVX2(); }
     bool AVX512F(void) { return (bForceAVX | bForceAVX2) ? 0 : InstructionSet::AVX512F(); }
+    bool AVX512ER(void) { return (bForceAVX | bForceAVX2) ? 0 : InstructionSet::AVX512ER(); }
     bool BMI2(void) { return bForceAVX ? 0 : InstructionSet::BMI2(); }
 
 private:
@@ -142,6 +143,7 @@ struct JitManager
 
     uint32_t                mVWidth;
 
+    bool                    mUsingAVX512 = false;
 
     // fetch shader types
     llvm::FunctionType*     mFetchShaderTy;
