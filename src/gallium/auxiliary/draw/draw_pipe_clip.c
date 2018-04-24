@@ -252,8 +252,7 @@ static void emit_poly(struct draw_stage *stage,
    struct prim_header header;
    unsigned i;
    ushort edge_first, edge_middle, edge_last;
-   boolean last_tri_was_null = FALSE;
-   boolean tri_was_not_null = FALSE;
+   boolean tri_emitted = FALSE;
 
    if (stage->draw->rasterizer->flatshade_first) {
       edge_first  = DRAW_PIPE_EDGE_FLAG_0;
@@ -289,17 +288,16 @@ static void emit_poly(struct draw_stage *stage,
       }
 
       tri_null = is_tri_null(clipper, &header);
-      /* If we generated a triangle with an area, aka. non-null triangle,
-       * or if the previous triangle was also null then skip all subsequent
-       * null triangles */
-      if ((tri_was_not_null && tri_null) || (last_tri_was_null && tri_null)) {
-         last_tri_was_null = tri_null;
+      /*
+       * If we ever generated a tri (regardless if it had area or not),
+       * skip all subsequent null tris.
+       * FIXME: it is unclear why we always have to emit at least one
+       * tri. Maybe this is hiding bugs elsewhere.
+       */
+      if (tri_null && tri_emitted) {
          continue;
       }
-      last_tri_was_null = tri_null;
-      if (!tri_null) {
-         tri_was_not_null = TRUE;
-      }
+      tri_emitted = TRUE;
 
       if (!edgeflags[i-1]) {
          header.flags &= ~edge_middle;
