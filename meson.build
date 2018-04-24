@@ -1055,6 +1055,12 @@ _libdrm_checks = [
   ['freedreno', with_gallium_freedreno],
 ]
 
+# VC4 only needs core libdrm support of this version, not a libdrm_vc4
+# library.
+if with_gallium_vc4
+  _drm_ver = '2.4.89'
+endif
+
 # Loop over the enables versions and get the highest libdrm requirement for all
 # active drivers.
 foreach d : _libdrm_checks

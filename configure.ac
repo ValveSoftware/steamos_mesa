@@ -80,6 +80,7 @@ LIBDRM_NVVIEUX_REQUIRED=2.4.66
 LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.92
 LIBDRM_ETNAVIV_REQUIRED=2.4.89
+LIBDRM_VC4_REQUIRED=2.4.89
 
 dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.8
@@ -2727,6 +2728,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xvc4)
             HAVE_GALLIUM_VC4=yes
+            PKG_CHECK_MODULES([VC4], [libdrm >= $LIBDRM_VC4_REQUIRED])
 
             PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
                               [USE_VC4_SIMULATOR=yes;
