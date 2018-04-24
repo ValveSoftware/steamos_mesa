@@ -25,6 +25,65 @@
 
 #include "vk_util.h"
 
+/* Do a second "compile" step on a render pass */
+static void
+anv_render_pass_compile(struct anv_render_pass *pass)
+{
+   /* The CreateRenderPass code zeros the entire render pass and also uses a
+    * designated initializer for filling these out.  There's no need for us to
+    * do it again.
+    *
+    * for (uint32_t i = 0; i < pass->attachment_count; i++) {
+    *    pass->attachments[i].usage = 0;
+    *    pass->attachments[i].first_subpass_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    * }
+    */
+
+   for (uint32_t i = 0; i < pass->subpass_count; i++) {
+      struct anv_subpass *subpass = &pass->subpasses[i];
+
+      for (uint32_t j = 0; j < subpass->attachment_count; j++) {
+         struct anv_subpass_attachment *subpass_att = &subpass->attachments[j];
+         if (subpass_att->attachment == VK_ATTACHMENT_UNUSED)
+            continue;
+
+         struct anv_render_pass_attachment *pass_att =
+            &pass->attachments[subpass_att->attachment];
+
+         assert(__builtin_popcount(subpass_att->usage) == 1);
+         pass_att->usage |= subpass_att->usage;
+         pass_att->last_subpass_idx = i;
+
+         if (pass_att->first_subpass_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
+            pass_att->first_subpass_layout = subpass_att->layout;
+            assert(pass_att->first_subpass_layout != VK_IMAGE_LAYOUT_UNDEFINED);
+         }
+
+         if (subpass_att->usage == VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
+             subpass_att->attachment == subpass->depth_stencil_attachment.attachment)
+            subpass->has_ds_self_dep = true;
+      }
+
+      /* We have to handle resolve attachments specially */
+      subpass->has_resolve = false;
+      if (subpass->resolve_attachments) {
+         for (uint32_t j = 0; j < subpass->color_count; j++) {
+            struct anv_subpass_attachment *color_att =
+               &subpass->color_attachments[j];
+            struct anv_subpass_attachment *resolve_att =
+               &subpass->resolve_attachments[j];
+            if (resolve_att->attachment == VK_ATTACHMENT_UNUSED)
+               continue;
+
+            subpass->has_resolve = true;
+
+            assert(resolve_att->usage == VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+            color_att->usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+         }
+      }
+   }
+}
+
 static unsigned
 num_subpass_attachments(const VkSubpassDescription *desc)
 {
@@ -32,16 +91,6 @@ num_subpass_attachments(const VkSubpassDescription *desc)
           desc->colorAttachmentCount +
           (desc->pResolveAttachments ? desc->colorAttachmentCount : 0) +
           (desc->pDepthStencilAttachment != NULL);
-}
-
-static void
-init_first_subpass_layout(struct anv_render_pass_attachment * const att,
-                          const VkAttachmentReference att_ref)
-{
-   if (att->first_subpass_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
-      att->first_subpass_layout = att_ref.layout;
-      assert(att->first_subpass_layout != VK_IMAGE_LAYOUT_UNDEFINED);
-   }
 }
 
 VkResult anv_CreateRenderPass(
@@ -90,13 +139,11 @@ VkResult anv_CreateRenderPass(
       pass->attachments[i] = (struct anv_render_pass_attachment) {
          .format                 = pCreateInfo->pAttachments[i].format,
          .samples                = pCreateInfo->pAttachments[i].samples,
-         .usage                  = 0,
          .load_op                = pCreateInfo->pAttachments[i].loadOp,
          .store_op               = pCreateInfo->pAttachments[i].storeOp,
          .stencil_load_op        = pCreateInfo->pAttachments[i].stencilLoadOp,
          .initial_layout         = pCreateInfo->pAttachments[i].initialLayout,
          .final_layout           = pCreateInfo->pAttachments[i].finalLayout,
-         .first_subpass_layout   = VK_IMAGE_LAYOUT_UNDEFINED,
       };
    }
 
@@ -122,17 +169,8 @@ VkResult anv_CreateRenderPass(
                .attachment =  desc->pInputAttachments[j].attachment,
                .layout =      desc->pInputAttachments[j].layout,
             };
-            if (a != VK_ATTACHMENT_UNUSED) {
+            if (a != VK_ATTACHMENT_UNUSED)
                has_input = true;
-               pass->attachments[a].usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-               pass->attachments[a].last_subpass_idx = i;
-
-               init_first_subpass_layout(&pass->attachments[a],
-                                         desc->pInputAttachments[j]);
-               if (desc->pDepthStencilAttachment &&
-                   a == desc->pDepthStencilAttachment->attachment)
-                  subpass->has_ds_self_dep = true;
-            }
          }
       }
 
@@ -147,40 +185,21 @@ VkResult anv_CreateRenderPass(
                .attachment =  desc->pColorAttachments[j].attachment,
                .layout =      desc->pColorAttachments[j].layout,
             };
-            if (a != VK_ATTACHMENT_UNUSED) {
+            if (a != VK_ATTACHMENT_UNUSED)
                has_color = true;
-               pass->attachments[a].usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-               pass->attachments[a].last_subpass_idx = i;
-
-               init_first_subpass_layout(&pass->attachments[a],
-                                         desc->pColorAttachments[j]);
-            }
          }
       }
 
-      subpass->has_resolve = false;
       if (desc->pResolveAttachments) {
          subpass->resolve_attachments = subpass_attachments;
          subpass_attachments += desc->colorAttachmentCount;
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
-            uint32_t a = desc->pResolveAttachments[j].attachment;
             subpass->resolve_attachments[j] = (struct anv_subpass_attachment) {
                .usage =       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                .attachment =  desc->pResolveAttachments[j].attachment,
                .layout =      desc->pResolveAttachments[j].layout,
             };
-            if (a != VK_ATTACHMENT_UNUSED) {
-               subpass->has_resolve = true;
-               uint32_t color_att = desc->pColorAttachments[j].attachment;
-               pass->attachments[color_att].usage |=
-                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-               pass->attachments[a].usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-               pass->attachments[a].last_subpass_idx = i;
-
-               init_first_subpass_layout(&pass->attachments[a],
-                                         desc->pResolveAttachments[j]);
-            }
          }
       }
 
@@ -192,15 +211,8 @@ VkResult anv_CreateRenderPass(
             .layout =      desc->pDepthStencilAttachment->layout,
          };
          *subpass_attachments++ = subpass->depth_stencil_attachment;
-         if (a != VK_ATTACHMENT_UNUSED) {
+         if (a != VK_ATTACHMENT_UNUSED)
             has_depth = true;
-            pass->attachments[a].usage |=
-               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            pass->attachments[a].last_subpass_idx = i;
-
-            init_first_subpass_layout(&pass->attachments[a],
-                                      *desc->pDepthStencilAttachment);
-         }
       } else {
          subpass->depth_stencil_attachment = (struct anv_subpass_attachment) {
             .usage =       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -306,6 +318,8 @@ VkResult anv_CreateRenderPass(
          anv_debug_ignored_stype(ext->sType);
       }
    }
+
+   anv_render_pass_compile(pass);
 
    *pRenderPass = anv_render_pass_to_handle(pass);
 
