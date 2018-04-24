@@ -1149,7 +1149,7 @@ if with_llvm
   # programs, so we need to build all C++ code in mesa without rtti as well to
   # ensure that linking works.
   if dep_llvm.get_configtool_variable('has-rtti') == 'NO'
-    cpp_args('-fno-rtti')
+    cpp_args += '-fno-rtti'
   endif
 elif with_amd_vk or with_gallium_radeonsi or with_gallium_swr
   error('The following drivers require LLVM: Radv, RadeonSI, SWR. One of these is enabled, but LLVM is disabled.')
