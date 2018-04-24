@@ -185,7 +185,6 @@ fail:
 void
 dri_destroy_buffer(__DRIdrawable * dPriv)
 {
-   struct dri_context *ctx = dri_context(dPriv->driContextPriv);
    struct dri_drawable *drawable = dri_drawable(dPriv);
    struct dri_screen *screen = drawable->screen;
    struct st_api *stapi = screen->st_api;
@@ -202,9 +201,6 @@ dri_destroy_buffer(__DRIdrawable * dPriv)
 
    /* Notify the st manager that this drawable is no longer valid */
    stapi->destroy_drawable(stapi, &drawable->base);
-
-   if (ctx && ctx->dPriv == dPriv)
-      ctx->dPriv = NULL;
 
    FREE(drawable);
 }
