@@ -124,6 +124,19 @@ qpu_validate_inst(struct v3d_qpu_validate_state *state, struct qinst *qinst)
                 fail_instr(state, "LDUNIF after a LDVARY");
         }
 
+        /* GFXH-1633 */
+        bool last_reads_ldunif = (state->last && (state->last->sig.ldunif ||
+                                                  state->last->sig.ldunifrf));
+        bool last_reads_ldunifa = (state->last && (state->last->sig.ldunifa ||
+                                                   state->last->sig.ldunifarf));
+        bool reads_ldunif = inst->sig.ldunif || inst->sig.ldunifrf;
+        bool reads_ldunifa = inst->sig.ldunifa || inst->sig.ldunifarf;
+        if ((last_reads_ldunif && reads_ldunifa) ||
+            (last_reads_ldunifa && reads_ldunif)) {
+                fail_instr(state,
+                           "LDUNIF and LDUNIFA can't be next to each other");
+        }
+
         int tmu_writes = 0;
         int sfu_writes = 0;
         int vpm_writes = 0;
