@@ -247,6 +247,11 @@ qpu_validate_inst(struct v3d_qpu_validate_state *state, struct qinst *qinst)
 
                 if (v3d_qpu_sig_writes_address(devinfo, &inst->sig))
                         fail_instr(state, "RF write after THREND");
+
+                /* GFXH-1625: No TMUWT in the last instruction */
+                if (state->last_thrsw_ip - state->ip == 2 &&
+                    inst->alu.add.op == V3D_QPU_A_TMUWT)
+                        fail_instr(state, "TMUWT in last instruction");
         }
 
         if (inst->type == V3D_QPU_INSTR_TYPE_BRANCH) {
