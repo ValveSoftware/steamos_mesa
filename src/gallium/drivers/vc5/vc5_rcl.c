@@ -715,20 +715,39 @@ v3dX(emit_rcl)(struct vc5_job *job)
                 coords.tile_row_number = 0;
         }
 
+        /* Emit an initial clear of the tile buffers.  This is necessary for
+         * any buffers that should be cleared (since clearing normally happens
+         * at the *end* of the generic tile list), but it's also nice to clear
+         * everything so the first tile doesn't inherit any contents from some
+         * previous frame.
+         *
+         * Also, implement the GFXH-1742 workaround.  There's a race in the HW
+         * between the RCL updating the TLB's internal type/size and the
+         * spawning of the QPU instances using the TLB's current internal
+         * type/size.  To make sure the QPUs get the right state,, we need 1
+         * dummy store in between internal type/size changes on V3D 3.x, and 2
+         * dummy stores on 4.x.
+         */
 #if V3D_VERSION < 40
         cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
                 store.buffer_to_store = NONE;
         }
 #else
-        cl_emit(&job->rcl, END_OF_LOADS, end);
-        cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
-                store.buffer_to_store = NONE;
+        for (int i = 0; i < 2; i++) {
+                if (i > 0)
+                        cl_emit(&job->rcl, TILE_COORDINATES, coords);
+                cl_emit(&job->rcl, END_OF_LOADS, end);
+                cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
+                        store.buffer_to_store = NONE;
+                }
+                if (i == 0) {
+                        cl_emit(&job->rcl, CLEAR_TILE_BUFFERS, clear) {
+                                clear.clear_z_stencil_buffer = true;
+                                clear.clear_all_render_targets = true;
+                        }
+                }
+                cl_emit(&job->rcl, END_OF_TILE_MARKER, end);
         }
-        cl_emit(&job->rcl, CLEAR_TILE_BUFFERS, clear) {
-                clear.clear_z_stencil_buffer = true;
-                clear.clear_all_render_targets = true;
-        }
-        cl_emit(&job->rcl, END_OF_TILE_MARKER, end);
 #endif
 
         cl_emit(&job->rcl, FLUSH_VCD_CACHE, flush);
