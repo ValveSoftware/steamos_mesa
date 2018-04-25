@@ -968,7 +968,7 @@ radv_image_create(VkDevice _device,
 	image->info.samples = pCreateInfo->samples;
 	image->info.array_size = pCreateInfo->arrayLayers;
 	image->info.levels = pCreateInfo->mipLevels;
-	image->info.num_channels = 4; /* TODO: set this correctly */
+	image->info.num_channels = vk_format_get_nr_components(pCreateInfo->format);
 
 	image->vk_format = pCreateInfo->format;
 	image->tiling = pCreateInfo->tiling;
