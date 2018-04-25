@@ -2806,7 +2806,8 @@ static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 	LLVMValueRef src = get_src(ctx, instr->src[src_idx]);
 
 	if (instr->intrinsic == nir_intrinsic_var_atomic_comp_swap ||
-	    instr->intrinsic == nir_intrinsic_shared_atomic_comp_swap) {
+	    instr->intrinsic == nir_intrinsic_shared_atomic_comp_swap ||
+	    instr->intrinsic == nir_intrinsic_deref_atomic_comp_swap) {
 		LLVMValueRef src1 = get_src(ctx, instr->src[src_idx + 1]);
 		result = LLVMBuildAtomicCmpXchg(ctx->ac.builder,
 						ptr, src, src1,
@@ -2819,38 +2820,47 @@ static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 		switch (instr->intrinsic) {
 		case nir_intrinsic_var_atomic_add:
 		case nir_intrinsic_shared_atomic_add:
+		case nir_intrinsic_deref_atomic_add:
 			op = LLVMAtomicRMWBinOpAdd;
 			break;
 		case nir_intrinsic_var_atomic_umin:
 		case nir_intrinsic_shared_atomic_umin:
+		case nir_intrinsic_deref_atomic_umin:
 			op = LLVMAtomicRMWBinOpUMin;
 			break;
 		case nir_intrinsic_var_atomic_umax:
 		case nir_intrinsic_shared_atomic_umax:
+		case nir_intrinsic_deref_atomic_umax:
 			op = LLVMAtomicRMWBinOpUMax;
 			break;
 		case nir_intrinsic_var_atomic_imin:
 		case nir_intrinsic_shared_atomic_imin:
+		case nir_intrinsic_deref_atomic_imin:
 			op = LLVMAtomicRMWBinOpMin;
 			break;
 		case nir_intrinsic_var_atomic_imax:
 		case nir_intrinsic_shared_atomic_imax:
+		case nir_intrinsic_deref_atomic_imax:
 			op = LLVMAtomicRMWBinOpMax;
 			break;
 		case nir_intrinsic_var_atomic_and:
 		case nir_intrinsic_shared_atomic_and:
+		case nir_intrinsic_deref_atomic_and:
 			op = LLVMAtomicRMWBinOpAnd;
 			break;
 		case nir_intrinsic_var_atomic_or:
 		case nir_intrinsic_shared_atomic_or:
+		case nir_intrinsic_deref_atomic_or:
 			op = LLVMAtomicRMWBinOpOr;
 			break;
 		case nir_intrinsic_var_atomic_xor:
 		case nir_intrinsic_shared_atomic_xor:
+		case nir_intrinsic_deref_atomic_xor:
 			op = LLVMAtomicRMWBinOpXor;
 			break;
 		case nir_intrinsic_var_atomic_exchange:
 		case nir_intrinsic_shared_atomic_exchange:
+		case nir_intrinsic_deref_atomic_exchange:
 			op = LLVMAtomicRMWBinOpXchg;
 			break;
 		default:
@@ -3231,6 +3241,20 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_var_atomic_comp_swap: {
 		LLVMValueRef ptr = build_gep_for_deref(ctx, instr->variables[0]);
 		result = visit_var_atomic(ctx, instr, ptr, 0);
+		break;
+	}
+	case nir_intrinsic_deref_atomic_add:
+	case nir_intrinsic_deref_atomic_imin:
+	case nir_intrinsic_deref_atomic_umin:
+	case nir_intrinsic_deref_atomic_imax:
+	case nir_intrinsic_deref_atomic_umax:
+	case nir_intrinsic_deref_atomic_and:
+	case nir_intrinsic_deref_atomic_or:
+	case nir_intrinsic_deref_atomic_xor:
+	case nir_intrinsic_deref_atomic_exchange:
+	case nir_intrinsic_deref_atomic_comp_swap: {
+		LLVMValueRef ptr = get_src(ctx, instr->src[0]);
+		result = visit_var_atomic(ctx, instr, ptr, 1);
 		break;
 	}
 	case nir_intrinsic_interp_var_at_centroid:
