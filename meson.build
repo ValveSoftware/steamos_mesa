@@ -213,8 +213,8 @@ if _vulkan_drivers.contains('auto')
   endif
 endif
 if _vulkan_drivers != ['']
-  with_intel_vk = _drivers.contains('intel')
-  with_amd_vk = _drivers.contains('amd')
+  with_intel_vk = _vulkan_drivers.contains('intel')
+  with_amd_vk = _vulkan_drivers.contains('amd')
   with_any_vk = true
 endif
 
