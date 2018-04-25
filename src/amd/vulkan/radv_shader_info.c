@@ -23,6 +23,7 @@
 #include "radv_private.h"
 #include "radv_shader.h"
 #include "nir/nir.h"
+#include "nir/nir_deref.h"
 
 static void mark_sampler_desc(const nir_variable *var,
 			      struct radv_shader_info *info)
@@ -88,14 +89,57 @@ static void get_deref_offset(nir_deref_var *deref, unsigned *const_out)
 }
 
 static void
+get_deref_instr_offset(nir_deref_instr *instr,
+                       unsigned *const_out)
+{
+        nir_variable *var = nir_deref_instr_get_variable(instr);
+        nir_deref_path path;
+        unsigned idx_lvl = 1;
+
+	if (var->data.compact) {
+		assert(instr->deref_type == nir_deref_type_array);
+		nir_const_value *v = nir_src_as_const_value(instr->arr.index);
+		assert(v);
+		*const_out = v->u32[0];
+		return;
+	}
+
+	nir_deref_path_init(&path, instr, NULL);
+
+	uint32_t const_offset = 0;
+
+	for (; path.path[idx_lvl]; ++idx_lvl) {
+		const struct glsl_type *parent_type = path.path[idx_lvl - 1]->type;
+		if (path.path[idx_lvl]->deref_type == nir_deref_type_struct) {
+			unsigned index = path.path[idx_lvl]->strct.index;
+
+			for (unsigned i = 0; i < index; i++) {
+				const struct glsl_type *ft = glsl_get_struct_field(parent_type, i);
+				const_offset += glsl_count_attribute_slots(ft, false);
+			}
+		} else if(path.path[idx_lvl]->deref_type == nir_deref_type_array) {
+			unsigned size = glsl_count_attribute_slots(path.path[idx_lvl]->type, false);
+			nir_const_value *v = nir_src_as_const_value(path.path[idx_lvl]->arr.index);
+			if (v)
+				const_offset += v->u32[0] * size;
+		} else
+			unreachable("Uhandled deref type in get_deref_instr_offset");
+	}
+
+	*const_out = const_offset;
+
+	nir_deref_path_finish(&path);
+}
+
+static void
 gather_intrinsic_load_var_info(const nir_shader *nir,
 			       const nir_intrinsic_instr *instr,
 			       struct radv_shader_info *info)
 {
 	switch (nir->info.stage) {
 	case MESA_SHADER_VERTEX: {
-		nir_deref_var *dvar = instr->variables[0];
-		nir_variable *var = dvar->var;
+		nir_variable *var = instr->intrinsic == nir_intrinsic_load_var ? instr->variables[0]->var :
+		                    nir_deref_instr_get_variable(nir_instr_as_deref(instr->src[0].ssa->parent_instr));
 
 		if (var->data.mode == nir_var_shader_in) {
 			unsigned idx = var->data.location;
@@ -116,8 +160,8 @@ gather_intrinsic_store_var_info(const nir_shader *nir,
 				const nir_intrinsic_instr *instr,
 				struct radv_shader_info *info)
 {
-	nir_deref_var *dvar = instr->variables[0];
-	nir_variable *var = dvar->var;
+	nir_variable *var = instr->intrinsic == nir_intrinsic_store_var ? instr->variables[0]->var :
+	                          nir_deref_instr_get_variable(nir_instr_as_deref(instr->src[0].ssa->parent_instr));
 
 	if (var->data.mode == nir_var_shader_out) {
 		unsigned attrib_count = glsl_count_attribute_slots(var->type, false);
@@ -125,7 +169,10 @@ gather_intrinsic_store_var_info(const nir_shader *nir,
 		unsigned comp = var->data.location_frac;
 		unsigned const_offset = 0;
 
-		get_deref_offset(dvar, &const_offset);
+		if (instr->intrinsic == nir_intrinsic_store_var)
+			get_deref_offset(instr->variables[0], &const_offset);
+		else
+			get_deref_instr_offset(nir_instr_as_deref(instr->src[0].ssa->parent_instr), &const_offset);
 
 		switch (nir->info.stage) {
 		case MESA_SHADER_VERTEX:
@@ -176,6 +223,7 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 {
 	switch (instr->intrinsic) {
 	case nir_intrinsic_interp_var_at_sample:
+	case nir_intrinsic_interp_deref_at_sample:
 		info->ps.needs_sample_positions = true;
 		break;
 	case nir_intrinsic_load_draw_id:
@@ -314,9 +362,11 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 			info->ps.writes_memory = true;
 		break;
 	case nir_intrinsic_load_var:
+	case nir_intrinsic_load_deref:
 		gather_intrinsic_load_var_info(nir, instr, info);
 		break;
 	case nir_intrinsic_store_var:
+	case nir_intrinsic_store_deref:
 		gather_intrinsic_store_var_info(nir, instr, info);
 		break;
 	default:
