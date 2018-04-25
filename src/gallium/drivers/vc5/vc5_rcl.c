@@ -226,10 +226,22 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
         if ((loads_pending & PIPE_CLEAR_DEPTHSTENCIL) &&
             (V3D_VERSION >= 40 ||
              (job->zsbuf && job->zsbuf->texture->nr_samples > 1))) {
-                load_general(cl, job->zsbuf,
-                             zs_buffer_from_pipe_bits(loads_pending),
-                             PIPE_CLEAR_DEPTHSTENCIL,
-                             &loads_pending);
+                struct vc5_resource *rsc = vc5_resource(job->zsbuf->texture);
+
+                if (rsc->separate_stencil &&
+                    (loads_pending & PIPE_CLEAR_STENCIL)) {
+                        load_general(cl, job->zsbuf,
+                                     STENCIL,
+                                     PIPE_CLEAR_STENCIL,
+                                     &loads_pending);
+                }
+
+                if (loads_pending & PIPE_CLEAR_DEPTHSTENCIL) {
+                        load_general(cl, job->zsbuf,
+                                     zs_buffer_from_pipe_bits(loads_pending),
+                                     loads_pending & PIPE_CLEAR_DEPTHSTENCIL,
+                                     &loads_pending);
+                }
         }
 
 #if V3D_VERSION < 40
