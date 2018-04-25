@@ -2897,24 +2897,42 @@ static LLVMValueRef visit_interp(struct ac_nir_context *ctx,
 	LLVMValueRef src_c0 = NULL;
 	LLVMValueRef src_c1 = NULL;
 	LLVMValueRef src0 = NULL;
-	int input_index = instr->variables[0]->var->data.location - VARYING_SLOT_VAR0;
+	bool uses_deref_chain;
 	switch (instr->intrinsic) {
 	case nir_intrinsic_interp_var_at_centroid:
+	case nir_intrinsic_interp_var_at_sample:
+	case nir_intrinsic_interp_var_at_offset:
+		uses_deref_chain = true;
+		break;
+	default:
+		uses_deref_chain = false;
+		break;
+	}
+
+	nir_variable *var = uses_deref_chain ? instr->variables[0]->var : nir_deref_instr_get_variable(nir_instr_as_deref(instr->src[0].ssa->parent_instr));
+	int input_index = var->data.location - VARYING_SLOT_VAR0;
+	switch (instr->intrinsic) {
+	case nir_intrinsic_interp_var_at_centroid:
+	case nir_intrinsic_interp_deref_at_centroid:
 		location = INTERP_CENTROID;
 		break;
 	case nir_intrinsic_interp_var_at_sample:
 	case nir_intrinsic_interp_var_at_offset:
+	case nir_intrinsic_interp_deref_at_sample:
+	case nir_intrinsic_interp_deref_at_offset:
 		location = INTERP_CENTER;
-		src0 = get_src(ctx, instr->src[0]);
+		src0 = get_src(ctx, instr->src[uses_deref_chain ? 0 : 1]);
 		break;
 	default:
 		break;
 	}
 
-	if (instr->intrinsic == nir_intrinsic_interp_var_at_offset) {
+	if (instr->intrinsic == nir_intrinsic_interp_var_at_offset ||
+	    instr->intrinsic == nir_intrinsic_interp_deref_at_offset) {
 		src_c0 = ac_to_float(&ctx->ac, LLVMBuildExtractElement(ctx->ac.builder, src0, ctx->ac.i32_0, ""));
 		src_c1 = ac_to_float(&ctx->ac, LLVMBuildExtractElement(ctx->ac.builder, src0, ctx->ac.i32_1, ""));
-	} else if (instr->intrinsic == nir_intrinsic_interp_var_at_sample) {
+	} else if (instr->intrinsic == nir_intrinsic_interp_var_at_sample ||
+	           instr->intrinsic == nir_intrinsic_interp_deref_at_sample) {
 		LLVMValueRef sample_position;
 		LLVMValueRef halfval = LLVMConstReal(ctx->ac.f32, 0.5f);
 
@@ -2926,7 +2944,7 @@ static LLVMValueRef visit_interp(struct ac_nir_context *ctx,
 		src_c1 = LLVMBuildExtractElement(ctx->ac.builder, sample_position, ctx->ac.i32_1, "");
 		src_c1 = LLVMBuildFSub(ctx->ac.builder, src_c1, halfval, "");
 	}
-	interp_param = ctx->abi->lookup_interp_param(ctx->abi, instr->variables[0]->var->data.interpolation, location);
+	interp_param = ctx->abi->lookup_interp_param(ctx->abi, var->data.interpolation, location);
 	attr_number = LLVMConstInt(ctx->ac.i32, input_index, false);
 
 	if (location == INTERP_CENTER) {
@@ -2990,7 +3008,7 @@ static LLVMValueRef visit_interp(struct ac_nir_context *ctx,
 		}
 	}
 	return ac_build_varying_gather_values(&ctx->ac, result, instr->num_components,
-					      instr->variables[0]->var->data.location_frac);
+					      var->data.location_frac);
 }
 
 static void visit_intrinsic(struct ac_nir_context *ctx,
@@ -3260,6 +3278,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_interp_var_at_centroid:
 	case nir_intrinsic_interp_var_at_sample:
 	case nir_intrinsic_interp_var_at_offset:
+	case nir_intrinsic_interp_deref_at_centroid:
+	case nir_intrinsic_interp_deref_at_sample:
+	case nir_intrinsic_interp_deref_at_offset:
 		result = visit_interp(ctx, instr);
 		break;
 	case nir_intrinsic_emit_vertex:
