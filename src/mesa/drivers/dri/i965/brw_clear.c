@@ -231,10 +231,6 @@ brw_fast_clear_depth(struct gl_context *ctx)
    }
 
    if (!need_clear) {
-      /* If all of the layers we intend to clear are already in the clear
-       * state then simply updating the miptree fast clear value is sufficient
-       * to change their clear value.
-       */
       if (devinfo->gen >= 10 && !same_clear_value) {
          /* Before gen10, it was enough to just update the clear value in the
           * miptree. But on gen10+, we let blorp update the clear value state
@@ -255,7 +251,6 @@ brw_fast_clear_depth(struct gl_context *ctx)
          }
          brw_emit_pipe_control_flush(brw, PIPE_CONTROL_STATE_CACHE_INVALIDATE);
       }
-      return true;
    }
 
    for (unsigned a = 0; a < num_layers; a++) {
