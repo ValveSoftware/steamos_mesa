@@ -635,6 +635,41 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpBitFieldInsert:
+   case SpvOpBitFieldSExtract:
+   case SpvOpBitFieldUExtract:
+   case SpvOpShiftLeftLogical:
+   case SpvOpShiftRightArithmetic:
+   case SpvOpShiftRightLogical: {
+      bool swap;
+      unsigned src0_bit_size = glsl_get_bit_size(vtn_src[0]->type);
+      unsigned dst_bit_size = glsl_get_bit_size(type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
+                                                  src0_bit_size, dst_bit_size);
+
+      assert (op == nir_op_ushr || op == nir_op_ishr || op == nir_op_ishl ||
+              op == nir_op_bitfield_insert || op == nir_op_ubitfield_extract ||
+              op == nir_op_ibitfield_extract);
+
+      for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++) {
+         unsigned src_bit_size =
+            nir_alu_type_get_type_size(nir_op_infos[op].input_types[i]);
+         if (src_bit_size == 0)
+            continue;
+         if (src_bit_size != src[i]->bit_size) {
+            assert(src_bit_size == 32);
+            /* Convert the Shift, Offset and Count  operands to 32 bits, which is the bitsize
+             * supported by the NIR instructions. See discussion here:
+             *
+             * https://lists.freedesktop.org/archives/mesa-dev/2018-April/193026.html
+             */
+            src[i] = nir_u2u32(&b->nb, src[i]);
+         }
+      }
+      val->ssa->def = nir_build_alu(&b->nb, op, src[0], src[1], src[2], src[3]);
+      break;
+   }
+
    default: {
       bool swap;
       unsigned src_bit_size = glsl_get_bit_size(vtn_src[0]->type);
