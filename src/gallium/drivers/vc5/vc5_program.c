@@ -125,6 +125,10 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                                 .output_buffer_to_write_to = buffer,
                         };
 
+                        /* GFXH-1559 */
+                        assert(unpacked.first_shaded_vertex_value_to_output != 8 ||
+                               so->num_tf_specs != 0);
+
                         assert(so->num_tf_specs != ARRAY_SIZE(so->tf_specs));
                         V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
                                                                        (void *)&so->tf_specs[so->num_tf_specs],
@@ -136,6 +140,11 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                          * though.
                          */
                         unpacked.first_shaded_vertex_value_to_output++;
+
+                        /* GFXH-1559 */
+                        assert(unpacked.first_shaded_vertex_value_to_output != 8 ||
+                               so->num_tf_specs != 0);
+
                         V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
                                                                        (void *)&so->tf_specs_psiz[so->num_tf_specs],
                                                                        &unpacked);
