@@ -787,7 +787,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * BRW_OPCODE_F32TO16 when/if we work for HF support on gen7.
        */
 
-   case nir_op_f2f16_undef:
+   case nir_op_f2f16:
       inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;

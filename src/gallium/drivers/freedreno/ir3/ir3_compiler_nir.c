@@ -948,7 +948,7 @@ create_cov(struct ir3_context *ctx, struct ir3_instruction *src,
 	case nir_op_f2f32:
 	case nir_op_f2f16_rtne:
 	case nir_op_f2f16_rtz:
-	case nir_op_f2f16_undef:
+	case nir_op_f2f16:
 	case nir_op_f2i32:
 	case nir_op_f2i16:
 	case nir_op_f2i8:
@@ -1020,7 +1020,7 @@ create_cov(struct ir3_context *ctx, struct ir3_instruction *src,
 
 	case nir_op_f2f16_rtne:
 	case nir_op_f2f16_rtz:
-	case nir_op_f2f16_undef:
+	case nir_op_f2f16:
 		/* TODO how to handle rounding mode? */
 	case nir_op_i2f16:
 	case nir_op_u2f16:
@@ -1145,7 +1145,7 @@ emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 	case nir_op_f2f32:
 	case nir_op_f2f16_rtne:
 	case nir_op_f2f16_rtz:
-	case nir_op_f2f16_undef:
+	case nir_op_f2f16:
 	case nir_op_f2i32:
 	case nir_op_f2i16:
 	case nir_op_f2i8:

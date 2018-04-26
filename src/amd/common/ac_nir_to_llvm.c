@@ -889,7 +889,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = LLVMBuildExtractElement(ctx->ac.builder, result, ctx->ac.i32_0, "");
 		break;
 	case nir_op_f2f16_rtne:
-	case nir_op_f2f16_undef:
+	case nir_op_f2f16:
 	case nir_op_f2f32:
 	case nir_op_f2f64:
 		src[0] = ac_to_float(&ctx->ac, src[0]);
