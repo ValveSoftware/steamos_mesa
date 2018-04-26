@@ -495,7 +495,10 @@ put_dst(struct ir3_context *ctx, nir_dest *dst)
 
 	if (bit_size < 32) {
 		for (unsigned i = 0; i < ctx->last_dst_n; i++) {
-			ctx->last_dst[i]->regs[0]->flags |= IR3_REG_HALF;
+			struct ir3_instruction *dst = ctx->last_dst[i];
+			dst->regs[0]->flags |= IR3_REG_HALF;
+			if (ctx->last_dst[i]->opc == OPC_META_FO)
+				dst->regs[1]->instr->regs[0]->flags |= IR3_REG_HALF;
 		}
 	}
 
