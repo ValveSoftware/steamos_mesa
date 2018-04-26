@@ -65,7 +65,7 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 	p_atomic_inc(&sscreen->compressed_colortex_counter);
 }
 
-static void si_set_clear_color(struct r600_texture *rtex,
+static bool si_set_clear_color(struct r600_texture *rtex,
 			       enum pipe_format surface_format,
 			       const union pipe_color_union *color)
 {
@@ -90,7 +90,11 @@ static void si_set_clear_color(struct r600_texture *rtex,
 		util_pack_color(color->f, surface_format, &uc);
 	}
 
+	if (memcmp(rtex->color_clear_value, &uc, 2 * sizeof(uint32_t)) == 0)
+		return false;
+
 	memcpy(rtex->color_clear_value, &uc, 2 * sizeof(uint32_t));
+	return true;
 }
 
 /** Linearize and convert luminace/intensity to red. */
@@ -545,10 +549,10 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		/* We can change the micro tile mode before a full clear. */
 		si_set_optimal_micro_tile_mode(sctx->screen, tex);
 
-		si_set_clear_color(tex, fb->cbufs[i]->format, color);
-
-		sctx->framebuffer.dirty_cbufs |= 1 << i;
-		si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
+		if (si_set_clear_color(tex, fb->cbufs[i]->format, color)) {
+			sctx->framebuffer.dirty_cbufs |= 1 << i;
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
+		}
 		*buffers &= ~clear_bit;
 	}
 }
@@ -596,9 +600,12 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 				sctx->db_depth_disable_expclear = true;
 			}
 
-			zstex->depth_clear_value = depth;
-			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer); /* updates DB_DEPTH_CLEAR */
+			if (zstex->depth_clear_value != (float)depth) {
+				/* Update DB_DEPTH_CLEAR. */
+				zstex->depth_clear_value = depth;
+				sctx->framebuffer.dirty_zsbuf = true;
+				si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
+			}
 			sctx->db_depth_clear = true;
 			si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 		}
@@ -614,9 +621,12 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 				sctx->db_stencil_disable_expclear = true;
 			}
 
-			zstex->stencil_clear_value = stencil;
-			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer); /* updates DB_STENCIL_CLEAR */
+			if (zstex->stencil_clear_value != (uint8_t)stencil) {
+				/* Update DB_STENCIL_CLEAR. */
+				zstex->stencil_clear_value = stencil;
+				sctx->framebuffer.dirty_zsbuf = true;
+				si_mark_atom_dirty(sctx, &sctx->atoms.s.framebuffer);
+			}
 			sctx->db_stencil_clear = true;
 			si_mark_atom_dirty(sctx, &sctx->atoms.s.db_render_state);
 		}
