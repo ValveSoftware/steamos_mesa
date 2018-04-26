@@ -1,4 +1,4 @@
-# Copyright © 2017 Intel Corporation
+# Copyright © 2017-2018 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -96,7 +96,7 @@ foreach g : [['70', ['gen7_cmd_buffer.c']], ['75', ['gen7_cmd_buffer.c']],
   _gen = g[0]
   libanv_gen_libs += static_library(
     'libanv_gen@0@'.format(_gen),
-    [anv_gen_files, g[1], anv_entrypoints[0]],
+    [anv_gen_files, g[1], anv_entrypoints[0], anv_extensions_h],
     include_directories : [
       inc_common, inc_compiler, inc_drm_uapi, inc_intel, inc_vulkan_util,
       inc_vulkan_wsi,
@@ -220,7 +220,7 @@ if with_tests
       'anv_@0@'.format(t),
       executable(
         t,
-        ['tests/@0@.c'.format(t), anv_entrypoints[0]],
+        ['tests/@0@.c'.format(t), anv_entrypoints[0], anv_extensions_h],
         link_with : libvulkan_intel_test,
         dependencies : [dep_libdrm, dep_thread, dep_m, dep_valgrind],
         include_directories : [
