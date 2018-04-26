@@ -170,7 +170,7 @@ struct ureg_program
    struct {
       unsigned index;
       enum tgsi_texture_type target;
-      unsigned format;
+      enum pipe_format format;
       boolean wr;
       boolean raw;
    } image[PIPE_MAX_SHADER_IMAGES];
@@ -773,7 +773,7 @@ struct ureg_src
 ureg_DECL_image(struct ureg_program *ureg,
                 unsigned index,
                 enum tgsi_texture_type target,
-                unsigned format,
+                enum pipe_format format,
                 boolean wr,
                 boolean raw)
 {
@@ -1363,8 +1363,8 @@ void
 ureg_emit_memory(struct ureg_program *ureg,
                  unsigned extended_token,
                  unsigned qualifier,
-                 unsigned texture,
-                 unsigned format)
+                 enum tgsi_texture_type texture,
+                 enum pipe_format format)
 {
    union tgsi_any_token *out, *insn;
 
@@ -1478,8 +1478,8 @@ ureg_memory_insn(struct ureg_program *ureg,
                  const struct ureg_src *src,
                  unsigned nr_src,
                  unsigned qualifier,
-                 unsigned texture,
-                 unsigned format)
+                 enum tgsi_texture_type texture,
+                 enum pipe_format format)
 {
    struct ureg_emit_insn_result insn;
    unsigned i;
@@ -1719,7 +1719,7 @@ static void
 emit_decl_image(struct ureg_program *ureg,
                 unsigned index,
                 enum tgsi_texture_type target,
-                unsigned format,
+                enum pipe_format format,
                 boolean wr,
                 boolean raw)
 {

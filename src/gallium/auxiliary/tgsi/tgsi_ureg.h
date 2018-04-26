@@ -372,7 +372,7 @@ struct ureg_src
 ureg_DECL_image(struct ureg_program *ureg,
                 unsigned index,
                 enum tgsi_texture_type target,
-                unsigned format,
+                enum pipe_format format,
                 boolean wr,
                 boolean raw);
 
@@ -579,8 +579,8 @@ ureg_memory_insn(struct ureg_program *ureg,
                  const struct ureg_src *src,
                  unsigned nr_src,
                  unsigned qualifier,
-                 unsigned texture,
-                 unsigned format);
+                 enum tgsi_texture_type texture,
+                 enum pipe_format format);
 
 /***********************************************************************
  * Internal instruction helpers, don't call these directly:
@@ -619,8 +619,8 @@ void
 ureg_emit_memory(struct ureg_program *ureg,
                  unsigned insn_token,
                  unsigned qualifier,
-                 unsigned texture,
-                 unsigned format);
+                 enum tgsi_texture_type texture,
+                 enum pipe_format format);
 
 void 
 ureg_emit_dst( struct ureg_program *ureg,
