@@ -81,7 +81,7 @@ INLINE void ProcessAttributes(
     // Conservative Rasterization requires degenerate tris to have constant attribute interpolation
     uint32_t constantInterpMask = IsDegenerate::value ? 0xFFFFFFFF : backendState.constantInterpolationMask;
     const uint32_t provokingVertex = pDC->pState->state.frontendState.topologyProvokingVertex;
-    const PRIMITIVE_TOPOLOGY topo = pDC->pState->state.topology;
+    const PRIMITIVE_TOPOLOGY topo = pa.binTopology;
 
     static const float constTable[3][4] = {
         { 0.0f, 0.0f, 0.0f, 0.0f },
