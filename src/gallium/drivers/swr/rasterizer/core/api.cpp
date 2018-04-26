@@ -475,7 +475,12 @@ void SetupDefaultState(SWR_CONTEXT *pContext)
     pState->depthBoundsState.depthBoundsTestMaxValue = 1.0f;
 }
 
-void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2, uint64_t userData3)
+void SWR_API SwrSync(
+    HANDLE hContext,
+    PFN_CALLBACK_FUNC pfnFunc,
+    uint64_t userData,
+    uint64_t userData2,
+    uint64_t userData3)
 {
     SWR_ASSERT(pfnFunc != nullptr);
 
