@@ -82,6 +82,7 @@ void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
 #define VC5_DIRTY_FS_INPUTS     (1 << 26)
 #define VC5_DIRTY_STREAMOUT     (1 << 27)
 #define VC5_DIRTY_OQ            (1 << 28)
+#define VC5_DIRTY_CENTROID_FLAGS (1 << 29)
 
 #define VC5_MAX_FS_INPUTS 64
 

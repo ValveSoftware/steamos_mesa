@@ -478,6 +478,10 @@ struct v3d_compile {
          */
         uint32_t flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
 
+        uint32_t centroid_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
+
+        bool uses_centroid_and_center_w;
+
         struct v3d_ubo_range *ubo_ranges;
         bool *ubo_range_used;
         uint32_t ubo_ranges_array_size;
@@ -657,8 +661,11 @@ struct v3d_fs_prog_data {
          */
         uint32_t flat_shade_flags[((V3D_MAX_FS_INPUTS - 1) / 24) + 1];
 
+        uint32_t centroid_flags[((V3D_MAX_FS_INPUTS - 1) / 24) + 1];
+
         bool writes_z;
         bool discard;
+        bool uses_centroid_and_center_w;
 };
 
 /* Special nir_load_input intrinsic index for loading the current TLB

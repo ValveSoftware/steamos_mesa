@@ -177,6 +177,9 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                         (vc5->prog.fs->prog_data.fs->writes_z ||
                          vc5->prog.fs->prog_data.fs->discard);
 
+                shader.fragment_shader_uses_real_pixel_centre_w_in_addition_to_centroid_w2 =
+                        vc5->prog.fs->prog_data.fs->uses_centroid_and_center_w;
+
                 shader.number_of_varyings_in_fragment_shader =
                         vc5->prog.fs->prog_data.base->num_inputs;
 

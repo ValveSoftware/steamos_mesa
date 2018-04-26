@@ -589,6 +589,45 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 }
         }
 
+#if V3D_VERSION >= 40
+        if (vc5->dirty & VC5_DIRTY_CENTROID_FLAGS) {
+                bool emitted_any = false;
+
+                for (int i = 0; i < ARRAY_SIZE(vc5->prog.fs->prog_data.fs->centroid_flags); i++) {
+                        if (!vc5->prog.fs->prog_data.fs->centroid_flags[i])
+                                continue;
+
+                        cl_emit(&job->bcl, CENTROID_FLAGS, flags) {
+                                flags.varying_offset_v0 = i;
+
+                                if (emitted_any) {
+                                        flags.action_for_centroid_flags_of_lower_numbered_varyings =
+                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
+                                        flags.action_for_centroid_flags_of_higher_numbered_varyings =
+                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
+                                } else {
+                                        flags.action_for_centroid_flags_of_lower_numbered_varyings =
+                                                ((i == 0) ?
+                                                 V3D_VARYING_FLAGS_ACTION_UNCHANGED :
+                                                 V3D_VARYING_FLAGS_ACTION_ZEROED);
+
+                                        flags.action_for_centroid_flags_of_higher_numbered_varyings =
+                                                V3D_VARYING_FLAGS_ACTION_ZEROED;
+                                }
+
+                                flags.centroid_flags_for_varyings_v024 =
+                                        vc5->prog.fs->prog_data.fs->centroid_flags[i];
+                        }
+
+                        emitted_any = true;
+                }
+
+                if (!emitted_any) {
+                        cl_emit(&job->bcl, ZERO_ALL_CENTROID_FLAGS, flags);
+                }
+        }
+#endif
+
         /* Set up the transform feedback data specs (which VPM entries to
          * output to which buffers).
          */

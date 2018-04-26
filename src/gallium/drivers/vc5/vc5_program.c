@@ -477,10 +477,16 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
 
         vc5->dirty |= VC5_DIRTY_COMPILED_FS;
 
-        if (old_fs &&
-            vc5->prog.fs->prog_data.fs->flat_shade_flags !=
-            old_fs->prog_data.fs->flat_shade_flags) {
-                vc5->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
+        if (old_fs) {
+                if (vc5->prog.fs->prog_data.fs->flat_shade_flags !=
+                    old_fs->prog_data.fs->flat_shade_flags) {
+                        vc5->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
+                }
+
+                if (vc5->prog.fs->prog_data.fs->centroid_flags !=
+                    old_fs->prog_data.fs->centroid_flags) {
+                        vc5->dirty |= VC5_DIRTY_CENTROID_FLAGS;
+                }
         }
 
         if (old_fs && memcmp(vc5->prog.fs->prog_data.fs->input_slots,
