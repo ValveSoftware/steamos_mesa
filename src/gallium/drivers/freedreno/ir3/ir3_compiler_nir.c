@@ -919,11 +919,138 @@ ir3_n2b(struct ir3_block *block, struct ir3_instruction *instr)
  * alu/sfu instructions:
  */
 
+static struct ir3_instruction *
+create_cov(struct ir3_context *ctx, struct ir3_instruction *src,
+		unsigned src_bitsize, nir_op op)
+{
+	type_t src_type, dst_type;
+
+	switch (op) {
+	case nir_op_f2f32:
+	case nir_op_f2f16_rtne:
+	case nir_op_f2f16_rtz:
+	case nir_op_f2f16_undef:
+	case nir_op_f2i32:
+	case nir_op_f2i16:
+	case nir_op_f2i8:
+	case nir_op_f2u32:
+	case nir_op_f2u16:
+	case nir_op_f2u8:
+		switch (src_bitsize) {
+		case 32:
+			src_type = TYPE_F32;
+			break;
+		case 16:
+			src_type = TYPE_F16;
+			break;
+		default:
+			compile_error(ctx, "invalid src bit size: %u", src_bitsize);
+		}
+		break;
+
+	case nir_op_i2f32:
+	case nir_op_i2f16:
+	case nir_op_i2i32:
+	case nir_op_i2i16:
+	case nir_op_i2i8:
+		switch (src_bitsize) {
+		case 32:
+			src_type = TYPE_S32;
+			break;
+		case 16:
+			src_type = TYPE_S16;
+			break;
+		case 8:
+			src_type = TYPE_S8;
+			break;
+		default:
+			compile_error(ctx, "invalid src bit size: %u", src_bitsize);
+		}
+		break;
+
+	case nir_op_u2f32:
+	case nir_op_u2f16:
+	case nir_op_u2u32:
+	case nir_op_u2u16:
+	case nir_op_u2u8:
+		switch (src_bitsize) {
+		case 32:
+			src_type = TYPE_U32;
+			break;
+		case 16:
+			src_type = TYPE_U16;
+			break;
+		case 8:
+			src_type = TYPE_U8;
+			break;
+		default:
+			compile_error(ctx, "invalid src bit size: %u", src_bitsize);
+		}
+		break;
+
+	default:
+		compile_error(ctx, "invalid conversion op: %u", op);
+	}
+
+	switch (op) {
+	case nir_op_f2f32:
+	case nir_op_i2f32:
+	case nir_op_u2f32:
+		dst_type = TYPE_F32;
+		break;
+
+	case nir_op_f2f16_rtne:
+	case nir_op_f2f16_rtz:
+	case nir_op_f2f16_undef:
+		/* TODO how to handle rounding mode? */
+	case nir_op_i2f16:
+	case nir_op_u2f16:
+		dst_type = TYPE_F16;
+		break;
+
+	case nir_op_f2i32:
+	case nir_op_i2i32:
+		dst_type = TYPE_S32;
+		break;
+
+	case nir_op_f2i16:
+	case nir_op_i2i16:
+		dst_type = TYPE_S16;
+		break;
+
+	case nir_op_f2i8:
+	case nir_op_i2i8:
+		dst_type = TYPE_S8;
+		break;
+
+	case nir_op_f2u32:
+	case nir_op_u2u32:
+		dst_type = TYPE_U32;
+		break;
+
+	case nir_op_f2u16:
+	case nir_op_u2u16:
+		dst_type = TYPE_U16;
+		break;
+
+	case nir_op_f2u8:
+	case nir_op_u2u8:
+		dst_type = TYPE_U8;
+		break;
+
+	default:
+		compile_error(ctx, "invalid conversion op: %u", op);
+	}
+
+	return ir3_COV(ctx->block, src, src_type, dst_type);
+}
+
 static void
 emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 {
 	const nir_op_info *info = &nir_op_infos[alu->op];
 	struct ir3_instruction **dst, *src[info->num_inputs];
+	unsigned bs[info->num_inputs];     /* bit size */
 	struct ir3_block *b = ctx->block;
 	unsigned dst_sz, wrmask;
 
@@ -990,22 +1117,33 @@ emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 		compile_assert(ctx, !asrc->negate);
 
 		src[i] = get_src(ctx, &asrc->src)[asrc->swizzle[chan]];
+		bs[i] = nir_src_bit_size(asrc->src);
 
 		compile_assert(ctx, src[i]);
 	}
 
 	switch (alu->op) {
+	case nir_op_f2f32:
+	case nir_op_f2f16_rtne:
+	case nir_op_f2f16_rtz:
+	case nir_op_f2f16_undef:
 	case nir_op_f2i32:
-		dst[0] = ir3_COV(b, src[0], TYPE_F32, TYPE_S32);
-		break;
+	case nir_op_f2i16:
+	case nir_op_f2i8:
 	case nir_op_f2u32:
-		dst[0] = ir3_COV(b, src[0], TYPE_F32, TYPE_U32);
-		break;
+	case nir_op_f2u16:
+	case nir_op_f2u8:
 	case nir_op_i2f32:
-		dst[0] = ir3_COV(b, src[0], TYPE_S32, TYPE_F32);
-		break;
+	case nir_op_i2f16:
+	case nir_op_i2i32:
+	case nir_op_i2i16:
+	case nir_op_i2i8:
 	case nir_op_u2f32:
-		dst[0] = ir3_COV(b, src[0], TYPE_U32, TYPE_F32);
+	case nir_op_u2f16:
+	case nir_op_u2u32:
+	case nir_op_u2u16:
+	case nir_op_u2u8:
+		dst[0] = create_cov(ctx, src[0], bs[0], alu->op);
 		break;
 	case nir_op_f2b:
 		dst[0] = ir3_CMPS_F(b, src[0], 0, create_immed(b, fui(0.0)), 0);
@@ -1237,10 +1375,18 @@ emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 		dst[0] = ir3_n2b(b, dst[0]);
 		break;
 
-	case nir_op_bcsel:
-		dst[0] = ir3_SEL_B32(b, src[1], 0, ir3_b2n(b, src[0]), 0, src[2], 0);
+	case nir_op_bcsel: {
+		struct ir3_instruction *cond = ir3_b2n(b, src[0]);
+		compile_assert(ctx, bs[1] == bs[2]);
+		/* the boolean condition is 32b even if src[1] and src[2] are
+		 * half-precision, but sel.b16 wants all three src's to be the
+		 * same type.
+		 */
+		if (bs[1] < 32)
+			cond = ir3_COV(b, cond, TYPE_U32, TYPE_U16);
+		dst[0] = ir3_SEL_B32(b, src[1], 0, cond, 0, src[2], 0);
 		break;
-
+	}
 	case nir_op_bit_count:
 		dst[0] = ir3_CBITS_B(b, src[0], 0);
 		break;
