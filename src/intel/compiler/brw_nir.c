@@ -592,6 +592,25 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
    return nir;
 }
 
+static unsigned
+lower_bit_size_callback(const nir_alu_instr *alu, void *data)
+{
+   assert(alu->dest.dest.is_ssa);
+   if (alu->dest.dest.ssa.bit_size != 16)
+      return 0;
+
+   switch (alu->op) {
+   case nir_op_idiv:
+   case nir_op_imod:
+   case nir_op_irem:
+   case nir_op_udiv:
+   case nir_op_umod:
+      return 32;
+   default:
+      return 0;
+   }
+}
+
 /* Does some simple lowering and runs the standard suite of optimizations
  *
  * This is intended to be called more-or-less directly after you get the
@@ -644,6 +663,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
                         nir_lower_divmod64);
 
    nir = brw_nir_optimize(nir, compiler, is_scalar);
+
+   nir_lower_bit_size(nir, lower_bit_size_callback, NULL);
 
    if (is_scalar) {
       OPT(nir_lower_load_const_to_scalar);
