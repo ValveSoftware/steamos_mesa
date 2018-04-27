@@ -3350,10 +3350,10 @@ static void si_emit_msaa_config(struct si_context *sctx)
 
 		radeon_set_context_reg_seq(cs, R_028BDC_PA_SC_LINE_CNTL, 2);
 		radeon_emit(cs, sc_line_cntl |
-			    S_028BDC_EXPAND_LINE_WIDTH(1)); /* CM_R_028BDC_PA_SC_LINE_CNTL */
+			    S_028BDC_EXPAND_LINE_WIDTH(1)); /* R_028BDC_PA_SC_LINE_CNTL */
 		radeon_emit(cs, S_028BE0_MSAA_NUM_SAMPLES(log_samples) |
 			    S_028BE0_MAX_SAMPLE_DIST(max_dist[log_samples]) |
-			    S_028BE0_MSAA_EXPOSED_SAMPLES(log_samples)); /* CM_R_028BE0_PA_SC_AA_CONFIG */
+			    S_028BE0_MSAA_EXPOSED_SAMPLES(log_samples)); /* R_028BE0_PA_SC_AA_CONFIG */
 
 		if (sctx->framebuffer.nr_samples > 1) {
 			radeon_set_context_reg(cs, R_028804_DB_EQAA,
@@ -3376,8 +3376,8 @@ static void si_emit_msaa_config(struct si_context *sctx)
 		}
 	} else {
 		radeon_set_context_reg_seq(cs, R_028BDC_PA_SC_LINE_CNTL, 2);
-		radeon_emit(cs, sc_line_cntl); /* CM_R_028BDC_PA_SC_LINE_CNTL */
-		radeon_emit(cs, 0); /* CM_R_028BE0_PA_SC_AA_CONFIG */
+		radeon_emit(cs, sc_line_cntl); /* R_028BDC_PA_SC_LINE_CNTL */
+		radeon_emit(cs, 0); /* R_028BE0_PA_SC_AA_CONFIG */
 
 		radeon_set_context_reg(cs, R_028804_DB_EQAA,
 				       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
