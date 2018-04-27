@@ -36,7 +36,6 @@
 
 #include "brw_blorp.h"
 #include "brw_context.h"
-#include "brw_meta_util.h"
 #include "brw_state.h"
 
 #include "main/enums.h"
@@ -3725,11 +3724,8 @@ get_isl_dim_layout(const struct gen_device_info *devinfo,
 bool
 intel_miptree_set_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              const union gl_color_union *color)
+                              union isl_color_value clear_color)
 {
-   const union isl_color_value clear_color =
-      brw_meta_convert_fast_clear_color(brw, mt, color);
-
    if (memcmp(&mt->fast_clear_color, &clear_color, sizeof(clear_color)) != 0) {
       mt->fast_clear_color = clear_color;
       brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;

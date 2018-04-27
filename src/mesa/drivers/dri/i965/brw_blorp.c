@@ -1225,9 +1225,12 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (can_fast_clear) {
       const enum isl_aux_state aux_state =
          intel_miptree_get_aux_state(irb->mt, irb->mt_level, irb->mt_layer);
+      union isl_color_value clear_color =
+         brw_meta_convert_fast_clear_color(brw, irb->mt,
+                                           &ctx->Color.ClearColor);
 
       bool same_clear_color =
-         !intel_miptree_set_clear_color(brw, irb->mt, &ctx->Color.ClearColor);
+         !intel_miptree_set_clear_color(brw, irb->mt, clear_color);
 
       /* If the buffer is already in INTEL_FAST_CLEAR_STATE_CLEAR, the clear
        * is redundant and can be skipped.

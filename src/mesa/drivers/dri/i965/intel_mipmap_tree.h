@@ -706,7 +706,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
 bool
 intel_miptree_set_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              const union gl_color_union *color);
+                              union isl_color_value clear_color);
 
 /* Get a clear color suitable for filling out an ISL surface state. */
 union isl_color_value
