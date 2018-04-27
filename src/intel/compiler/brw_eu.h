@@ -509,7 +509,8 @@ brw_byte_scattered_write(struct brw_codegen *p,
 
 void
 brw_memory_fence(struct brw_codegen *p,
-                 struct brw_reg dst);
+                 struct brw_reg dst,
+                 enum opcode send_op);
 
 void
 brw_pixel_interpolator_query(struct brw_codegen *p,

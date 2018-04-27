@@ -2277,7 +2277,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
 
       case SHADER_OPCODE_MEMORY_FENCE:
-         brw_memory_fence(p, dst);
+         brw_memory_fence(p, dst, BRW_OPCODE_SEND);
+         break;
+
+      case SHADER_OPCODE_INTERLOCK:
+         /* The interlock is basically a memory fence issued via sendc */
+         brw_memory_fence(p, dst, BRW_OPCODE_SENDC);
          break;
 
       case SHADER_OPCODE_FIND_LIVE_CHANNEL: {

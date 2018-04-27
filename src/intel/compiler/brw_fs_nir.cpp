@@ -4823,6 +4823,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_begin_invocation_interlock: {
+      const fs_builder ubld = bld.group(8, 0);
+      const fs_reg tmp = ubld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+
+      ubld.emit(SHADER_OPCODE_INTERLOCK, tmp)->size_written = 2 *
+         REG_SIZE;
+
+      break;
+   }
+
+   case nir_intrinsic_end_invocation_interlock: {
+      /* We don't need to do anything here */
+      break;
+   }
+
    default:
       unreachable("unknown intrinsic");
    }

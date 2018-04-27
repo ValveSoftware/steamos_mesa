@@ -296,6 +296,9 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "typed_surface_write_logical";
    case SHADER_OPCODE_MEMORY_FENCE:
       return "memory_fence";
+   case SHADER_OPCODE_INTERLOCK:
+      /* For an interlock we actually issue a memory fence via sendc. */
+      return "interlock";
 
    case SHADER_OPCODE_BYTE_SCATTERED_READ:
       return "byte_scattered_read";
@@ -1003,6 +1006,7 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_MEMORY_FENCE:
+   case SHADER_OPCODE_INTERLOCK:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
    case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
