@@ -3734,19 +3734,6 @@ intel_miptree_set_clear_color(struct brw_context *brw,
    return false;
 }
 
-bool
-intel_miptree_set_depth_clear_value(struct brw_context *brw,
-                                    struct intel_mipmap_tree *mt,
-                                    float clear_value)
-{
-   if (mt->fast_clear_color.f32[0] != clear_value) {
-      mt->fast_clear_color.f32[0] = clear_value;
-      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
-      return true;
-   }
-   return false;
-}
-
 union isl_color_value
 intel_miptree_get_clear_color(const struct gen_device_info *devinfo,
                               const struct intel_mipmap_tree *mt,

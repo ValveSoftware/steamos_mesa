@@ -716,11 +716,6 @@ intel_miptree_get_clear_color(const struct gen_device_info *devinfo,
                               struct brw_bo **clear_color_bo,
                               uint32_t *clear_color_offset);
 
-bool
-intel_miptree_set_depth_clear_value(struct brw_context *brw,
-                                    struct intel_mipmap_tree *mt,
-                                    float clear_value);
-
 #ifdef __cplusplus
 }
 #endif
