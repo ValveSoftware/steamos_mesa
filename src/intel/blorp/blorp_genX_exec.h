@@ -1700,8 +1700,10 @@ blorp_update_clear_color(struct blorp_batch *batch,
 static void
 blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
 {
-   blorp_update_clear_color(batch, &params->dst, params->fast_clear_op);
-   blorp_update_clear_color(batch, &params->depth, params->hiz_op);
+   if (!(batch->flags & BLORP_BATCH_NO_UPDATE_CLEAR_COLOR)) {
+      blorp_update_clear_color(batch, &params->dst, params->fast_clear_op);
+      blorp_update_clear_color(batch, &params->depth, params->hiz_op);
+   }
 
 #if GEN_GEN >= 8
    if (params->hiz_op != ISL_AUX_OP_NONE) {

@@ -72,6 +72,11 @@ enum blorp_batch_flags {
 
    /* This flag indicates that the blorp call should be predicated. */
    BLORP_BATCH_PREDICATE_ENABLE      = (1 << 1),
+
+   /* This flag indicates that blorp should *not* update the indirect clear
+    * color buffer.
+    */
+   BLORP_BATCH_NO_UPDATE_CLEAR_COLOR = (1 << 2),
 };
 
 struct blorp_batch {
