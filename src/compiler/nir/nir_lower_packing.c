@@ -87,7 +87,7 @@ lower_unpack_64_to_16(nir_builder *b, nir_ssa_def *src)
 }
 
 static bool
-lower_64bit_pack_impl(nir_function_impl *impl)
+lower_pack_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
@@ -148,13 +148,13 @@ lower_64bit_pack_impl(nir_function_impl *impl)
 }
 
 bool
-nir_lower_64bit_pack(nir_shader *shader)
+nir_lower_pack(nir_shader *shader)
 {
    bool progress = false;
 
    nir_foreach_function(function, shader) {
       if (function->impl)
-         progress |= lower_64bit_pack_impl(function->impl);
+         progress |= lower_pack_impl(function->impl);
    }
 
    return false;

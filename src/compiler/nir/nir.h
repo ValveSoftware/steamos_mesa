@@ -2786,7 +2786,7 @@ typedef enum {
 } nir_lower_doubles_options;
 
 bool nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options);
-bool nir_lower_64bit_pack(nir_shader *shader);
+bool nir_lower_pack(nir_shader *shader);
 
 bool nir_normalize_cubemap_coords(nir_shader *shader);
 
