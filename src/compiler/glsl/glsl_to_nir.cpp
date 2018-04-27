@@ -752,6 +752,12 @@ nir_visitor::visit(ir_call *ir)
       case ir_intrinsic_shader_clock:
          op = nir_intrinsic_shader_clock;
          break;
+      case ir_intrinsic_begin_invocation_interlock:
+         op = nir_intrinsic_begin_invocation_interlock;
+         break;
+      case ir_intrinsic_end_invocation_interlock:
+         op = nir_intrinsic_end_invocation_interlock;
+         break;
       case ir_intrinsic_group_memory_barrier:
          op = nir_intrinsic_group_memory_barrier;
          break;
@@ -968,6 +974,12 @@ nir_visitor::visit(ir_call *ir)
       case nir_intrinsic_shader_clock:
          nir_ssa_dest_init(&instr->instr, &instr->dest, 2, 32, NULL);
          instr->num_components = 2;
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      case nir_intrinsic_begin_invocation_interlock:
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      case nir_intrinsic_end_invocation_interlock:
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
