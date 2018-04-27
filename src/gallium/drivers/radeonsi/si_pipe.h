@@ -591,6 +591,7 @@ struct si_framebuffer {
 	unsigned			spi_shader_col_format_blend_alpha;
 	ubyte				nr_samples:5; /* at most 16xAA */
 	ubyte				log_samples:3; /* at most 4 = 16xAA */
+	ubyte				nr_color_samples; /* at most 8xAA */
 	ubyte				compressed_cb_mask;
 	ubyte				uncompressed_cb_mask;
 	ubyte				color_is_int8;
@@ -1474,9 +1475,9 @@ vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
 static inline unsigned si_get_ps_iter_samples(struct si_context *sctx)
 {
 	if (sctx->ps_uses_fbfetch)
-		return sctx->framebuffer.nr_samples;
+		return sctx->framebuffer.nr_color_samples;
 
-	return sctx->ps_iter_samples;
+	return MIN2(sctx->ps_iter_samples, sctx->framebuffer.nr_color_samples);
 }
 
 static inline unsigned si_get_total_colormask(struct si_context *sctx)

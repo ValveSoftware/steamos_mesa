@@ -2410,9 +2410,10 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	if (rtex->buffer.b.b.nr_samples > 1) {
 		unsigned log_samples = util_logbase2(rtex->buffer.b.b.nr_samples);
+		unsigned log_fragments = util_logbase2(rtex->num_color_samples);
 
 		color_attrib |= S_028C74_NUM_SAMPLES(log_samples) |
-				S_028C74_NUM_FRAGMENTS(log_samples);
+				S_028C74_NUM_FRAGMENTS(log_fragments);
 
 		if (rtex->surface.fmask_size) {
 			color_info |= S_028C70_COMPRESSION(1);
@@ -2436,7 +2437,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		if (!sctx->screen->info.has_dedicated_vram)
 			min_compressed_block_size = V_028C78_MIN_BLOCK_SIZE_64B;
 
-		if (rtex->buffer.b.b.nr_samples > 1) {
+		if (rtex->num_color_samples > 1) {
 			if (rtex->surface.bpe == 1)
 				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
 			else if (rtex->surface.bpe == 2)
@@ -2627,6 +2628,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 			if (rtex->tc_compatible_htile) {
 				surf->db_htile_surface |= S_028ABC_TC_COMPATIBLE(1);
 
+				/* 0 = full compression. N = only compress up to N-1 Z planes. */
 				if (rtex->buffer.b.b.nr_samples <= 1)
 					z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(5);
 				else if (rtex->buffer.b.b.nr_samples <= 4)
@@ -2805,6 +2807,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.compressed_cb_mask = 0;
 	sctx->framebuffer.uncompressed_cb_mask = 0;
 	sctx->framebuffer.nr_samples = util_framebuffer_get_num_samples(state);
+	sctx->framebuffer.nr_color_samples = sctx->framebuffer.nr_samples;
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
 	sctx->framebuffer.any_dst_linear = false;
 	sctx->framebuffer.CB_has_shader_readable_metadata = false;
@@ -2840,6 +2843,16 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		else
 			sctx->framebuffer.uncompressed_cb_mask |= 1 << i;
+
+		/* Don't update nr_color_samples for non-AA buffers.
+		 * (e.g. destination of MSAA resolve)
+		 */
+		if (rtex->buffer.b.b.nr_samples >= 2 &&
+		    rtex->num_color_samples < rtex->buffer.b.b.nr_samples) {
+			sctx->framebuffer.nr_color_samples =
+				MIN2(sctx->framebuffer.nr_color_samples,
+				     rtex->num_color_samples);
+		}
 
 		if (rtex->surface.is_linear)
 			sctx->framebuffer.any_dst_linear = true;
@@ -3325,9 +3338,57 @@ static void si_emit_msaa_config(struct si_context *sctx)
 			   S_028804_INCOHERENT_EQAA_READS(1) |
 			   S_028804_INTERPOLATE_COMP_Z(1) |
 			   S_028804_STATIC_ANCHOR_ASSOCIATIONS(1);
+	unsigned coverage_samples, color_samples;
 
-	int setup_samples = sctx->framebuffer.nr_samples > 1 ? sctx->framebuffer.nr_samples :
-			    sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0;
+	/* S: Coverage samples (up to 16x):
+	 * - Scan conversion samples (PA_SC_AA_CONFIG.MSAA_NUM_SAMPLES)
+	 * - CB FMASK samples (CB_COLORi_ATTRIB.NUM_SAMPLES)
+	 *
+	 * Z: Z/S samples (up to 8x, must be <= coverage samples and >= color samples):
+	 * - Value seen by DB (DB_Z_INFO.NUM_SAMPLES)
+	 * - Value seen by CB, must be correct even if Z/S is unbound (DB_EQAA.MAX_ANCHOR_SAMPLES)
+	 * # Missing samples are derived from Z planes if Z is compressed (up to 16x quality), or
+	 * # from the closest defined sample if Z is uncompressed (same quality as the number of
+	 * # Z samples).
+	 *
+	 * F: Color samples (up to 8x, must be <= coverage samples):
+	 * - CB color samples (CB_COLORi_ATTRIB.NUM_FRAGMENTS)
+	 * - PS iter samples (DB_EQAA.PS_ITER_SAMPLES)
+	 *
+	 * Can be anything between coverage and color samples:
+	 * - SampleMaskIn samples (PA_SC_AA_CONFIG.MSAA_EXPOSED_SAMPLES)
+	 * - SampleMaskOut samples (DB_EQAA.MASK_EXPORT_NUM_SAMPLES)
+	 * - Alpha-to-coverage samples (DB_EQAA.ALPHA_TO_MASK_NUM_SAMPLES)
+	 * - Occlusion query samples (DB_COUNT_CONTROL.SAMPLE_RATE)
+	 * # All are currently set the same as coverage samples.
+	 *
+	 * If color samples < coverage samples, FMASK has a higher bpp to store an "unknown"
+	 * flag for undefined color samples. A shader-based resolve must handle unknowns
+	 * or mask them out with AND. Unknowns can also be guessed from neighbors via
+	 * an edge-detect shader-based resolve, which is required to make "color samples = 1"
+	 * useful. The CB resolve always drops unknowns.
+	 *
+	 * Sensible AA configurations:
+	 *   EQAA 16s 8z 8f - might look the same as 16x MSAA if Z is compressed
+	 *   EQAA 16s 8z 4f - might look the same as 16x MSAA if Z is compressed
+	 *   EQAA 16s 4z 4f - might look the same as 16x MSAA if Z is compressed
+	 *   EQAA  8s 8z 8f = 8x MSAA
+	 *   EQAA  8s 8z 4f - might look the same as 8x MSAA
+	 *   EQAA  8s 8z 2f - might look the same as 8x MSAA with low-density geometry
+	 *   EQAA  8s 4z 4f - might look the same as 8x MSAA if Z is compressed
+	 *   EQAA  8s 4z 2f - might look the same as 8x MSAA with low-density geometry if Z is compressed
+	 *   EQAA  4s 4z 4f = 4x MSAA
+	 *   EQAA  4s 4z 2f - might look the same as 4x MSAA with low-density geometry
+	 *   EQAA  2s 2z 2f = 2x MSAA
+	 */
+	if (sctx->framebuffer.nr_samples > 1) {
+		coverage_samples = sctx->framebuffer.nr_samples;
+		color_samples = sctx->framebuffer.nr_color_samples;
+	} else if (sctx->smoothing_enabled) {
+		coverage_samples = color_samples = SI_NUM_SMOOTH_AA_SAMPLES;
+	} else {
+		coverage_samples = color_samples = 1;
+	}
 
 	/* Required by OpenGL line rasterization.
 	 *
@@ -3338,7 +3399,7 @@ static void si_emit_msaa_config(struct si_context *sctx)
 	 */
 	unsigned sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
 
-	if (setup_samples > 1) {
+	if (coverage_samples > 1) {
 		/* distance from the pixel center, indexed by log2(nr_samples) */
 		static unsigned max_dist[] = {
 			0, /* unused */
@@ -3347,8 +3408,9 @@ static void si_emit_msaa_config(struct si_context *sctx)
 			7, /* 8x MSAA */
 			8, /* 16x MSAA */
 		};
-		unsigned log_samples = util_logbase2(setup_samples);
+		unsigned log_samples = util_logbase2(coverage_samples);
 		unsigned ps_iter_samples = si_get_ps_iter_samples(sctx);
+		ps_iter_samples = MIN2(ps_iter_samples, color_samples);
 		unsigned log_ps_iter_samples =
 			util_logbase2(util_next_power_of_two(ps_iter_samples));
 
