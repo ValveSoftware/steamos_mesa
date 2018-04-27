@@ -182,6 +182,11 @@ namespace SwrJit
         return ConstantInt::get(IRB()->getInt32Ty(), i);
     }
 
+    Constant *Builder::C(uint64_t i)
+    {
+        return ConstantInt::get(IRB()->getInt64Ty(), i);
+    }
+
     Constant *Builder::C(float i)
     {
         return ConstantFP::get(IRB()->getFloatTy(), i);
