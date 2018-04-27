@@ -353,7 +353,7 @@ OMX_ERRORTYPE enc_LoadImage_common(vid_enc_PrivateType * priv, OMX_VIDEO_PORTDEF
       blit.src.resource = inp->resource;
       blit.src.format = inp->resource->format;
 
-      blit.src.box.x = 0;
+      blit.src.box.x = -1;
       blit.src.box.y = def->nFrameHeight;
       blit.src.box.width = def->nFrameWidth;
       blit.src.box.height = def->nFrameHeight / 2 ;
@@ -367,11 +367,11 @@ OMX_ERRORTYPE enc_LoadImage_common(vid_enc_PrivateType * priv, OMX_VIDEO_PORTDEF
       blit.dst.box.depth = 1;
       blit.filter = PIPE_TEX_FILTER_NEAREST;
 
-      blit.mask = PIPE_MASK_G;
+      blit.mask = PIPE_MASK_R;
       priv->s_pipe->blit(priv->s_pipe, &blit);
 
-      blit.src.box.x = 1;
-      blit.mask = PIPE_MASK_R;
+      blit.src.box.x = 0;
+      blit.mask = PIPE_MASK_G;
       priv->s_pipe->blit(priv->s_pipe, &blit);
       priv->s_pipe->flush(priv->s_pipe, NULL, 0);
 
