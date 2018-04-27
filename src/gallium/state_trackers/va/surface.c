@@ -531,10 +531,12 @@ surface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
 {
    vlVaDriver *drv;
    struct pipe_screen *pscreen;
-   struct pipe_resource *resource;
    struct pipe_resource res_templ;
    struct winsys_handle whandle;
    struct pipe_resource *resources[VL_NUM_COMPONENTS];
+   const enum pipe_format *resource_formats = NULL;
+   VAStatus result;
+   int i;
 
    pscreen = VL_VA_PSCREEN(ctx);
    drv = VL_VA_DRIVER(ctx);
@@ -548,17 +550,12 @@ surface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
        memory_attribute->num_planes < 1)
       return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-   switch (memory_attribute->pixel_format) {
-   case VA_FOURCC_RGBA:
-   case VA_FOURCC_RGBX:
-   case VA_FOURCC_BGRA:
-   case VA_FOURCC_BGRX:
-      if (memory_attribute->num_planes != 1)
-         return VA_STATUS_ERROR_INVALID_PARAMETER;
-      break;
-   default:
+   if (memory_attribute->num_planes > VL_NUM_COMPONENTS)
       return VA_STATUS_ERROR_INVALID_PARAMETER;
-   }
+
+   resource_formats = vl_video_buffer_formats(pscreen, templat->buffer_format);
+   if (!resource_formats)
+      return VA_STATUS_ERROR_INVALID_PARAMETER;
 
    memset(&res_templ, 0, sizeof(res_templ));
    res_templ.target = PIPE_TEXTURE_2D;
@@ -567,29 +564,45 @@ surface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    res_templ.array_size = 1;
    res_templ.width0 = memory_attribute->width;
    res_templ.height0 = memory_attribute->height;
-   res_templ.format = surface->templat.buffer_format;
    res_templ.bind = PIPE_BIND_SAMPLER_VIEW;
    res_templ.usage = PIPE_USAGE_DEFAULT;
 
    memset(&whandle, 0, sizeof(struct winsys_handle));
    whandle.type = DRM_API_HANDLE_TYPE_FD;
    whandle.handle = memory_attribute->buffers[index];
-   whandle.stride = memory_attribute->pitches[0];
 
-   resource = pscreen->resource_from_handle(pscreen, &res_templ, &whandle,
-                                            PIPE_HANDLE_USAGE_READ_WRITE);
-
-   if (!resource)
-      return VA_STATUS_ERROR_ALLOCATION_FAILED;
-
+   // Create a resource for each plane.
    memset(resources, 0, sizeof resources);
-   resources[0] = resource;
+   for (i = 0; i < memory_attribute->num_planes; i++) {
+      res_templ.format = resource_formats[i];
+      if (res_templ.format == PIPE_FORMAT_NONE) {
+         result = VA_STATUS_ERROR_INVALID_PARAMETER;
+         goto fail;
+      }
+
+      whandle.stride = memory_attribute->pitches[i];
+      whandle.offset = memory_attribute->offsets[i];
+      resources[i] = pscreen->resource_from_handle(pscreen, &res_templ, &whandle,
+                                                   PIPE_HANDLE_USAGE_READ_WRITE);
+      if (!resources[i]) {
+         result = VA_STATUS_ERROR_ALLOCATION_FAILED;
+         goto fail;
+      }
+   }
 
    surface->buffer = vl_video_buffer_create_ex2(drv->pipe, templat, resources);
-   if (!surface->buffer)
-      return VA_STATUS_ERROR_ALLOCATION_FAILED;
-
+   if (!surface->buffer) {
+      result = VA_STATUS_ERROR_ALLOCATION_FAILED;
+      goto fail;
+   }
    return VA_STATUS_SUCCESS;
+
+fail:
+   for (i = 0; i < VL_NUM_COMPONENTS; i++) {
+      if (resources[i])
+         pscreen->resource_destroy(pscreen, resources[i]);
+   }
+   return result;
 }
 
 VAStatus
