@@ -317,11 +317,10 @@ void radeon_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 /**
  * Called via glDrawBuffer.
  */
-void radeonDrawBuffer( struct gl_context *ctx, GLenum mode )
+void radeonDrawBuffer(struct gl_context *ctx)
 {
 	if (RADEON_DEBUG & RADEON_DRI)
-		fprintf(stderr, "%s %s\n", __func__,
-			_mesa_enum_to_string( mode ));
+		fprintf(stderr, "%s\n", __func__);
 
 	if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer)) {
 		radeonContextPtr radeon = RADEON_CONTEXT(ctx);
