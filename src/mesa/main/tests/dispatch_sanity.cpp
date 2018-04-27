@@ -1026,6 +1026,15 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_EXT_shader_framebuffer_fetch_non_coherent */
    { "glFramebufferFetchBarrierEXT", 20, -1 },
 
+   /* GL_NV_conservative_raster */
+   { "glSubpixelPrecisionBiasNV", 10, -1 },
+
+   /* GL_NV_conservative_raster_dilate */
+   { "glConservativeRasterParameterfNV", 10, -1 },
+
+   /* GL_NV_conservative_raster_pre_snap_triangles */
+   { "glConservativeRasterParameteriNV", 10, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2185,6 +2194,15 @@ const struct function gles11_functions_possible[] = {
    /* GL_EXT_polygon_offset_clamp */
    { "glPolygonOffsetClampEXT", 11, -1 },
 
+   /* GL_NV_conservative_raster */
+   { "glSubpixelPrecisionBiasNV", 20, -1 },
+
+   /* GL_NV_conservative_raster_dilate */
+   { "glConservativeRasterParameterfNV", 20, -1 },
+
+   /* GL_NV_conservative_raster_pre_snap_triangles */
+   { "glConservativeRasterParameteriNV", 20, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2451,6 +2469,15 @@ const struct function gles2_functions_possible[] = {
 
    /* GL_EXT_shader_framebuffer_fetch_non_coherent */
    { "glFramebufferFetchBarrierEXT", 20, -1 },
+
+   /* GL_NV_conservative_raster */
+   { "glSubpixelPrecisionBiasNV", 20, -1 },
+
+   /* GL_NV_conservative_raster_dilate */
+   { "glConservativeRasterParameterfNV", 20, -1 },
+
+   /* GL_NV_conservative_raster_pre_snap_triangles */
+   { "glConservativeRasterParameteriNV", 20, -1 },
 
    { NULL, 0, -1 }
 };
