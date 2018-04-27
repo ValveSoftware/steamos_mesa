@@ -3321,6 +3321,10 @@ static void si_emit_msaa_config(struct si_context *sctx)
 		S_028A4C_MULTI_SHADER_ENGINE_PRIM_DISCARD_ENABLE(1) |
 		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		S_028A4C_FORCE_EOV_REZ_ENABLE(1);
+	unsigned db_eqaa = S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
+			   S_028804_INCOHERENT_EQAA_READS(1) |
+			   S_028804_INTERPOLATE_COMP_Z(1) |
+			   S_028804_STATIC_ANCHOR_ASSOCIATIONS(1);
 
 	int setup_samples = sctx->framebuffer.nr_samples > 1 ? sctx->framebuffer.nr_samples :
 			    sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0;
@@ -3357,19 +3361,17 @@ static void si_emit_msaa_config(struct si_context *sctx)
 
 		if (sctx->framebuffer.nr_samples > 1) {
 			radeon_set_context_reg(cs, R_028804_DB_EQAA,
+					       db_eqaa |
 					       S_028804_MAX_ANCHOR_SAMPLES(log_samples) |
 					       S_028804_PS_ITER_SAMPLES(log_ps_iter_samples) |
 					       S_028804_MASK_EXPORT_NUM_SAMPLES(log_samples) |
-					       S_028804_ALPHA_TO_MASK_NUM_SAMPLES(log_samples) |
-					       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
-					       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1));
+					       S_028804_ALPHA_TO_MASK_NUM_SAMPLES(log_samples));
 			radeon_set_context_reg(cs, R_028A4C_PA_SC_MODE_CNTL_1,
 					       S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1) |
 					       sc_mode_cntl_1);
 		} else if (sctx->smoothing_enabled) {
 			radeon_set_context_reg(cs, R_028804_DB_EQAA,
-					       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
-					       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1) |
+					       db_eqaa |
 					       S_028804_OVERRASTERIZATION_AMOUNT(log_samples));
 			radeon_set_context_reg(cs, R_028A4C_PA_SC_MODE_CNTL_1,
 					       sc_mode_cntl_1);
@@ -3379,9 +3381,7 @@ static void si_emit_msaa_config(struct si_context *sctx)
 		radeon_emit(cs, sc_line_cntl); /* R_028BDC_PA_SC_LINE_CNTL */
 		radeon_emit(cs, 0); /* R_028BE0_PA_SC_AA_CONFIG */
 
-		radeon_set_context_reg(cs, R_028804_DB_EQAA,
-				       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
-				       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1));
+		radeon_set_context_reg(cs, R_028804_DB_EQAA, db_eqaa);
 		radeon_set_context_reg(cs, R_028A4C_PA_SC_MODE_CNTL_1,
 				       sc_mode_cntl_1);
 	}
