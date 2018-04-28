@@ -541,7 +541,6 @@ genX(emit_vertices)(struct brw_context *brw)
 
    const bool uses_draw_params =
       vs_prog_data->uses_firstvertex ||
-      vs_prog_data->uses_basevertex ||
       vs_prog_data->uses_baseinstance;
 
    const bool uses_derived_draw_params =

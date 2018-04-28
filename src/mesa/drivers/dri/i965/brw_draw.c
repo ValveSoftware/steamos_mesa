@@ -825,16 +825,12 @@ brw_draw_single_prim(struct gl_context *ctx,
    const struct brw_vs_prog_data *vs_prog_data =
       brw_vs_prog_data(brw->vs.base.prog_data);
    if (prim_id > 0) {
-      const bool uses_firstvertex =
-         vs_prog_data->uses_basevertex ||
-         vs_prog_data->uses_firstvertex;
-
       const bool uses_draw_parameters =
-         uses_firstvertex ||
+         vs_prog_data->uses_firstvertex ||
          vs_prog_data->uses_baseinstance;
 
       if ((uses_draw_parameters && prim->is_indirect) ||
-          (uses_firstvertex &&
+          (vs_prog_data->uses_firstvertex &&
            brw->draw.params.firstvertex != new_firstvertex) ||
           (vs_prog_data->uses_baseinstance &&
            brw->draw.params.gl_baseinstance != new_baseinstance))
