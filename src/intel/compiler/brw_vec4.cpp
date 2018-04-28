@@ -2838,6 +2838,10 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       prog_data->uses_basevertex = true;
 
    if (shader->info.system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_IS_INDEXED_DRAW))
+      prog_data->uses_is_indexed_draw = true;
+
+   if (shader->info.system_values_read &
        BITFIELD64_BIT(SYSTEM_VALUE_FIRST_VERTEX))
       prog_data->uses_firstvertex = true;
 

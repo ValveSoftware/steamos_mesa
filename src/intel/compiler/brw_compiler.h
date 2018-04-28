@@ -978,6 +978,7 @@ struct brw_vs_prog_data {
    bool uses_vertexid;
    bool uses_instanceid;
    bool uses_basevertex;
+   bool uses_is_indexed_draw;
    bool uses_firstvertex;
    bool uses_baseinstance;
    bool uses_drawid;
