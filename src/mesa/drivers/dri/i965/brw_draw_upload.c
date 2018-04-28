@@ -716,11 +716,11 @@ brw_prepare_shader_draw_parameters(struct brw_context *brw)
                       &brw->draw.draw_params_offset);
    }
 
-   if (vs_prog_data->uses_drawid) {
+   if (vs_prog_data->uses_drawid || vs_prog_data->uses_is_indexed_draw) {
       brw_upload_data(&brw->upload,
-                      &brw->draw.gl_drawid, sizeof(brw->draw.gl_drawid), 4,
-                      &brw->draw.draw_id_bo,
-                      &brw->draw.draw_id_offset);
+                      &brw->draw.derived_params, sizeof(brw->draw.derived_params), 4,
+                      &brw->draw.derived_draw_params_bo,
+                      &brw->draw.derived_draw_params_offset);
    }
 }
 

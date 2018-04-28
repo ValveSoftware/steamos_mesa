@@ -116,6 +116,7 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
 
       case nir_intrinsic_load_vertex_id_zero_base:
       case nir_intrinsic_load_base_vertex:
+      case nir_intrinsic_load_is_indexed_draw:
       case nir_intrinsic_load_first_vertex:
       case nir_intrinsic_load_instance_id:
       case nir_intrinsic_load_base_instance:
@@ -2460,6 +2461,7 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
    }
 
    case nir_intrinsic_load_first_vertex:
+   case nir_intrinsic_load_is_indexed_draw:
       unreachable("lowered by brw_nir_lower_vs_inputs");
 
    default:

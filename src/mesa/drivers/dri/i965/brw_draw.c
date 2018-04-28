@@ -861,16 +861,20 @@ brw_draw_single_prim(struct gl_context *ctx,
    }
 
    /* gl_DrawID always needs its own vertex buffer since it's not part of
-    * the indirect parameter buffer. If the program uses gl_DrawID we need
-    * to flag BRW_NEW_VERTICES. For the first iteration, we don't have
-    * valid vs_prog_data, but we always flag BRW_NEW_VERTICES before
-    * the loop.
+    * the indirect parameter buffer. Same for is_indexed_draw, which shares
+    * the buffer with gl_DrawID. If the program uses gl_DrawID, we need to
+    * flag BRW_NEW_VERTICES. For the first iteration, we don't have valid
+    * vs_prog_data, but we always flag BRW_NEW_VERTICES before the loop.
     */
-   brw->draw.gl_drawid = prim->draw_id;
-   brw_bo_unreference(brw->draw.draw_id_bo);
-   brw->draw.draw_id_bo = NULL;
    if (prim_id > 0 && vs_prog_data->uses_drawid)
       brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+
+   brw->draw.derived_params.gl_drawid = prim->draw_id;
+   brw->draw.derived_params.is_indexed_draw = prim->indexed ? ~0 : 0;
+
+   brw_bo_unreference(brw->draw.derived_draw_params_bo);
+   brw->draw.derived_draw_params_bo = NULL;
+   brw->draw.derived_draw_params_offset = 0;
 
    if (devinfo->gen < 6)
       brw_set_prim(brw, prim);

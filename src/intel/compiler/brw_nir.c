@@ -266,6 +266,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
             case nir_intrinsic_load_base_instance:
             case nir_intrinsic_load_vertex_id_zero_base:
             case nir_intrinsic_load_instance_id:
+            case nir_intrinsic_load_is_indexed_draw:
             case nir_intrinsic_load_draw_id: {
                b.cursor = nir_after_instr(&intrin->instr);
 
@@ -293,11 +294,15 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                   nir_intrinsic_set_component(load, 3);
                   break;
                case nir_intrinsic_load_draw_id:
-                  /* gl_DrawID is stored right after gl_VertexID and friends
-                   * if any of them exist.
+               case nir_intrinsic_load_is_indexed_draw:
+                  /* gl_DrawID and IsIndexedDraw are stored right after
+                   * gl_VertexID and friends if any of them exist.
                    */
                   nir_intrinsic_set_base(load, num_inputs + has_sgvs);
-                  nir_intrinsic_set_component(load, 0);
+                  if (intrin->intrinsic == nir_intrinsic_load_draw_id)
+                     nir_intrinsic_set_component(load, 0);
+                  else
+                     nir_intrinsic_set_component(load, 1);
                   break;
                default:
                   unreachable("Invalid system value intrinsic");

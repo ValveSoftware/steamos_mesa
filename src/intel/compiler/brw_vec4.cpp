@@ -2833,6 +2833,13 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       nr_attribute_slots++;
    }
 
+   /* gl_DrawID and IsIndexedDraw share its very own vec4 */
+   if (shader->info.system_values_read &
+       (BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID) |
+        BITFIELD64_BIT(SYSTEM_VALUE_IS_INDEXED_DRAW))) {
+      nr_attribute_slots++;
+   }
+
    if (shader->info.system_values_read &
        BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX))
       prog_data->uses_basevertex = true;
@@ -2857,12 +2864,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
        BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID))
       prog_data->uses_instanceid = true;
 
-   /* gl_DrawID has its very own vec4 */
    if (shader->info.system_values_read &
-       BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID)) {
-      prog_data->uses_drawid = true;
-      nr_attribute_slots++;
-   }
+       BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID))
+          prog_data->uses_drawid = true;
 
    /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
     * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
