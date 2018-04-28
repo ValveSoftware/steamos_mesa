@@ -3601,10 +3601,13 @@ si_make_texture_descriptor(struct si_screen *screen,
 	const struct util_format_description *desc;
 	unsigned char swizzle[4];
 	int first_non_void;
-	unsigned num_format, data_format, type;
+	unsigned num_format, data_format, type, num_samples;
 	uint64_t va;
 
 	desc = util_format_description(pipe_format);
+
+	num_samples = desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS ?
+			MAX2(1, res->nr_samples) : tex->num_color_samples;
 
 	if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS) {
 		const unsigned char swizzle_xxxx[4] = {0, 0, 0, 0};
@@ -3728,7 +3731,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 
 		assert(res->target != PIPE_TEXTURE_3D || (first_level == 0 && last_level == 0));
 	} else {
-		type = si_tex_dim(screen, tex, target, res->nr_samples);
+		type = si_tex_dim(screen, tex, target, num_samples);
 	}
 
 	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
@@ -3751,10 +3754,9 @@ si_make_texture_descriptor(struct si_screen *screen,
 		    S_008F1C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
 		    S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
 		    S_008F1C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
-		    S_008F1C_BASE_LEVEL(res->nr_samples > 1 ?
-					0 : first_level) |
-		    S_008F1C_LAST_LEVEL(res->nr_samples > 1 ?
-					util_logbase2(res->nr_samples) :
+		    S_008F1C_BASE_LEVEL(num_samples > 1 ? 0 : first_level) |
+		    S_008F1C_LAST_LEVEL(num_samples > 1 ?
+					util_logbase2(num_samples) :
 					last_level) |
 		    S_008F1C_TYPE(type));
 	state[4] = 0;
@@ -3774,8 +3776,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 			state[4] |= S_008F20_DEPTH(last_layer);
 
 		state[4] |= S_008F20_BC_SWIZZLE(bc_swizzle);
-		state[5] |= S_008F24_MAX_MIP(res->nr_samples > 1 ?
-					     util_logbase2(res->nr_samples) :
+		state[5] |= S_008F24_MAX_MIP(num_samples > 1 ?
+					     util_logbase2(num_samples) :
 					     tex->buffer.b.b.last_level);
 	} else {
 		state[3] |= S_008F1C_POW2_PAD(res->last_level > 0);
@@ -3803,37 +3805,99 @@ si_make_texture_descriptor(struct si_screen *screen,
 
 		va = tex->buffer.gpu_address + tex->fmask_offset;
 
+#define FMASK(s,f) (((unsigned)(s) * 16) + (f))
 		if (screen->info.chip_class >= GFX9) {
 			data_format = V_008F14_IMG_DATA_FORMAT_FMASK;
-			switch (res->nr_samples) {
-			case 2:
+			switch (FMASK(res->nr_samples, tex->num_color_samples)) {
+			case FMASK(2,1):
+				num_format = V_008F14_IMG_FMASK_8_2_1;
+				break;
+			case FMASK(2,2):
 				num_format = V_008F14_IMG_FMASK_8_2_2;
 				break;
-			case 4:
+			case FMASK(4,1):
+				num_format = V_008F14_IMG_FMASK_8_4_1;
+				break;
+			case FMASK(4,2):
+				num_format = V_008F14_IMG_FMASK_8_4_2;
+				break;
+			case FMASK(4,4):
 				num_format = V_008F14_IMG_FMASK_8_4_4;
 				break;
-			case 8:
+			case FMASK(8,1):
+				num_format = V_008F14_IMG_FMASK_8_8_1;
+				break;
+			case FMASK(8,2):
+				num_format = V_008F14_IMG_FMASK_16_8_2;
+				break;
+			case FMASK(8,4):
+				num_format = V_008F14_IMG_FMASK_32_8_4;
+				break;
+			case FMASK(8,8):
 				num_format = V_008F14_IMG_FMASK_32_8_8;
+				break;
+			case FMASK(16,1):
+				num_format = V_008F14_IMG_FMASK_16_16_1;
+				break;
+			case FMASK(16,2):
+				num_format = V_008F14_IMG_FMASK_32_16_2;
+				break;
+			case FMASK(16,4):
+				num_format = V_008F14_IMG_FMASK_64_16_4;
+				break;
+			case FMASK(16,8):
+				num_format = V_008F14_IMG_FMASK_64_16_8;
 				break;
 			default:
 				unreachable("invalid nr_samples");
 			}
 		} else {
-			switch (res->nr_samples) {
-			case 2:
+			switch (FMASK(res->nr_samples, tex->num_color_samples)) {
+			case FMASK(2,1):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F1;
+				break;
+			case FMASK(2,2):
 				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F2;
 				break;
-			case 4:
+			case FMASK(4,1):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F1;
+				break;
+			case FMASK(4,2):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F2;
+				break;
+			case FMASK(4,4):
 				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F4;
 				break;
-			case 8:
+			case FMASK(8,1):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S8_F1;
+				break;
+			case FMASK(8,2):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK16_S8_F2;
+				break;
+			case FMASK(8,4):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F4;
+				break;
+			case FMASK(8,8):
 				data_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
+				break;
+			case FMASK(16,1):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK16_S16_F1;
+				break;
+			case FMASK(16,2):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S16_F2;
+				break;
+			case FMASK(16,4):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK64_S16_F4;
+				break;
+			case FMASK(16,8):
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK64_S16_F8;
 				break;
 			default:
 				unreachable("invalid nr_samples");
 			}
 			num_format = V_008F14_IMG_NUM_FORMAT_UINT;
 		}
+#undef FMASK
 
 		fmask_state[0] = (va >> 8) | tex->surface.fmask_tile_swizzle;
 		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
