@@ -31,8 +31,17 @@
 	 (((unsigned)(s2x) & 0xf) << 16) | (((unsigned)(s2y) & 0xf) << 20) | \
 	 (((unsigned)(s3x) & 0xf) << 24) | (((unsigned)(s3y) & 0xf) << 28))
 
-/* 2xMSAA
- * There are two locations (4, 4), (-4, -4). */
+/* For obtaining location coordinates from registers */
+#define SEXT4(x)		((int)((x) | ((x) & 0x8 ? 0xfffffff0 : 0)))
+#define GET_SFIELD(reg, index)	SEXT4(((reg) >> ((index) * 4)) & 0xf)
+#define GET_SX(reg, index)	GET_SFIELD((reg)[(index) / 4], ((index) % 4) * 2)
+#define GET_SY(reg, index)	GET_SFIELD((reg)[(index) / 4], ((index) % 4) * 2 + 1)
+
+/* 1x MSAA */
+static const uint32_t sample_locs_1x =
+	FILL_SREG( 0, 0,   0, 0,   0, 0,   0, 0); /* S1, S2, S3 fields are not used by 1x */
+
+/* 2x MSAA */
 static const uint32_t sample_locs_2x =
 	FILL_SREG(4, 4, -4, -4, 0, 0, 0, 0); /* S2 & S3 fields are not used by 2x MSAA */
 
@@ -57,47 +66,29 @@ static const uint32_t sample_locs_16x[] = {
 static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
 				   unsigned sample_index, float *out_value)
 {
-	int offset, index;
-	struct {
-		int idx:4;
-	} val;
+	const uint32_t *sample_locs;
 
 	switch (sample_count) {
 	case 1:
 	default:
-		out_value[0] = out_value[1] = 0.5;
+		sample_locs = &sample_locs_1x;
 		break;
 	case 2:
-		offset = 4 * (sample_index * 2);
-		val.idx = (sample_locs_2x >> offset) & 0xf;
-		out_value[0] = (float)(val.idx + 8) / 16.0f;
-		val.idx = (sample_locs_2x >> (offset + 4)) & 0xf;
-		out_value[1] = (float)(val.idx + 8) / 16.0f;
+		sample_locs = &sample_locs_2x;
 		break;
 	case 4:
-		offset = 4 * (sample_index * 2);
-		val.idx = (sample_locs_4x >> offset) & 0xf;
-		out_value[0] = (float)(val.idx + 8) / 16.0f;
-		val.idx = (sample_locs_4x >> (offset + 4)) & 0xf;
-		out_value[1] = (float)(val.idx + 8) / 16.0f;
+		sample_locs = &sample_locs_4x;
 		break;
 	case 8:
-		offset = 4 * (sample_index % 4 * 2);
-		index = sample_index / 4;
-		val.idx = (sample_locs_8x[index] >> offset) & 0xf;
-		out_value[0] = (float)(val.idx + 8) / 16.0f;
-		val.idx = (sample_locs_8x[index] >> (offset + 4)) & 0xf;
-		out_value[1] = (float)(val.idx + 8) / 16.0f;
+		sample_locs = sample_locs_8x;
 		break;
 	case 16:
-		offset = 4 * (sample_index % 4 * 2);
-		index = sample_index / 4;
-		val.idx = (sample_locs_16x[index] >> offset) & 0xf;
-		out_value[0] = (float)(val.idx + 8) / 16.0f;
-		val.idx = (sample_locs_16x[index] >> (offset + 4)) & 0xf;
-		out_value[1] = (float)(val.idx + 8) / 16.0f;
+		sample_locs = sample_locs_16x;
 		break;
 	}
+
+	out_value[0] = (GET_SX(sample_locs, sample_index) + 8) / 16.0f;
+	out_value[1] = (GET_SY(sample_locs, sample_index) + 8) / 16.0f;
 }
 
 void si_emit_sample_locations(struct radeon_winsys_cs *cs, int nr_samples)
