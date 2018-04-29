@@ -182,6 +182,47 @@ static const enum pipe_swizzle set_alpha[PIPE_SWIZZLE_MAX] = {
    PIPE_SWIZZLE_NONE
 };
 
+static const enum pipe_swizzle set_000X[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
+
+static const enum pipe_swizzle set_XXXX[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
+
+static const enum pipe_swizzle set_XXX1[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
+
+static const enum pipe_swizzle set_XXXY[PIPE_SWIZZLE_MAX] = {
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_X,
+   PIPE_SWIZZLE_Y,
+   PIPE_SWIZZLE_0,
+   PIPE_SWIZZLE_1,
+   PIPE_SWIZZLE_NONE
+};
+
+
 /**
  * Initialize the shader-neutral fields of svga_compile_key from context
  * state.  This is basically the texture-related state.
@@ -229,20 +270,41 @@ svga_init_shader_key_common(const struct svga_context *svga,
          assert(view->texture->nr_samples < (1 << 5)); /* 5-bit field */
          key->tex[i].num_samples = view->texture->nr_samples;
 
-         /* If we have a non-alpha view into an svga3d surface with an
-          * alpha channel, then explicitly set the alpha channel to 1
-          * when sampling. Note that we need to check the
-          * actual device format to cover also imported surface cases.
-          */
-         const enum pipe_swizzle *swizzle_tab =
-            (view->texture->target != PIPE_BUFFER &&
-             !util_format_has_alpha(view->format) &&
-             svga_texture_device_format_has_alpha(view->texture)) ?
-            set_alpha : copy_alpha;
+         const enum pipe_swizzle *swizzle_tab;
+         if (view->texture->target == PIPE_BUFFER) {
+            SVGA3dSurfaceFormat svga_format;
+            unsigned tf_flags;
 
-         if (view->texture->format == PIPE_FORMAT_DXT1_RGB ||
-             view->texture->format == PIPE_FORMAT_DXT1_SRGB)
-            swizzle_tab = set_alpha;
+            /* Apply any special swizzle mask for the view format if needed */
+
+            svga_translate_texture_buffer_view_format(view->format,
+                                                      &svga_format, &tf_flags);
+            if (tf_flags & TF_000X)
+               swizzle_tab = set_000X;
+            else if (tf_flags & TF_XXXX)
+               swizzle_tab = set_XXXX;
+            else if (tf_flags & TF_XXX1)
+               swizzle_tab = set_XXX1;
+            else if (tf_flags & TF_XXXY)
+               swizzle_tab = set_XXXY;
+            else
+               swizzle_tab = copy_alpha;
+         }
+         else {
+            /* If we have a non-alpha view into an svga3d surface with an
+             * alpha channel, then explicitly set the alpha channel to 1
+             * when sampling. Note that we need to check the
+             * actual device format to cover also imported surface cases.
+             */
+            swizzle_tab =
+               (!util_format_has_alpha(view->format) &&
+                svga_texture_device_format_has_alpha(view->texture)) ?
+                set_alpha : copy_alpha;
+
+            if (view->texture->format == PIPE_FORMAT_DXT1_RGB ||
+                view->texture->format == PIPE_FORMAT_DXT1_SRGB)
+               swizzle_tab = set_alpha;
+         }
 
          key->tex[i].swizzle_r = swizzle_tab[view->swizzle_r];
          key->tex[i].swizzle_g = swizzle_tab[view->swizzle_g];
