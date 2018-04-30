@@ -31,6 +31,7 @@
 #include "intel_image.h"
 #include "intel_mipmap_tree.h"
 #include "intel_tex.h"
+#include "intel_tiled_memcpy.h"
 #include "intel_blit.h"
 #include "intel_fbo.h"
 
@@ -3023,7 +3024,7 @@ intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 }
 
 static void
-intel_miptree_unmap_gtt(struct brw_context *brw,
+intel_miptree_unmap_map(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
                         struct intel_miptree_map *map,
                         unsigned int level, unsigned int slice)
@@ -3032,7 +3033,7 @@ intel_miptree_unmap_gtt(struct brw_context *brw,
 }
 
 static void
-intel_miptree_map_gtt(struct brw_context *brw,
+intel_miptree_map_map(struct brw_context *brw,
 		      struct intel_mipmap_tree *mt,
 		      struct intel_miptree_map *map,
 		      unsigned int level, unsigned int slice)
@@ -3080,7 +3081,7 @@ intel_miptree_map_gtt(struct brw_context *brw,
        mt, _mesa_get_format_name(mt->format),
        x, y, map->ptr, map->stride);
 
-   map->unmap = intel_miptree_unmap_gtt;
+   map->unmap = intel_miptree_unmap_map;
 }
 
 static void
@@ -3110,6 +3111,94 @@ intel_miptree_unmap_blit(struct brw_context *brw,
    }
 
    intel_miptree_release(&map->linear_mt);
+}
+
+/* Compute extent parameters for use with tiled_memcpy functions.
+ * xs are in units of bytes and ys are in units of strides.
+ */
+static inline void
+tile_extents(struct intel_mipmap_tree *mt, struct intel_miptree_map *map,
+             unsigned int level, unsigned int slice, unsigned int *x1_B,
+             unsigned int *x2_B, unsigned int *y1_el, unsigned int *y2_el)
+{
+   unsigned int block_width, block_height;
+   unsigned int x0_el, y0_el;
+
+   _mesa_get_format_block_size(mt->format, &block_width, &block_height);
+
+   assert(map->x % block_width == 0);
+   assert(map->y % block_height == 0);
+
+   intel_miptree_get_image_offset(mt, level, slice, &x0_el, &y0_el);
+   *x1_B = (map->x / block_width + x0_el) * mt->cpp;
+   *y1_el = map->y / block_height + y0_el;
+   *x2_B = (DIV_ROUND_UP(map->x + map->w, block_width) + x0_el) * mt->cpp;
+   *y2_el = DIV_ROUND_UP(map->y + map->h, block_height) + y0_el;
+}
+
+static void
+intel_miptree_unmap_tiled_memcpy(struct brw_context *brw,
+                                 struct intel_mipmap_tree *mt,
+                                 struct intel_miptree_map *map,
+                                 unsigned int level,
+                                 unsigned int slice)
+{
+   if (map->mode & GL_MAP_WRITE_BIT) {
+      unsigned int x1, x2, y1, y2;
+      tile_extents(mt, map, level, slice, &x1, &x2, &y1, &y2);
+
+      char *dst = intel_miptree_map_raw(brw, mt, map->mode | MAP_RAW);
+      dst += mt->offset;
+
+      linear_to_tiled(x1, x2, y1, y2, dst, map->ptr, mt->surf.row_pitch,
+                      map->stride, brw->has_swizzling, mt->surf.tiling, memcpy);
+
+      intel_miptree_unmap_raw(mt);
+   }
+   _mesa_align_free(map->buffer);
+   map->buffer = map->ptr = NULL;
+}
+
+static void
+intel_miptree_map_tiled_memcpy(struct brw_context *brw,
+                               struct intel_mipmap_tree *mt,
+                               struct intel_miptree_map *map,
+                               unsigned int level, unsigned int slice)
+{
+   intel_miptree_access_raw(brw, mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
+
+   unsigned int x1, x2, y1, y2;
+   tile_extents(mt, map, level, slice, &x1, &x2, &y1, &y2);
+   map->stride = ALIGN(_mesa_format_row_stride(mt->format, map->w), 16);
+
+   /* The tiling and detiling functions require that the linear buffer
+    * has proper 16-byte alignment (that is, its `x0` is 16-byte
+    * aligned). Here we over-allocate the linear buffer by enough
+    * bytes to get the proper alignment.
+    */
+   map->buffer = _mesa_align_malloc(map->stride * (y2 - y1) + (x1 & 0xf), 16);
+   map->ptr = (char *)map->buffer + (x1 & 0xf);
+   assert(map->buffer);
+
+   if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
+      char *src = intel_miptree_map_raw(brw, mt, map->mode | MAP_RAW);
+      src += mt->offset;
+
+      const mem_copy_fn fn =
+#if defined(USE_SSE41)
+         cpu_has_sse4_1 ? (mem_copy_fn)_mesa_streaming_load_memcpy :
+#endif
+         memcpy;
+
+      tiled_to_linear(x1, x2, y1, y2, map->ptr, src, map->stride,
+                      mt->surf.row_pitch, brw->has_swizzling, mt->surf.tiling,
+                      fn);
+
+      intel_miptree_unmap_raw(mt);
+   }
+
+   map->unmap = intel_miptree_unmap_tiled_memcpy;
 }
 
 static void
@@ -3643,6 +3732,7 @@ intel_miptree_map(struct brw_context *brw,
                   void **out_ptr,
                   ptrdiff_t *out_stride)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_miptree_map *map;
 
    assert(mt->surf.samples == 1);
@@ -3663,6 +3753,8 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_depthstencil(brw, mt, map, level, slice);
    } else if (use_intel_mipree_map_blit(brw, mt, mode, level, slice)) {
       intel_miptree_map_blit(brw, mt, map, level, slice);
+   } else if (mt->surf.tiling != ISL_TILING_LINEAR && devinfo->gen > 4) {
+      intel_miptree_map_tiled_memcpy(brw, mt, map, level, slice);
 #if defined(USE_SSE41)
    } else if (!(mode & GL_MAP_WRITE_BIT) &&
               !mt->compressed && cpu_has_sse4_1 &&
@@ -3670,7 +3762,9 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {
-      intel_miptree_map_gtt(brw, mt, map, level, slice);
+      if (mt->surf.tiling != ISL_TILING_LINEAR)
+         perf_debug("intel_miptree_map: mapping via gtt");
+      intel_miptree_map_map(brw, mt, map, level, slice);
    }
 
    *out_ptr = map->ptr;
