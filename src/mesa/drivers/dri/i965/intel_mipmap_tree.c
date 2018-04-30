@@ -3066,7 +3066,10 @@ intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 }
 
 static void
-intel_miptree_unmap_gtt(struct intel_mipmap_tree *mt)
+intel_miptree_unmap_gtt(struct brw_context *brw,
+                        struct intel_mipmap_tree *mt,
+                        struct intel_miptree_map *map,
+                        unsigned int level, unsigned int slice)
 {
    intel_miptree_unmap_raw(mt);
 }
@@ -3116,6 +3119,8 @@ intel_miptree_map_gtt(struct brw_context *brw,
        map->x, map->y, map->w, map->h,
        mt, _mesa_get_format_name(mt->format),
        x, y, map->ptr, map->stride);
+
+   map->unmap = intel_miptree_unmap_gtt;
 }
 
 static void
@@ -3181,6 +3186,7 @@ intel_miptree_map_blit(struct brw_context *brw,
        mt, _mesa_get_format_name(mt->format),
        level, slice, map->ptr, map->stride);
 
+   map->unmap = intel_miptree_unmap_blit;
    return;
 
 fail:
@@ -3262,6 +3268,8 @@ intel_miptree_map_movntdqa(struct brw_context *brw,
    }
 
    intel_miptree_unmap_raw(mt);
+
+   map->unmap = intel_miptree_unmap_movntdqa;
 }
 #endif
 
@@ -3338,6 +3346,8 @@ intel_miptree_map_s8(struct brw_context *brw,
 	  map->x, map->y, map->w, map->h,
 	  mt, map->ptr, map->stride);
    }
+
+   map->unmap = intel_miptree_unmap_s8;
 }
 
 static void
@@ -3390,6 +3400,7 @@ intel_miptree_map_etc(struct brw_context *brw,
    map->buffer = malloc(_mesa_format_image_size(mt->etc_format,
                                                 map->w, map->h, 1));
    map->ptr = map->buffer;
+   map->unmap = intel_miptree_unmap_etc;
 }
 
 /**
@@ -3531,6 +3542,8 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
 	  map->x, map->y, map->w, map->h,
 	  mt, map->ptr, map->stride);
    }
+
+   map->unmap = intel_miptree_unmap_depthstencil;
 }
 
 /**
@@ -3702,22 +3715,8 @@ intel_miptree_unmap(struct brw_context *brw,
    DBG("%s: mt %p (%s) level %d slice %d\n", __func__,
        mt, _mesa_get_format_name(mt->format), level, slice);
 
-   if (mt->format == MESA_FORMAT_S_UINT8) {
-      intel_miptree_unmap_s8(brw, mt, map, level, slice);
-   } else if (mt->etc_format != MESA_FORMAT_NONE &&
-              !(map->mode & BRW_MAP_DIRECT_BIT)) {
-      intel_miptree_unmap_etc(brw, mt, map, level, slice);
-   } else if (mt->stencil_mt && !(map->mode & BRW_MAP_DIRECT_BIT)) {
-      intel_miptree_unmap_depthstencil(brw, mt, map, level, slice);
-   } else if (map->linear_mt) {
-      intel_miptree_unmap_blit(brw, mt, map, level, slice);
-#if defined(USE_SSE41)
-   } else if (map->buffer && cpu_has_sse4_1) {
-      intel_miptree_unmap_movntdqa(brw, mt, map, level, slice);
-#endif
-   } else {
-      intel_miptree_unmap_gtt(mt);
-   }
+   if (map->unmap)
+	   map->unmap(brw, mt, map, level, slice);
 
    intel_miptree_release_map(mt, level, slice);
 }

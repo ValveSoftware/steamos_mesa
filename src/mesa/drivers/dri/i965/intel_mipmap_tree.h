@@ -88,6 +88,12 @@ struct intel_miptree_map {
    void *ptr;
    /** Stride of the mapping. */
    int stride;
+
+   void (*unmap)(struct brw_context *brw,
+                 struct intel_mipmap_tree *mt,
+                 struct intel_miptree_map *map,
+                 unsigned int level,
+                 unsigned int slice);
 };
 
 /**
