@@ -1655,7 +1655,7 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    intel_obj->needs_validate = true;
 }
 
-static void
+static bool
 intel_miptree_init_mcs(struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
                        int init_value)
@@ -1675,13 +1675,14 @@ intel_miptree_init_mcs(struct brw_context *brw,
    void *map = brw_bo_map(brw, mt->aux_buf->bo, MAP_WRITE | MAP_RAW);
    if (unlikely(map == NULL)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
-      brw_bo_unreference(mt->aux_buf->bo);
-      free(mt->aux_buf);
-      return;
+      intel_miptree_aux_buffer_free(mt->aux_buf);
+      mt->aux_buf = NULL;
+      return false;
    }
    void *data = map;
    memset(data, init_value, mt->aux_buf->surf.size);
    brw_bo_unmap(mt->aux_buf->bo);
+   return true;
 }
 
 static struct intel_miptree_aux_buffer *
@@ -1759,14 +1760,13 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    const uint32_t alloc_flags = 0;
    mt->aux_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
                                         &temp_mcs_surf, alloc_flags, mt);
-   if (!mt->aux_buf) {
+   if (!mt->aux_buf ||
+       !intel_miptree_init_mcs(brw, mt, 0xFF)) {
       free(aux_state);
       return false;
    }
 
    mt->aux_state = aux_state;
-
-   intel_miptree_init_mcs(brw, mt, 0xFF);
 
    return true;
 }
