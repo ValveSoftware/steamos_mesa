@@ -3393,7 +3393,7 @@ intel_miptree_map_etc(struct brw_context *brw,
 }
 
 /**
- * Mapping function for packed depth/stencil miptrees backed by real separate
+ * Mapping functions for packed depth/stencil miptrees backed by real separate
  * miptrees for depth and stencil.
  *
  * On gen7, and to support HiZ pre-gen7, we have to have the stencil buffer
@@ -3403,6 +3403,65 @@ intel_miptree_map_etc(struct brw_context *brw,
  * operations.  We give Mesa core that access by mallocing a temporary and
  * copying the data between the actual backing store and the temporary.
  */
+static void
+intel_miptree_unmap_depthstencil(struct brw_context *brw,
+				 struct intel_mipmap_tree *mt,
+				 struct intel_miptree_map *map,
+				 unsigned int level,
+				 unsigned int slice)
+{
+   struct intel_mipmap_tree *z_mt = mt;
+   struct intel_mipmap_tree *s_mt = mt->stencil_mt;
+   bool map_z32f_x24s8 = mt->format == MESA_FORMAT_Z_FLOAT32;
+
+   if (map->mode & GL_MAP_WRITE_BIT) {
+      uint32_t *packed_map = map->ptr;
+      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_WRITE_BIT);
+      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_WRITE_BIT);
+      unsigned int s_image_x, s_image_y;
+      unsigned int z_image_x, z_image_y;
+
+      intel_miptree_get_image_offset(s_mt, level, slice,
+				     &s_image_x, &s_image_y);
+      intel_miptree_get_image_offset(z_mt, level, slice,
+				     &z_image_x, &z_image_y);
+
+      for (uint32_t y = 0; y < map->h; y++) {
+	 for (uint32_t x = 0; x < map->w; x++) {
+	    ptrdiff_t s_offset = intel_offset_S8(s_mt->surf.row_pitch,
+						 x + s_image_x + map->x,
+						 y + s_image_y + map->y,
+						 brw->has_swizzling);
+	    ptrdiff_t z_offset = ((y + z_image_y + map->y) *
+                                  (z_mt->surf.row_pitch / 4) +
+				  (x + z_image_x + map->x));
+
+	    if (map_z32f_x24s8) {
+	       z_map[z_offset] = packed_map[(y * map->w + x) * 2 + 0];
+	       s_map[s_offset] = packed_map[(y * map->w + x) * 2 + 1];
+	    } else {
+	       uint32_t packed = packed_map[y * map->w + x];
+	       s_map[s_offset] = packed >> 24;
+	       z_map[z_offset] = packed;
+	    }
+	 }
+      }
+
+      intel_miptree_unmap_raw(s_mt);
+      intel_miptree_unmap_raw(z_mt);
+
+      DBG("%s: %d,%d %dx%d from z mt %p (%s) %d,%d, s mt %p %d,%d = %p/%d\n",
+	  __func__,
+	  map->x, map->y, map->w, map->h,
+	  z_mt, _mesa_get_format_name(z_mt->format),
+	  map->x + z_image_x, map->y + z_image_y,
+	  s_mt, map->x + s_image_x, map->y + s_image_y,
+	  map->ptr, map->stride);
+   }
+
+   free(map->buffer);
+}
+
 static void
 intel_miptree_map_depthstencil(struct brw_context *brw,
 			       struct intel_mipmap_tree *mt,
@@ -3472,65 +3531,6 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
 	  map->x, map->y, map->w, map->h,
 	  mt, map->ptr, map->stride);
    }
-}
-
-static void
-intel_miptree_unmap_depthstencil(struct brw_context *brw,
-				 struct intel_mipmap_tree *mt,
-				 struct intel_miptree_map *map,
-				 unsigned int level,
-				 unsigned int slice)
-{
-   struct intel_mipmap_tree *z_mt = mt;
-   struct intel_mipmap_tree *s_mt = mt->stencil_mt;
-   bool map_z32f_x24s8 = mt->format == MESA_FORMAT_Z_FLOAT32;
-
-   if (map->mode & GL_MAP_WRITE_BIT) {
-      uint32_t *packed_map = map->ptr;
-      uint8_t *s_map = intel_miptree_map_raw(brw, s_mt, GL_MAP_WRITE_BIT);
-      uint32_t *z_map = intel_miptree_map_raw(brw, z_mt, GL_MAP_WRITE_BIT);
-      unsigned int s_image_x, s_image_y;
-      unsigned int z_image_x, z_image_y;
-
-      intel_miptree_get_image_offset(s_mt, level, slice,
-				     &s_image_x, &s_image_y);
-      intel_miptree_get_image_offset(z_mt, level, slice,
-				     &z_image_x, &z_image_y);
-
-      for (uint32_t y = 0; y < map->h; y++) {
-	 for (uint32_t x = 0; x < map->w; x++) {
-	    ptrdiff_t s_offset = intel_offset_S8(s_mt->surf.row_pitch,
-						 x + s_image_x + map->x,
-						 y + s_image_y + map->y,
-						 brw->has_swizzling);
-	    ptrdiff_t z_offset = ((y + z_image_y + map->y) *
-                                  (z_mt->surf.row_pitch / 4) +
-				  (x + z_image_x + map->x));
-
-	    if (map_z32f_x24s8) {
-	       z_map[z_offset] = packed_map[(y * map->w + x) * 2 + 0];
-	       s_map[s_offset] = packed_map[(y * map->w + x) * 2 + 1];
-	    } else {
-	       uint32_t packed = packed_map[y * map->w + x];
-	       s_map[s_offset] = packed >> 24;
-	       z_map[z_offset] = packed;
-	    }
-	 }
-      }
-
-      intel_miptree_unmap_raw(s_mt);
-      intel_miptree_unmap_raw(z_mt);
-
-      DBG("%s: %d,%d %dx%d from z mt %p (%s) %d,%d, s mt %p %d,%d = %p/%d\n",
-	  __func__,
-	  map->x, map->y, map->w, map->h,
-	  z_mt, _mesa_get_format_name(z_mt->format),
-	  map->x + z_image_x, map->y + z_image_y,
-	  s_mt, map->x + s_image_x, map->y + s_image_y,
-	  map->ptr, map->stride);
-   }
-
-   free(map->buffer);
 }
 
 /**
