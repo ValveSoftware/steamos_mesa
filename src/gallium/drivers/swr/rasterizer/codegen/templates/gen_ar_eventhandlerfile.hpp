@@ -59,7 +59,7 @@ namespace ArchRast
             outDir << KNOB_DEBUG_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
             mOutputDir = outDir.str();
             if (CreateDirectory(mOutputDir.c_str(), NULL)) {
-                std::cout << "ArchRast Dir:      " << mOutputDir << std::endl << std::endl << std::flush;
+                std::cout << std::endl << "ArchRast Dir:       " << mOutputDir << std::endl << std::endl << std::flush;
             }
 
             // There could be multiple threads creating thread pools. We
