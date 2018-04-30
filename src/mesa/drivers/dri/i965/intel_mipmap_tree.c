@@ -978,11 +978,11 @@ create_ccs_buf_for_image(struct brw_context *brw,
     * system with CCS, we don't have the extra space at the end of the aux
     * buffer. So create a new bo here that will store that clear color.
     */
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   if (devinfo->gen >= 10) {
+   if (brw->isl_dev.ss.clear_color_state_size > 0) {
       mt->aux_buf->clear_color_bo =
-         brw_bo_alloc(brw->bufmgr, "clear_color_bo",
-                      brw->isl_dev.ss.clear_color_state_size);
+         brw_bo_alloc_tiled(brw->bufmgr, "clear_color_bo",
+                            brw->isl_dev.ss.clear_color_state_size,
+                            I915_TILING_NONE, 0, BO_ALLOC_ZEROED);
       if (!mt->aux_buf->clear_color_bo) {
          free(mt->aux_buf);
          mt->aux_buf = NULL;
@@ -1670,9 +1670,9 @@ intel_alloc_aux_buffer(struct brw_context *brw,
 
    uint64_t size = aux_surf->size;
 
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   if (devinfo->gen >= 10) {
-      /* On CNL, instead of setting the clear color in the SURFACE_STATE, we
+   const bool has_indirect_clear = brw->isl_dev.ss.clear_color_state_size > 0;
+   if (has_indirect_clear) {
+      /* On CNL+, instead of setting the clear color in the SURFACE_STATE, we
        * will set a pointer to a dword somewhere that contains the color. So,
        * allocate the space for the clear color value here on the aux buffer.
        */
@@ -1693,7 +1693,8 @@ intel_alloc_aux_buffer(struct brw_context *brw,
    }
 
    /* Initialize the bo to the desired value */
-   if (wants_memset) {
+   const bool needs_memset = wants_memset || has_indirect_clear;
+   if (needs_memset) {
       assert(!(alloc_flags & BO_ALLOC_BUSY));
 
       void *map = brw_bo_map(brw, buf->bo, MAP_WRITE | MAP_RAW);
@@ -1701,11 +1702,21 @@ intel_alloc_aux_buffer(struct brw_context *brw,
          intel_miptree_aux_buffer_free(buf);
          return NULL;
       }
-      memset(map, memset_value, aux_surf->size);
+
+      /* Memset the aux_surf portion of the BO. */
+      if (wants_memset)
+         memset(map, memset_value, aux_surf->size);
+
+      /* Zero the indirect clear color to match ::fast_clear_color. */
+      if (has_indirect_clear) {
+         memset((char *)map + buf->clear_color_offset, 0,
+                brw->isl_dev.ss.clear_color_state_size);
+      }
+
       brw_bo_unmap(buf->bo);
    }
 
-   if (devinfo->gen >= 10) {
+   if (has_indirect_clear) {
       buf->clear_color_bo = buf->bo;
       brw_bo_reference(buf->clear_color_bo);
    }
@@ -1864,7 +1875,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
       isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
    assert(ok);
 
-   const uint32_t alloc_flags = BO_ALLOC_BUSY;
+   const uint32_t alloc_flags = 0;
    mt->aux_buf = intel_alloc_aux_buffer(brw, "hiz-miptree", &temp_hiz_surf,
                                         alloc_flags, false, 0, mt);
 
