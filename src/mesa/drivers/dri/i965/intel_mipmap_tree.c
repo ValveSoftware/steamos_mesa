@@ -3194,6 +3194,18 @@ fail:
  */
 #if defined(USE_SSE41)
 static void
+intel_miptree_unmap_movntdqa(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt,
+                             struct intel_miptree_map *map,
+                             unsigned int level,
+                             unsigned int slice)
+{
+   _mesa_align_free(map->buffer);
+   map->buffer = NULL;
+   map->ptr = NULL;
+}
+
+static void
 intel_miptree_map_movntdqa(struct brw_context *brw,
                            struct intel_mipmap_tree *mt,
                            struct intel_miptree_map *map,
@@ -3250,18 +3262,6 @@ intel_miptree_map_movntdqa(struct brw_context *brw,
    }
 
    intel_miptree_unmap_raw(mt);
-}
-
-static void
-intel_miptree_unmap_movntdqa(struct brw_context *brw,
-                             struct intel_mipmap_tree *mt,
-                             struct intel_miptree_map *map,
-                             unsigned int level,
-                             unsigned int slice)
-{
-   _mesa_align_free(map->buffer);
-   map->buffer = NULL;
-   map->ptr = NULL;
 }
 #endif
 
