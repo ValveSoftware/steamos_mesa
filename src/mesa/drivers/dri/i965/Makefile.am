@@ -92,7 +92,13 @@ libi965_gen11_la_CFLAGS = $(AM_CFLAGS) -DGEN_VERSIONx10=110
 
 noinst_LTLIBRARIES = \
 	libi965_dri.la \
+	libintel_tiled_memcpy.la \
 	$(I965_PERGEN_LIBS)
+
+libintel_tiled_memcpy_la_SOURCES = \
+	$(intel_tiled_memcpy_FILES)
+libintel_tiled_memcpy_la_CFLAGS = \
+	$(AM_CFLAGS) $(SSE41_CFLAGS)
 
 libi965_dri_la_SOURCES = \
 	$(i965_FILES) \
@@ -104,6 +110,7 @@ libi965_dri_la_LIBADD = \
 	$(top_builddir)/src/intel/compiler/libintel_compiler.la \
 	$(top_builddir)/src/intel/blorp/libblorp.la \
 	$(I965_PERGEN_LIBS) \
+	libintel_tiled_memcpy.la
 	$(LIBDRM_LIBS)
 
 BUILT_SOURCES = $(i965_oa_GENERATED_FILES)

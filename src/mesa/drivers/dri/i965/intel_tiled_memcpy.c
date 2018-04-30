@@ -36,6 +36,10 @@
 #include "brw_context.h"
 #include "intel_tiled_memcpy.h"
 
+#if defined(USE_SSE41)
+#include "main/streaming-load-memcpy.h"
+#include <smmintrin.h>
+#endif
 #if defined(__SSSE3__)
 #include <tmmintrin.h>
 #elif defined(__SSE2__)
@@ -212,6 +216,31 @@ rgba8_copy_aligned_src(void *dst, const void *src, size_t bytes)
 
    return dst;
 }
+
+#if defined(USE_SSE41)
+static ALWAYS_INLINE void *
+_memcpy_streaming_load(void *dest, const void *src, size_t count)
+{
+   if (count == 16) {
+      __m128i val = _mm_stream_load_si128((__m128i *)src);
+      _mm_store_si128((__m128i *)dest, val);
+      return dest;
+   } else if (count == 64) {
+      __m128i val0 = _mm_stream_load_si128(((__m128i *)src) + 0);
+      __m128i val1 = _mm_stream_load_si128(((__m128i *)src) + 1);
+      __m128i val2 = _mm_stream_load_si128(((__m128i *)src) + 2);
+      __m128i val3 = _mm_stream_load_si128(((__m128i *)src) + 3);
+      _mm_store_si128(((__m128i *)dest) + 0, val0);
+      _mm_store_si128(((__m128i *)dest) + 1, val1);
+      _mm_store_si128(((__m128i *)dest) + 2, val2);
+      _mm_store_si128(((__m128i *)dest) + 3, val3);
+      return dest;
+   } else {
+      assert(count < 64); /* and (count < 16) for ytiled */
+      return memcpy(dest, src, count);
+   }
+}
+#endif
 
 /**
  * Each row from y0 to y1 is copied in three parts: [x0,x1), [x1,x2), [x2,x3).
@@ -677,6 +706,12 @@ xtiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
          return xtiled_to_linear(0, 0, xtile_width, xtile_width, 0, xtile_height,
                                  dst, src, dst_pitch, swizzle_bit,
                                  rgba8_copy, rgba8_copy_aligned_src);
+#if defined(USE_SSE41)
+      else if (mem_copy == (mem_copy_fn)_mesa_streaming_load_memcpy)
+         return xtiled_to_linear(0, 0, xtile_width, xtile_width, 0, xtile_height,
+                                 dst, src, dst_pitch, swizzle_bit,
+                                 memcpy, _memcpy_streaming_load);
+#endif
       else
          unreachable("not reached");
    } else {
@@ -687,6 +722,12 @@ xtiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
          return xtiled_to_linear(x0, x1, x2, x3, y0, y1,
                                  dst, src, dst_pitch, swizzle_bit,
                                  rgba8_copy, rgba8_copy_aligned_src);
+#if defined(USE_SSE41)
+      else if (mem_copy == (mem_copy_fn)_mesa_streaming_load_memcpy)
+         return xtiled_to_linear(x0, x1, x2, x3, y0, y1,
+                                 dst, src, dst_pitch, swizzle_bit,
+                                 memcpy, _memcpy_streaming_load);
+#endif
       else
          unreachable("not reached");
    }
@@ -719,6 +760,12 @@ ytiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
          return ytiled_to_linear(0, 0, ytile_width, ytile_width, 0, ytile_height,
                                  dst, src, dst_pitch, swizzle_bit,
                                  rgba8_copy, rgba8_copy_aligned_src);
+#if defined(USE_SSE41)
+      else if (mem_copy == (mem_copy_fn)_mesa_streaming_load_memcpy)
+         return ytiled_to_linear(0, 0, ytile_width, ytile_width, 0, ytile_height,
+                                 dst, src, dst_pitch, swizzle_bit,
+                                 memcpy, _memcpy_streaming_load);
+#endif
       else
          unreachable("not reached");
    } else {
@@ -729,6 +776,12 @@ ytiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
          return ytiled_to_linear(x0, x1, x2, x3, y0, y1,
                                  dst, src, dst_pitch, swizzle_bit,
                                  rgba8_copy, rgba8_copy_aligned_src);
+#if defined(USE_SSE41)
+      else if (mem_copy == (mem_copy_fn)_mesa_streaming_load_memcpy)
+         return ytiled_to_linear(x0, x1, x2, x3, y0, y1,
+                                 dst, src, dst_pitch, swizzle_bit,
+                                 memcpy, _memcpy_streaming_load);
+#endif
       else
          unreachable("not reached");
    }
@@ -867,6 +920,15 @@ tiled_to_linear(uint32_t xt1, uint32_t xt2,
    } else {
       unreachable("unsupported tiling");
    }
+
+#if defined(USE_SSE41)
+   if (mem_copy == (mem_copy_fn)_mesa_streaming_load_memcpy) {
+      /* The hidden cacheline sized register used by movntdqa can apparently
+       * give you stale data, so do an mfence to invalidate it.
+       */
+      _mm_mfence();
+   }
+#endif
 
    /* Round out to tile boundaries. */
    xt0 = ALIGN_DOWN(xt1, tw);
