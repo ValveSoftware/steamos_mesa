@@ -3066,6 +3066,12 @@ intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 }
 
 static void
+intel_miptree_unmap_gtt(struct intel_mipmap_tree *mt)
+{
+   intel_miptree_unmap_raw(mt);
+}
+
+static void
 intel_miptree_map_gtt(struct brw_context *brw,
 		      struct intel_mipmap_tree *mt,
 		      struct intel_miptree_map *map,
@@ -3110,12 +3116,6 @@ intel_miptree_map_gtt(struct brw_context *brw,
        map->x, map->y, map->w, map->h,
        mt, _mesa_get_format_name(mt->format),
        x, y, map->ptr, map->stride);
-}
-
-static void
-intel_miptree_unmap_gtt(struct intel_mipmap_tree *mt)
-{
-   intel_miptree_unmap_raw(mt);
 }
 
 static void
