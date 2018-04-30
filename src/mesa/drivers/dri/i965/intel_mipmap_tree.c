@@ -1655,41 +1655,13 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    intel_obj->needs_validate = true;
 }
 
-static bool
-intel_miptree_init_mcs(struct brw_context *brw,
-                       struct intel_mipmap_tree *mt,
-                       int init_value)
-{
-   assert(mt->aux_buf != NULL);
-
-   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
-    *
-    *     When MCS buffer is enabled and bound to MSRT, it is required that it
-    *     is cleared prior to any rendering.
-    *
-    * Since we don't use the MCS buffer for any purpose other than rendering,
-    * it makes sense to just clear it immediately upon allocation.
-    *
-    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
-    */
-   void *map = brw_bo_map(brw, mt->aux_buf->bo, MAP_WRITE | MAP_RAW);
-   if (unlikely(map == NULL)) {
-      fprintf(stderr, "Failed to map mcs buffer into GTT\n");
-      intel_miptree_aux_buffer_free(mt->aux_buf);
-      mt->aux_buf = NULL;
-      return false;
-   }
-   void *data = map;
-   memset(data, init_value, mt->aux_buf->surf.size);
-   brw_bo_unmap(mt->aux_buf->bo);
-   return true;
-}
-
 static struct intel_miptree_aux_buffer *
 intel_alloc_aux_buffer(struct brw_context *brw,
                        const char *name,
                        const struct isl_surf *aux_surf,
                        uint32_t alloc_flags,
+                       bool wants_memset,
+                       uint8_t memset_value,
                        struct intel_mipmap_tree *mt)
 {
    struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
@@ -1718,6 +1690,19 @@ intel_alloc_aux_buffer(struct brw_context *brw,
    if (!buf->bo) {
       free(buf);
       return NULL;
+   }
+
+   /* Initialize the bo to the desired value */
+   if (wants_memset) {
+      assert(!(alloc_flags & BO_ALLOC_BUSY));
+
+      void *map = brw_bo_map(brw, buf->bo, MAP_WRITE | MAP_RAW);
+      if (map == NULL) {
+         intel_miptree_aux_buffer_free(buf);
+         return NULL;
+      }
+      memset(map, memset_value, aux_surf->size);
+      brw_bo_unmap(buf->bo);
    }
 
    if (devinfo->gen >= 10) {
@@ -1758,10 +1743,19 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     * to be just used by the GPU.
     */
    const uint32_t alloc_flags = 0;
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
-                                        &temp_mcs_surf, alloc_flags, mt);
-   if (!mt->aux_buf ||
-       !intel_miptree_init_mcs(brw, mt, 0xFF)) {
+   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
+    *
+    *     When MCS buffer is enabled and bound to MSRT, it is required that it
+    *     is cleared prior to any rendering.
+    *
+    * Since we don't use the MCS buffer for any purpose other than rendering,
+    * it makes sense to just clear it immediately upon allocation.
+    *
+    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
+    */
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "mcs-miptree", &temp_mcs_surf,
+                                        alloc_flags, true, 0xFF, mt);
+   if (!mt->aux_buf) {
       free(aux_state);
       return false;
    }
@@ -1805,7 +1799,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * bits in the aux buffer.
     */
    mt->aux_buf = intel_alloc_aux_buffer(brw, "ccs-miptree", &temp_ccs_surf,
-                                        BO_ALLOC_ZEROED, mt);
+                                        BO_ALLOC_ZEROED, false, 0, mt);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
@@ -1871,8 +1865,8 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    assert(ok);
 
    const uint32_t alloc_flags = BO_ALLOC_BUSY;
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
-                                        &temp_hiz_surf, alloc_flags, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "hiz-miptree", &temp_hiz_surf,
+                                        alloc_flags, false, 0, mt);
 
    if (!mt->aux_buf) {
       free(aux_state);
