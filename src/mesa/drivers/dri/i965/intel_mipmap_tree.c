@@ -3341,27 +3341,6 @@ intel_miptree_map_s8(struct brw_context *brw,
 }
 
 static void
-intel_miptree_map_etc(struct brw_context *brw,
-                      struct intel_mipmap_tree *mt,
-                      struct intel_miptree_map *map,
-                      unsigned int level,
-                      unsigned int slice)
-{
-   assert(mt->etc_format != MESA_FORMAT_NONE);
-   if (mt->etc_format == MESA_FORMAT_ETC1_RGB8) {
-      assert(mt->format == MESA_FORMAT_R8G8B8X8_UNORM);
-   }
-
-   assert(map->mode & GL_MAP_WRITE_BIT);
-   assert(map->mode & GL_MAP_INVALIDATE_RANGE_BIT);
-
-   map->stride = _mesa_format_row_stride(mt->etc_format, map->w);
-   map->buffer = malloc(_mesa_format_image_size(mt->etc_format,
-                                                map->w, map->h, 1));
-   map->ptr = map->buffer;
-}
-
-static void
 intel_miptree_unmap_etc(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
                         struct intel_miptree_map *map,
@@ -3390,6 +3369,27 @@ intel_miptree_unmap_etc(struct brw_context *brw,
 
    intel_miptree_unmap_raw(mt);
    free(map->buffer);
+}
+
+static void
+intel_miptree_map_etc(struct brw_context *brw,
+                      struct intel_mipmap_tree *mt,
+                      struct intel_miptree_map *map,
+                      unsigned int level,
+                      unsigned int slice)
+{
+   assert(mt->etc_format != MESA_FORMAT_NONE);
+   if (mt->etc_format == MESA_FORMAT_ETC1_RGB8) {
+      assert(mt->format == MESA_FORMAT_R8G8B8X8_UNORM);
+   }
+
+   assert(map->mode & GL_MAP_WRITE_BIT);
+   assert(map->mode & GL_MAP_INVALIDATE_RANGE_BIT);
+
+   map->stride = _mesa_format_row_stride(mt->etc_format, map->w);
+   map->buffer = malloc(_mesa_format_image_size(mt->etc_format,
+                                                map->w, map->h, 1));
+   map->ptr = map->buffer;
 }
 
 /**
