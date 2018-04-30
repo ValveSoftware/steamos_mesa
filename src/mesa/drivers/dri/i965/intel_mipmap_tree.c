@@ -3266,6 +3266,36 @@ intel_miptree_map_movntdqa(struct brw_context *brw,
 #endif
 
 static void
+intel_miptree_unmap_s8(struct brw_context *brw,
+		       struct intel_mipmap_tree *mt,
+		       struct intel_miptree_map *map,
+		       unsigned int level,
+		       unsigned int slice)
+{
+   if (map->mode & GL_MAP_WRITE_BIT) {
+      unsigned int image_x, image_y;
+      uint8_t *untiled_s8_map = map->ptr;
+      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT);
+
+      intel_miptree_get_image_offset(mt, level, slice, &image_x, &image_y);
+
+      for (uint32_t y = 0; y < map->h; y++) {
+	 for (uint32_t x = 0; x < map->w; x++) {
+	    ptrdiff_t offset = intel_offset_S8(mt->surf.row_pitch,
+	                                       image_x + x + map->x,
+	                                       image_y + y + map->y,
+					       brw->has_swizzling);
+	    tiled_s8_map[offset] = untiled_s8_map[y * map->w + x];
+	 }
+      }
+
+      intel_miptree_unmap_raw(mt);
+   }
+
+   free(map->buffer);
+}
+
+static void
 intel_miptree_map_s8(struct brw_context *brw,
 		     struct intel_mipmap_tree *mt,
 		     struct intel_miptree_map *map,
@@ -3308,36 +3338,6 @@ intel_miptree_map_s8(struct brw_context *brw,
 	  map->x, map->y, map->w, map->h,
 	  mt, map->ptr, map->stride);
    }
-}
-
-static void
-intel_miptree_unmap_s8(struct brw_context *brw,
-		       struct intel_mipmap_tree *mt,
-		       struct intel_miptree_map *map,
-		       unsigned int level,
-		       unsigned int slice)
-{
-   if (map->mode & GL_MAP_WRITE_BIT) {
-      unsigned int image_x, image_y;
-      uint8_t *untiled_s8_map = map->ptr;
-      uint8_t *tiled_s8_map = intel_miptree_map_raw(brw, mt, GL_MAP_WRITE_BIT);
-
-      intel_miptree_get_image_offset(mt, level, slice, &image_x, &image_y);
-
-      for (uint32_t y = 0; y < map->h; y++) {
-	 for (uint32_t x = 0; x < map->w; x++) {
-	    ptrdiff_t offset = intel_offset_S8(mt->surf.row_pitch,
-	                                       image_x + x + map->x,
-	                                       image_y + y + map->y,
-					       brw->has_swizzling);
-	    tiled_s8_map[offset] = untiled_s8_map[y * map->w + x];
-	 }
-      }
-
-      intel_miptree_unmap_raw(mt);
-   }
-
-   free(map->buffer);
 }
 
 static void
