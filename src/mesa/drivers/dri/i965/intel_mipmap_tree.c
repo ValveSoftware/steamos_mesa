@@ -3119,6 +3119,28 @@ intel_miptree_map_gtt(struct brw_context *brw,
 }
 
 static void
+intel_miptree_unmap_blit(struct brw_context *brw,
+			 struct intel_mipmap_tree *mt,
+			 struct intel_miptree_map *map,
+			 unsigned int level,
+			 unsigned int slice)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   intel_miptree_unmap_raw(map->linear_mt);
+
+   if (map->mode & GL_MAP_WRITE_BIT) {
+      bool ok = intel_miptree_copy(brw,
+                                   map->linear_mt, 0, 0, 0, 0,
+                                   mt, level, slice, map->x, map->y,
+                                   map->w, map->h);
+      WARN_ONCE(!ok, "Failed to blit from linear temporary mapping");
+   }
+
+   intel_miptree_release(&map->linear_mt);
+}
+
+static void
 intel_miptree_map_blit(struct brw_context *brw,
 		       struct intel_mipmap_tree *mt,
 		       struct intel_miptree_map *map,
@@ -3165,28 +3187,6 @@ fail:
    intel_miptree_release(&map->linear_mt);
    map->ptr = NULL;
    map->stride = 0;
-}
-
-static void
-intel_miptree_unmap_blit(struct brw_context *brw,
-			 struct intel_mipmap_tree *mt,
-			 struct intel_miptree_map *map,
-			 unsigned int level,
-			 unsigned int slice)
-{
-   struct gl_context *ctx = &brw->ctx;
-
-   intel_miptree_unmap_raw(map->linear_mt);
-
-   if (map->mode & GL_MAP_WRITE_BIT) {
-      bool ok = intel_miptree_copy(brw,
-                                   map->linear_mt, 0, 0, 0, 0,
-                                   mt, level, slice, map->x, map->y,
-                                   map->w, map->h);
-      WARN_ONCE(!ok, "Failed to blit from linear temporary mapping");
-   }
-
-   intel_miptree_release(&map->linear_mt);
 }
 
 /**
