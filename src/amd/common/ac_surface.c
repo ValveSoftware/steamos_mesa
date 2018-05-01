@@ -1320,6 +1320,10 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 			assert(!(surf->flags & RADEON_SURF_Z_OR_SBUFFER));
 			AddrSurfInfoIn.format = ADDR_FMT_32_32;
 			break;
+		case 12:
+			assert(!(surf->flags & RADEON_SURF_Z_OR_SBUFFER));
+			AddrSurfInfoIn.format = ADDR_FMT_32_32_32;
+			break;
 		case 16:
 			assert(!(surf->flags & RADEON_SURF_Z_OR_SBUFFER));
 			AddrSurfInfoIn.format = ADDR_FMT_32_32_32_32;
