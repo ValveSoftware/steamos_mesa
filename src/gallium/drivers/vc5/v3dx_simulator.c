@@ -100,16 +100,16 @@ vc5_flush_caches(struct v3d_hw *v3d)
 
 int
 v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,
-                                struct drm_vc5_get_param *args)
+                                struct drm_v3d_get_param *args)
 {
         static const uint32_t reg_map[] = {
-                [DRM_VC5_PARAM_V3D_UIFCFG] = V3D_HUB_CTL_UIFCFG,
-                [DRM_VC5_PARAM_V3D_HUB_IDENT1] = V3D_HUB_CTL_IDENT1,
-                [DRM_VC5_PARAM_V3D_HUB_IDENT2] = V3D_HUB_CTL_IDENT2,
-                [DRM_VC5_PARAM_V3D_HUB_IDENT3] = V3D_HUB_CTL_IDENT3,
-                [DRM_VC5_PARAM_V3D_CORE0_IDENT0] = V3D_CTL_0_IDENT0,
-                [DRM_VC5_PARAM_V3D_CORE0_IDENT1] = V3D_CTL_0_IDENT1,
-                [DRM_VC5_PARAM_V3D_CORE0_IDENT2] = V3D_CTL_0_IDENT2,
+                [DRM_V3D_PARAM_V3D_UIFCFG] = V3D_HUB_CTL_UIFCFG,
+                [DRM_V3D_PARAM_V3D_HUB_IDENT1] = V3D_HUB_CTL_IDENT1,
+                [DRM_V3D_PARAM_V3D_HUB_IDENT2] = V3D_HUB_CTL_IDENT2,
+                [DRM_V3D_PARAM_V3D_HUB_IDENT3] = V3D_HUB_CTL_IDENT3,
+                [DRM_V3D_PARAM_V3D_CORE0_IDENT0] = V3D_CTL_0_IDENT0,
+                [DRM_V3D_PARAM_V3D_CORE0_IDENT1] = V3D_CTL_0_IDENT1,
+                [DRM_V3D_PARAM_V3D_CORE0_IDENT2] = V3D_CTL_0_IDENT2,
         };
 
         if (args->param < ARRAY_SIZE(reg_map) && reg_map[args->param]) {
@@ -139,7 +139,7 @@ v3dX(simulator_init_regs)(struct v3d_hw *v3d)
 }
 
 void
-v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_vc5_submit_cl *submit,
+v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_v3d_submit_cl *submit,
                       uint32_t gmp_ofs)
 {
         /* Completely reset the GMP. */

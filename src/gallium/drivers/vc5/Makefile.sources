@@ -6,7 +6,6 @@ C_SOURCES := \
 	vc5_cl.h \
 	vc5_context.c \
 	vc5_context.h \
-	vc5_drm.h \
 	vc5_fence.c \
 	vc5_formats.c \
 	vc5_format_table.h \

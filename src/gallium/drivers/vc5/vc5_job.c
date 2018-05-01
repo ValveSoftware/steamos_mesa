@@ -411,7 +411,7 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
                 int ret;
 
 #ifndef USE_VC5_SIMULATOR
-                ret = drmIoctl(vc5->fd, DRM_IOCTL_VC5_SUBMIT_CL, &job->submit);
+                ret = drmIoctl(vc5->fd, DRM_IOCTL_V3D_SUBMIT_CL, &job->submit);
 #else
                 ret = vc5_simulator_flush(vc5, &job->submit, job);
 #endif

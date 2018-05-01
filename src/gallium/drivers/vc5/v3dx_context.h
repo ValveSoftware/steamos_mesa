@@ -38,8 +38,8 @@ void v3dX(bcl_epilogue)(struct vc5_context *vc5, struct vc5_job *job);
 
 void v3dX(simulator_init_regs)(struct v3d_hw *v3d);
 int v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,
-                                    struct drm_vc5_get_param *args);
-void v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_vc5_submit_cl *submit,
+                                    struct drm_v3d_get_param *args);
+void v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_v3d_submit_cl *submit,
                            uint32_t gmp_ofs);
 const struct vc5_format *v3dX(get_format_desc)(enum pipe_format f);
 void v3dX(get_internal_type_bpp_for_output_format)(uint32_t format,

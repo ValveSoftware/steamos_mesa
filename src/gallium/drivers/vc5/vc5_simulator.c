@@ -360,7 +360,7 @@ vc5_dump_to_file(struct vc5_exec_info *exec)
 
 int
 vc5_simulator_flush(struct vc5_context *vc5,
-                    struct drm_vc5_submit_cl *submit, struct vc5_job *job)
+                    struct drm_v3d_submit_cl *submit, struct vc5_job *job)
 {
         struct vc5_screen *screen = vc5->screen;
         int fd = screen->fd;
@@ -469,7 +469,7 @@ void vc5_simulator_open_from_handle(int fd, uint32_t winsys_stride,
  * Making a VC5 BO is just a matter of making a corresponding BO on the host.
  */
 static int
-vc5_simulator_create_bo_ioctl(int fd, struct drm_vc5_create_bo *args)
+vc5_simulator_create_bo_ioctl(int fd, struct drm_v3d_create_bo *args)
 {
         int ret;
         struct drm_mode_create_dumb create = {
@@ -497,7 +497,7 @@ vc5_simulator_create_bo_ioctl(int fd, struct drm_vc5_create_bo *args)
  * We just pass this straight through to dumb mmap.
  */
 static int
-vc5_simulator_mmap_bo_ioctl(int fd, struct drm_vc5_mmap_bo *args)
+vc5_simulator_mmap_bo_ioctl(int fd, struct drm_v3d_mmap_bo *args)
 {
         int ret;
         struct drm_mode_map_dumb map = {
@@ -511,7 +511,7 @@ vc5_simulator_mmap_bo_ioctl(int fd, struct drm_vc5_mmap_bo *args)
 }
 
 static int
-vc5_simulator_get_bo_offset_ioctl(int fd, struct drm_vc5_get_bo_offset *args)
+vc5_simulator_get_bo_offset_ioctl(int fd, struct drm_v3d_get_bo_offset *args)
 {
         struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
         struct vc5_simulator_bo *sim_bo = vc5_get_simulator_bo(file,
@@ -537,7 +537,7 @@ vc5_simulator_gem_close_ioctl(int fd, struct drm_gem_close *args)
 }
 
 static int
-vc5_simulator_get_param_ioctl(int fd, struct drm_vc5_get_param *args)
+vc5_simulator_get_param_ioctl(int fd, struct drm_v3d_get_param *args)
 {
         if (sim_state.ver >= 41)
                 return v3d41_simulator_get_param_ioctl(sim_state.v3d, args);
@@ -549,14 +549,14 @@ int
 vc5_simulator_ioctl(int fd, unsigned long request, void *args)
 {
         switch (request) {
-        case DRM_IOCTL_VC5_CREATE_BO:
+        case DRM_IOCTL_V3D_CREATE_BO:
                 return vc5_simulator_create_bo_ioctl(fd, args);
-        case DRM_IOCTL_VC5_MMAP_BO:
+        case DRM_IOCTL_V3D_MMAP_BO:
                 return vc5_simulator_mmap_bo_ioctl(fd, args);
-        case DRM_IOCTL_VC5_GET_BO_OFFSET:
+        case DRM_IOCTL_V3D_GET_BO_OFFSET:
                 return vc5_simulator_get_bo_offset_ioctl(fd, args);
 
-        case DRM_IOCTL_VC5_WAIT_BO:
+        case DRM_IOCTL_V3D_WAIT_BO:
                 /* We do all of the vc5 rendering synchronously, so we just
                  * return immediately on the wait ioctls.  This ignores any
                  * native rendering to the host BO, so it does mean we race on
@@ -564,7 +564,7 @@ vc5_simulator_ioctl(int fd, unsigned long request, void *args)
                  */
                 return 0;
 
-        case DRM_IOCTL_VC5_GET_PARAM:
+        case DRM_IOCTL_V3D_GET_PARAM:
                 return vc5_simulator_get_param_ioctl(fd, args);
 
         case DRM_IOCTL_GEM_CLOSE:

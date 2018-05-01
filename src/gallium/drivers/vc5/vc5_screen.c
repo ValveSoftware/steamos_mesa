@@ -34,7 +34,6 @@
 #include "util/ralloc.h"
 
 #include <xf86drm.h>
-#include "vc5_drm.h"
 #include "vc5_screen.h"
 #include "vc5_context.h"
 #include "vc5_resource.h"
@@ -550,21 +549,21 @@ static int handle_compare(void *key1, void *key2)
 static bool
 vc5_get_device_info(struct vc5_screen *screen)
 {
-        struct drm_vc5_get_param ident0 = {
-                .param = DRM_VC5_PARAM_V3D_CORE0_IDENT0,
+        struct drm_v3d_get_param ident0 = {
+                .param = DRM_V3D_PARAM_V3D_CORE0_IDENT0,
         };
-        struct drm_vc5_get_param ident1 = {
-                .param = DRM_VC5_PARAM_V3D_CORE0_IDENT1,
+        struct drm_v3d_get_param ident1 = {
+                .param = DRM_V3D_PARAM_V3D_CORE0_IDENT1,
         };
         int ret;
 
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_VC5_GET_PARAM, &ident0);
+        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident0);
         if (ret != 0) {
                 fprintf(stderr, "Couldn't get V3D core IDENT0: %s\n",
                         strerror(errno));
                 return false;
         }
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_VC5_GET_PARAM, &ident1);
+        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident1);
         if (ret != 0) {
                 fprintf(stderr, "Couldn't get V3D core IDENT1: %s\n",
                         strerror(errno));

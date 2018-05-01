@@ -152,11 +152,11 @@ vc5_bo_alloc(struct vc5_screen *screen, uint32_t size, const char *name)
         ;
 
         bool cleared_and_retried = false;
-        struct drm_vc5_create_bo create = {
+        struct drm_v3d_create_bo create = {
                 .size = size
         };
 
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_VC5_CREATE_BO, &create);
+        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_CREATE_BO, &create);
         bo->handle = create.handle;
         bo->offset = create.offset;
 
@@ -354,10 +354,10 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         bo->map = malloc(bo->size);
 #endif
 
-        struct drm_vc5_get_bo_offset get = {
+        struct drm_v3d_get_bo_offset get = {
                 .handle = handle,
         };
-        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_VC5_GET_BO_OFFSET, &get);
+        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_BO_OFFSET, &get);
         if (ret) {
                 fprintf(stderr, "Failed to get BO offset: %s\n",
                         strerror(errno));
@@ -455,11 +455,11 @@ vc5_bo_flink(struct vc5_bo *bo, uint32_t *name)
 
 static int vc5_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
 {
-        struct drm_vc5_wait_bo wait = {
+        struct drm_v3d_wait_bo wait = {
                 .handle = handle,
                 .timeout_ns = timeout_ns,
         };
-        int ret = vc5_ioctl(fd, DRM_IOCTL_VC5_WAIT_BO, &wait);
+        int ret = vc5_ioctl(fd, DRM_IOCTL_V3D_WAIT_BO, &wait);
         if (ret == -1)
                 return -errno;
         else
@@ -501,10 +501,10 @@ vc5_bo_map_unsynchronized(struct vc5_bo *bo)
         if (bo->map)
                 return bo->map;
 
-        struct drm_vc5_mmap_bo map;
+        struct drm_v3d_mmap_bo map;
         memset(&map, 0, sizeof(map));
         map.handle = bo->handle;
-        ret = vc5_ioctl(bo->screen->fd, DRM_IOCTL_VC5_MMAP_BO, &map);
+        ret = vc5_ioctl(bo->screen->fd, DRM_IOCTL_V3D_MMAP_BO, &map);
         offset = map.offset;
         if (ret != 0) {
                 fprintf(stderr, "map ioctl failure\n");

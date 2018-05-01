@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014-2017 Broadcom
+ * Copyright © 2014-2018 Broadcom
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef _VC5_DRM_H_
-#define _VC5_DRM_H_
+#ifndef _V3D_DRM_H_
+#define _V3D_DRM_H_
 
 #include "drm.h"
 
@@ -30,28 +30,28 @@
 extern "C" {
 #endif
 
-#define DRM_VC5_SUBMIT_CL                         0x00
-#define DRM_VC5_WAIT_BO                           0x01
-#define DRM_VC5_CREATE_BO                         0x02
-#define DRM_VC5_MMAP_BO                           0x03
-#define DRM_VC5_GET_PARAM                         0x04
-#define DRM_VC5_GET_BO_OFFSET                     0x05
+#define DRM_V3D_SUBMIT_CL                         0x00
+#define DRM_V3D_WAIT_BO                           0x01
+#define DRM_V3D_CREATE_BO                         0x02
+#define DRM_V3D_MMAP_BO                           0x03
+#define DRM_V3D_GET_PARAM                         0x04
+#define DRM_V3D_GET_BO_OFFSET                     0x05
 
-#define DRM_IOCTL_VC5_SUBMIT_CL           DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_SUBMIT_CL, struct drm_vc5_submit_cl)
-#define DRM_IOCTL_VC5_WAIT_BO             DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_WAIT_BO, struct drm_vc5_wait_bo)
-#define DRM_IOCTL_VC5_CREATE_BO           DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_CREATE_BO, struct drm_vc5_create_bo)
-#define DRM_IOCTL_VC5_MMAP_BO             DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_MMAP_BO, struct drm_vc5_mmap_bo)
-#define DRM_IOCTL_VC5_GET_PARAM           DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_GET_PARAM, struct drm_vc5_get_param)
-#define DRM_IOCTL_VC5_GET_BO_OFFSET       DRM_IOWR(DRM_COMMAND_BASE + DRM_VC5_GET_BO_OFFSET, struct drm_vc5_get_bo_offset)
+#define DRM_IOCTL_V3D_SUBMIT_CL           DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_SUBMIT_CL, struct drm_v3d_submit_cl)
+#define DRM_IOCTL_V3D_WAIT_BO             DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_WAIT_BO, struct drm_v3d_wait_bo)
+#define DRM_IOCTL_V3D_CREATE_BO           DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_CREATE_BO, struct drm_v3d_create_bo)
+#define DRM_IOCTL_V3D_MMAP_BO             DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_MMAP_BO, struct drm_v3d_mmap_bo)
+#define DRM_IOCTL_V3D_GET_PARAM           DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_GET_PARAM, struct drm_v3d_get_param)
+#define DRM_IOCTL_V3D_GET_BO_OFFSET       DRM_IOWR(DRM_COMMAND_BASE + DRM_V3D_GET_BO_OFFSET, struct drm_v3d_get_bo_offset)
 
 /**
- * struct drm_vc5_submit_cl - ioctl argument for submitting commands to the 3D
+ * struct drm_v3d_submit_cl - ioctl argument for submitting commands to the 3D
  * engine.
  *
  * This asks the kernel to have the GPU execute an optional binner
  * command list, and a render command list.
  */
-struct drm_vc5_submit_cl {
+struct drm_v3d_submit_cl {
 	/* Pointer to the binner command list.
 	 *
 	 * This is the first set of commands executed, which runs the
@@ -101,29 +101,32 @@ struct drm_vc5_submit_cl {
 
 	/* Number of BO handles passed in (size is that times 4). */
 	__u32 bo_handle_count;
+
+	/* Pad, must be zero-filled. */
+	__u32 pad;
 };
 
 /**
- * struct drm_vc5_wait_bo - ioctl argument for waiting for
- * completion of the last DRM_VC5_SUBMIT_CL on a BO.
+ * struct drm_v3d_wait_bo - ioctl argument for waiting for
+ * completion of the last DRM_V3D_SUBMIT_CL on a BO.
  *
  * This is useful for cases where multiple processes might be
  * rendering to a BO and you want to wait for all rendering to be
  * completed.
  */
-struct drm_vc5_wait_bo {
+struct drm_v3d_wait_bo {
 	__u32 handle;
 	__u32 pad;
 	__u64 timeout_ns;
 };
 
 /**
- * struct drm_vc5_create_bo - ioctl argument for creating VC5 BOs.
+ * struct drm_v3d_create_bo - ioctl argument for creating V3D BOs.
  *
  * There are currently no values for the flags argument, but it may be
  * used in a future extension.
  */
-struct drm_vc5_create_bo {
+struct drm_v3d_create_bo {
 	__u32 size;
 	__u32 flags;
 	/** Returned GEM handle for the BO. */
@@ -140,7 +143,7 @@ struct drm_vc5_create_bo {
 };
 
 /**
- * struct drm_vc5_mmap_bo - ioctl argument for mapping VC5 BOs.
+ * struct drm_v3d_mmap_bo - ioctl argument for mapping V3D BOs.
  *
  * This doesn't actually perform an mmap.  Instead, it returns the
  * offset you need to use in an mmap on the DRM device node.  This
@@ -150,7 +153,7 @@ struct drm_vc5_create_bo {
  * There are currently no values for the flags argument, but it may be
  * used in a future extension.
  */
-struct drm_vc5_mmap_bo {
+struct drm_v3d_mmap_bo {
 	/** Handle for the object being mapped. */
 	__u32 handle;
 	__u32 flags;
@@ -158,17 +161,17 @@ struct drm_vc5_mmap_bo {
 	__u64 offset;
 };
 
-enum drm_vc5_param {
-	DRM_VC5_PARAM_V3D_UIFCFG,
-	DRM_VC5_PARAM_V3D_HUB_IDENT1,
-	DRM_VC5_PARAM_V3D_HUB_IDENT2,
-	DRM_VC5_PARAM_V3D_HUB_IDENT3,
-	DRM_VC5_PARAM_V3D_CORE0_IDENT0,
-	DRM_VC5_PARAM_V3D_CORE0_IDENT1,
-	DRM_VC5_PARAM_V3D_CORE0_IDENT2,
+enum drm_v3d_param {
+	DRM_V3D_PARAM_V3D_UIFCFG,
+	DRM_V3D_PARAM_V3D_HUB_IDENT1,
+	DRM_V3D_PARAM_V3D_HUB_IDENT2,
+	DRM_V3D_PARAM_V3D_HUB_IDENT3,
+	DRM_V3D_PARAM_V3D_CORE0_IDENT0,
+	DRM_V3D_PARAM_V3D_CORE0_IDENT1,
+	DRM_V3D_PARAM_V3D_CORE0_IDENT2,
 };
 
-struct drm_vc5_get_param {
+struct drm_v3d_get_param {
 	__u32 param;
 	__u32 pad;
 	__u64 value;
@@ -176,10 +179,10 @@ struct drm_vc5_get_param {
 
 /**
  * Returns the offset for the BO in the V3D address space for this DRM fd.
- * This is the same value returned by drm_vc5_create_bo, if that was called
+ * This is the same value returned by drm_v3d_create_bo, if that was called
  * from this DRM fd.
  */
-struct drm_vc5_get_bo_offset {
+struct drm_v3d_get_bo_offset {
 	__u32 handle;
 	__u32 offset;
 };
@@ -188,4 +191,4 @@ struct drm_vc5_get_bo_offset {
 }
 #endif
 
-#endif /* _VC5_DRM_H_ */
+#endif /* _V3D_DRM_H_ */

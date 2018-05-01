@@ -36,15 +36,13 @@
 #include "util/bitset.h"
 #include "util/slab.h"
 #include "xf86drm.h"
-#include "vc5_drm.h"
+#include "v3d_drm.h"
 #include "vc5_screen.h"
 
 struct vc5_job;
 struct vc5_bo;
 void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
 
-#define __user
-#include "vc5_drm.h"
 #include "vc5_bufmgr.h"
 #include "vc5_resource.h"
 #include "vc5_cl.h"
@@ -225,7 +223,7 @@ struct vc5_job {
         struct vc5_bo *tile_state;
         uint32_t shader_rec_count;
 
-        struct drm_vc5_submit_cl submit;
+        struct drm_v3d_submit_cl submit;
 
         /**
          * Set of all BOs referenced by the job.  This will be used for making
@@ -492,7 +490,7 @@ void vc5_query_init(struct pipe_context *pctx);
 void vc5_simulator_init(struct vc5_screen *screen);
 void vc5_simulator_destroy(struct vc5_screen *screen);
 int vc5_simulator_flush(struct vc5_context *vc5,
-                        struct drm_vc5_submit_cl *args,
+                        struct drm_v3d_submit_cl *args,
                         struct vc5_job *job);
 int vc5_simulator_ioctl(int fd, unsigned long request, void *arg);
 void vc5_simulator_open_from_handle(int fd, uint32_t winsys_stride,
