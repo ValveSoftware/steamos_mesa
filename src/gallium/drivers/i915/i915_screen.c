@@ -441,7 +441,7 @@ i915_get_paramf(struct pipe_screen *screen, enum pipe_capf cap)
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
       return 16.0;
 
-   case PIPE_CAPF_MIN_CONSERVTIVE_RASTER_DILATE:
+   case PIPE_CAPF_MIN_CONSERVATIVE_RASTER_DILATE:
       /* fall-through */
    case PIPE_CAPF_MAX_CONSERVATIVE_RASTER_DILATE:
       /* fall-through */
