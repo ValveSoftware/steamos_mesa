@@ -151,6 +151,12 @@ struct dri2_egl_display_vtbl {
    __DRIdrawable *(*get_dri_drawable)(_EGLSurface *surf);
 
    void (*close_screen_notify)(_EGLDisplay *dpy);
+
+   /* Used in EGL_KHR_mutable_render_buffer to update the native window's
+    * shared buffer mode.
+    */
+   bool (*set_shared_buffer_mode)(_EGLDisplay *dpy, _EGLSurface *surf,
+                                  bool mode);
 };
 
 struct dri2_egl_display
@@ -178,6 +184,7 @@ struct dri2_egl_display
    const __DRI2blobExtension *blob;
    const __DRI2rendererQueryExtension *rendererQuery;
    const __DRI2interopExtension *interop;
+   const __DRImutableRenderBufferDriverExtension *mutable_render_buffer;
    int                       fd;
 
    /* dri2_initialize/dri2_terminate increment/decrement this count, so does
