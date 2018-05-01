@@ -103,7 +103,7 @@ struct gen_group {
    uint32_t dw_length;
    uint32_t group_offset, group_count;
    uint32_t group_size;
-   bool variable;
+   bool variable; /* <group> specific */
    bool fixed_length; /* True for <struct> & <register> */
 
    struct gen_group *parent;
@@ -112,8 +112,7 @@ struct gen_group {
    uint32_t opcode_mask;
    uint32_t opcode;
 
-   /* Register specific */
-   uint32_t register_offset;
+   uint32_t register_offset; /* <register> specific */
 };
 
 struct gen_value {
