@@ -852,9 +852,9 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 			       struct r600_fmask_info *out)
 {
 	if (sscreen->info.chip_class >= GFX9) {
-		out->alignment = rtex->surface.u.gfx9.fmask_alignment;
-		out->size = rtex->surface.u.gfx9.fmask_size;
-		out->tile_swizzle = rtex->surface.u.gfx9.fmask_tile_swizzle;
+		out->alignment = rtex->surface.fmask_alignment;
+		out->size = rtex->surface.fmask_size;
+		out->tile_swizzle = rtex->surface.fmask_tile_swizzle;
 		return;
 	}
 
@@ -862,9 +862,9 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 	out->tile_mode_index = rtex->surface.u.legacy.fmask.tiling_index;
 	out->pitch_in_pixels = rtex->surface.u.legacy.fmask.pitch_in_pixels;
 	out->bank_height = rtex->surface.u.legacy.fmask.bankh;
-	out->tile_swizzle = rtex->surface.u.legacy.fmask.tile_swizzle;
-	out->alignment = rtex->surface.u.legacy.fmask.alignment;
-	out->size = rtex->surface.u.legacy.fmask.size;
+	out->tile_swizzle = rtex->surface.fmask_tile_swizzle;
+	out->alignment = rtex->surface.fmask_alignment;
+	out->size = rtex->surface.fmask_size;
 }
 
 static void si_texture_allocate_fmask(struct si_screen *sscreen,
@@ -1053,8 +1053,8 @@ void si_print_texture_info(struct si_screen *sscreen,
 			u_log_printf(log, "  FMASK: offset=%"PRIu64", size=%"PRIu64", "
 				"alignment=%u, swmode=%u, epitch=%u\n",
 				rtex->fmask.offset,
-				rtex->surface.u.gfx9.fmask_size,
-				rtex->surface.u.gfx9.fmask_alignment,
+				rtex->surface.fmask_size,
+				rtex->surface.fmask_alignment,
 				rtex->surface.u.gfx9.fmask.swizzle_mode,
 				rtex->surface.u.gfx9.fmask.epitch);
 		}

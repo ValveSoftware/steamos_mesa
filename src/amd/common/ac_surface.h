@@ -80,9 +80,6 @@ struct legacy_surf_level {
 };
 
 struct legacy_surf_fmask {
-    uint64_t size;
-    unsigned alignment;
-    unsigned tile_swizzle;
     unsigned slice_tile_max; /* max 4M */
     uint8_t tiling_index;    /* max 31 */
     uint8_t bankh;           /* max 8 */
@@ -153,13 +150,9 @@ struct gfx9_surf_layout {
     uint16_t                    dcc_pitch_max;  /* (mip chain pitch - 1) */
 
     uint64_t                    stencil_offset; /* separate stencil */
-    uint64_t                    fmask_size;
     uint64_t                    cmask_size;
 
-    uint32_t                    fmask_alignment;
     uint32_t                    cmask_alignment;
-
-    uint8_t                     fmask_tile_swizzle;
 };
 
 struct radeon_surf {
@@ -199,8 +192,10 @@ struct radeon_surf {
      * - depth/stencil if HTILE is not TC-compatible and if the gen is not GFX9
      */
     uint8_t                     tile_swizzle;
+    uint8_t                     fmask_tile_swizzle;
 
     uint64_t                    surf_size;
+    uint64_t                    fmask_size;
     /* DCC and HTILE are very small. */
     uint32_t                    dcc_size;
     uint32_t                    htile_size;
@@ -208,6 +203,7 @@ struct radeon_surf {
     uint32_t                    htile_slice_size;
 
     uint32_t                    surf_alignment;
+    uint32_t                    fmask_alignment;
     uint32_t                    dcc_alignment;
     uint32_t                    htile_alignment;
 

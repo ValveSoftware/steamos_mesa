@@ -277,9 +277,9 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
 
         assert(fmask.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
 
-        surf_ws->u.legacy.fmask.size = fmask.surf_size;
-        surf_ws->u.legacy.fmask.alignment = MAX2(256, fmask.surf_alignment);
-        surf_ws->u.legacy.fmask.tile_swizzle = fmask.tile_swizzle;
+        surf_ws->fmask_size = fmask.surf_size;
+        surf_ws->fmask_alignment = MAX2(256, fmask.surf_alignment);
+        surf_ws->fmask_tile_swizzle = fmask.tile_swizzle;
 
         surf_ws->u.legacy.fmask.slice_tile_max =
             (fmask.u.legacy.level[0].nblk_x * fmask.u.legacy.level[0].nblk_y) / 64;

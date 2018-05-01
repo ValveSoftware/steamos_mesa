@@ -734,9 +734,9 @@ radv_image_get_fmask_info(struct radv_device *device,
 			  struct radv_fmask_info *out)
 {
 	if (device->physical_device->rad_info.chip_class >= GFX9) {
-		out->alignment = image->surface.u.gfx9.fmask_alignment;
-		out->size = image->surface.u.gfx9.fmask_size;
-		out->tile_swizzle = image->surface.u.gfx9.fmask_tile_swizzle;
+		out->alignment = image->surface.fmask_alignment;
+		out->size = image->surface.fmask_size;
+		out->tile_swizzle = image->surface.fmask_tile_swizzle;
 		return;
 	}
 
@@ -744,9 +744,9 @@ radv_image_get_fmask_info(struct radv_device *device,
 	out->tile_mode_index = image->surface.u.legacy.fmask.tiling_index;
 	out->pitch_in_pixels = image->surface.u.legacy.fmask.pitch_in_pixels;
 	out->bank_height = image->surface.u.legacy.fmask.bankh;
-	out->tile_swizzle = image->surface.u.legacy.fmask.tile_swizzle;
-	out->alignment = image->surface.u.legacy.fmask.alignment;
-	out->size = image->surface.u.legacy.fmask.size;
+	out->tile_swizzle = image->surface.fmask_tile_swizzle;
+	out->alignment = image->surface.fmask_alignment;
+	out->size = image->surface.fmask_size;
 
 	assert(!out->tile_swizzle || !image->shareable);
 }

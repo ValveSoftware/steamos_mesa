@@ -853,9 +853,9 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		if (r)
 			return r;
 
-		surf->u.legacy.fmask.size = fout.fmaskBytes;
-		surf->u.legacy.fmask.alignment = fout.baseAlign;
-		surf->u.legacy.fmask.tile_swizzle = 0;
+		surf->fmask_size = fout.fmaskBytes;
+		surf->fmask_alignment = fout.baseAlign;
+		surf->fmask_tile_swizzle = 0;
 
 		surf->u.legacy.fmask.slice_tile_max =
 			(fout.pitch * fout.height) / 64;
@@ -888,7 +888,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 
 			assert(xout.tileSwizzle <=
 			       u_bit_consecutive(0, sizeof(surf->tile_swizzle) * 8));
-			surf->u.legacy.fmask.tile_swizzle = xout.tileSwizzle;
+			surf->fmask_tile_swizzle = xout.tileSwizzle;
 		}
 	}
 
@@ -1178,8 +1178,8 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 
 			surf->u.gfx9.fmask.swizzle_mode = fin.swizzleMode;
 			surf->u.gfx9.fmask.epitch = fout.pitch - 1;
-			surf->u.gfx9.fmask_size = fout.fmaskBytes;
-			surf->u.gfx9.fmask_alignment = fout.baseAlign;
+			surf->fmask_size = fout.fmaskBytes;
+			surf->fmask_alignment = fout.baseAlign;
 
 			/* Compute tile swizzle for the FMASK surface. */
 			if (config->info.fmask_surf_index &&
@@ -1205,8 +1205,8 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 					return ret;
 
 				assert(xout.pipeBankXor <=
-				       u_bit_consecutive(0, sizeof(surf->u.gfx9.fmask_tile_swizzle) * 8));
-				surf->u.gfx9.fmask_tile_swizzle = xout.pipeBankXor;
+				       u_bit_consecutive(0, sizeof(surf->fmask_tile_swizzle) * 8));
+				surf->fmask_tile_swizzle = xout.pipeBankXor;
 			}
 		}
 
@@ -1372,12 +1372,12 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 
 	surf->num_dcc_levels = 0;
 	surf->surf_size = 0;
+	surf->fmask_size = 0;
 	surf->dcc_size = 0;
 	surf->htile_size = 0;
 	surf->htile_slice_size = 0;
 	surf->u.gfx9.surf_offset = 0;
 	surf->u.gfx9.stencil_offset = 0;
-	surf->u.gfx9.fmask_size = 0;
 	surf->u.gfx9.cmask_size = 0;
 
 	/* Calculate texture layout information. */
@@ -1472,7 +1472,7 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 
 	/* Temporary workaround to prevent VM faults and hangs. */
 	if (info->family == CHIP_VEGA12)
-		surf->u.gfx9.fmask_size *= 8;
+		surf->fmask_size *= 8;
 
 	return 0;
 }
