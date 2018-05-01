@@ -566,70 +566,58 @@ ac_get_raster_config(struct radeon_info *info,
 		     uint32_t *raster_config_1_p)
 {
 	unsigned raster_config, raster_config_1;
+
 	switch (info->family) {
-	case CHIP_TAHITI:
-	case CHIP_PITCAIRN:
-		raster_config = 0x2a00126a;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_VERDE:
-		raster_config = 0x0000124a;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_OLAND:
-		raster_config = 0x00000082;
-		raster_config_1 = 0x00000000;
-		break;
+	/* 1 SE / 1 RB */
 	case CHIP_HAINAN:
-		raster_config = 0x00000000;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_BONAIRE:
-		raster_config = 0x16000012;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_HAWAII:
-		raster_config = 0x3a00161a;
-		raster_config_1 = 0x0000002e;
-		break;
-	case CHIP_FIJI:
-		raster_config = 0x3a00161a;
-		raster_config_1 = 0x0000002e;
-		break;
-	case CHIP_POLARIS10:
-		raster_config = 0x16000012;
-		raster_config_1 = 0x0000002a;
-		break;
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12:
-		raster_config = 0x16000012;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_VEGAM:
-		raster_config = 0x3a00161a;
-		raster_config_1 = 0x0000002e;
-		break;
-	case CHIP_TONGA:
-		raster_config = 0x16000012;
-		raster_config_1 = 0x0000002a;
-		break;
-	case CHIP_ICELAND:
-		raster_config = 0x00000002;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_CARRIZO:
-		raster_config = 0x00000002;
-		raster_config_1 = 0x00000000;
-		break;
-	case CHIP_KAVERI:
-		raster_config = 0x00000002;
-		raster_config_1 = 0x00000000;
-		break;
 	case CHIP_KABINI:
 	case CHIP_MULLINS:
 	case CHIP_STONEY:
 		raster_config = 0x00000000;
 		raster_config_1 = 0x00000000;
+		break;
+	/* 1 SE / 4 RBs */
+	case CHIP_VERDE:
+		raster_config = 0x0000124a;
+		raster_config_1 = 0x00000000;
+		break;
+	/* 1 SE / 2 RBs (Oland is special) */
+	case CHIP_OLAND:
+		raster_config = 0x00000082;
+		raster_config_1 = 0x00000000;
+		break;
+	/* 1 SE / 2 RBs */
+	case CHIP_KAVERI:
+	case CHIP_ICELAND:
+	case CHIP_CARRIZO:
+		raster_config = 0x00000002;
+		raster_config_1 = 0x00000000;
+		break;
+	/* 2 SEs / 4 RBs */
+	case CHIP_BONAIRE:
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x00000000;
+		break;
+	/* 2 SEs / 8 RBs */
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+		raster_config = 0x2a00126a;
+		raster_config_1 = 0x00000000;
+		break;
+	/* 4 SEs / 8 RBs */
+	case CHIP_TONGA:
+	case CHIP_POLARIS10:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x0000002a;
+		break;
+	/* 4 SEs / 16 RBs */
+	case CHIP_HAWAII:
+	case CHIP_FIJI:
+	case CHIP_VEGAM:
+		raster_config = 0x3a00161a;
+		raster_config_1 = 0x0000002e;
 		break;
 	default:
 		fprintf(stderr,
