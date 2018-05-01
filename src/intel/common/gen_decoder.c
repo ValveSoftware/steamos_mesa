@@ -151,7 +151,8 @@ static struct gen_group *
 create_group(struct parser_context *ctx,
              const char *name,
              const char **atts,
-             struct gen_group *parent)
+             struct gen_group *parent,
+             bool fixed_length)
 {
    struct gen_group *group;
 
@@ -161,6 +162,7 @@ create_group(struct parser_context *ctx,
 
    group->spec = ctx->spec;
    group->variable = false;
+   group->fixed_length = fixed_length;
 
    for (int i = 0; atts[i]; i += 2) {
       char *p;
@@ -370,18 +372,19 @@ start_element(void *data, const char *element_name, const char **atts)
          minor = 0;
 
       ctx->spec->gen = gen_make_gen(major, minor);
-   } else if (strcmp(element_name, "instruction") == 0 ||
-              strcmp(element_name, "struct") == 0) {
-      ctx->group = create_group(ctx, name, atts, NULL);
+   } else if (strcmp(element_name, "instruction") == 0) {
+      ctx->group = create_group(ctx, name, atts, NULL, false);
+   } else if (strcmp(element_name, "struct") == 0) {
+      ctx->group = create_group(ctx, name, atts, NULL, true);
    } else if (strcmp(element_name, "register") == 0) {
-      ctx->group = create_group(ctx, name, atts, NULL);
+      ctx->group = create_group(ctx, name, atts, NULL, true);
       get_register_offset(atts, &ctx->group->register_offset);
    } else if (strcmp(element_name, "group") == 0) {
       struct gen_group *previous_group = ctx->group;
       while (previous_group->next)
          previous_group = previous_group->next;
 
-      struct gen_group *group = create_group(ctx, "", atts, ctx->group);
+      struct gen_group *group = create_group(ctx, "", atts, ctx->group, false);
       previous_group->next = group;
       ctx->group = group;
    } else if (strcmp(element_name, "field") == 0) {
@@ -713,6 +716,9 @@ gen_group_find_field(struct gen_group *group, const char *name)
 int
 gen_group_get_length(struct gen_group *group, const uint32_t *p)
 {
+   if (group && group->fixed_length)
+      return group->dw_length;
+
    uint32_t h = p[0];
    uint32_t type = field_value(h, 29, 31);
 

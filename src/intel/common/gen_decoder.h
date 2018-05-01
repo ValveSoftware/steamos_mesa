@@ -104,6 +104,7 @@ struct gen_group {
    uint32_t group_offset, group_count;
    uint32_t group_size;
    bool variable;
+   bool fixed_length; /* True for <struct> & <register> */
 
    struct gen_group *parent;
    struct gen_group *next;
