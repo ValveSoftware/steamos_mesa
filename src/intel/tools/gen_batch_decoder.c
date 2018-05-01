@@ -322,6 +322,7 @@ handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
                               const uint32_t *p)
 {
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+   struct gen_group *vbs = gen_spec_find_struct(ctx->spec, "VERTEX_BUFFER_STATE");
 
    struct gen_batch_decode_bo vb = {};
    uint32_t vb_size = 0;
@@ -332,43 +333,50 @@ handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
    while (gen_field_iterator_next(&iter)) {
-      if (strcmp(iter.name, "Vertex Buffer Index") == 0) {
-         index = iter.raw_value;
-      } else if (strcmp(iter.name, "Buffer Pitch") == 0) {
-         pitch = iter.raw_value;
-      } else if (strcmp(iter.name, "Buffer Starting Address") == 0) {
-         vb = ctx_get_bo(ctx, iter.raw_value);
-      } else if (strcmp(iter.name, "Buffer Size") == 0) {
-         vb_size = iter.raw_value;
-         ready = true;
-      } else if (strcmp(iter.name, "End Address") == 0) {
-         if (vb.map && iter.raw_value >= vb.addr)
-            vb_size = iter.raw_value - vb.addr;
-         else
-            vb_size = 0;
-         ready = true;
+      if (iter.struct_desc != vbs)
+         continue;
+
+      struct gen_field_iterator vbs_iter;
+      gen_field_iterator_init(&vbs_iter, vbs, &iter.p[iter.start_bit / 32], 0, false);
+      while (gen_field_iterator_next(&vbs_iter)) {
+         if (strcmp(vbs_iter.name, "Vertex Buffer Index") == 0) {
+            index = vbs_iter.raw_value;
+         } else if (strcmp(vbs_iter.name, "Buffer Pitch") == 0) {
+            pitch = vbs_iter.raw_value;
+         } else if (strcmp(vbs_iter.name, "Buffer Starting Address") == 0) {
+            vb = ctx_get_bo(ctx, vbs_iter.raw_value);
+         } else if (strcmp(vbs_iter.name, "Buffer Size") == 0) {
+            vb_size = vbs_iter.raw_value;
+            ready = true;
+         } else if (strcmp(vbs_iter.name, "End Address") == 0) {
+            if (vb.map && vbs_iter.raw_value >= vb.addr)
+               vb_size = vbs_iter.raw_value - vb.addr;
+            else
+               vb_size = 0;
+            ready = true;
+         }
+
+         if (!ready)
+            continue;
+
+         fprintf(ctx->fp, "vertex buffer %d, size %d\n", index, vb_size);
+
+         if (vb.map == NULL) {
+            fprintf(ctx->fp, "  buffer contents unavailable\n");
+            continue;
+         }
+
+         if (vb.map == 0 || vb_size == 0)
+            continue;
+
+         ctx_print_buffer(ctx, vb, vb_size, pitch);
+
+         vb.map = NULL;
+         vb_size = 0;
+         index = -1;
+         pitch = -1;
+         ready = false;
       }
-
-      if (!ready)
-         continue;
-
-      fprintf(ctx->fp, "vertex buffer %d, size %d\n", index, vb_size);
-
-      if (vb.map == NULL) {
-         fprintf(ctx->fp, "  buffer contents unavailable\n");
-         continue;
-      }
-
-      if (vb.map == 0 || vb_size == 0)
-         continue;
-
-      ctx_print_buffer(ctx, vb, vb_size, pitch);
-
-      vb.map = NULL;
-      vb_size = 0;
-      index = -1;
-      pitch = -1;
-      ready = false;
    }
 }
 
