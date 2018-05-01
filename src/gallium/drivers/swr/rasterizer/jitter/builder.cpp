@@ -170,4 +170,48 @@ namespace SwrJit
         return (pGenIntrin->getMetadata("is_evaluate") != nullptr);
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Packetizes the type. Assumes SOA conversion.
+    Type* Builder::GetVectorType(Type* pType)
+    {
+        if (pType->isVectorTy())
+        {
+            return pType;
+        }
+
+        // [N x float] should packetize to [N x <8 x float>]
+        if (pType->isArrayTy())
+        {
+            uint32_t arraySize = pType->getArrayNumElements();
+            Type* pArrayType = pType->getArrayElementType();
+            Type* pVecArrayType = GetVectorType(pArrayType);
+            Type* pVecType = ArrayType::get(pVecArrayType, arraySize);
+            return pVecType;
+        }
+
+        // {float,int} should packetize to {<8 x float>, <8 x int>}
+        if (pType->isAggregateType())
+        {
+            uint32_t numElems = pType->getStructNumElements();
+            SmallVector<Type*, 8> vecTypes;
+            for (uint32_t i = 0; i < numElems; ++i)
+            {
+                Type* pElemType = pType->getStructElementType(i);
+                Type* pVecElemType = GetVectorType(pElemType);
+                vecTypes.push_back(pVecElemType);
+            }
+            Type* pVecType = StructType::get(JM()->mContext, vecTypes);
+            return pVecType;
+        }
+
+        // [N x float]* should packetize to [N x <8 x float>]*
+        if (pType->isPointerTy() && pType->getPointerElementType()->isArrayTy())
+        {
+            return PointerType::get(GetVectorType(pType->getPointerElementType()), pType->getPointerAddressSpace());
+        }
+
+        // <ty> should packetize to <8 x <ty>>
+        Type* vecType = VectorType::get(pType, JM()->mVWidth);
+        return vecType;
+    }
 }

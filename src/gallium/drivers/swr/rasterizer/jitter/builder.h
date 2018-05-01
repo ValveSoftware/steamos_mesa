@@ -123,6 +123,7 @@ namespace SwrJit
         bool IsTempAlloca(Value* inst);
         bool SetTexelMaskEvaluate(Instruction* inst);
         bool IsTexelMaskEvaluate(Instruction* inst);
+        Type* GetVectorType(Type* pType);
 
 #include "gen_builder.hpp"
 #include "gen_builder_meta.hpp"
