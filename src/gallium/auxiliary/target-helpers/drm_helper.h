@@ -311,7 +311,7 @@ pipe_vc4_create_screen(int fd, const struct pipe_screen_config *config)
 #endif
 
 #ifdef GALLIUM_V3D
-#include "vc5/drm/vc5_drm_public.h"
+#include "v3d/drm/v3d_drm_public.h"
 
 struct pipe_screen *
 pipe_v3d_create_screen(int fd, const struct pipe_screen_config *config)

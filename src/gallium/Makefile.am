@@ -90,7 +90,7 @@ endif
 
 ## v3d
 if HAVE_GALLIUM_V3D
-SUBDIRS += drivers/vc5 winsys/vc5/drm
+SUBDIRS += drivers/v3d winsys/v3d/drm
 endif
 
 ## virgl
