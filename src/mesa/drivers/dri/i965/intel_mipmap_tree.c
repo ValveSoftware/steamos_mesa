@@ -1657,7 +1657,6 @@ intel_miptree_copy_teximage(struct brw_context *brw,
 
 static struct intel_miptree_aux_buffer *
 intel_alloc_aux_buffer(struct brw_context *brw,
-                       const char *name,
                        const struct isl_surf *aux_surf,
                        uint32_t alloc_flags,
                        bool wants_memset,
@@ -1684,7 +1683,7 @@ intel_alloc_aux_buffer(struct brw_context *brw,
     * Therefore one can pass the ISL dimensions in terms of bytes instead of
     * trying to recalculate based on different format block sizes.
     */
-   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, name, size,
+   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "aux-miptree", size,
                                 I915_TILING_Y, aux_surf->row_pitch,
                                 alloc_flags);
    if (!buf->bo) {
@@ -1764,7 +1763,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "mcs-miptree", &temp_mcs_surf,
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf,
                                         alloc_flags, true, 0xFF, mt);
    if (!mt->aux_buf) {
       free(aux_state);
@@ -1809,7 +1808,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * For CCS_D, do the same thing. On gen9+, this avoids having any undefined
     * bits in the aux buffer.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "ccs-miptree", &temp_ccs_surf,
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf,
                                         BO_ALLOC_ZEROED, false, 0, mt);
    if (!mt->aux_buf) {
       free(aux_state);
@@ -1876,7 +1875,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    assert(ok);
 
    const uint32_t alloc_flags = 0;
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "hiz-miptree", &temp_hiz_surf,
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf,
                                         alloc_flags, false, 0, mt);
 
    if (!mt->aux_buf) {
