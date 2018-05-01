@@ -53,7 +53,7 @@ files_per_version = files(
 )
 
 v3dv3_c_args = []
-dep_v3dv3 = dependency('v3dv3')
+dep_v3dv3 = dependency('v3dv3', required: false)
 if dep_v3dv3.found()
   v3dv3_c_args = '-DUSE_V3D_SIMULATOR'
 endif

@@ -2740,7 +2740,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([V3D_SIMULATOR], [v3dv3],
                               [USE_V3D_SIMULATOR=yes;
                                DEFINES="$DEFINES -DUSE_V3D_SIMULATOR"],
-                              [AC_MSG_ERROR([vc5 requires the simulator])])
+                              [USE_V3D_SIMULATOR=no])
             ;;
         xpl111)
             HAVE_GALLIUM_PL111=yes
