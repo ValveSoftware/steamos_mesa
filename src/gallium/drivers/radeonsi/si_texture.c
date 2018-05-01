@@ -564,7 +564,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 	rtex->can_sample_z = new_tex->can_sample_z;
 	rtex->can_sample_s = new_tex->can_sample_s;
 	rtex->surface = new_tex->surface;
-	rtex->fmask = new_tex->fmask;
+	rtex->fmask_offset = new_tex->fmask_offset;
 	rtex->cmask = new_tex->cmask;
 	rtex->cb_color_info = new_tex->cb_color_info;
 	rtex->last_msaa_resolve_target_micro_mode = new_tex->last_msaa_resolve_target_micro_mode;
@@ -578,7 +578,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
 		assert(!rtex->htile_offset);
 		assert(!rtex->cmask.size);
-		assert(!rtex->fmask.size);
+		assert(!rtex->surface.fmask_size);
 		assert(!rtex->dcc_offset);
 		assert(!rtex->is_depth);
 	}
@@ -612,7 +612,7 @@ static void si_query_opaque_metadata(struct si_screen *sscreen,
 		return;
 
 	assert(rtex->dcc_separate_buffer == NULL);
-	assert(rtex->fmask.size == 0);
+	assert(rtex->surface.fmask_size == 0);
 
 	/* Metadata image format format version 1:
 	 * [0] = 1 (metadata format identifier)
@@ -845,38 +845,6 @@ static void si_texture_destroy(struct pipe_screen *screen,
 
 static const struct u_resource_vtbl si_texture_vtbl;
 
-/* The number of samples can be specified independently of the texture. */
-void si_texture_get_fmask_info(struct si_screen *sscreen,
-			       struct r600_texture *rtex,
-			       unsigned nr_samples,
-			       struct r600_fmask_info *out)
-{
-	if (sscreen->info.chip_class >= GFX9) {
-		out->alignment = rtex->surface.fmask_alignment;
-		out->size = rtex->surface.fmask_size;
-		out->tile_swizzle = rtex->surface.fmask_tile_swizzle;
-		return;
-	}
-
-	out->slice_tile_max = rtex->surface.u.legacy.fmask.slice_tile_max;
-	out->tile_mode_index = rtex->surface.u.legacy.fmask.tiling_index;
-	out->pitch_in_pixels = rtex->surface.u.legacy.fmask.pitch_in_pixels;
-	out->bank_height = rtex->surface.u.legacy.fmask.bankh;
-	out->tile_swizzle = rtex->surface.fmask_tile_swizzle;
-	out->alignment = rtex->surface.fmask_alignment;
-	out->size = rtex->surface.fmask_size;
-}
-
-static void si_texture_allocate_fmask(struct si_screen *sscreen,
-				      struct r600_texture *rtex)
-{
-	si_texture_get_fmask_info(sscreen, rtex,
-				    rtex->buffer.b.b.nr_samples, &rtex->fmask);
-
-	rtex->fmask.offset = align64(rtex->size, rtex->fmask.alignment);
-	rtex->size = rtex->fmask.offset + rtex->fmask.size;
-}
-
 void si_texture_get_cmask_info(struct si_screen *sscreen,
 			       struct r600_texture *rtex,
 			       struct r600_cmask_info *out)
@@ -1049,10 +1017,10 @@ void si_print_texture_info(struct si_screen *sscreen,
 			rtex->surface.u.gfx9.surf.epitch,
 			rtex->surface.u.gfx9.surf_pitch);
 
-		if (rtex->fmask.size) {
+		if (rtex->surface.fmask_size) {
 			u_log_printf(log, "  FMASK: offset=%"PRIu64", size=%"PRIu64", "
 				"alignment=%u, swmode=%u, epitch=%u\n",
-				rtex->fmask.offset,
+				rtex->fmask_offset,
 				rtex->surface.fmask_size,
 				rtex->surface.fmask_alignment,
 				rtex->surface.u.gfx9.fmask.swizzle_mode,
@@ -1104,12 +1072,14 @@ void si_print_texture_info(struct si_screen *sscreen,
 		rtex->surface.u.legacy.tile_split, rtex->surface.u.legacy.pipe_config,
 		(rtex->surface.flags & RADEON_SURF_SCANOUT) != 0);
 
-	if (rtex->fmask.size)
+	if (rtex->surface.fmask_size)
 		u_log_printf(log, "  FMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, pitch_in_pixels=%u, "
 			"bankh=%u, slice_tile_max=%u, tile_mode_index=%u\n",
-			rtex->fmask.offset, rtex->fmask.size, rtex->fmask.alignment,
-			rtex->fmask.pitch_in_pixels, rtex->fmask.bank_height,
-			rtex->fmask.slice_tile_max, rtex->fmask.tile_mode_index);
+			rtex->fmask_offset, rtex->surface.fmask_size, rtex->surface.fmask_alignment,
+			rtex->surface.u.legacy.fmask.pitch_in_pixels,
+			rtex->surface.u.legacy.fmask.bankh,
+			rtex->surface.u.legacy.fmask.slice_tile_max,
+			rtex->surface.u.legacy.fmask.tiling_index);
 
 	if (rtex->cmask.size)
 		u_log_printf(log, "  CMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, "
@@ -1248,11 +1218,15 @@ si_texture_create_object(struct pipe_screen *screen,
 		if (base->nr_samples > 1 &&
 		    !buf &&
 		    !(sscreen->debug_flags & DBG(NO_FMASK))) {
-			si_texture_allocate_fmask(sscreen, rtex);
+			/* Allocate FMASK. */
+			rtex->fmask_offset = align64(rtex->size,
+						     rtex->surface.fmask_alignment);
+			rtex->size = rtex->fmask_offset + rtex->surface.fmask_size;
+
 			si_texture_allocate_cmask(sscreen, rtex);
 			rtex->cmask_buffer = &rtex->buffer;
 
-			if (!rtex->fmask.size || !rtex->cmask.size) {
+			if (!rtex->surface.fmask_size || !rtex->cmask.size) {
 				FREE(rtex);
 				return NULL;
 			}

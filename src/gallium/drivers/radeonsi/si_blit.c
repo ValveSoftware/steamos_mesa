@@ -470,7 +470,7 @@ static void si_blit_decompress_color(struct si_context *sctx,
 			if (!vi_dcc_enabled(rtex, i))
 				level_mask &= ~(1 << i);
 		}
-	} else if (rtex->fmask.size) {
+	} else if (rtex->surface.fmask_size) {
 		custom_blend = sctx->custom_blend_fmask_decompress;
 	} else {
 		custom_blend = sctx->custom_blend_eliminate_fastclear;
@@ -528,7 +528,7 @@ si_decompress_color_texture(struct si_context *sctx, struct r600_texture *tex,
 			    unsigned first_level, unsigned last_level)
 {
 	/* CMASK or DCC can be discarded and we can still end up here. */
-	if (!tex->cmask.size && !tex->fmask.size && !tex->dcc_offset)
+	if (!tex->cmask.size && !tex->surface.fmask_size && !tex->dcc_offset)
 		return;
 
 	si_blit_decompress_color(sctx, tex, first_level, last_level, 0,
@@ -849,7 +849,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 		si_decompress_depth(sctx, rtex, planes,
 				    level, level,
 				    first_layer, last_layer);
-	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
+	} else if (rtex->surface.fmask_size || rtex->cmask.size || rtex->dcc_offset) {
 		/* If we've rendered into the framebuffer and it's a blitting
 		 * source, make sure the decompression pass is invoked
 		 * by dirtying the framebuffer.

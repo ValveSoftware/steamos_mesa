@@ -467,7 +467,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 					       desc);
 	}
 
-	if (!is_buffer && rtex->fmask.size) {
+	if (!is_buffer && rtex->surface.fmask_size) {
 		memcpy(desc + 8, sview->fmask_state, 8*4);
 	} else {
 		/* Disable FMASK and bind sampler state in [12:15]. */
@@ -482,7 +482,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 
 static bool color_needs_decompression(struct r600_texture *rtex)
 {
-	return rtex->fmask.size ||
+	return rtex->surface.fmask_size ||
 	       (rtex->dirty_level_mask &&
 		(rtex->cmask.size || rtex->dcc_offset));
 }
@@ -714,13 +714,13 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 		 * so we don't wanna trigger it.
 		 */
 		if (tex->is_depth ||
-		    (!fmask_desc && tex->fmask.size != 0)) {
+		    (!fmask_desc && tex->surface.fmask_size != 0)) {
 			assert(!"Z/S and MSAA image stores are not supported");
 			access &= ~PIPE_IMAGE_ACCESS_WRITE;
 		}
 
 		assert(!tex->is_depth);
-		assert(fmask_desc || tex->fmask.size == 0);
+		assert(fmask_desc || tex->surface.fmask_size == 0);
 
 		if (uses_dcc && !skip_decompress &&
 		    (view->access & PIPE_IMAGE_ACCESS_WRITE ||
@@ -980,7 +980,7 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 		    sview->base.texture->target != PIPE_BUFFER)
 			tex = (struct r600_texture *)sview->base.texture;
 
-		if (tex && tex->fmask.size)
+		if (tex && tex->surface.fmask_size)
 			continue;
 
 		si_set_sampler_state_desc(sstates[i], sview, tex,
