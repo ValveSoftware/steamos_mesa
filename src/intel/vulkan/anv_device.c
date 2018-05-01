@@ -1179,6 +1179,7 @@ PFN_vkVoidFunction anv_GetInstanceProcAddr(
 
    LOOKUP_ANV_ENTRYPOINT(EnumerateInstanceExtensionProperties);
    LOOKUP_ANV_ENTRYPOINT(EnumerateInstanceLayerProperties);
+   LOOKUP_ANV_ENTRYPOINT(EnumerateInstanceVersion);
    LOOKUP_ANV_ENTRYPOINT(CreateInstance);
 
 #undef LOOKUP_ANV_ENTRYPOINT
