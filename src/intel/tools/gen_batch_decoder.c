@@ -175,7 +175,7 @@ handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
 
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Surface State Base Address") == 0) {
          ctx->surface_base = ctx_get_bo(ctx, iter.raw_value);
       } else if (strcmp(iter.name, "Dynamic State Base Address") == 0) {
@@ -183,7 +183,7 @@ handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
       } else if (strcmp(iter.name, "Instruction Base Address") == 0) {
          ctx->instruction_base = ctx_get_bo(ctx, iter.raw_value);
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 }
 
 static void
@@ -272,14 +272,14 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
    gen_field_iterator_init(&iter, inst, p, 0, false);
    uint32_t descriptor_offset = 0;
    int descriptor_count = 0;
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Interface Descriptor Data Start Address") == 0) {
          descriptor_offset = strtol(iter.value, NULL, 16);
       } else if (strcmp(iter.name, "Interface Descriptor Total Length") == 0) {
          descriptor_count =
             strtol(iter.value, NULL, 16) / (desc->dw_length * 4);
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    uint64_t desc_addr = ctx->dynamic_base.addr + descriptor_offset;
    const uint32_t *desc_map = ctx->dynamic_base.map + descriptor_offset;
@@ -292,7 +292,7 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
       uint64_t ksp;
       uint32_t sampler_offset, sampler_count;
       uint32_t binding_table_offset, binding_entry_count;
-      do {
+      while (gen_field_iterator_next(&iter)) {
          if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
             ksp = strtoll(iter.value, NULL, 16);
          } else if (strcmp(iter.name, "Sampler State Pointer") == 0) {
@@ -304,7 +304,7 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
          } else if (strcmp(iter.name, "Binding Table Entry Count") == 0) {
             binding_entry_count = strtol(iter.value, NULL, 10);
          }
-      } while (gen_field_iterator_next(&iter));
+      }
 
       ctx_disassemble_program(ctx, ksp, "compute shader");
       printf("\n");
@@ -331,7 +331,7 @@ handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Vertex Buffer Index") == 0) {
          index = iter.raw_value;
       } else if (strcmp(iter.name, "Buffer Pitch") == 0) {
@@ -369,7 +369,7 @@ handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
       index = -1;
       pitch = -1;
       ready = false;
-   } while (gen_field_iterator_next(&iter));
+   }
 }
 
 static void
@@ -384,7 +384,7 @@ handle_3dstate_index_buffer(struct gen_batch_decode_ctx *ctx,
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Index Format") == 0) {
          format = iter.raw_value;
       } else if (strcmp(iter.name, "Buffer Starting Address") == 0) {
@@ -392,7 +392,7 @@ handle_3dstate_index_buffer(struct gen_batch_decode_ctx *ctx,
       } else if (strcmp(iter.name, "Buffer Size") == 0) {
          ib_size = iter.raw_value;
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    if (ib.map == NULL) {
       fprintf(ctx->fp, "  buffer contents unavailable\n");
@@ -434,7 +434,7 @@ decode_single_ksp(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
          ksp = iter.raw_value;
       } else if (strcmp(iter.name, "SIMD8 Dispatch Enable") == 0) {
@@ -446,7 +446,7 @@ decode_single_ksp(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
       } else if (strcmp(iter.name, "Enable") == 0) {
          is_enabled = iter.raw_value;
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    const char *type =
       strcmp(inst->name,   "VS_STATE") == 0 ? "vertex shader" :
@@ -475,7 +475,7 @@ decode_ps_kernels(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strncmp(iter.name, "Kernel Start Pointer ",
                   strlen("Kernel Start Pointer ")) == 0) {
          int idx = iter.name[strlen("Kernel Start Pointer ")] - '0';
@@ -487,7 +487,7 @@ decode_ps_kernels(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
       } else if (strcmp(iter.name, "32 Pixel Dispatch Enable") == 0) {
          enabled[2] = strcmp(iter.value, "true") == 0;
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    /* Reorder KSPs to be [8, 16, 32] instead of the hardware order. */
    if (enabled[0] + enabled[1] + enabled[2] == 1) {
@@ -526,13 +526,13 @@ decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Read Length") == 0) {
          read_length[rlidx++] = iter.raw_value;
       } else if (strcmp(iter.name, "Buffer") == 0) {
          buffer[bidx++] = ctx_get_bo(ctx, iter.raw_value);
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    for (int i = 0; i < 4; i++) {
       if (read_length[i] == 0 || buffer[i].map == NULL)
@@ -595,12 +595,12 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       if (str_ends_with(iter.name, "Pointer")) {
          state_offset = iter.raw_value;
          break;
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 
    uint32_t state_addr = ctx->dynamic_base.addr + state_offset;
    const uint32_t *state_map = ctx->dynamic_base.map + state_offset;
@@ -788,13 +788,13 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
          bool second_level;
          struct gen_field_iterator iter;
          gen_field_iterator_init(&iter, inst, p, 0, false);
-         do {
+         while (gen_field_iterator_next(&iter)) {
             if (strcmp(iter.name, "Batch Buffer Start Address") == 0) {
                next_batch = ctx_get_bo(ctx, iter.raw_value);
             } else if (strcmp(iter.name, "Second Level Batch Buffer") == 0) {
                second_level = iter.raw_value;
             }
-         } while (gen_field_iterator_next(&iter));
+         }
 
          if (next_batch.map == NULL) {
             fprintf(ctx->fp, "Secondary batch at 0x%08"PRIx64" unavailable",

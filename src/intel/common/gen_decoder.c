@@ -981,25 +981,31 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    memset(iter, 0, sizeof(*iter));
 
    iter->group = group;
-   if (group->fields)
-      iter->field = group->fields;
-   else
-      iter->field = group->next->fields;
    iter->p = p;
    iter->p_bit = p_bit;
 
    int length = gen_group_get_length(iter->group, iter->p);
    iter->p_end = length > 0 ? &p[length] : NULL;
    iter->print_colors = print_colors;
-
-   bool result = iter_decode_field(iter);
-   if (length >= 0)
-      assert(result);
 }
 
 bool
 gen_field_iterator_next(struct gen_field_iterator *iter)
 {
+   /* Initial condition */
+   if (!iter->field) {
+      if (iter->group->fields)
+         iter->field = iter->group->fields;
+      else
+         iter->field = iter->group->next->fields;
+
+      bool result = iter_decode_field(iter);
+      if (iter->p_end)
+         assert(result);
+
+      return true;
+   }
+
    if (!iter_advance_field(iter))
       return false;
 
@@ -1040,7 +1046,7 @@ gen_print_group(FILE *outfile, struct gen_group *group, uint64_t offset,
    int last_dword = -1;
 
    gen_field_iterator_init(&iter, group, p, p_bit, color);
-   do {
+   while (gen_field_iterator_next(&iter)) {
       int iter_dword = iter.end_bit / 32;
       if (last_dword != iter_dword) {
          for (int i = last_dword + 1; i <= iter_dword; i++)
@@ -1055,5 +1061,5 @@ gen_print_group(FILE *outfile, struct gen_group *group, uint64_t offset,
                             &p[iter_dword], iter.start_bit % 32, color);
          }
       }
-   } while (gen_field_iterator_next(&iter));
+   }
 }
