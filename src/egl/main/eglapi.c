@@ -509,6 +509,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_image);
    _EGL_CHECK_EXTENSION(KHR_image_base);
    _EGL_CHECK_EXTENSION(KHR_image_pixmap);
+   _EGL_CHECK_EXTENSION(KHR_mutable_render_buffer);
    _EGL_CHECK_EXTENSION(KHR_no_config_context);
    _EGL_CHECK_EXTENSION(KHR_partial_update);
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
