@@ -30,9 +30,9 @@
 #include "v3d_context.h"
 #include "broadcom/cle/v3dx_pack.h"
 
-void v3dX(bcl_epilogue)(struct vc5_context *vc5, struct vc5_job *job)
+void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
 {
-                vc5_cl_ensure_space_with_branch(&job->bcl,
+                v3d_cl_ensure_space_with_branch(&job->bcl,
                                                 cl_packet_length(OCCLUSION_QUERY_COUNTER) +
 #if V3D_VERSION >= 41
                                                 cl_packet_length(TRANSFORM_FEEDBACK_SPECS) +

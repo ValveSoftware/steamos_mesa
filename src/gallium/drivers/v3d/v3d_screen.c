@@ -40,9 +40,9 @@
 #include "compiler/v3d_compiler.h"
 
 static const char *
-vc5_screen_get_name(struct pipe_screen *pscreen)
+v3d_screen_get_name(struct pipe_screen *pscreen)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
+        struct v3d_screen *screen = v3d_screen(pscreen);
 
         if (!screen->name) {
                 screen->name = ralloc_asprintf(screen,
@@ -55,22 +55,22 @@ vc5_screen_get_name(struct pipe_screen *pscreen)
 }
 
 static const char *
-vc5_screen_get_vendor(struct pipe_screen *pscreen)
+v3d_screen_get_vendor(struct pipe_screen *pscreen)
 {
         return "Broadcom";
 }
 
 static void
-vc5_screen_destroy(struct pipe_screen *pscreen)
+v3d_screen_destroy(struct pipe_screen *pscreen)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
+        struct v3d_screen *screen = v3d_screen(pscreen);
 
         util_hash_table_destroy(screen->bo_handles);
-        vc5_bufmgr_destroy(pscreen);
+        v3d_bufmgr_destroy(pscreen);
         slab_destroy_parent(&screen->transfer_pool);
 
-        if (using_vc5_simulator)
-                vc5_simulator_destroy(screen);
+        if (using_v3d_simulator)
+                v3d_simulator_destroy(screen);
 
         v3d_compiler_free(screen->compiler);
 
@@ -79,9 +79,9 @@ vc5_screen_destroy(struct pipe_screen *pscreen)
 }
 
 static int
-vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
+v3d_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
+        struct v3d_screen *screen = v3d_screen(pscreen);
 
         switch (param) {
                 /* Supported features (boolean caps). */
@@ -323,7 +323,7 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 }
 
 static float
-vc5_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
+v3d_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 {
         switch (param) {
         case PIPE_CAPF_MAX_LINE_WIDTH:
@@ -350,7 +350,7 @@ vc5_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
 }
 
 static int
-vc5_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
+v3d_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
                            enum pipe_shader_cap param)
 {
         if (shader != PIPE_SHADER_VERTEX &&
@@ -429,13 +429,13 @@ vc5_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 }
 
 static boolean
-vc5_screen_is_format_supported(struct pipe_screen *pscreen,
+v3d_screen_is_format_supported(struct pipe_screen *pscreen,
                                enum pipe_format format,
                                enum pipe_texture_target target,
                                unsigned sample_count,
                                unsigned usage)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
+        struct v3d_screen *screen = v3d_screen(pscreen);
 
         if (sample_count > 1 && sample_count != VC5_MAX_SAMPLES)
                 return FALSE;
@@ -506,12 +506,12 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
         }
 
         if ((usage & PIPE_BIND_RENDER_TARGET) &&
-            !vc5_rt_format_supported(&screen->devinfo, format)) {
+            !v3d_rt_format_supported(&screen->devinfo, format)) {
                 return FALSE;
         }
 
         if ((usage & PIPE_BIND_SAMPLER_VIEW) &&
-            !vc5_tex_format_supported(&screen->devinfo, format)) {
+            !v3d_tex_format_supported(&screen->devinfo, format)) {
                 return FALSE;
         }
 
@@ -547,7 +547,7 @@ static int handle_compare(void *key1, void *key2)
 }
 
 static bool
-vc5_get_device_info(struct vc5_screen *screen)
+v3d_get_device_info(struct v3d_screen *screen)
 {
         struct drm_v3d_get_param ident0 = {
                 .param = DRM_V3D_PARAM_V3D_CORE0_IDENT0,
@@ -557,13 +557,13 @@ vc5_get_device_info(struct vc5_screen *screen)
         };
         int ret;
 
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident0);
+        ret = v3d_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident0);
         if (ret != 0) {
                 fprintf(stderr, "Couldn't get V3D core IDENT0: %s\n",
                         strerror(errno));
                 return false;
         }
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident1);
+        ret = v3d_ioctl(screen->fd, DRM_IOCTL_V3D_GET_PARAM, &ident1);
         if (ret != 0) {
                 fprintf(stderr, "Couldn't get V3D core IDENT1: %s\n",
                         strerror(errno));
@@ -591,7 +591,7 @@ vc5_get_device_info(struct vc5_screen *screen)
 }
 
 static const void *
-vc5_screen_get_compiler_options(struct pipe_screen *pscreen,
+v3d_screen_get_compiler_options(struct pipe_screen *pscreen,
                                 enum pipe_shader_ir ir, unsigned shader)
 {
         return &v3d_nir_options;
@@ -600,17 +600,17 @@ vc5_screen_get_compiler_options(struct pipe_screen *pscreen,
 struct pipe_screen *
 v3d_screen_create(int fd)
 {
-        struct vc5_screen *screen = rzalloc(NULL, struct vc5_screen);
+        struct v3d_screen *screen = rzalloc(NULL, struct v3d_screen);
         struct pipe_screen *pscreen;
 
         pscreen = &screen->base;
 
-        pscreen->destroy = vc5_screen_destroy;
-        pscreen->get_param = vc5_screen_get_param;
-        pscreen->get_paramf = vc5_screen_get_paramf;
-        pscreen->get_shader_param = vc5_screen_get_shader_param;
-        pscreen->context_create = vc5_context_create;
-        pscreen->is_format_supported = vc5_screen_is_format_supported;
+        pscreen->destroy = v3d_screen_destroy;
+        pscreen->get_param = v3d_screen_get_param;
+        pscreen->get_paramf = v3d_screen_get_paramf;
+        pscreen->get_shader_param = v3d_screen_get_shader_param;
+        pscreen->context_create = v3d_context_create;
+        pscreen->is_format_supported = v3d_screen_is_format_supported;
 
         screen->fd = fd;
         list_inithead(&screen->bo_cache.time_list);
@@ -618,26 +618,26 @@ v3d_screen_create(int fd)
         screen->bo_handles = util_hash_table_create(handle_hash, handle_compare);
 
 #if defined(USE_V3D_SIMULATOR)
-        vc5_simulator_init(screen);
+        v3d_simulator_init(screen);
 #endif
 
-        if (!vc5_get_device_info(screen))
+        if (!v3d_get_device_info(screen))
                 goto fail;
 
-        slab_create_parent(&screen->transfer_pool, sizeof(struct vc5_transfer), 16);
+        slab_create_parent(&screen->transfer_pool, sizeof(struct v3d_transfer), 16);
 
-        vc5_fence_init(screen);
+        v3d_fence_init(screen);
 
         v3d_process_debug_variable();
 
-        vc5_resource_screen_init(pscreen);
+        v3d_resource_screen_init(pscreen);
 
         screen->compiler = v3d_compiler_init(&screen->devinfo);
 
-        pscreen->get_name = vc5_screen_get_name;
-        pscreen->get_vendor = vc5_screen_get_vendor;
-        pscreen->get_device_vendor = vc5_screen_get_vendor;
-        pscreen->get_compiler_options = vc5_screen_get_compiler_options;
+        pscreen->get_name = v3d_screen_get_name;
+        pscreen->get_vendor = v3d_screen_get_vendor;
+        pscreen->get_device_vendor = v3d_screen_get_vendor;
+        pscreen->get_compiler_options = v3d_screen_get_compiler_options;
 
         return pscreen;
 

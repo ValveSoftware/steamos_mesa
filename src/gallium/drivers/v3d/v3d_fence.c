@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-/** @file vc5_fence.c
+/** @file v3d_fence.c
  *
  * Seqno-based fence management.
  *
@@ -39,20 +39,20 @@
 #include "v3d_context.h"
 #include "v3d_bufmgr.h"
 
-struct vc5_fence {
+struct v3d_fence {
         struct pipe_reference reference;
         uint32_t sync;
 };
 
 static void
-vc5_fence_reference(struct pipe_screen *pscreen,
+v3d_fence_reference(struct pipe_screen *pscreen,
                     struct pipe_fence_handle **pp,
                     struct pipe_fence_handle *pf)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_fence **p = (struct vc5_fence **)pp;
-        struct vc5_fence *f = (struct vc5_fence *)pf;
-        struct vc5_fence *old = *p;
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_fence **p = (struct v3d_fence **)pp;
+        struct v3d_fence *f = (struct v3d_fence *)pf;
+        struct v3d_fence *old = *p;
 
         if (pipe_reference(&(*p)->reference, &f->reference)) {
                 drmSyncobjDestroy(screen->fd, old->sync);
@@ -62,27 +62,27 @@ vc5_fence_reference(struct pipe_screen *pscreen,
 }
 
 static boolean
-vc5_fence_finish(struct pipe_screen *pscreen,
+v3d_fence_finish(struct pipe_screen *pscreen,
 		 struct pipe_context *ctx,
                  struct pipe_fence_handle *pf,
                  uint64_t timeout_ns)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_fence *f = (struct vc5_fence *)pf;
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_fence *f = (struct v3d_fence *)pf;
 
         return drmSyncobjWait(screen->fd, &f->sync, 1, timeout_ns, 0, NULL);
 }
 
-struct vc5_fence *
-vc5_fence_create(struct vc5_context *vc5)
+struct v3d_fence *
+v3d_fence_create(struct v3d_context *v3d)
 {
-        struct vc5_fence *f = calloc(1, sizeof(*f));
+        struct v3d_fence *f = calloc(1, sizeof(*f));
         if (!f)
                 return NULL;
 
         uint32_t new_sync;
         /* Make a new sync object for the context. */
-        int ret = drmSyncobjCreate(vc5->fd, DRM_SYNCOBJ_CREATE_SIGNALED,
+        int ret = drmSyncobjCreate(v3d->fd, DRM_SYNCOBJ_CREATE_SIGNALED,
                                    &new_sync);
         if (ret) {
                 free(f);
@@ -90,15 +90,15 @@ vc5_fence_create(struct vc5_context *vc5)
         }
 
         pipe_reference_init(&f->reference, 1);
-        f->sync = vc5->out_sync;
-        vc5->out_sync = new_sync;
+        f->sync = v3d->out_sync;
+        v3d->out_sync = new_sync;
 
         return f;
 }
 
 void
-vc5_fence_init(struct vc5_screen *screen)
+v3d_fence_init(struct v3d_screen *screen)
 {
-        screen->base.fence_reference = vc5_fence_reference;
-        screen->base.fence_finish = vc5_fence_finish;
+        screen->base.fence_reference = v3d_fence_reference;
+        screen->base.fence_finish = v3d_fence_finish;
 }

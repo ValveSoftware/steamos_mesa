@@ -40,7 +40,7 @@
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
 static void
-vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
+v3d_debug_resource_layout(struct v3d_resource *rsc, const char *caller)
 {
         if (!(V3D_DEBUG & V3D_DEBUG_SURFACE))
                 return;
@@ -68,7 +68,7 @@ vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
         };
 
         for (int i = 0; i <= prsc->last_level; i++) {
-                struct vc5_resource_slice *slice = &rsc->slices[i];
+                struct v3d_resource_slice *slice = &rsc->slices[i];
 
                 int level_width = slice->stride / rsc->cpp;
                 int level_height = slice->padded_height;
@@ -94,17 +94,17 @@ vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
 }
 
 static bool
-vc5_resource_bo_alloc(struct vc5_resource *rsc)
+v3d_resource_bo_alloc(struct v3d_resource *rsc)
 {
         struct pipe_resource *prsc = &rsc->base;
         struct pipe_screen *pscreen = prsc->screen;
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
 
-        bo = vc5_bo_alloc(vc5_screen(pscreen), rsc->size, "resource");
+        bo = v3d_bo_alloc(v3d_screen(pscreen), rsc->size, "resource");
         if (bo) {
-                vc5_bo_unreference(&rsc->bo);
+                v3d_bo_unreference(&rsc->bo);
                 rsc->bo = bo;
-                vc5_debug_resource_layout(rsc, "alloc");
+                v3d_debug_resource_layout(rsc, "alloc");
                 return true;
         } else {
                 return false;
@@ -112,23 +112,23 @@ vc5_resource_bo_alloc(struct vc5_resource *rsc)
 }
 
 static void
-vc5_resource_transfer_unmap(struct pipe_context *pctx,
+v3d_resource_transfer_unmap(struct pipe_context *pctx,
                             struct pipe_transfer *ptrans)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_transfer *trans = vc5_transfer(ptrans);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_transfer *trans = v3d_transfer(ptrans);
 
         if (trans->map) {
-                struct vc5_resource *rsc = vc5_resource(ptrans->resource);
-                struct vc5_resource_slice *slice = &rsc->slices[ptrans->level];
+                struct v3d_resource *rsc = v3d_resource(ptrans->resource);
+                struct v3d_resource_slice *slice = &rsc->slices[ptrans->level];
 
                 if (ptrans->usage & PIPE_TRANSFER_WRITE) {
                         for (int z = 0; z < ptrans->box.depth; z++) {
                                 void *dst = rsc->bo->map +
-                                        vc5_layer_offset(&rsc->base,
+                                        v3d_layer_offset(&rsc->base,
                                                          ptrans->level,
                                                          ptrans->box.z + z);
-                                vc5_store_tiled_image(dst,
+                                v3d_store_tiled_image(dst,
                                                       slice->stride,
                                                       (trans->map +
                                                        ptrans->stride *
@@ -143,19 +143,19 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
         }
 
         pipe_resource_reference(&ptrans->resource, NULL);
-        slab_free(&vc5->transfer_pool, ptrans);
+        slab_free(&v3d->transfer_pool, ptrans);
 }
 
 static void *
-vc5_resource_transfer_map(struct pipe_context *pctx,
+v3d_resource_transfer_map(struct pipe_context *pctx,
                           struct pipe_resource *prsc,
                           unsigned level, unsigned usage,
                           const struct pipe_box *box,
                           struct pipe_transfer **pptrans)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_resource *rsc = vc5_resource(prsc);
-        struct vc5_transfer *trans;
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_resource *rsc = v3d_resource(prsc);
+        struct v3d_transfer *trans;
         struct pipe_transfer *ptrans;
         enum pipe_format format = prsc->format;
         char *buf;
@@ -179,20 +179,20 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
         }
 
         if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
-                if (vc5_resource_bo_alloc(rsc)) {
+                if (v3d_resource_bo_alloc(rsc)) {
                         /* If it might be bound as one of our vertex buffers
                          * or UBOs, make sure we re-emit vertex buffer state
                          * or uniforms.
                          */
                         if (prsc->bind & PIPE_BIND_VERTEX_BUFFER)
-                                vc5->dirty |= VC5_DIRTY_VTXBUF;
+                                v3d->dirty |= VC5_DIRTY_VTXBUF;
                         if (prsc->bind & PIPE_BIND_CONSTANT_BUFFER)
-                                vc5->dirty |= VC5_DIRTY_CONSTBUF;
+                                v3d->dirty |= VC5_DIRTY_CONSTBUF;
                 } else {
                         /* If we failed to reallocate, flush users so that we
                          * don't violate any syncing requirements.
                          */
-                        vc5_flush_jobs_reading_resource(vc5, prsc);
+                        v3d_flush_jobs_reading_resource(v3d, prsc);
                 }
         } else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
                 /* If we're writing and the buffer is being used by the CL, we
@@ -200,9 +200,9 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                  * to flush if the CL has written our buffer.
                  */
                 if (usage & PIPE_TRANSFER_WRITE)
-                        vc5_flush_jobs_reading_resource(vc5, prsc);
+                        v3d_flush_jobs_reading_resource(v3d, prsc);
                 else
-                        vc5_flush_jobs_writing_resource(vc5, prsc);
+                        v3d_flush_jobs_writing_resource(v3d, prsc);
         }
 
         if (usage & PIPE_TRANSFER_WRITE) {
@@ -210,7 +210,7 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                 rsc->initialized_buffers = ~0;
         }
 
-        trans = slab_alloc(&vc5->transfer_pool);
+        trans = slab_alloc(&v3d->transfer_pool);
         if (!trans)
                 return NULL;
 
@@ -230,9 +230,9 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
          */
 
         if (usage & PIPE_TRANSFER_UNSYNCHRONIZED)
-                buf = vc5_bo_map_unsynchronized(rsc->bo);
+                buf = v3d_bo_map_unsynchronized(rsc->bo);
         else
-                buf = vc5_bo_map(rsc->bo);
+                buf = v3d_bo_map(rsc->bo);
         if (!buf) {
                 fprintf(stderr, "Failed to map bo\n");
                 goto fail;
@@ -248,7 +248,7 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
         ptrans->box.height = DIV_ROUND_UP(ptrans->box.height,
                                           util_format_get_blockheight(format));
 
-        struct vc5_resource_slice *slice = &rsc->slices[level];
+        struct v3d_resource_slice *slice = &rsc->slices[level];
         if (rsc->tiled) {
                 /* No direct mappings of tiled, since we need to manually
                  * tile/untile.
@@ -264,10 +264,10 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                 if (usage & PIPE_TRANSFER_READ) {
                         for (int z = 0; z < ptrans->box.depth; z++) {
                                 void *src = rsc->bo->map +
-                                        vc5_layer_offset(&rsc->base,
+                                        v3d_layer_offset(&rsc->base,
                                                          ptrans->level,
                                                          ptrans->box.z + z);
-                                vc5_load_tiled_image((trans->map +
+                                v3d_load_tiled_image((trans->map +
                                                       ptrans->stride *
                                                       ptrans->box.height * z),
                                                      ptrans->stride,
@@ -291,29 +291,29 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
 
 
 fail:
-        vc5_resource_transfer_unmap(pctx, ptrans);
+        v3d_resource_transfer_unmap(pctx, ptrans);
         return NULL;
 }
 
 static void
-vc5_resource_destroy(struct pipe_screen *pscreen,
+v3d_resource_destroy(struct pipe_screen *pscreen,
                      struct pipe_resource *prsc)
 {
-        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct v3d_resource *rsc = v3d_resource(prsc);
 
-        vc5_bo_unreference(&rsc->bo);
+        v3d_bo_unreference(&rsc->bo);
         free(rsc);
 }
 
 static boolean
-vc5_resource_get_handle(struct pipe_screen *pscreen,
+v3d_resource_get_handle(struct pipe_screen *pscreen,
                         struct pipe_context *pctx,
                         struct pipe_resource *prsc,
                         struct winsys_handle *whandle,
                         unsigned usage)
 {
-        struct vc5_resource *rsc = vc5_resource(prsc);
-        struct vc5_bo *bo = rsc->bo;
+        struct v3d_resource *rsc = v3d_resource(prsc);
+        struct v3d_bo *bo = rsc->bo;
 
         whandle->stride = rsc->slices[0].stride;
 
@@ -325,12 +325,12 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
 
         switch (whandle->type) {
         case DRM_API_HANDLE_TYPE_SHARED:
-                return vc5_bo_flink(bo, &whandle->handle);
+                return v3d_bo_flink(bo, &whandle->handle);
         case DRM_API_HANDLE_TYPE_KMS:
                 whandle->handle = bo->handle;
                 return TRUE;
         case DRM_API_HANDLE_TYPE_FD:
-                whandle->handle = vc5_bo_get_dmabuf(bo);
+                whandle->handle = v3d_bo_get_dmabuf(bo);
                 return whandle->handle != -1;
         }
 
@@ -350,9 +350,9 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
  * between columns of UIF blocks.
  */
 static uint32_t
-vc5_get_ub_pad(struct vc5_resource *rsc, uint32_t height)
+v3d_get_ub_pad(struct v3d_resource *rsc, uint32_t height)
 {
-        uint32_t utile_h = vc5_utile_height(rsc->cpp);
+        uint32_t utile_h = v3d_utile_height(rsc->cpp);
         uint32_t uif_block_h = utile_h * 2;
         uint32_t height_ub = height / uif_block_h;
 
@@ -384,7 +384,7 @@ vc5_get_ub_pad(struct vc5_resource *rsc, uint32_t height)
 }
 
 static void
-vc5_setup_slices(struct vc5_resource *rsc)
+v3d_setup_slices(struct v3d_resource *rsc)
 {
         struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
@@ -399,8 +399,8 @@ vc5_setup_slices(struct vc5_resource *rsc)
         uint32_t pot_height = 2 * util_next_power_of_two(u_minify(height, 1));
         uint32_t pot_depth = 2 * util_next_power_of_two(u_minify(depth, 1));
         uint32_t offset = 0;
-        uint32_t utile_w = vc5_utile_width(rsc->cpp);
-        uint32_t utile_h = vc5_utile_height(rsc->cpp);
+        uint32_t utile_w = v3d_utile_width(rsc->cpp);
+        uint32_t utile_h = v3d_utile_height(rsc->cpp);
         uint32_t uif_block_w = utile_w * 2;
         uint32_t uif_block_h = utile_h * 2;
         uint32_t block_width = util_format_get_blockwidth(prsc->format);
@@ -412,7 +412,7 @@ vc5_setup_slices(struct vc5_resource *rsc)
         bool uif_top = msaa;
 
         for (int i = prsc->last_level; i >= 0; i--) {
-                struct vc5_resource_slice *slice = &rsc->slices[i];
+                struct v3d_resource_slice *slice = &rsc->slices[i];
 
                 uint32_t level_width, level_height, level_depth;
                 if (i < 2) {
@@ -466,7 +466,7 @@ vc5_setup_slices(struct vc5_resource *rsc)
                                 level_height = align(level_height,
                                                      uif_block_h);
 
-                                slice->ub_pad = vc5_get_ub_pad(rsc,
+                                slice->ub_pad = v3d_get_ub_pad(rsc,
                                                                level_height);
                                 level_height += slice->ub_pad * uif_block_h;
 
@@ -539,10 +539,10 @@ vc5_setup_slices(struct vc5_resource *rsc)
 }
 
 uint32_t
-vc5_layer_offset(struct pipe_resource *prsc, uint32_t level, uint32_t layer)
+v3d_layer_offset(struct pipe_resource *prsc, uint32_t level, uint32_t layer)
 {
-        struct vc5_resource *rsc = vc5_resource(prsc);
-        struct vc5_resource_slice *slice = &rsc->slices[level];
+        struct v3d_resource *rsc = v3d_resource(prsc);
+        struct v3d_resource_slice *slice = &rsc->slices[level];
 
         if (prsc->target == PIPE_TEXTURE_3D)
                 return slice->offset + layer * slice->size;
@@ -550,12 +550,12 @@ vc5_layer_offset(struct pipe_resource *prsc, uint32_t level, uint32_t layer)
                 return slice->offset + layer * rsc->cube_map_stride;
 }
 
-static struct vc5_resource *
-vc5_resource_setup(struct pipe_screen *pscreen,
+static struct v3d_resource *
+v3d_resource_setup(struct pipe_screen *pscreen,
                    const struct pipe_resource *tmpl)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_resource *rsc = CALLOC_STRUCT(vc5_resource);
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_resource *rsc = CALLOC_STRUCT(v3d_resource);
         if (!rsc)
                 return NULL;
         struct pipe_resource *prsc = &rsc->base;
@@ -572,12 +572,12 @@ vc5_resource_setup(struct pipe_screen *pscreen,
                 if (screen->devinfo.ver < 40 && prsc->nr_samples > 1)
                         rsc->cpp *= prsc->nr_samples;
         } else {
-                assert(vc5_rt_format_supported(&screen->devinfo, prsc->format));
+                assert(v3d_rt_format_supported(&screen->devinfo, prsc->format));
                 uint32_t output_image_format =
-                        vc5_get_rt_format(&screen->devinfo, prsc->format);
+                        v3d_get_rt_format(&screen->devinfo, prsc->format);
                 uint32_t internal_type;
                 uint32_t internal_bpp;
-                vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                v3d_get_internal_type_bpp_for_output_format(&screen->devinfo,
                                                             output_image_format,
                                                             &internal_type,
                                                             &internal_bpp);
@@ -613,13 +613,13 @@ find_modifier(uint64_t needle, const uint64_t *haystack, int count)
 }
 
 static struct pipe_resource *
-vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
+v3d_resource_create_with_modifiers(struct pipe_screen *pscreen,
                                    const struct pipe_resource *tmpl,
                                    const uint64_t *modifiers,
                                    int count)
 {
         bool linear_ok = find_modifier(DRM_FORMAT_MOD_LINEAR, modifiers, count);
-        struct vc5_resource *rsc = vc5_resource_setup(pscreen, tmpl);
+        struct v3d_resource *rsc = v3d_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base;
         /* Use a tiled layout if we can, for better 3D performance. */
         bool should_tile = true;
@@ -641,7 +641,7 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
         /* Scanout BOs for simulator need to be linear for interaction with
          * i965.
          */
-        if (using_vc5_simulator &&
+        if (using_v3d_simulator &&
             tmpl->bind & (PIPE_BIND_SHARED | PIPE_BIND_SCANOUT))
                 should_tile = false;
 
@@ -662,34 +662,34 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
 
         rsc->internal_format = prsc->format;
 
-        vc5_setup_slices(rsc);
-        if (!vc5_resource_bo_alloc(rsc))
+        v3d_setup_slices(rsc);
+        if (!v3d_resource_bo_alloc(rsc))
                 goto fail;
 
         return prsc;
 fail:
-        vc5_resource_destroy(pscreen, prsc);
+        v3d_resource_destroy(pscreen, prsc);
         return NULL;
 }
 
 struct pipe_resource *
-vc5_resource_create(struct pipe_screen *pscreen,
+v3d_resource_create(struct pipe_screen *pscreen,
                     const struct pipe_resource *tmpl)
 {
         const uint64_t mod = DRM_FORMAT_MOD_INVALID;
-        return vc5_resource_create_with_modifiers(pscreen, tmpl, &mod, 1);
+        return v3d_resource_create_with_modifiers(pscreen, tmpl, &mod, 1);
 }
 
 static struct pipe_resource *
-vc5_resource_from_handle(struct pipe_screen *pscreen,
+v3d_resource_from_handle(struct pipe_screen *pscreen,
                          const struct pipe_resource *tmpl,
                          struct winsys_handle *whandle,
                          unsigned usage)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_resource *rsc = vc5_resource_setup(pscreen, tmpl);
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_resource *rsc = v3d_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base;
-        struct vc5_resource_slice *slice = &rsc->slices[0];
+        struct v3d_resource_slice *slice = &rsc->slices[0];
 
         if (!rsc)
                 return NULL;
@@ -716,11 +716,11 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
 
         switch (whandle->type) {
         case DRM_API_HANDLE_TYPE_SHARED:
-                rsc->bo = vc5_bo_open_name(screen,
+                rsc->bo = v3d_bo_open_name(screen,
                                            whandle->handle, whandle->stride);
                 break;
         case DRM_API_HANDLE_TYPE_FD:
-                rsc->bo = vc5_bo_open_dmabuf(screen,
+                rsc->bo = v3d_bo_open_dmabuf(screen,
                                              whandle->handle, whandle->stride);
                 break;
         default:
@@ -735,8 +735,8 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
 
         rsc->internal_format = prsc->format;
 
-        vc5_setup_slices(rsc);
-        vc5_debug_resource_layout(rsc, "import");
+        v3d_setup_slices(rsc);
+        v3d_debug_resource_layout(rsc, "import");
 
         if (whandle->stride != slice->stride) {
                 static bool warned = false;
@@ -756,19 +756,19 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
         return prsc;
 
 fail:
-        vc5_resource_destroy(pscreen, prsc);
+        v3d_resource_destroy(pscreen, prsc);
         return NULL;
 }
 
 static struct pipe_surface *
-vc5_create_surface(struct pipe_context *pctx,
+v3d_create_surface(struct pipe_context *pctx,
                    struct pipe_resource *ptex,
                    const struct pipe_surface *surf_tmpl)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_screen *screen = vc5->screen;
-        struct vc5_surface *surface = CALLOC_STRUCT(vc5_surface);
-        struct vc5_resource *rsc = vc5_resource(ptex);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_screen *screen = v3d->screen;
+        struct v3d_surface *surface = CALLOC_STRUCT(v3d_surface);
+        struct v3d_resource *rsc = v3d_resource(ptex);
 
         if (!surface)
                 return NULL;
@@ -777,7 +777,7 @@ vc5_create_surface(struct pipe_context *pctx,
 
         struct pipe_surface *psurf = &surface->base;
         unsigned level = surf_tmpl->u.tex.level;
-        struct vc5_resource_slice *slice = &rsc->slices[level];
+        struct v3d_resource_slice *slice = &rsc->slices[level];
 
         pipe_reference_init(&psurf->reference, 1);
         pipe_resource_reference(&psurf->texture, ptex);
@@ -790,11 +790,11 @@ vc5_create_surface(struct pipe_context *pctx,
         psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
         psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
-        surface->offset = vc5_layer_offset(ptex, level,
+        surface->offset = v3d_layer_offset(ptex, level,
                                            psurf->u.tex.first_layer);
         surface->tiling = slice->tiling;
 
-        surface->format = vc5_get_rt_format(&screen->devinfo, psurf->format);
+        surface->format = v3d_get_rt_format(&screen->devinfo, psurf->format);
 
         if (util_format_is_depth_or_stencil(psurf->format)) {
                 switch (psurf->format) {
@@ -810,7 +810,7 @@ vc5_create_surface(struct pipe_context *pctx,
                 }
         } else {
                 uint32_t bpp, type;
-                vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                v3d_get_internal_type_bpp_for_output_format(&screen->devinfo,
                                                             surface->format,
                                                             &type, &bpp);
                 surface->internal_type = type;
@@ -821,12 +821,12 @@ vc5_create_surface(struct pipe_context *pctx,
             surface->tiling == VC5_TILING_UIF_XOR) {
                 surface->padded_height_of_output_image_in_uif_blocks =
                         (slice->padded_height /
-                         (2 * vc5_utile_height(rsc->cpp)));
+                         (2 * v3d_utile_height(rsc->cpp)));
         }
 
         if (rsc->separate_stencil) {
                 surface->separate_stencil =
-                        vc5_create_surface(pctx, &rsc->separate_stencil->base,
+                        v3d_create_surface(pctx, &rsc->separate_stencil->base,
                                            surf_tmpl);
         }
 
@@ -834,9 +834,9 @@ vc5_create_surface(struct pipe_context *pctx,
 }
 
 static void
-vc5_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
+v3d_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
 {
-        struct vc5_surface *surf = vc5_surface(psurf);
+        struct v3d_surface *surf = v3d_surface(psurf);
 
         if (surf->separate_stencil)
                 pipe_surface_reference(&surf->separate_stencil, NULL);
@@ -846,7 +846,7 @@ vc5_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
 }
 
 static void
-vc5_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
+v3d_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 {
         /* All calls to flush_resource are followed by a flush of the context,
          * so there's nothing to do.
@@ -854,61 +854,61 @@ vc5_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 }
 
 static enum pipe_format
-vc5_resource_get_internal_format(struct pipe_resource *prsc)
+v3d_resource_get_internal_format(struct pipe_resource *prsc)
 {
-        return vc5_resource(prsc)->internal_format;
+        return v3d_resource(prsc)->internal_format;
 }
 
 static void
-vc5_resource_set_stencil(struct pipe_resource *prsc,
+v3d_resource_set_stencil(struct pipe_resource *prsc,
                          struct pipe_resource *stencil)
 {
-        vc5_resource(prsc)->separate_stencil = vc5_resource(stencil);
+        v3d_resource(prsc)->separate_stencil = v3d_resource(stencil);
 }
 
 static struct pipe_resource *
-vc5_resource_get_stencil(struct pipe_resource *prsc)
+v3d_resource_get_stencil(struct pipe_resource *prsc)
 {
-        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct v3d_resource *rsc = v3d_resource(prsc);
 
         return &rsc->separate_stencil->base;
 }
 
 static const struct u_transfer_vtbl transfer_vtbl = {
-        .resource_create          = vc5_resource_create,
-        .resource_destroy         = vc5_resource_destroy,
-        .transfer_map             = vc5_resource_transfer_map,
-        .transfer_unmap           = vc5_resource_transfer_unmap,
+        .resource_create          = v3d_resource_create,
+        .resource_destroy         = v3d_resource_destroy,
+        .transfer_map             = v3d_resource_transfer_map,
+        .transfer_unmap           = v3d_resource_transfer_unmap,
         .transfer_flush_region    = u_default_transfer_flush_region,
-        .get_internal_format      = vc5_resource_get_internal_format,
-        .set_stencil              = vc5_resource_set_stencil,
-        .get_stencil              = vc5_resource_get_stencil,
+        .get_internal_format      = v3d_resource_get_internal_format,
+        .set_stencil              = v3d_resource_set_stencil,
+        .get_stencil              = v3d_resource_get_stencil,
 };
 
 void
-vc5_resource_screen_init(struct pipe_screen *pscreen)
+v3d_resource_screen_init(struct pipe_screen *pscreen)
 {
         pscreen->resource_create_with_modifiers =
-                vc5_resource_create_with_modifiers;
+                v3d_resource_create_with_modifiers;
         pscreen->resource_create = u_transfer_helper_resource_create;
-        pscreen->resource_from_handle = vc5_resource_from_handle;
-        pscreen->resource_get_handle = vc5_resource_get_handle;
+        pscreen->resource_from_handle = v3d_resource_from_handle;
+        pscreen->resource_get_handle = v3d_resource_get_handle;
         pscreen->resource_destroy = u_transfer_helper_resource_destroy;
         pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
                                                             true, true, true);
 }
 
 void
-vc5_resource_context_init(struct pipe_context *pctx)
+v3d_resource_context_init(struct pipe_context *pctx)
 {
         pctx->transfer_map = u_transfer_helper_transfer_map;
         pctx->transfer_flush_region = u_transfer_helper_transfer_flush_region;
         pctx->transfer_unmap = u_transfer_helper_transfer_unmap;
         pctx->buffer_subdata = u_default_buffer_subdata;
         pctx->texture_subdata = u_default_texture_subdata;
-        pctx->create_surface = vc5_create_surface;
-        pctx->surface_destroy = vc5_surface_destroy;
+        pctx->create_surface = v3d_create_surface;
+        pctx->surface_destroy = v3d_surface_destroy;
         pctx->resource_copy_region = util_resource_copy_region;
-        pctx->blit = vc5_blit;
-        pctx->flush_resource = vc5_flush_resource;
+        pctx->blit = v3d_blit;
+        pctx->flush_resource = v3d_flush_resource;
 }

@@ -39,106 +39,106 @@
 #include "v3d_resource.h"
 
 void
-vc5_flush(struct pipe_context *pctx)
+v3d_flush(struct pipe_context *pctx)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
 
         struct hash_entry *entry;
-        hash_table_foreach(vc5->jobs, entry) {
-                struct vc5_job *job = entry->data;
-                vc5_job_submit(vc5, job);
+        hash_table_foreach(v3d->jobs, entry) {
+                struct v3d_job *job = entry->data;
+                v3d_job_submit(v3d, job);
         }
 }
 
 static void
-vc5_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
+v3d_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                unsigned flags)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
 
-        vc5_flush(pctx);
+        v3d_flush(pctx);
 
         if (fence) {
                 struct pipe_screen *screen = pctx->screen;
-                struct vc5_fence *f = vc5_fence_create(vc5);
+                struct v3d_fence *f = v3d_fence_create(v3d);
                 screen->fence_reference(screen, fence, NULL);
                 *fence = (struct pipe_fence_handle *)f;
         }
 }
 
 static void
-vc5_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
+v3d_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_resource *rsc = v3d_resource(prsc);
 
         rsc->initialized_buffers = 0;
 
-        struct hash_entry *entry = _mesa_hash_table_search(vc5->write_jobs,
+        struct hash_entry *entry = _mesa_hash_table_search(v3d->write_jobs,
                                                            prsc);
         if (!entry)
                 return;
 
-        struct vc5_job *job = entry->data;
+        struct v3d_job *job = entry->data;
         if (job->key.zsbuf && job->key.zsbuf->texture == prsc)
                 job->resolve &= ~(PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL);
 }
 
 static void
-vc5_context_destroy(struct pipe_context *pctx)
+v3d_context_destroy(struct pipe_context *pctx)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
 
-        vc5_flush(pctx);
+        v3d_flush(pctx);
 
-        if (vc5->blitter)
-                util_blitter_destroy(vc5->blitter);
+        if (v3d->blitter)
+                util_blitter_destroy(v3d->blitter);
 
-        if (vc5->primconvert)
-                util_primconvert_destroy(vc5->primconvert);
+        if (v3d->primconvert)
+                util_primconvert_destroy(v3d->primconvert);
 
-        if (vc5->uploader)
-                u_upload_destroy(vc5->uploader);
+        if (v3d->uploader)
+                u_upload_destroy(v3d->uploader);
 
-        slab_destroy_child(&vc5->transfer_pool);
+        slab_destroy_child(&v3d->transfer_pool);
 
-        pipe_surface_reference(&vc5->framebuffer.cbufs[0], NULL);
-        pipe_surface_reference(&vc5->framebuffer.zsbuf, NULL);
+        pipe_surface_reference(&v3d->framebuffer.cbufs[0], NULL);
+        pipe_surface_reference(&v3d->framebuffer.zsbuf, NULL);
 
-        vc5_program_fini(pctx);
+        v3d_program_fini(pctx);
 
-        ralloc_free(vc5);
+        ralloc_free(v3d);
 }
 
 struct pipe_context *
-vc5_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
+v3d_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_context *vc5;
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_context *v3d;
 
         /* Prevent dumping of the shaders built during context setup. */
         uint32_t saved_shaderdb_flag = V3D_DEBUG & V3D_DEBUG_SHADERDB;
         V3D_DEBUG &= ~V3D_DEBUG_SHADERDB;
 
-        vc5 = rzalloc(NULL, struct vc5_context);
-        if (!vc5)
+        v3d = rzalloc(NULL, struct v3d_context);
+        if (!v3d)
                 return NULL;
-        struct pipe_context *pctx = &vc5->base;
+        struct pipe_context *pctx = &v3d->base;
 
-        vc5->screen = screen;
+        v3d->screen = screen;
 
         int ret = drmSyncobjCreate(screen->fd, DRM_SYNCOBJ_CREATE_SIGNALED,
-                                   &vc5->out_sync);
+                                   &v3d->out_sync);
         if (ret) {
-                ralloc_free(vc5);
+                ralloc_free(v3d);
                 return NULL;
         }
 
         pctx->screen = pscreen;
         pctx->priv = priv;
-        pctx->destroy = vc5_context_destroy;
-        pctx->flush = vc5_pipe_flush;
-        pctx->invalidate_resource = vc5_invalidate_resource;
+        pctx->destroy = v3d_context_destroy;
+        pctx->flush = v3d_pipe_flush;
+        pctx->invalidate_resource = v3d_invalidate_resource;
 
         if (screen->devinfo.ver >= 41) {
                 v3d41_draw_init(pctx);
@@ -147,35 +147,35 @@ vc5_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
                 v3d33_draw_init(pctx);
                 v3d33_state_init(pctx);
         }
-        vc5_program_init(pctx);
-        vc5_query_init(pctx);
-        vc5_resource_context_init(pctx);
+        v3d_program_init(pctx);
+        v3d_query_init(pctx);
+        v3d_resource_context_init(pctx);
 
-        vc5_job_init(vc5);
+        v3d_job_init(v3d);
 
-        vc5->fd = screen->fd;
+        v3d->fd = screen->fd;
 
-        slab_create_child(&vc5->transfer_pool, &screen->transfer_pool);
+        slab_create_child(&v3d->transfer_pool, &screen->transfer_pool);
 
-        vc5->uploader = u_upload_create_default(&vc5->base);
-        vc5->base.stream_uploader = vc5->uploader;
-        vc5->base.const_uploader = vc5->uploader;
+        v3d->uploader = u_upload_create_default(&v3d->base);
+        v3d->base.stream_uploader = v3d->uploader;
+        v3d->base.const_uploader = v3d->uploader;
 
-        vc5->blitter = util_blitter_create(pctx);
-        if (!vc5->blitter)
+        v3d->blitter = util_blitter_create(pctx);
+        if (!v3d->blitter)
                 goto fail;
 
-        vc5->primconvert = util_primconvert_create(pctx,
+        v3d->primconvert = util_primconvert_create(pctx,
                                                    (1 << PIPE_PRIM_QUADS) - 1);
-        if (!vc5->primconvert)
+        if (!v3d->primconvert)
                 goto fail;
 
         V3D_DEBUG |= saved_shaderdb_flag;
 
-        vc5->sample_mask = (1 << VC5_MAX_SAMPLES) - 1;
-        vc5->active_queries = true;
+        v3d->sample_mask = (1 << VC5_MAX_SAMPLES) - 1;
+        v3d->active_queries = true;
 
-        return &vc5->base;
+        return &v3d->base;
 
 fail:
         pctx->destroy(pctx);

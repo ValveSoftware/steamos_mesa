@@ -22,7 +22,7 @@
  */
 
 /**
- * @file vc5_simulator.c
+ * @file v3d_simulator.c
  *
  * Implements VC5 simulation on top of a non-VC5 GEM fd.
  *
@@ -60,7 +60,7 @@
 #include "v3d_context.h"
 
 /** Global (across GEM fds) state for the simulator */
-static struct vc5_simulator_state {
+static struct v3d_simulator_state {
         mtx_t mutex;
 
         struct v3d_hw *v3d;
@@ -76,7 +76,7 @@ static struct vc5_simulator_state {
         struct mem_block *heap;
         struct mem_block *overflow;
 
-        /** Mapping from GEM handle to struct vc5_simulator_bo * */
+        /** Mapping from GEM handle to struct v3d_simulator_bo * */
         struct hash_table *fd_map;
 
         int refcount;
@@ -85,19 +85,19 @@ static struct vc5_simulator_state {
 };
 
 /** Per-GEM-fd state for the simulator. */
-struct vc5_simulator_file {
+struct v3d_simulator_file {
         int fd;
 
-        /** Mapping from GEM handle to struct vc5_simulator_bo * */
+        /** Mapping from GEM handle to struct v3d_simulator_bo * */
         struct hash_table *bo_map;
 
         struct mem_block *gmp;
         void *gmp_vaddr;
 };
 
-/** Wrapper for drm_vc5_bo tracking the simulator-specific state. */
-struct vc5_simulator_bo {
-        struct vc5_simulator_file *file;
+/** Wrapper for drm_v3d_bo tracking the simulator-specific state. */
+struct v3d_simulator_bo {
+        struct v3d_simulator_file *file;
 
         /** Area for this BO within sim_state->mem */
         struct mem_block *block;
@@ -116,8 +116,8 @@ int_to_key(int key)
         return (void *)(uintptr_t)key;
 }
 
-static struct vc5_simulator_file *
-vc5_get_simulator_file_for_fd(int fd)
+static struct v3d_simulator_file *
+v3d_get_simulator_file_for_fd(int fd)
 {
         struct hash_entry *entry = _mesa_hash_table_search(sim_state.fd_map,
                                                            int_to_key(fd + 1));
@@ -137,7 +137,7 @@ vc5_get_simulator_file_for_fd(int fd)
  * permissions (bit 0 = read, bit 1 = write, write-only forbidden).
  */
 static void
-set_gmp_flags(struct vc5_simulator_file *file,
+set_gmp_flags(struct v3d_simulator_file *file,
               uint32_t offset, uint32_t size, uint32_t flag)
 {
         assert((offset & ((1 << GMP_ALIGN2) - 1)) == 0);
@@ -158,12 +158,12 @@ set_gmp_flags(struct vc5_simulator_file *file,
  * Allocates space in simulator memory and returns a tracking struct for it
  * that also contains the drm_gem_cma_object struct.
  */
-static struct vc5_simulator_bo *
-vc5_create_simulator_bo(int fd, int handle, unsigned size)
+static struct v3d_simulator_bo *
+v3d_create_simulator_bo(int fd, int handle, unsigned size)
 {
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
-        struct vc5_simulator_bo *sim_bo = rzalloc(file,
-                                                  struct vc5_simulator_bo);
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
+        struct v3d_simulator_bo *sim_bo = rzalloc(file,
+                                                  struct v3d_simulator_bo);
         size = align(size, 4096);
 
         sim_bo->file = file;
@@ -182,7 +182,7 @@ vc5_create_simulator_bo(int fd, int handle, unsigned size)
 
         *(uint32_t *)(sim_bo->vaddr + sim_bo->size) = BO_SENTINEL;
 
-        /* A handle of 0 is used for vc5_gem.c internal allocations that
+        /* A handle of 0 is used for v3d_gem.c internal allocations that
          * don't need to go in the lookup table.
          */
         if (handle != 0) {
@@ -196,9 +196,9 @@ vc5_create_simulator_bo(int fd, int handle, unsigned size)
 }
 
 static void
-vc5_free_simulator_bo(struct vc5_simulator_bo *sim_bo)
+v3d_free_simulator_bo(struct v3d_simulator_bo *sim_bo)
 {
-        struct vc5_simulator_file *sim_file = sim_bo->file;
+        struct v3d_simulator_file *sim_file = sim_bo->file;
 
         if (sim_bo->winsys_map)
                 munmap(sim_bo->winsys_map, sim_bo->size);
@@ -217,8 +217,8 @@ vc5_free_simulator_bo(struct vc5_simulator_bo *sim_bo)
         ralloc_free(sim_bo);
 }
 
-static struct vc5_simulator_bo *
-vc5_get_simulator_bo(struct vc5_simulator_file *file, int gem_handle)
+static struct v3d_simulator_bo *
+v3d_get_simulator_bo(struct v3d_simulator_file *file, int gem_handle)
 {
         mtx_lock(&sim_state.mutex);
         struct hash_entry *entry =
@@ -229,17 +229,17 @@ vc5_get_simulator_bo(struct vc5_simulator_file *file, int gem_handle)
 }
 
 static int
-vc5_simulator_pin_bos(int fd, struct vc5_job *job)
+v3d_simulator_pin_bos(int fd, struct v3d_job *job)
 {
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
         struct set_entry *entry;
 
         set_foreach(job->bos, entry) {
-                struct vc5_bo *bo = (struct vc5_bo *)entry->key;
-                struct vc5_simulator_bo *sim_bo =
-                        vc5_get_simulator_bo(file, bo->handle);
+                struct v3d_bo *bo = (struct v3d_bo *)entry->key;
+                struct v3d_simulator_bo *sim_bo =
+                        v3d_get_simulator_bo(file, bo->handle);
 
-                vc5_bo_map(bo);
+                v3d_bo_map(bo);
                 memcpy(sim_bo->vaddr, bo->map, bo->size);
         }
 
@@ -247,22 +247,22 @@ vc5_simulator_pin_bos(int fd, struct vc5_job *job)
 }
 
 static int
-vc5_simulator_unpin_bos(int fd, struct vc5_job *job)
+v3d_simulator_unpin_bos(int fd, struct v3d_job *job)
 {
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
         struct set_entry *entry;
 
         set_foreach(job->bos, entry) {
-                struct vc5_bo *bo = (struct vc5_bo *)entry->key;
-                struct vc5_simulator_bo *sim_bo =
-                        vc5_get_simulator_bo(file, bo->handle);
+                struct v3d_bo *bo = (struct v3d_bo *)entry->key;
+                struct v3d_simulator_bo *sim_bo =
+                        v3d_get_simulator_bo(file, bo->handle);
 
                 if (*(uint32_t *)(sim_bo->vaddr +
                                   sim_bo->size) != BO_SENTINEL) {
                         fprintf(stderr, "Buffer overflow in %s\n", bo->name);
                 }
 
-                vc5_bo_map(bo);
+                v3d_bo_map(bo);
                 memcpy(bo->map, sim_bo->vaddr, bo->size);
         }
 
@@ -271,20 +271,20 @@ vc5_simulator_unpin_bos(int fd, struct vc5_job *job)
 
 #if 0
 static void
-vc5_dump_to_file(struct vc5_exec_info *exec)
+v3d_dump_to_file(struct v3d_exec_info *exec)
 {
         static int dumpno = 0;
-        struct drm_vc5_get_hang_state *state;
-        struct drm_vc5_get_hang_state_bo *bo_state;
+        struct drm_v3d_get_hang_state *state;
+        struct drm_v3d_get_hang_state_bo *bo_state;
         unsigned int dump_version = 0;
 
-        if (!(vc5_debug & VC5_DEBUG_DUMP))
+        if (!(v3d_debug & VC5_DEBUG_DUMP))
                 return;
 
         state = calloc(1, sizeof(*state));
 
         int unref_count = 0;
-        list_for_each_entry_safe(struct drm_vc5_bo, bo, &exec->unref_list,
+        list_for_each_entry_safe(struct drm_v3d_bo, bo, &exec->unref_list,
                                  unref_head) {
                 unref_count++;
         }
@@ -294,7 +294,7 @@ vc5_dump_to_file(struct vc5_exec_info *exec)
         bo_state = calloc(state->bo_count, sizeof(*bo_state));
 
         char *filename = NULL;
-        asprintf(&filename, "vc5-dri-%d.dump", dumpno++);
+        asprintf(&filename, "v3d-dri-%d.dump", dumpno++);
         FILE *f = fopen(filename, "w+");
         if (!f) {
                 fprintf(stderr, "Couldn't open %s: %s", filename,
@@ -320,7 +320,7 @@ vc5_dump_to_file(struct vc5_exec_info *exec)
                 bo_state[i].size = cma_bo->base.size;
         }
 
-        list_for_each_entry_safe(struct drm_vc5_bo, bo, &exec->unref_list,
+        list_for_each_entry_safe(struct drm_v3d_bo, bo, &exec->unref_list,
                                  unref_head) {
                 struct drm_gem_cma_object *cma_bo = &bo->base;
                 bo_state[i].handle = 0;
@@ -342,7 +342,7 @@ vc5_dump_to_file(struct vc5_exec_info *exec)
                 fwrite(cma_bo->vaddr, cma_bo->base.size, 1, f);
         }
 
-        list_for_each_entry_safe(struct drm_vc5_bo, bo, &exec->unref_list,
+        list_for_each_entry_safe(struct drm_v3d_bo, bo, &exec->unref_list,
                                  unref_head) {
                 struct drm_gem_cma_object *cma_bo = &bo->base;
                 fwrite(cma_bo->vaddr, cma_bo->base.size, 1, f);
@@ -359,15 +359,15 @@ vc5_dump_to_file(struct vc5_exec_info *exec)
 #endif
 
 int
-vc5_simulator_flush(struct vc5_context *vc5,
-                    struct drm_v3d_submit_cl *submit, struct vc5_job *job)
+v3d_simulator_flush(struct v3d_context *v3d,
+                    struct drm_v3d_submit_cl *submit, struct v3d_job *job)
 {
-        struct vc5_screen *screen = vc5->screen;
+        struct v3d_screen *screen = v3d->screen;
         int fd = screen->fd;
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
-        struct vc5_surface *csurf = vc5_surface(vc5->framebuffer.cbufs[0]);
-        struct vc5_resource *ctex = csurf ? vc5_resource(csurf->base.texture) : NULL;
-        struct vc5_simulator_bo *csim_bo = ctex ? vc5_get_simulator_bo(file, ctex->bo->handle) : NULL;
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
+        struct v3d_surface *csurf = v3d_surface(v3d->framebuffer.cbufs[0]);
+        struct v3d_resource *ctex = csurf ? v3d_resource(csurf->base.texture) : NULL;
+        struct v3d_simulator_bo *csim_bo = ctex ? v3d_get_simulator_bo(file, ctex->bo->handle) : NULL;
         uint32_t winsys_stride = ctex ? csim_bo->winsys_stride : 0;
         uint32_t sim_stride = ctex ? ctex->slices[0].stride : 0;
         uint32_t row_len = MIN2(sim_stride, winsys_stride);
@@ -389,18 +389,18 @@ vc5_simulator_flush(struct vc5_context *vc5,
                 }
         }
 
-        ret = vc5_simulator_pin_bos(fd, job);
+        ret = v3d_simulator_pin_bos(fd, job);
         if (ret)
                 return ret;
 
-        //vc5_dump_to_file(&exec);
+        //v3d_dump_to_file(&exec);
 
         if (sim_state.ver >= 41)
                 v3d41_simulator_flush(sim_state.v3d, submit, file->gmp->ofs);
         else
                 v3d33_simulator_flush(sim_state.v3d, submit, file->gmp->ofs);
 
-        ret = vc5_simulator_unpin_bos(fd, job);
+        ret = v3d_simulator_unpin_bos(fd, job);
         if (ret)
                 return ret;
 
@@ -419,7 +419,7 @@ vc5_simulator_flush(struct vc5_context *vc5,
  * Map the underlying GEM object from the real hardware GEM handle.
  */
 static void *
-vc5_simulator_map_winsys_bo(int fd, struct vc5_simulator_bo *sim_bo)
+v3d_simulator_map_winsys_bo(int fd, struct v3d_simulator_bo *sim_bo)
 {
         int ret;
         void *map;
@@ -453,14 +453,14 @@ vc5_simulator_map_winsys_bo(int fd, struct vc5_simulator_bo *sim_bo)
  * time, but we're still using drmPrimeFDToHandle() so we have this helper to
  * be called afterward instead.
  */
-void vc5_simulator_open_from_handle(int fd, uint32_t winsys_stride,
+void v3d_simulator_open_from_handle(int fd, uint32_t winsys_stride,
                                     int handle, uint32_t size)
 {
-        struct vc5_simulator_bo *sim_bo =
-                vc5_create_simulator_bo(fd, handle, size);
+        struct v3d_simulator_bo *sim_bo =
+                v3d_create_simulator_bo(fd, handle, size);
 
         sim_bo->winsys_stride = winsys_stride;
-        sim_bo->winsys_map = vc5_simulator_map_winsys_bo(fd, sim_bo);
+        sim_bo->winsys_map = v3d_simulator_map_winsys_bo(fd, sim_bo);
 }
 
 /**
@@ -469,7 +469,7 @@ void vc5_simulator_open_from_handle(int fd, uint32_t winsys_stride,
  * Making a VC5 BO is just a matter of making a corresponding BO on the host.
  */
 static int
-vc5_simulator_create_bo_ioctl(int fd, struct drm_v3d_create_bo *args)
+v3d_simulator_create_bo_ioctl(int fd, struct drm_v3d_create_bo *args)
 {
         int ret;
         struct drm_mode_create_dumb create = {
@@ -483,8 +483,8 @@ vc5_simulator_create_bo_ioctl(int fd, struct drm_v3d_create_bo *args)
 
         args->handle = create.handle;
 
-        struct vc5_simulator_bo *sim_bo =
-                vc5_create_simulator_bo(fd, create.handle, args->size);
+        struct v3d_simulator_bo *sim_bo =
+                v3d_create_simulator_bo(fd, create.handle, args->size);
 
         args->offset = sim_bo->block->ofs;
 
@@ -497,7 +497,7 @@ vc5_simulator_create_bo_ioctl(int fd, struct drm_v3d_create_bo *args)
  * We just pass this straight through to dumb mmap.
  */
 static int
-vc5_simulator_mmap_bo_ioctl(int fd, struct drm_v3d_mmap_bo *args)
+v3d_simulator_mmap_bo_ioctl(int fd, struct drm_v3d_mmap_bo *args)
 {
         int ret;
         struct drm_mode_map_dumb map = {
@@ -511,10 +511,10 @@ vc5_simulator_mmap_bo_ioctl(int fd, struct drm_v3d_mmap_bo *args)
 }
 
 static int
-vc5_simulator_get_bo_offset_ioctl(int fd, struct drm_v3d_get_bo_offset *args)
+v3d_simulator_get_bo_offset_ioctl(int fd, struct drm_v3d_get_bo_offset *args)
 {
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
-        struct vc5_simulator_bo *sim_bo = vc5_get_simulator_bo(file,
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
+        struct v3d_simulator_bo *sim_bo = v3d_get_simulator_bo(file,
                                                                args->handle);
 
         args->offset = sim_bo->block->ofs;
@@ -523,21 +523,21 @@ vc5_simulator_get_bo_offset_ioctl(int fd, struct drm_v3d_get_bo_offset *args)
 }
 
 static int
-vc5_simulator_gem_close_ioctl(int fd, struct drm_gem_close *args)
+v3d_simulator_gem_close_ioctl(int fd, struct drm_gem_close *args)
 {
         /* Free the simulator's internal tracking. */
-        struct vc5_simulator_file *file = vc5_get_simulator_file_for_fd(fd);
-        struct vc5_simulator_bo *sim_bo = vc5_get_simulator_bo(file,
+        struct v3d_simulator_file *file = v3d_get_simulator_file_for_fd(fd);
+        struct v3d_simulator_bo *sim_bo = v3d_get_simulator_bo(file,
                                                                args->handle);
 
-        vc5_free_simulator_bo(sim_bo);
+        v3d_free_simulator_bo(sim_bo);
 
         /* Pass the call on down. */
         return drmIoctl(fd, DRM_IOCTL_GEM_CLOSE, args);
 }
 
 static int
-vc5_simulator_get_param_ioctl(int fd, struct drm_v3d_get_param *args)
+v3d_simulator_get_param_ioctl(int fd, struct drm_v3d_get_param *args)
 {
         if (sim_state.ver >= 41)
                 return v3d41_simulator_get_param_ioctl(sim_state.v3d, args);
@@ -546,18 +546,18 @@ vc5_simulator_get_param_ioctl(int fd, struct drm_v3d_get_param *args)
 }
 
 int
-vc5_simulator_ioctl(int fd, unsigned long request, void *args)
+v3d_simulator_ioctl(int fd, unsigned long request, void *args)
 {
         switch (request) {
         case DRM_IOCTL_V3D_CREATE_BO:
-                return vc5_simulator_create_bo_ioctl(fd, args);
+                return v3d_simulator_create_bo_ioctl(fd, args);
         case DRM_IOCTL_V3D_MMAP_BO:
-                return vc5_simulator_mmap_bo_ioctl(fd, args);
+                return v3d_simulator_mmap_bo_ioctl(fd, args);
         case DRM_IOCTL_V3D_GET_BO_OFFSET:
-                return vc5_simulator_get_bo_offset_ioctl(fd, args);
+                return v3d_simulator_get_bo_offset_ioctl(fd, args);
 
         case DRM_IOCTL_V3D_WAIT_BO:
-                /* We do all of the vc5 rendering synchronously, so we just
+                /* We do all of the v3d rendering synchronously, so we just
                  * return immediately on the wait ioctls.  This ignores any
                  * native rendering to the host BO, so it does mean we race on
                  * front buffer rendering.
@@ -565,10 +565,10 @@ vc5_simulator_ioctl(int fd, unsigned long request, void *args)
                 return 0;
 
         case DRM_IOCTL_V3D_GET_PARAM:
-                return vc5_simulator_get_param_ioctl(fd, args);
+                return v3d_simulator_get_param_ioctl(fd, args);
 
         case DRM_IOCTL_GEM_CLOSE:
-                return vc5_simulator_gem_close_ioctl(fd, args);
+                return v3d_simulator_gem_close_ioctl(fd, args);
 
         case DRM_IOCTL_GEM_OPEN:
         case DRM_IOCTL_GEM_FLINK:
@@ -580,7 +580,7 @@ vc5_simulator_ioctl(int fd, unsigned long request, void *args)
 }
 
 static void
-vc5_simulator_init_global(const struct v3d_device_info *devinfo)
+v3d_simulator_init_global(const struct v3d_device_info *devinfo)
 {
         mtx_lock(&sim_state.mutex);
         if (sim_state.refcount++) {
@@ -622,12 +622,12 @@ vc5_simulator_init_global(const struct v3d_device_info *devinfo)
 }
 
 void
-vc5_simulator_init(struct vc5_screen *screen)
+v3d_simulator_init(struct v3d_screen *screen)
 {
-        vc5_simulator_init_global(&screen->devinfo);
+        v3d_simulator_init_global(&screen->devinfo);
 
-        screen->sim_file = rzalloc(screen, struct vc5_simulator_file);
-        struct vc5_simulator_file *sim_file = screen->sim_file;
+        screen->sim_file = rzalloc(screen, struct v3d_simulator_file);
+        struct v3d_simulator_file *sim_file = screen->sim_file;
 
         screen->sim_file->bo_map =
                 _mesa_hash_table_create(screen->sim_file,
@@ -645,7 +645,7 @@ vc5_simulator_init(struct vc5_screen *screen)
 }
 
 void
-vc5_simulator_destroy(struct vc5_screen *screen)
+v3d_simulator_destroy(struct v3d_screen *screen)
 {
         mtx_lock(&sim_state.mutex);
         if (!--sim_state.refcount) {

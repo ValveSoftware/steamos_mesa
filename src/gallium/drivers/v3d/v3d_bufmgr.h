@@ -30,11 +30,11 @@
 #include "util/list.h"
 #include "v3d_screen.h"
 
-struct vc5_context;
+struct v3d_context;
 
-struct vc5_bo {
+struct v3d_bo {
         struct pipe_reference reference;
-        struct vc5_screen *screen;
+        struct v3d_screen *screen;
         void *map;
         const char *name;
         uint32_t handle;
@@ -56,43 +56,43 @@ struct vc5_bo {
         bool private;
 };
 
-struct vc5_bo *vc5_bo_alloc(struct vc5_screen *screen, uint32_t size,
+struct v3d_bo *v3d_bo_alloc(struct v3d_screen *screen, uint32_t size,
                             const char *name);
-void vc5_bo_last_unreference(struct vc5_bo *bo);
-void vc5_bo_last_unreference_locked_timed(struct vc5_bo *bo, time_t time);
-struct vc5_bo *vc5_bo_open_name(struct vc5_screen *screen, uint32_t name,
+void v3d_bo_last_unreference(struct v3d_bo *bo);
+void v3d_bo_last_unreference_locked_timed(struct v3d_bo *bo, time_t time);
+struct v3d_bo *v3d_bo_open_name(struct v3d_screen *screen, uint32_t name,
                                 uint32_t winsys_stride);
-struct vc5_bo *vc5_bo_open_dmabuf(struct vc5_screen *screen, int fd,
+struct v3d_bo *v3d_bo_open_dmabuf(struct v3d_screen *screen, int fd,
                                   uint32_t winsys_stride);
-bool vc5_bo_flink(struct vc5_bo *bo, uint32_t *name);
-int vc5_bo_get_dmabuf(struct vc5_bo *bo);
+bool v3d_bo_flink(struct v3d_bo *bo, uint32_t *name);
+int v3d_bo_get_dmabuf(struct v3d_bo *bo);
 
 static inline void
-vc5_bo_set_reference(struct vc5_bo **old_bo, struct vc5_bo *new_bo)
+v3d_bo_set_reference(struct v3d_bo **old_bo, struct v3d_bo *new_bo)
 {
         if (pipe_reference(&(*old_bo)->reference, &new_bo->reference))
-                vc5_bo_last_unreference(*old_bo);
+                v3d_bo_last_unreference(*old_bo);
         *old_bo = new_bo;
 }
 
-static inline struct vc5_bo *
-vc5_bo_reference(struct vc5_bo *bo)
+static inline struct v3d_bo *
+v3d_bo_reference(struct v3d_bo *bo)
 {
         pipe_reference(NULL, &bo->reference);
         return bo;
 }
 
 static inline void
-vc5_bo_unreference(struct vc5_bo **bo)
+v3d_bo_unreference(struct v3d_bo **bo)
 {
-        struct vc5_screen *screen;
+        struct v3d_screen *screen;
         if (!*bo)
                 return;
 
         if ((*bo)->private) {
                 /* Avoid the mutex for private BOs */
                 if (pipe_reference(&(*bo)->reference, NULL))
-                        vc5_bo_last_unreference(*bo);
+                        v3d_bo_last_unreference(*bo);
         } else {
                 screen = (*bo)->screen;
                 mtx_lock(&screen->bo_handles_mutex);
@@ -100,7 +100,7 @@ vc5_bo_unreference(struct vc5_bo **bo)
                 if (pipe_reference(&(*bo)->reference, NULL)) {
                         util_hash_table_remove(screen->bo_handles,
                                                (void *)(uintptr_t)(*bo)->handle);
-                        vc5_bo_last_unreference(*bo);
+                        v3d_bo_last_unreference(*bo);
                 }
 
                 mtx_unlock(&screen->bo_handles_mutex);
@@ -110,31 +110,31 @@ vc5_bo_unreference(struct vc5_bo **bo)
 }
 
 static inline void
-vc5_bo_unreference_locked_timed(struct vc5_bo **bo, time_t time)
+v3d_bo_unreference_locked_timed(struct v3d_bo **bo, time_t time)
 {
         if (!*bo)
                 return;
 
         if (pipe_reference(&(*bo)->reference, NULL))
-                vc5_bo_last_unreference_locked_timed(*bo, time);
+                v3d_bo_last_unreference_locked_timed(*bo, time);
         *bo = NULL;
 }
 
 void *
-vc5_bo_map(struct vc5_bo *bo);
+v3d_bo_map(struct v3d_bo *bo);
 
 void *
-vc5_bo_map_unsynchronized(struct vc5_bo *bo);
+v3d_bo_map_unsynchronized(struct v3d_bo *bo);
 
 bool
-vc5_bo_wait(struct vc5_bo *bo, uint64_t timeout_ns, const char *reason);
+v3d_bo_wait(struct v3d_bo *bo, uint64_t timeout_ns, const char *reason);
 
 bool
-vc5_wait_seqno(struct vc5_screen *screen, uint64_t seqno, uint64_t timeout_ns,
+v3d_wait_seqno(struct v3d_screen *screen, uint64_t seqno, uint64_t timeout_ns,
                const char *reason);
 
 void
-vc5_bufmgr_destroy(struct pipe_screen *pscreen);
+v3d_bufmgr_destroy(struct pipe_screen *pscreen);
 
 #endif /* VC5_BUFMGR_H */
 

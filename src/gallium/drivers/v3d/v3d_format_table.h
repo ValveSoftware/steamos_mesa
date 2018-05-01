@@ -26,7 +26,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct vc5_format {
+struct v3d_format {
         /** Set if the pipe format is defined in the table. */
         bool present;
 

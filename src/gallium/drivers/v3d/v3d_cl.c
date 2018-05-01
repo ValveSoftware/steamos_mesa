@@ -30,7 +30,7 @@
 #include "broadcom/cle/v3dx_pack.h"
 
 void
-vc5_init_cl(struct vc5_job *job, struct vc5_cl *cl)
+v3d_init_cl(struct v3d_job *job, struct v3d_cl *cl)
 {
         cl->base = NULL;
         cl->next = cl->base;
@@ -39,7 +39,7 @@ vc5_init_cl(struct vc5_job *job, struct vc5_cl *cl)
 }
 
 uint32_t
-vc5_cl_ensure_space(struct vc5_cl *cl, uint32_t space, uint32_t alignment)
+v3d_cl_ensure_space(struct v3d_cl *cl, uint32_t space, uint32_t alignment)
 {
         uint32_t offset = align(cl_offset(cl), alignment);
 
@@ -48,9 +48,9 @@ vc5_cl_ensure_space(struct vc5_cl *cl, uint32_t space, uint32_t alignment)
                 return offset;
         }
 
-        vc5_bo_unreference(&cl->bo);
-        cl->bo = vc5_bo_alloc(cl->job->vc5->screen, align(space, 4096), "CL");
-        cl->base = vc5_bo_map(cl->bo);
+        v3d_bo_unreference(&cl->bo);
+        cl->bo = v3d_bo_alloc(cl->job->v3d->screen, align(space, 4096), "CL");
+        cl->base = v3d_bo_map(cl->bo);
         cl->size = cl->bo->size;
         cl->next = cl->base;
 
@@ -58,12 +58,12 @@ vc5_cl_ensure_space(struct vc5_cl *cl, uint32_t space, uint32_t alignment)
 }
 
 void
-vc5_cl_ensure_space_with_branch(struct vc5_cl *cl, uint32_t space)
+v3d_cl_ensure_space_with_branch(struct v3d_cl *cl, uint32_t space)
 {
         if (cl_offset(cl) + space + cl_packet_length(BRANCH) <= cl->size)
                 return;
 
-        struct vc5_bo *new_bo = vc5_bo_alloc(cl->job->vc5->screen, 4096, "CL");
+        struct v3d_bo *new_bo = v3d_bo_alloc(cl->job->v3d->screen, 4096, "CL");
         assert(space <= new_bo->size);
 
         /* Chain to the new BO from the old one. */
@@ -71,20 +71,20 @@ vc5_cl_ensure_space_with_branch(struct vc5_cl *cl, uint32_t space)
                 cl_emit(cl, BRANCH, branch) {
                         branch.address = cl_address(new_bo, 0);
                 }
-                vc5_bo_unreference(&cl->bo);
+                v3d_bo_unreference(&cl->bo);
         } else {
                 /* Root the first RCL/BCL BO in the job. */
-                vc5_job_add_bo(cl->job, cl->bo);
+                v3d_job_add_bo(cl->job, cl->bo);
         }
 
         cl->bo = new_bo;
-        cl->base = vc5_bo_map(cl->bo);
+        cl->base = v3d_bo_map(cl->bo);
         cl->size = cl->bo->size;
         cl->next = cl->base;
 }
 
 void
-vc5_destroy_cl(struct vc5_cl *cl)
+v3d_destroy_cl(struct v3d_cl *cl)
 {
-        vc5_bo_unreference(&cl->bo);
+        v3d_bo_unreference(&cl->bo);
 }

@@ -39,18 +39,18 @@
 #include "v3d_drm.h"
 #include "v3d_screen.h"
 
-struct vc5_job;
-struct vc5_bo;
-void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
+struct v3d_job;
+struct v3d_bo;
+void v3d_job_add_bo(struct v3d_job *job, struct v3d_bo *bo);
 
 #include "v3d_bufmgr.h"
 #include "v3d_resource.h"
 #include "v3d_cl.h"
 
 #ifdef USE_V3D_SIMULATOR
-#define using_vc5_simulator true
+#define using_v3d_simulator true
 #else
-#define using_vc5_simulator false
+#define using_v3d_simulator false
 #endif
 
 #define VC5_DIRTY_BLEND         (1 <<  0)
@@ -84,7 +84,7 @@ void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
 
 #define VC5_MAX_FS_INPUTS 64
 
-struct vc5_sampler_view {
+struct v3d_sampler_view {
         struct pipe_sampler_view base;
         uint32_t p0;
         uint32_t p1;
@@ -93,10 +93,10 @@ struct vc5_sampler_view {
 
         uint8_t texture_shader_state[32];
         /* V3D 4.x: Texture state struct. */
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
 };
 
-struct vc5_sampler_state {
+struct v3d_sampler_state {
         struct pipe_sampler_state base;
         uint32_t p0;
         uint32_t p1;
@@ -104,24 +104,24 @@ struct vc5_sampler_state {
         /* V3D 3.x: Packed texture state. */
         uint8_t texture_shader_state[32];
         /* V3D 4.x: Sampler state struct. */
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
 };
 
-struct vc5_texture_stateobj {
+struct v3d_texture_stateobj {
         struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
         unsigned num_textures;
         struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
         unsigned num_samplers;
-        struct vc5_cl_reloc texture_state[PIPE_MAX_SAMPLERS];
+        struct v3d_cl_reloc texture_state[PIPE_MAX_SAMPLERS];
 };
 
-struct vc5_shader_uniform_info {
+struct v3d_shader_uniform_info {
         enum quniform_contents *contents;
         uint32_t *data;
         uint32_t count;
 };
 
-struct vc5_uncompiled_shader {
+struct v3d_uncompiled_shader {
         /** A name for this program, so you can track it in shader-db output. */
         uint32_t program_id;
         /** How many variants of this program were compiled, for shader-db. */
@@ -141,8 +141,8 @@ struct vc5_uncompiled_shader {
         bool was_tgsi;
 };
 
-struct vc5_compiled_shader {
-        struct vc5_bo *bo;
+struct v3d_compiled_shader {
+        struct v3d_bo *bo;
 
         union {
                 struct v3d_prog_data *base;
@@ -151,54 +151,54 @@ struct vc5_compiled_shader {
         } prog_data;
 
         /**
-         * VC5_DIRTY_* flags that, when set in vc5->dirty, mean that the
+         * VC5_DIRTY_* flags that, when set in v3d->dirty, mean that the
          * uniforms have to be rewritten (and therefore the shader state
          * reemitted).
          */
         uint32_t uniform_dirty_bits;
 };
 
-struct vc5_program_stateobj {
-        struct vc5_uncompiled_shader *bind_vs, *bind_fs;
-        struct vc5_compiled_shader *cs, *vs, *fs;
+struct v3d_program_stateobj {
+        struct v3d_uncompiled_shader *bind_vs, *bind_fs;
+        struct v3d_compiled_shader *cs, *vs, *fs;
 
-        struct vc5_bo *spill_bo;
+        struct v3d_bo *spill_bo;
         int spill_size_per_thread;
 };
 
-struct vc5_constbuf_stateobj {
+struct v3d_constbuf_stateobj {
         struct pipe_constant_buffer cb[PIPE_MAX_CONSTANT_BUFFERS];
         uint32_t enabled_mask;
         uint32_t dirty_mask;
 };
 
-struct vc5_vertexbuf_stateobj {
+struct v3d_vertexbuf_stateobj {
         struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
         unsigned count;
         uint32_t enabled_mask;
         uint32_t dirty_mask;
 };
 
-struct vc5_vertex_stateobj {
+struct v3d_vertex_stateobj {
         struct pipe_vertex_element pipe[VC5_MAX_ATTRIBUTES];
         unsigned num_elements;
 
         uint8_t attrs[12 * VC5_MAX_ATTRIBUTES];
-        struct vc5_bo *default_attribute_values;
+        struct v3d_bo *default_attribute_values;
 };
 
-struct vc5_streamout_stateobj {
+struct v3d_streamout_stateobj {
         struct pipe_stream_output_target *targets[PIPE_MAX_SO_BUFFERS];
         unsigned num_targets;
 };
 
-/* Hash table key for vc5->jobs */
-struct vc5_job_key {
+/* Hash table key for v3d->jobs */
+struct v3d_job_key {
         struct pipe_surface *cbufs[4];
         struct pipe_surface *zsbuf;
 };
 
-enum vc5_ez_state {
+enum v3d_ez_state {
         VC5_EZ_UNDECIDED = 0,
         VC5_EZ_GT_GE,
         VC5_EZ_LT_LE,
@@ -214,13 +214,13 @@ enum vc5_ez_state {
  * target (which would mean reading back from the old render target when
  * starting to render to it again).
  */
-struct vc5_job {
-        struct vc5_context *vc5;
-        struct vc5_cl bcl;
-        struct vc5_cl rcl;
-        struct vc5_cl indirect;
-        struct vc5_bo *tile_alloc;
-        struct vc5_bo *tile_state;
+struct v3d_job {
+        struct v3d_context *v3d;
+        struct v3d_cl bcl;
+        struct v3d_cl rcl;
+        struct v3d_cl indirect;
+        struct v3d_bo *tile_alloc;
+        struct v3d_bo *tile_state;
         uint32_t shader_rec_count;
 
         struct drm_v3d_submit_cl submit;
@@ -310,12 +310,12 @@ struct vc5_job {
          * Current EZ state for drawing. Updated at the start of draw after
          * we've decided on the shader being rendered.
          */
-        enum vc5_ez_state ez_state;
+        enum v3d_ez_state ez_state;
         /**
          * The first EZ state that was used for drawing with a decided EZ
          * direction (so either UNDECIDED, GT, or LT).
          */
-        enum vc5_ez_state first_ez_state;
+        enum v3d_ez_state first_ez_state;
 
         /**
          * Number of draw calls (not counting full buffer clears) queued in
@@ -323,24 +323,24 @@ struct vc5_job {
          */
         uint32_t draw_calls_queued;
 
-        struct vc5_job_key key;
+        struct v3d_job_key key;
 };
 
-struct vc5_context {
+struct v3d_context {
         struct pipe_context base;
 
         int fd;
-        struct vc5_screen *screen;
+        struct v3d_screen *screen;
 
         /** The 3D rendering job for the currently bound FBO. */
-        struct vc5_job *job;
+        struct v3d_job *job;
 
-        /* Map from struct vc5_job_key to the job for that FBO.
+        /* Map from struct v3d_job_key to the job for that FBO.
          */
         struct hash_table *jobs;
 
         /**
-         * Map from vc5_resource to a job writing to that resource.
+         * Map from v3d_resource to a job writing to that resource.
          *
          * Primarily for flushing jobs rendering to textures that are now
          * being read from.
@@ -359,7 +359,7 @@ struct vc5_context {
         uint32_t next_uncompiled_program_id;
         uint64_t next_compiled_program_id;
 
-        struct vc5_compiler_state *compiler_state;
+        struct v3d_compiler_state *compiler_state;
 
         uint8_t prim_mode;
 
@@ -374,14 +374,14 @@ struct vc5_context {
         /** @{ Current pipeline state objects */
         struct pipe_scissor_state scissor;
         struct pipe_blend_state *blend;
-        struct vc5_rasterizer_state *rasterizer;
-        struct vc5_depth_stencil_alpha_state *zsa;
+        struct v3d_rasterizer_state *rasterizer;
+        struct v3d_depth_stencil_alpha_state *zsa;
 
-        struct vc5_texture_stateobj verttex, fragtex;
+        struct v3d_texture_stateobj verttex, fragtex;
 
-        struct vc5_program_stateobj prog;
+        struct v3d_program_stateobj prog;
 
-        struct vc5_vertex_stateobj *vtx;
+        struct v3d_vertex_stateobj *vtx;
 
         struct {
                 struct pipe_blend_color f;
@@ -414,14 +414,14 @@ struct vc5_context {
         struct pipe_poly_stipple stipple;
         struct pipe_clip_state clip;
         struct pipe_viewport_state viewport;
-        struct vc5_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
-        struct vc5_vertexbuf_stateobj vertexbuf;
-        struct vc5_streamout_stateobj streamout;
-        struct vc5_bo *current_oq;
+        struct v3d_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
+        struct v3d_vertexbuf_stateobj vertexbuf;
+        struct v3d_streamout_stateobj streamout;
+        struct v3d_bo *current_oq;
         /** @} */
 };
 
-struct vc5_rasterizer_state {
+struct v3d_rasterizer_state {
         struct pipe_rasterizer_state base;
 
         /* VC5_CONFIGURATION_BITS */
@@ -441,10 +441,10 @@ struct vc5_rasterizer_state {
         uint16_t offset_factor;
 };
 
-struct vc5_depth_stencil_alpha_state {
+struct v3d_depth_stencil_alpha_state {
         struct pipe_depth_stencil_alpha_state base;
 
-        enum vc5_ez_state ez_state;
+        enum v3d_ez_state ez_state;
 
         /** Uniforms for stencil state.
          *
@@ -463,92 +463,92 @@ struct vc5_depth_stencil_alpha_state {
                 fprintf(stderr, __VA_ARGS__);           \
 } while (0)
 
-static inline struct vc5_context *
-vc5_context(struct pipe_context *pcontext)
+static inline struct v3d_context *
+v3d_context(struct pipe_context *pcontext)
 {
-        return (struct vc5_context *)pcontext;
+        return (struct v3d_context *)pcontext;
 }
 
-static inline struct vc5_sampler_view *
-vc5_sampler_view(struct pipe_sampler_view *psview)
+static inline struct v3d_sampler_view *
+v3d_sampler_view(struct pipe_sampler_view *psview)
 {
-        return (struct vc5_sampler_view *)psview;
+        return (struct v3d_sampler_view *)psview;
 }
 
-static inline struct vc5_sampler_state *
-vc5_sampler_state(struct pipe_sampler_state *psampler)
+static inline struct v3d_sampler_state *
+v3d_sampler_state(struct pipe_sampler_state *psampler)
 {
-        return (struct vc5_sampler_state *)psampler;
+        return (struct v3d_sampler_state *)psampler;
 }
 
-struct pipe_context *vc5_context_create(struct pipe_screen *pscreen,
+struct pipe_context *v3d_context_create(struct pipe_screen *pscreen,
                                         void *priv, unsigned flags);
-void vc5_program_init(struct pipe_context *pctx);
-void vc5_program_fini(struct pipe_context *pctx);
-void vc5_query_init(struct pipe_context *pctx);
+void v3d_program_init(struct pipe_context *pctx);
+void v3d_program_fini(struct pipe_context *pctx);
+void v3d_query_init(struct pipe_context *pctx);
 
-void vc5_simulator_init(struct vc5_screen *screen);
-void vc5_simulator_destroy(struct vc5_screen *screen);
-int vc5_simulator_flush(struct vc5_context *vc5,
+void v3d_simulator_init(struct v3d_screen *screen);
+void v3d_simulator_destroy(struct v3d_screen *screen);
+int v3d_simulator_flush(struct v3d_context *v3d,
                         struct drm_v3d_submit_cl *args,
-                        struct vc5_job *job);
-int vc5_simulator_ioctl(int fd, unsigned long request, void *arg);
-void vc5_simulator_open_from_handle(int fd, uint32_t winsys_stride,
+                        struct v3d_job *job);
+int v3d_simulator_ioctl(int fd, unsigned long request, void *arg);
+void v3d_simulator_open_from_handle(int fd, uint32_t winsys_stride,
                                     int handle, uint32_t size);
 
 static inline int
-vc5_ioctl(int fd, unsigned long request, void *arg)
+v3d_ioctl(int fd, unsigned long request, void *arg)
 {
-        if (using_vc5_simulator)
-                return vc5_simulator_ioctl(fd, request, arg);
+        if (using_v3d_simulator)
+                return v3d_simulator_ioctl(fd, request, arg);
         else
                 return drmIoctl(fd, request, arg);
 }
 
-void vc5_set_shader_uniform_dirty_flags(struct vc5_compiled_shader *shader);
-struct vc5_cl_reloc vc5_write_uniforms(struct vc5_context *vc5,
-                                       struct vc5_compiled_shader *shader,
-                                       struct vc5_constbuf_stateobj *cb,
-                                       struct vc5_texture_stateobj *texstate);
+void v3d_set_shader_uniform_dirty_flags(struct v3d_compiled_shader *shader);
+struct v3d_cl_reloc v3d_write_uniforms(struct v3d_context *v3d,
+                                       struct v3d_compiled_shader *shader,
+                                       struct v3d_constbuf_stateobj *cb,
+                                       struct v3d_texture_stateobj *texstate);
 
-void vc5_flush(struct pipe_context *pctx);
-void vc5_job_init(struct vc5_context *vc5);
-struct vc5_job *vc5_get_job(struct vc5_context *vc5,
+void v3d_flush(struct pipe_context *pctx);
+void v3d_job_init(struct v3d_context *v3d);
+struct v3d_job *v3d_get_job(struct v3d_context *v3d,
                             struct pipe_surface **cbufs,
                             struct pipe_surface *zsbuf);
-struct vc5_job *vc5_get_job_for_fbo(struct vc5_context *vc5);
-void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
-void vc5_job_add_write_resource(struct vc5_job *job, struct pipe_resource *prsc);
-void vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job);
-void vc5_flush_jobs_writing_resource(struct vc5_context *vc5,
+struct v3d_job *v3d_get_job_for_fbo(struct v3d_context *v3d);
+void v3d_job_add_bo(struct v3d_job *job, struct v3d_bo *bo);
+void v3d_job_add_write_resource(struct v3d_job *job, struct pipe_resource *prsc);
+void v3d_job_submit(struct v3d_context *v3d, struct v3d_job *job);
+void v3d_flush_jobs_writing_resource(struct v3d_context *v3d,
                                      struct pipe_resource *prsc);
-void vc5_flush_jobs_reading_resource(struct vc5_context *vc5,
+void v3d_flush_jobs_reading_resource(struct v3d_context *v3d,
                                      struct pipe_resource *prsc);
-void vc5_update_compiled_shaders(struct vc5_context *vc5, uint8_t prim_mode);
+void v3d_update_compiled_shaders(struct v3d_context *v3d, uint8_t prim_mode);
 
-bool vc5_rt_format_supported(const struct v3d_device_info *devinfo,
+bool v3d_rt_format_supported(const struct v3d_device_info *devinfo,
                              enum pipe_format f);
-bool vc5_tex_format_supported(const struct v3d_device_info *devinfo,
+bool v3d_tex_format_supported(const struct v3d_device_info *devinfo,
                               enum pipe_format f);
-uint8_t vc5_get_rt_format(const struct v3d_device_info *devinfo, enum pipe_format f);
-uint8_t vc5_get_tex_format(const struct v3d_device_info *devinfo, enum pipe_format f);
-uint8_t vc5_get_tex_return_size(const struct v3d_device_info *devinfo,
+uint8_t v3d_get_rt_format(const struct v3d_device_info *devinfo, enum pipe_format f);
+uint8_t v3d_get_tex_format(const struct v3d_device_info *devinfo, enum pipe_format f);
+uint8_t v3d_get_tex_return_size(const struct v3d_device_info *devinfo,
                                 enum pipe_format f,
                                 enum pipe_tex_compare compare);
-uint8_t vc5_get_tex_return_channels(const struct v3d_device_info *devinfo,
+uint8_t v3d_get_tex_return_channels(const struct v3d_device_info *devinfo,
                                     enum pipe_format f);
-const uint8_t *vc5_get_format_swizzle(const struct v3d_device_info *devinfo,
+const uint8_t *v3d_get_format_swizzle(const struct v3d_device_info *devinfo,
                                       enum pipe_format f);
-void vc5_get_internal_type_bpp_for_output_format(const struct v3d_device_info *devinfo,
+void v3d_get_internal_type_bpp_for_output_format(const struct v3d_device_info *devinfo,
                                                  uint32_t format,
                                                  uint32_t *type,
                                                  uint32_t *bpp);
 
-void vc5_init_query_functions(struct vc5_context *vc5);
-void vc5_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info);
-void vc5_blitter_save(struct vc5_context *vc5);
+void v3d_init_query_functions(struct v3d_context *v3d);
+void v3d_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info);
+void v3d_blitter_save(struct v3d_context *v3d);
 
-struct vc5_fence *vc5_fence_create(struct vc5_context *vc5);
+struct v3d_fence *v3d_fence_create(struct v3d_context *v3d);
 
 #ifdef v3dX
 #  include "v3dx_context.h"

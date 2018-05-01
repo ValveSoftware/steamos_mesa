@@ -58,7 +58,7 @@
 #define SWIZ_XXXX	SWIZ(X, X, X, X)
 #define SWIZ_000X	SWIZ(0, 0, 0, X)
 
-static const struct vc5_format format_table[] = {
+static const struct v3d_format format_table[] = {
         FORMAT(B8G8R8A8_UNORM,    RGBA8,        RGBA8,       SWIZ_ZYXW, 16, 0),
         FORMAT(B8G8R8X8_UNORM,    RGBA8,        RGBA8,       SWIZ_ZYX1, 16, 0),
         FORMAT(B8G8R8A8_SRGB,     SRGB8_ALPHA8, RGBA8,       SWIZ_ZYXW, 16, 0),
@@ -178,7 +178,7 @@ static const struct vc5_format format_table[] = {
         FORMAT(DXT5_RGBA,         NO,           BC3,         SWIZ_XYZ1, 16, 0),
 };
 
-const struct vc5_format *
+const struct v3d_format *
 v3dX(get_format_desc)(enum pipe_format f)
 {
         if (f < ARRAY_SIZE(format_table) && format_table[f].present)

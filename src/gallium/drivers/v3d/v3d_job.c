@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-/** @file vc5_job.c
+/** @file v3d_job.c
  *
  * Functions for submitting VC5 render jobs to the kernel.
  */
@@ -45,16 +45,16 @@ remove_from_ht(struct hash_table *ht, void *key)
 }
 
 static void
-vc5_job_free(struct vc5_context *vc5, struct vc5_job *job)
+v3d_job_free(struct v3d_context *v3d, struct v3d_job *job)
 {
         struct set_entry *entry;
 
         set_foreach(job->bos, entry) {
-                struct vc5_bo *bo = (struct vc5_bo *)entry->key;
-                vc5_bo_unreference(&bo);
+                struct v3d_bo *bo = (struct v3d_bo *)entry->key;
+                v3d_bo_unreference(&bo);
         }
 
-        remove_from_ht(vc5->jobs, &job->key);
+        remove_from_ht(v3d->jobs, &job->key);
 
         if (job->write_prscs) {
                 struct set_entry *entry;
@@ -62,43 +62,43 @@ vc5_job_free(struct vc5_context *vc5, struct vc5_job *job)
                 set_foreach(job->write_prscs, entry) {
                         const struct pipe_resource *prsc = entry->key;
 
-                        remove_from_ht(vc5->write_jobs, (void *)prsc);
+                        remove_from_ht(v3d->write_jobs, (void *)prsc);
                 }
         }
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 if (job->cbufs[i]) {
-                        remove_from_ht(vc5->write_jobs, job->cbufs[i]->texture);
+                        remove_from_ht(v3d->write_jobs, job->cbufs[i]->texture);
                         pipe_surface_reference(&job->cbufs[i], NULL);
                 }
         }
         if (job->zsbuf) {
-                remove_from_ht(vc5->write_jobs, job->zsbuf->texture);
+                remove_from_ht(v3d->write_jobs, job->zsbuf->texture);
                 pipe_surface_reference(&job->zsbuf, NULL);
         }
 
-        if (vc5->job == job)
-                vc5->job = NULL;
+        if (v3d->job == job)
+                v3d->job = NULL;
 
-        vc5_destroy_cl(&job->bcl);
-        vc5_destroy_cl(&job->rcl);
-        vc5_destroy_cl(&job->indirect);
-        vc5_bo_unreference(&job->tile_alloc);
-        vc5_bo_unreference(&job->tile_state);
+        v3d_destroy_cl(&job->bcl);
+        v3d_destroy_cl(&job->rcl);
+        v3d_destroy_cl(&job->indirect);
+        v3d_bo_unreference(&job->tile_alloc);
+        v3d_bo_unreference(&job->tile_state);
 
         ralloc_free(job);
 }
 
-static struct vc5_job *
-vc5_job_create(struct vc5_context *vc5)
+static struct v3d_job *
+v3d_job_create(struct v3d_context *v3d)
 {
-        struct vc5_job *job = rzalloc(vc5, struct vc5_job);
+        struct v3d_job *job = rzalloc(v3d, struct v3d_job);
 
-        job->vc5 = vc5;
+        job->v3d = v3d;
 
-        vc5_init_cl(job, &job->bcl);
-        vc5_init_cl(job, &job->rcl);
-        vc5_init_cl(job, &job->indirect);
+        v3d_init_cl(job, &job->bcl);
+        v3d_init_cl(job, &job->rcl);
+        v3d_init_cl(job, &job->indirect);
 
         job->draw_min_x = ~0;
         job->draw_min_y = ~0;
@@ -112,7 +112,7 @@ vc5_job_create(struct vc5_context *vc5)
 }
 
 void
-vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo)
+v3d_job_add_bo(struct v3d_job *job, struct v3d_bo *bo)
 {
         if (!bo)
                 return;
@@ -120,7 +120,7 @@ vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo)
         if (_mesa_set_search(job->bos, bo))
                 return;
 
-        vc5_bo_reference(bo);
+        v3d_bo_reference(bo);
         _mesa_set_add(job->bos, bo);
         job->referenced_size += bo->size;
 
@@ -136,9 +136,9 @@ vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo)
 }
 
 void
-vc5_job_add_write_resource(struct vc5_job *job, struct pipe_resource *prsc)
+v3d_job_add_write_resource(struct v3d_job *job, struct pipe_resource *prsc)
 {
-        struct vc5_context *vc5 = job->vc5;
+        struct v3d_context *v3d = job->v3d;
 
         if (!job->write_prscs) {
                 job->write_prscs = _mesa_set_create(job,
@@ -147,36 +147,36 @@ vc5_job_add_write_resource(struct vc5_job *job, struct pipe_resource *prsc)
         }
 
         _mesa_set_add(job->write_prscs, prsc);
-        _mesa_hash_table_insert(vc5->write_jobs, prsc, job);
+        _mesa_hash_table_insert(v3d->write_jobs, prsc, job);
 }
 
 void
-vc5_flush_jobs_writing_resource(struct vc5_context *vc5,
+v3d_flush_jobs_writing_resource(struct v3d_context *v3d,
                                 struct pipe_resource *prsc)
 {
-        struct hash_entry *entry = _mesa_hash_table_search(vc5->write_jobs,
+        struct hash_entry *entry = _mesa_hash_table_search(v3d->write_jobs,
                                                            prsc);
         if (entry) {
-                struct vc5_job *job = entry->data;
-                vc5_job_submit(vc5, job);
+                struct v3d_job *job = entry->data;
+                v3d_job_submit(v3d, job);
         }
 }
 
 void
-vc5_flush_jobs_reading_resource(struct vc5_context *vc5,
+v3d_flush_jobs_reading_resource(struct v3d_context *v3d,
                                 struct pipe_resource *prsc)
 {
-        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct v3d_resource *rsc = v3d_resource(prsc);
 
-        vc5_flush_jobs_writing_resource(vc5, prsc);
+        v3d_flush_jobs_writing_resource(v3d, prsc);
 
         struct hash_entry *entry;
-        hash_table_foreach(vc5->jobs, entry) {
-                struct vc5_job *job = entry->data;
+        hash_table_foreach(v3d->jobs, entry) {
+                struct v3d_job *job = entry->data;
 
                 if (_mesa_set_search(job->bos, rsc->bo)) {
-                        vc5_job_submit(vc5, job);
-                        /* Reminder: vc5->jobs is safe to keep iterating even
+                        v3d_job_submit(v3d, job);
+                        /* Reminder: v3d->jobs is safe to keep iterating even
                          * after deletion of an entry.
                          */
                         continue;
@@ -185,7 +185,7 @@ vc5_flush_jobs_reading_resource(struct vc5_context *vc5,
 }
 
 static void
-vc5_job_set_tile_buffer_size(struct vc5_job *job)
+v3d_job_set_tile_buffer_size(struct v3d_job *job)
 {
         static const uint8_t tile_sizes[] = {
                 64, 64,
@@ -206,7 +206,7 @@ vc5_job_set_tile_buffer_size(struct vc5_job *job)
         int max_bpp = RENDER_TARGET_MAXIMUM_32BPP;
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 if (job->cbufs[i]) {
-                        struct vc5_surface *surf = vc5_surface(job->cbufs[i]);
+                        struct v3d_surface *surf = v3d_surface(job->cbufs[i]);
                         max_bpp = MAX2(max_bpp, surf->internal_bpp);
                 }
         }
@@ -220,19 +220,19 @@ vc5_job_set_tile_buffer_size(struct vc5_job *job)
 }
 
 /**
- * Returns a vc5_job struture for tracking V3D rendering to a particular FBO.
+ * Returns a v3d_job struture for tracking V3D rendering to a particular FBO.
  *
  * If we've already started rendering to this FBO, then return old same job,
  * otherwise make a new one.  If we're beginning rendering to an FBO, make
  * sure that any previous reads of the FBO (or writes to its color/Z surfaces)
  * have been flushed.
  */
-struct vc5_job *
-vc5_get_job(struct vc5_context *vc5,
+struct v3d_job *
+v3d_get_job(struct v3d_context *v3d,
             struct pipe_surface **cbufs, struct pipe_surface *zsbuf)
 {
         /* Return the existing job for this FBO if we have one */
-        struct vc5_job_key local_key = {
+        struct v3d_job_key local_key = {
                 .cbufs = {
                         cbufs[0],
                         cbufs[1],
@@ -241,7 +241,7 @@ vc5_get_job(struct vc5_context *vc5,
                 },
                 .zsbuf = zsbuf,
         };
-        struct hash_entry *entry = _mesa_hash_table_search(vc5->jobs,
+        struct hash_entry *entry = _mesa_hash_table_search(v3d->jobs,
                                                            &local_key);
         if (entry)
                 return entry->data;
@@ -249,11 +249,11 @@ vc5_get_job(struct vc5_context *vc5,
         /* Creating a new job.  Make sure that any previous jobs reading or
          * writing these buffers are flushed.
          */
-        struct vc5_job *job = vc5_job_create(vc5);
+        struct v3d_job *job = v3d_job_create(v3d);
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 if (cbufs[i]) {
-                        vc5_flush_jobs_reading_resource(vc5, cbufs[i]->texture);
+                        v3d_flush_jobs_reading_resource(v3d, cbufs[i]->texture);
                         pipe_surface_reference(&job->cbufs[i], cbufs[i]);
 
                         if (cbufs[i]->texture->nr_samples > 1)
@@ -261,83 +261,83 @@ vc5_get_job(struct vc5_context *vc5,
                 }
         }
         if (zsbuf) {
-                vc5_flush_jobs_reading_resource(vc5, zsbuf->texture);
+                v3d_flush_jobs_reading_resource(v3d, zsbuf->texture);
                 pipe_surface_reference(&job->zsbuf, zsbuf);
                 if (zsbuf->texture->nr_samples > 1)
                         job->msaa = true;
         }
 
-        vc5_job_set_tile_buffer_size(job);
+        v3d_job_set_tile_buffer_size(job);
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 if (cbufs[i])
-                        _mesa_hash_table_insert(vc5->write_jobs,
+                        _mesa_hash_table_insert(v3d->write_jobs,
                                                 cbufs[i]->texture, job);
         }
         if (zsbuf)
-                _mesa_hash_table_insert(vc5->write_jobs, zsbuf->texture, job);
+                _mesa_hash_table_insert(v3d->write_jobs, zsbuf->texture, job);
 
         memcpy(&job->key, &local_key, sizeof(local_key));
-        _mesa_hash_table_insert(vc5->jobs, &job->key, job);
+        _mesa_hash_table_insert(v3d->jobs, &job->key, job);
 
         return job;
 }
 
-struct vc5_job *
-vc5_get_job_for_fbo(struct vc5_context *vc5)
+struct v3d_job *
+v3d_get_job_for_fbo(struct v3d_context *v3d)
 {
-        if (vc5->job)
-                return vc5->job;
+        if (v3d->job)
+                return v3d->job;
 
-        struct pipe_surface **cbufs = vc5->framebuffer.cbufs;
-        struct pipe_surface *zsbuf = vc5->framebuffer.zsbuf;
-        struct vc5_job *job = vc5_get_job(vc5, cbufs, zsbuf);
+        struct pipe_surface **cbufs = v3d->framebuffer.cbufs;
+        struct pipe_surface *zsbuf = v3d->framebuffer.zsbuf;
+        struct v3d_job *job = v3d_get_job(v3d, cbufs, zsbuf);
 
-        /* The dirty flags are tracking what's been updated while vc5->job has
+        /* The dirty flags are tracking what's been updated while v3d->job has
          * been bound, so set them all to ~0 when switching between jobs.  We
          * also need to reset all state at the start of rendering.
          */
-        vc5->dirty = ~0;
+        v3d->dirty = ~0;
 
         /* If we're binding to uninitialized buffers, no need to load their
          * contents before drawing.
          */
         for (int i = 0; i < 4; i++) {
                 if (cbufs[i]) {
-                        struct vc5_resource *rsc = vc5_resource(cbufs[i]->texture);
+                        struct v3d_resource *rsc = v3d_resource(cbufs[i]->texture);
                         if (!rsc->writes)
                                 job->cleared |= PIPE_CLEAR_COLOR0 << i;
                 }
         }
 
         if (zsbuf) {
-                struct vc5_resource *rsc = vc5_resource(zsbuf->texture);
+                struct v3d_resource *rsc = v3d_resource(zsbuf->texture);
                 if (!rsc->writes)
                         job->cleared |= PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL;
         }
 
-        job->draw_tiles_x = DIV_ROUND_UP(vc5->framebuffer.width,
+        job->draw_tiles_x = DIV_ROUND_UP(v3d->framebuffer.width,
                                          job->tile_width);
-        job->draw_tiles_y = DIV_ROUND_UP(vc5->framebuffer.height,
+        job->draw_tiles_y = DIV_ROUND_UP(v3d->framebuffer.height,
                                          job->tile_height);
 
-        vc5->job = job;
+        v3d->job = job;
 
         return job;
 }
 
 static bool
-vc5_clif_dump_lookup(void *data, uint32_t addr, void **vaddr)
+v3d_clif_dump_lookup(void *data, uint32_t addr, void **vaddr)
 {
-        struct vc5_job *job = data;
+        struct v3d_job *job = data;
         struct set_entry *entry;
 
         set_foreach(job->bos, entry) {
-                struct vc5_bo *bo = (void *)entry->key;
+                struct v3d_bo *bo = (void *)entry->key;
 
                 if (addr >= bo->offset &&
                     addr < bo->offset + bo->size) {
-                        vc5_bo_map(bo);
+                        v3d_bo_map(bo);
                         *vaddr = bo->map + addr - bo->offset;
                         return true;
                 }
@@ -347,13 +347,13 @@ vc5_clif_dump_lookup(void *data, uint32_t addr, void **vaddr)
 }
 
 static void
-vc5_clif_dump(struct vc5_context *vc5, struct vc5_job *job)
+v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
 {
         if (!(V3D_DEBUG & V3D_DEBUG_CL))
                 return;
 
-        struct clif_dump *clif = clif_dump_init(&vc5->screen->devinfo,
-                                                stderr, vc5_clif_dump_lookup,
+        struct clif_dump *clif = clif_dump_init(&v3d->screen->devinfo,
+                                                stderr, v3d_clif_dump_lookup,
                                                 job);
 
         fprintf(stderr, "BCL: 0x%08x..0x%08x\n",
@@ -370,26 +370,26 @@ vc5_clif_dump(struct vc5_context *vc5, struct vc5_job *job)
  * Submits the job to the kernel and then reinitializes it.
  */
 void
-vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
+v3d_job_submit(struct v3d_context *v3d, struct v3d_job *job)
 {
-        MAYBE_UNUSED struct vc5_screen *screen = vc5->screen;
+        MAYBE_UNUSED struct v3d_screen *screen = v3d->screen;
 
         if (!job->needs_flush)
                 goto done;
 
-        if (vc5->screen->devinfo.ver >= 41)
+        if (v3d->screen->devinfo.ver >= 41)
                 v3d41_emit_rcl(job);
         else
                 v3d33_emit_rcl(job);
 
         if (cl_offset(&job->bcl) > 0) {
                 if (screen->devinfo.ver >= 41)
-                        v3d41_bcl_epilogue(vc5, job);
+                        v3d41_bcl_epilogue(v3d, job);
                 else
-                        v3d33_bcl_epilogue(vc5, job);
+                        v3d33_bcl_epilogue(v3d, job);
         }
 
-        job->submit.out_sync = vc5->out_sync;
+        job->submit.out_sync = v3d->out_sync;
         job->submit.bcl_end = job->bcl.bo->offset + cl_offset(&job->bcl);
         job->submit.rcl_end = job->rcl.bo->offset + cl_offset(&job->rcl);
 
@@ -397,23 +397,23 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
          * instead of binner packets.
          */
         if (screen->devinfo.ver >= 41) {
-                vc5_job_add_bo(job, job->tile_alloc);
+                v3d_job_add_bo(job, job->tile_alloc);
                 job->submit.qma = job->tile_alloc->offset;
                 job->submit.qms = job->tile_alloc->size;
 
-                vc5_job_add_bo(job, job->tile_state);
+                v3d_job_add_bo(job, job->tile_state);
                 job->submit.qts = job->tile_state->offset;
         }
 
-        vc5_clif_dump(vc5, job);
+        v3d_clif_dump(v3d, job);
 
         if (!(V3D_DEBUG & V3D_DEBUG_NORAST)) {
                 int ret;
 
 #ifndef USE_V3D_SIMULATOR
-                ret = drmIoctl(vc5->fd, DRM_IOCTL_V3D_SUBMIT_CL, &job->submit);
+                ret = drmIoctl(v3d->fd, DRM_IOCTL_V3D_SUBMIT_CL, &job->submit);
 #else
-                ret = vc5_simulator_flush(vc5, &job->submit, job);
+                ret = v3d_simulator_flush(v3d, &job->submit, job);
 #endif
                 static bool warned = false;
                 if (ret && !warned) {
@@ -424,28 +424,28 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
         }
 
 done:
-        vc5_job_free(vc5, job);
+        v3d_job_free(v3d, job);
 }
 
 static bool
-vc5_job_compare(const void *a, const void *b)
+v3d_job_compare(const void *a, const void *b)
 {
-        return memcmp(a, b, sizeof(struct vc5_job_key)) == 0;
+        return memcmp(a, b, sizeof(struct v3d_job_key)) == 0;
 }
 
 static uint32_t
-vc5_job_hash(const void *key)
+v3d_job_hash(const void *key)
 {
-        return _mesa_hash_data(key, sizeof(struct vc5_job_key));
+        return _mesa_hash_data(key, sizeof(struct v3d_job_key));
 }
 
 void
-vc5_job_init(struct vc5_context *vc5)
+v3d_job_init(struct v3d_context *v3d)
 {
-        vc5->jobs = _mesa_hash_table_create(vc5,
-                                            vc5_job_hash,
-                                            vc5_job_compare);
-        vc5->write_jobs = _mesa_hash_table_create(vc5,
+        v3d->jobs = _mesa_hash_table_create(v3d,
+                                            v3d_job_hash,
+                                            v3d_job_compare);
+        v3d->write_jobs = _mesa_hash_table_create(v3d,
                                                   _mesa_hash_pointer,
                                                   _mesa_key_pointer_equal);
 }

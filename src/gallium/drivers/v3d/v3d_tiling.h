@@ -24,19 +24,19 @@
 #ifndef VC5_TILING_H
 #define VC5_TILING_H
 
-uint32_t vc5_utile_width(int cpp) ATTRIBUTE_CONST;
-uint32_t vc5_utile_height(int cpp) ATTRIBUTE_CONST;
-bool vc5_size_is_lt(uint32_t width, uint32_t height, int cpp) ATTRIBUTE_CONST;
-void vc5_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp);
-void vc5_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp);
-void vc5_load_tiled_image(void *dst, uint32_t dst_stride,
+uint32_t v3d_utile_width(int cpp) ATTRIBUTE_CONST;
+uint32_t v3d_utile_height(int cpp) ATTRIBUTE_CONST;
+bool v3d_size_is_lt(uint32_t width, uint32_t height, int cpp) ATTRIBUTE_CONST;
+void v3d_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp);
+void v3d_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp);
+void v3d_load_tiled_image(void *dst, uint32_t dst_stride,
                           void *src, uint32_t src_stride,
-                          enum vc5_tiling_mode tiling_format, int cpp,
+                          enum v3d_tiling_mode tiling_format, int cpp,
                           uint32_t image_h,
                           const struct pipe_box *box);
-void vc5_store_tiled_image(void *dst, uint32_t dst_stride,
+void v3d_store_tiled_image(void *dst, uint32_t dst_stride,
                            void *src, uint32_t src_stride,
-                           enum vc5_tiling_mode tiling_format, int cpp,
+                           enum v3d_tiling_mode tiling_format, int cpp,
                            uint32_t image_h,
                            const struct pipe_box *box);
 

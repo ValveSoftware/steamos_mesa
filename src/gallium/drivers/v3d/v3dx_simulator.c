@@ -22,7 +22,7 @@
  */
 
 /**
- * @file vc5_simulator_hw.c
+ * @file v3d_simulator_hw.c
  *
  * Implements the actual HW interaction betweeh the GL driver's VC5 simulator and the simulator.
  *
@@ -49,7 +49,7 @@
 #define V3D_READ(reg) v3d_hw_read_reg(v3d, reg)
 
 static void
-vc5_flush_l3(struct v3d_hw *v3d)
+v3d_flush_l3(struct v3d_hw *v3d)
 {
         if (!v3d_hw_has_gca(v3d))
                 return;
@@ -64,7 +64,7 @@ vc5_flush_l3(struct v3d_hw *v3d)
 
 /* Invalidates the L2 cache.  This is a read-only cache. */
 static void
-vc5_flush_l2(struct v3d_hw *v3d)
+v3d_flush_l2(struct v3d_hw *v3d)
 {
         V3D_WRITE(V3D_CTL_0_L2CACTL,
                   V3D_CTL_0_L2CACTL_L2CCLR_SET |
@@ -73,7 +73,7 @@ vc5_flush_l2(struct v3d_hw *v3d)
 
 /* Invalidates texture L2 cachelines */
 static void
-vc5_flush_l2t(struct v3d_hw *v3d)
+v3d_flush_l2t(struct v3d_hw *v3d)
 {
         V3D_WRITE(V3D_CTL_0_L2TFLSTA, 0);
         V3D_WRITE(V3D_CTL_0_L2TFLEND, ~0);
@@ -84,18 +84,18 @@ vc5_flush_l2t(struct v3d_hw *v3d)
 
 /* Invalidates the slice caches.  These are read-only caches. */
 static void
-vc5_flush_slices(struct v3d_hw *v3d)
+v3d_flush_slices(struct v3d_hw *v3d)
 {
         V3D_WRITE(V3D_CTL_0_SLCACTL, ~0);
 }
 
 static void
-vc5_flush_caches(struct v3d_hw *v3d)
+v3d_flush_caches(struct v3d_hw *v3d)
 {
-        vc5_flush_l3(v3d);
-        vc5_flush_l2(v3d);
-        vc5_flush_l2t(v3d);
-        vc5_flush_slices(v3d);
+        v3d_flush_l3(v3d);
+        v3d_flush_l2(v3d);
+        v3d_flush_l2t(v3d);
+        v3d_flush_slices(v3d);
 }
 
 int
@@ -152,7 +152,7 @@ v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_v3d_submit_cl *submit,
                 ;
         }
 
-        vc5_flush_caches(v3d);
+        v3d_flush_caches(v3d);
 
         if (submit->qma) {
                 V3D_WRITE(V3D_CLE_0_CT0QMA, submit->qma);

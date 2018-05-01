@@ -38,10 +38,10 @@
  */
 
 /**
- * Tiling mode enum used for vc5_resource.c, which maps directly to the Memory
+ * Tiling mode enum used for v3d_resource.c, which maps directly to the Memory
  * Format field of render target and Z/Stencil config.
  */
-enum vc5_tiling_mode {
+enum v3d_tiling_mode {
         /* Untiled resources.  Not valid as texture inputs. */
         VC5_TILING_RASTER,
 
@@ -65,12 +65,12 @@ enum vc5_tiling_mode {
         VC5_TILING_UIF_XOR,
 };
 
-struct vc5_transfer {
+struct v3d_transfer {
         struct pipe_transfer base;
         void *map;
 };
 
-struct vc5_resource_slice {
+struct v3d_resource_slice {
         uint32_t offset;
         uint32_t stride;
         uint32_t padded_height;
@@ -80,13 +80,13 @@ struct vc5_resource_slice {
          */
         uint32_t size;
         uint8_t ub_pad;
-        enum vc5_tiling_mode tiling;
+        enum v3d_tiling_mode tiling;
 };
 
-struct vc5_surface {
+struct v3d_surface {
         struct pipe_surface base;
         uint32_t offset;
-        enum vc5_tiling_mode tiling;
+        enum v3d_tiling_mode tiling;
         /**
          * Output image format for TILE_RENDERING_MODE_CONFIGURATION
          */
@@ -112,10 +112,10 @@ struct vc5_surface {
         struct pipe_surface *separate_stencil;
 };
 
-struct vc5_resource {
+struct v3d_resource {
         struct pipe_resource base;
-        struct vc5_bo *bo;
-        struct vc5_resource_slice slices[VC5_MAX_MIP_LEVELS];
+        struct v3d_bo *bo;
+        struct v3d_resource_slice slices[VC5_MAX_MIP_LEVELS];
         uint32_t cube_map_stride;
         uint32_t size;
         int cpp;
@@ -143,32 +143,32 @@ struct vc5_resource {
         enum pipe_format internal_format;
 
         /* Resource storing the S8 part of a Z32F_S8 resource, or NULL. */
-        struct vc5_resource *separate_stencil;
+        struct v3d_resource *separate_stencil;
 };
 
-static inline struct vc5_resource *
-vc5_resource(struct pipe_resource *prsc)
+static inline struct v3d_resource *
+v3d_resource(struct pipe_resource *prsc)
 {
-        return (struct vc5_resource *)prsc;
+        return (struct v3d_resource *)prsc;
 }
 
-static inline struct vc5_surface *
-vc5_surface(struct pipe_surface *psurf)
+static inline struct v3d_surface *
+v3d_surface(struct pipe_surface *psurf)
 {
-        return (struct vc5_surface *)psurf;
+        return (struct v3d_surface *)psurf;
 }
 
-static inline struct vc5_transfer *
-vc5_transfer(struct pipe_transfer *ptrans)
+static inline struct v3d_transfer *
+v3d_transfer(struct pipe_transfer *ptrans)
 {
-        return (struct vc5_transfer *)ptrans;
+        return (struct v3d_transfer *)ptrans;
 }
 
-void vc5_resource_screen_init(struct pipe_screen *pscreen);
-void vc5_resource_context_init(struct pipe_context *pctx);
-struct pipe_resource *vc5_resource_create(struct pipe_screen *pscreen,
+void v3d_resource_screen_init(struct pipe_screen *pscreen);
+void v3d_resource_context_init(struct pipe_context *pctx);
+struct pipe_resource *v3d_resource_create(struct pipe_screen *pscreen,
                                           const struct pipe_resource *tmpl);
-uint32_t vc5_layer_offset(struct pipe_resource *prsc, uint32_t level,
+uint32_t v3d_layer_offset(struct pipe_resource *prsc, uint32_t level,
                           uint32_t layer);
 
 

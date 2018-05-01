@@ -32,7 +32,7 @@
 #include "broadcom/common/v3d_debug.h"
 #include "broadcom/common/v3d_device_info.h"
 
-struct vc5_bo;
+struct v3d_bo;
 
 #define VC5_MAX_MIP_LEVELS 12
 #define VC5_MAX_TEXTURE_SAMPLERS 32
@@ -51,9 +51,9 @@ struct vc5_bo;
 #define VC5_UIFBLOCK_SIZE (4 * VC5_UBLOCK_SIZE)
 #define VC5_UIFBLOCK_ROW_SIZE (4 * VC5_UIFBLOCK_SIZE)
 
-struct vc5_simulator_file;
+struct v3d_simulator_file;
 
-struct vc5_screen {
+struct v3d_screen {
         struct pipe_screen base;
         int fd;
 
@@ -63,10 +63,10 @@ struct vc5_screen {
 
         struct slab_parent_pool transfer_pool;
 
-        struct vc5_bo_cache {
-                /** List of struct vc5_bo freed, by age. */
+        struct v3d_bo_cache {
+                /** List of struct v3d_bo freed, by age. */
                 struct list_head time_list;
-                /** List of struct vc5_bo freed, per size, by age. */
+                /** List of struct v3d_bo freed, per size, by age. */
                 struct list_head *size_list;
                 uint32_t size_list_size;
 
@@ -84,18 +84,18 @@ struct vc5_screen {
         uint32_t bo_size;
         uint32_t bo_count;
 
-        struct vc5_simulator_file *sim_file;
+        struct v3d_simulator_file *sim_file;
 };
 
-static inline struct vc5_screen *
-vc5_screen(struct pipe_screen *screen)
+static inline struct v3d_screen *
+v3d_screen(struct pipe_screen *screen)
 {
-        return (struct vc5_screen *)screen;
+        return (struct v3d_screen *)screen;
 }
 
 struct pipe_screen *v3d_screen_create(int fd);
 
 void
-vc5_fence_init(struct vc5_screen *screen);
+v3d_fence_init(struct v3d_screen *screen);
 
 #endif /* VC5_SCREEN_H */

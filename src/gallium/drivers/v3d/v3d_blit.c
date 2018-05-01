@@ -28,7 +28,7 @@
 
 #if 0
 static struct pipe_surface *
-vc5_get_blit_surface(struct pipe_context *pctx,
+v3d_get_blit_surface(struct pipe_context *pctx,
                      struct pipe_resource *prsc, unsigned level)
 {
         struct pipe_surface tmpl;
@@ -49,9 +49,9 @@ is_tile_unaligned(unsigned size, unsigned tile_size)
 }
 
 static bool
-vc5_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
+v3d_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
         bool msaa = (info->src.resource->nr_samples > 1 ||
                      info->dst.resource->nr_samples > 1);
         int tile_width = msaa ? 32 : 64;
@@ -95,7 +95,7 @@ vc5_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
          * determine the stride (which could be fixed by explicitly supplying
          * it in the ABI).
          */
-        struct vc5_resource *rsc = vc5_resource(info->src.resource);
+        struct v3d_resource *rsc = v3d_resource(info->src.resource);
 
         uint32_t stride;
 
@@ -123,13 +123,13 @@ vc5_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         }
 
         struct pipe_surface *dst_surf =
-                vc5_get_blit_surface(pctx, info->dst.resource, info->dst.level);
+                v3d_get_blit_surface(pctx, info->dst.resource, info->dst.level);
         struct pipe_surface *src_surf =
-                vc5_get_blit_surface(pctx, info->src.resource, info->src.level);
+                v3d_get_blit_surface(pctx, info->src.resource, info->src.level);
 
-        vc5_flush_jobs_reading_resource(vc5, info->src.resource);
+        v3d_flush_jobs_reading_resource(v3d, info->src.resource);
 
-        struct vc5_job *job = vc5_get_job(vc5, dst_surf, NULL);
+        struct v3d_job *job = v3d_get_job(v3d, dst_surf, NULL);
         pipe_surface_reference(&job->color_read, src_surf);
 
         /* If we're resolving from MSAA to single sample, we still need to run
@@ -154,7 +154,7 @@ vc5_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         job->needs_flush = true;
         job->resolve |= PIPE_CLEAR_COLOR;
 
-        vc5_job_submit(vc5, job);
+        v3d_job_submit(v3d, job);
 
         pipe_surface_reference(&dst_surf, NULL);
         pipe_surface_reference(&src_surf, NULL);
@@ -164,47 +164,47 @@ vc5_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 #endif
 
 void
-vc5_blitter_save(struct vc5_context *vc5)
+v3d_blitter_save(struct v3d_context *v3d)
 {
-        util_blitter_save_fragment_constant_buffer_slot(vc5->blitter,
-                                                        vc5->constbuf[PIPE_SHADER_FRAGMENT].cb);
-        util_blitter_save_vertex_buffer_slot(vc5->blitter, vc5->vertexbuf.vb);
-        util_blitter_save_vertex_elements(vc5->blitter, vc5->vtx);
-        util_blitter_save_vertex_shader(vc5->blitter, vc5->prog.bind_vs);
-        util_blitter_save_so_targets(vc5->blitter, vc5->streamout.num_targets,
-                                     vc5->streamout.targets);
-        util_blitter_save_rasterizer(vc5->blitter, vc5->rasterizer);
-        util_blitter_save_viewport(vc5->blitter, &vc5->viewport);
-        util_blitter_save_scissor(vc5->blitter, &vc5->scissor);
-        util_blitter_save_fragment_shader(vc5->blitter, vc5->prog.bind_fs);
-        util_blitter_save_blend(vc5->blitter, vc5->blend);
-        util_blitter_save_depth_stencil_alpha(vc5->blitter, vc5->zsa);
-        util_blitter_save_stencil_ref(vc5->blitter, &vc5->stencil_ref);
-        util_blitter_save_sample_mask(vc5->blitter, vc5->sample_mask);
-        util_blitter_save_framebuffer(vc5->blitter, &vc5->framebuffer);
-        util_blitter_save_fragment_sampler_states(vc5->blitter,
-                        vc5->fragtex.num_samplers,
-                        (void **)vc5->fragtex.samplers);
-        util_blitter_save_fragment_sampler_views(vc5->blitter,
-                        vc5->fragtex.num_textures, vc5->fragtex.textures);
-        util_blitter_save_so_targets(vc5->blitter, vc5->streamout.num_targets,
-                                     vc5->streamout.targets);
+        util_blitter_save_fragment_constant_buffer_slot(v3d->blitter,
+                                                        v3d->constbuf[PIPE_SHADER_FRAGMENT].cb);
+        util_blitter_save_vertex_buffer_slot(v3d->blitter, v3d->vertexbuf.vb);
+        util_blitter_save_vertex_elements(v3d->blitter, v3d->vtx);
+        util_blitter_save_vertex_shader(v3d->blitter, v3d->prog.bind_vs);
+        util_blitter_save_so_targets(v3d->blitter, v3d->streamout.num_targets,
+                                     v3d->streamout.targets);
+        util_blitter_save_rasterizer(v3d->blitter, v3d->rasterizer);
+        util_blitter_save_viewport(v3d->blitter, &v3d->viewport);
+        util_blitter_save_scissor(v3d->blitter, &v3d->scissor);
+        util_blitter_save_fragment_shader(v3d->blitter, v3d->prog.bind_fs);
+        util_blitter_save_blend(v3d->blitter, v3d->blend);
+        util_blitter_save_depth_stencil_alpha(v3d->blitter, v3d->zsa);
+        util_blitter_save_stencil_ref(v3d->blitter, &v3d->stencil_ref);
+        util_blitter_save_sample_mask(v3d->blitter, v3d->sample_mask);
+        util_blitter_save_framebuffer(v3d->blitter, &v3d->framebuffer);
+        util_blitter_save_fragment_sampler_states(v3d->blitter,
+                        v3d->fragtex.num_samplers,
+                        (void **)v3d->fragtex.samplers);
+        util_blitter_save_fragment_sampler_views(v3d->blitter,
+                        v3d->fragtex.num_textures, v3d->fragtex.textures);
+        util_blitter_save_so_targets(v3d->blitter, v3d->streamout.num_targets,
+                                     v3d->streamout.targets);
 }
 
 static bool
-vc5_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
+v3d_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
 {
-        struct vc5_context *vc5 = vc5_context(ctx);
+        struct v3d_context *v3d = v3d_context(ctx);
 
-        if (!util_blitter_is_blit_supported(vc5->blitter, info)) {
+        if (!util_blitter_is_blit_supported(v3d->blitter, info)) {
                 fprintf(stderr, "blit unsupported %s -> %s\n",
                     util_format_short_name(info->src.resource->format),
                     util_format_short_name(info->dst.resource->format));
                 return false;
         }
 
-        vc5_blitter_save(vc5);
-        util_blitter_blit(vc5->blitter, info);
+        v3d_blitter_save(v3d);
+        util_blitter_blit(v3d->blitter, info);
 
         return true;
 }
@@ -213,11 +213,11 @@ vc5_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
  * or R8 texture.
  */
 static void
-vc5_stencil_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
+v3d_stencil_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
 {
-        struct vc5_context *vc5 = vc5_context(ctx);
-        struct vc5_resource *src = vc5_resource(info->src.resource);
-        struct vc5_resource *dst = vc5_resource(info->dst.resource);
+        struct v3d_context *v3d = v3d_context(ctx);
+        struct v3d_resource *src = v3d_resource(info->src.resource);
+        struct v3d_resource *dst = v3d_resource(info->dst.resource);
         enum pipe_format src_format, dst_format;
 
         if (src->separate_stencil) {
@@ -267,8 +267,8 @@ vc5_stencil_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
         struct pipe_sampler_view *src_view =
                 ctx->create_sampler_view(ctx, &src->base, &src_tmpl);
 
-        vc5_blitter_save(vc5);
-        util_blitter_blit_generic(vc5->blitter, dst_surf, &info->dst.box,
+        v3d_blitter_save(v3d);
+        util_blitter_blit_generic(v3d->blitter, dst_surf, &info->dst.box,
                                   src_view, &info->src.box,
                                   src->base.width0, src->base.height0,
                                   PIPE_MASK_R,
@@ -284,19 +284,19 @@ vc5_stencil_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
  * Scaling, format conversion, up- and downsampling (resolve) are allowed.
  */
 void
-vc5_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
+v3d_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 {
         struct pipe_blit_info info = *blit_info;
 
         if (info.mask & PIPE_MASK_S) {
-                vc5_stencil_blit(pctx, blit_info);
+                v3d_stencil_blit(pctx, blit_info);
                 info.mask &= ~PIPE_MASK_S;
         }
 
 #if 0
-        if (vc5_tile_blit(pctx, blit_info))
+        if (v3d_tile_blit(pctx, blit_info))
                 return;
 #endif
 
-        vc5_render_blit(pctx, &info);
+        v3d_render_blit(pctx, &info);
 }

@@ -37,7 +37,7 @@
 #include "broadcom/cle/v3dx_pack.h"
 
 static void *
-vc5_generic_cso_state_create(const void *src, uint32_t size)
+v3d_generic_cso_state_create(const void *src, uint32_t size)
 {
         void *dst = calloc(1, size);
         if (!dst)
@@ -47,48 +47,48 @@ vc5_generic_cso_state_create(const void *src, uint32_t size)
 }
 
 static void
-vc5_generic_cso_state_delete(struct pipe_context *pctx, void *hwcso)
+v3d_generic_cso_state_delete(struct pipe_context *pctx, void *hwcso)
 {
         free(hwcso);
 }
 
 static void
-vc5_set_blend_color(struct pipe_context *pctx,
+v3d_set_blend_color(struct pipe_context *pctx,
                     const struct pipe_blend_color *blend_color)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->blend_color.f = *blend_color;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->blend_color.f = *blend_color;
         for (int i = 0; i < 4; i++) {
-                vc5->blend_color.hf[i] =
+                v3d->blend_color.hf[i] =
                         util_float_to_half(blend_color->color[i]);
         }
-        vc5->dirty |= VC5_DIRTY_BLEND_COLOR;
+        v3d->dirty |= VC5_DIRTY_BLEND_COLOR;
 }
 
 static void
-vc5_set_stencil_ref(struct pipe_context *pctx,
+v3d_set_stencil_ref(struct pipe_context *pctx,
                     const struct pipe_stencil_ref *stencil_ref)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->stencil_ref = *stencil_ref;
-        vc5->dirty |= VC5_DIRTY_STENCIL_REF;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->stencil_ref = *stencil_ref;
+        v3d->dirty |= VC5_DIRTY_STENCIL_REF;
 }
 
 static void
-vc5_set_clip_state(struct pipe_context *pctx,
+v3d_set_clip_state(struct pipe_context *pctx,
                    const struct pipe_clip_state *clip)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->clip = *clip;
-        vc5->dirty |= VC5_DIRTY_CLIP;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->clip = *clip;
+        v3d->dirty |= VC5_DIRTY_CLIP;
 }
 
 static void
-vc5_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
+v3d_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->sample_mask = sample_mask & ((1 << VC5_MAX_SAMPLES) - 1);
-        vc5->dirty |= VC5_DIRTY_SAMPLE_MASK;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->sample_mask = sample_mask & ((1 << VC5_MAX_SAMPLES) - 1);
+        v3d->dirty |= VC5_DIRTY_SAMPLE_MASK;
 }
 
 static uint16_t
@@ -98,12 +98,12 @@ float_to_187_half(float f)
 }
 
 static void *
-vc5_create_rasterizer_state(struct pipe_context *pctx,
+v3d_create_rasterizer_state(struct pipe_context *pctx,
                             const struct pipe_rasterizer_state *cso)
 {
-        struct vc5_rasterizer_state *so;
+        struct v3d_rasterizer_state *so;
 
-        so = CALLOC_STRUCT(vc5_rasterizer_state);
+        so = CALLOC_STRUCT(v3d_rasterizer_state);
         if (!so)
                 return NULL;
 
@@ -124,10 +124,10 @@ vc5_create_rasterizer_state(struct pipe_context *pctx,
 
 /* Blend state is baked into shaders. */
 static void *
-vc5_create_blend_state(struct pipe_context *pctx,
+v3d_create_blend_state(struct pipe_context *pctx,
                        const struct pipe_blend_state *cso)
 {
-        return vc5_generic_cso_state_create(cso, sizeof(*cso));
+        return v3d_generic_cso_state_create(cso, sizeof(*cso));
 }
 
 static uint32_t
@@ -147,12 +147,12 @@ translate_stencil_op(enum pipe_stencil_op op)
 }
 
 static void *
-vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
+v3d_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                                      const struct pipe_depth_stencil_alpha_state *cso)
 {
-        struct vc5_depth_stencil_alpha_state *so;
+        struct v3d_depth_stencil_alpha_state *so;
 
-        so = CALLOC_STRUCT(vc5_depth_stencil_alpha_state);
+        so = CALLOC_STRUCT(v3d_depth_stencil_alpha_state);
         if (!so)
                 return NULL;
 
@@ -235,82 +235,82 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
 }
 
 static void
-vc5_set_polygon_stipple(struct pipe_context *pctx,
+v3d_set_polygon_stipple(struct pipe_context *pctx,
                         const struct pipe_poly_stipple *stipple)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->stipple = *stipple;
-        vc5->dirty |= VC5_DIRTY_STIPPLE;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->stipple = *stipple;
+        v3d->dirty |= VC5_DIRTY_STIPPLE;
 }
 
 static void
-vc5_set_scissor_states(struct pipe_context *pctx,
+v3d_set_scissor_states(struct pipe_context *pctx,
                        unsigned start_slot,
                        unsigned num_scissors,
                        const struct pipe_scissor_state *scissor)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
 
-        vc5->scissor = *scissor;
-        vc5->dirty |= VC5_DIRTY_SCISSOR;
+        v3d->scissor = *scissor;
+        v3d->dirty |= VC5_DIRTY_SCISSOR;
 }
 
 static void
-vc5_set_viewport_states(struct pipe_context *pctx,
+v3d_set_viewport_states(struct pipe_context *pctx,
                         unsigned start_slot,
                         unsigned num_viewports,
                         const struct pipe_viewport_state *viewport)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->viewport = *viewport;
-        vc5->dirty |= VC5_DIRTY_VIEWPORT;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->viewport = *viewport;
+        v3d->dirty |= VC5_DIRTY_VIEWPORT;
 }
 
 static void
-vc5_set_vertex_buffers(struct pipe_context *pctx,
+v3d_set_vertex_buffers(struct pipe_context *pctx,
                        unsigned start_slot, unsigned count,
                        const struct pipe_vertex_buffer *vb)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_vertexbuf_stateobj *so = &vc5->vertexbuf;
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_vertexbuf_stateobj *so = &v3d->vertexbuf;
 
         util_set_vertex_buffers_mask(so->vb, &so->enabled_mask, vb,
                                      start_slot, count);
         so->count = util_last_bit(so->enabled_mask);
 
-        vc5->dirty |= VC5_DIRTY_VTXBUF;
+        v3d->dirty |= VC5_DIRTY_VTXBUF;
 }
 
 static void
-vc5_blend_state_bind(struct pipe_context *pctx, void *hwcso)
+v3d_blend_state_bind(struct pipe_context *pctx, void *hwcso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->blend = hwcso;
-        vc5->dirty |= VC5_DIRTY_BLEND;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->blend = hwcso;
+        v3d->dirty |= VC5_DIRTY_BLEND;
 }
 
 static void
-vc5_rasterizer_state_bind(struct pipe_context *pctx, void *hwcso)
+v3d_rasterizer_state_bind(struct pipe_context *pctx, void *hwcso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->rasterizer = hwcso;
-        vc5->dirty |= VC5_DIRTY_RASTERIZER;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->rasterizer = hwcso;
+        v3d->dirty |= VC5_DIRTY_RASTERIZER;
 }
 
 static void
-vc5_zsa_state_bind(struct pipe_context *pctx, void *hwcso)
+v3d_zsa_state_bind(struct pipe_context *pctx, void *hwcso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->zsa = hwcso;
-        vc5->dirty |= VC5_DIRTY_ZSA;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->zsa = hwcso;
+        v3d->dirty |= VC5_DIRTY_ZSA;
 }
 
 static void *
-vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
+v3d_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
                         const struct pipe_vertex_element *elements)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_vertex_stateobj *so = CALLOC_STRUCT(vc5_vertex_stateobj);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_vertex_stateobj *so = CALLOC_STRUCT(v3d_vertex_stateobj);
 
         if (!so)
                 return NULL;
@@ -385,11 +385,11 @@ vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
         /* Set up the default attribute values in case any of the vertex
          * elements use them.
          */
-        so->default_attribute_values = vc5_bo_alloc(vc5->screen,
+        so->default_attribute_values = v3d_bo_alloc(v3d->screen,
                                                     VC5_MAX_ATTRIBUTES *
                                                     4 * sizeof(float),
                                                     "default attributes");
-        uint32_t *attrs = vc5_bo_map(so->default_attribute_values);
+        uint32_t *attrs = v3d_bo_map(so->default_attribute_values);
         for (int i = 0; i < VC5_MAX_ATTRIBUTES; i++) {
                 attrs[i * 4 + 0] = 0;
                 attrs[i * 4 + 1] = 0;
@@ -406,19 +406,19 @@ vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
 }
 
 static void
-vc5_vertex_state_bind(struct pipe_context *pctx, void *hwcso)
+v3d_vertex_state_bind(struct pipe_context *pctx, void *hwcso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        vc5->vtx = hwcso;
-        vc5->dirty |= VC5_DIRTY_VTXSTATE;
+        struct v3d_context *v3d = v3d_context(pctx);
+        v3d->vtx = hwcso;
+        v3d->dirty |= VC5_DIRTY_VTXSTATE;
 }
 
 static void
-vc5_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
+v3d_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
                         const struct pipe_constant_buffer *cb)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_constbuf_stateobj *so = &vc5->constbuf[shader];
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_constbuf_stateobj *so = &v3d->constbuf[shader];
 
         util_copy_constant_buffer(&so->cb[index], cb);
 
@@ -433,24 +433,24 @@ vc5_set_constant_buffer(struct pipe_context *pctx, uint shader, uint index,
 
         so->enabled_mask |= 1 << index;
         so->dirty_mask |= 1 << index;
-        vc5->dirty |= VC5_DIRTY_CONSTBUF;
+        v3d->dirty |= VC5_DIRTY_CONSTBUF;
 }
 
 static void
-vc5_set_framebuffer_state(struct pipe_context *pctx,
+v3d_set_framebuffer_state(struct pipe_context *pctx,
                           const struct pipe_framebuffer_state *framebuffer)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct pipe_framebuffer_state *cso = &vc5->framebuffer;
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct pipe_framebuffer_state *cso = &v3d->framebuffer;
 
-        vc5->job = NULL;
+        v3d->job = NULL;
 
         util_copy_framebuffer_state(cso, framebuffer);
 
-        vc5->swap_color_rb = 0;
-        vc5->blend_dst_alpha_one = 0;
-        for (int i = 0; i < vc5->framebuffer.nr_cbufs; i++) {
-                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
+        v3d->swap_color_rb = 0;
+        v3d->blend_dst_alpha_one = 0;
+        for (int i = 0; i < v3d->framebuffer.nr_cbufs; i++) {
+                struct pipe_surface *cbuf = v3d->framebuffer.cbufs[i];
                 if (!cbuf)
                         continue;
 
@@ -462,27 +462,27 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
                  */
                 if (desc->swizzle[0] == PIPE_SWIZZLE_Z &&
                     cbuf->format != PIPE_FORMAT_B5G6R5_UNORM) {
-                        vc5->swap_color_rb |= 1 << i;
+                        v3d->swap_color_rb |= 1 << i;
                 }
 
                 if (desc->swizzle[3] == PIPE_SWIZZLE_1)
-                        vc5->blend_dst_alpha_one |= 1 << i;
+                        v3d->blend_dst_alpha_one |= 1 << i;
         }
 
-        vc5->dirty |= VC5_DIRTY_FRAMEBUFFER;
+        v3d->dirty |= VC5_DIRTY_FRAMEBUFFER;
 }
 
-static struct vc5_texture_stateobj *
-vc5_get_stage_tex(struct vc5_context *vc5, enum pipe_shader_type shader)
+static struct v3d_texture_stateobj *
+v3d_get_stage_tex(struct v3d_context *v3d, enum pipe_shader_type shader)
 {
         switch (shader) {
         case PIPE_SHADER_FRAGMENT:
-                vc5->dirty |= VC5_DIRTY_FRAGTEX;
-                return &vc5->fragtex;
+                v3d->dirty |= VC5_DIRTY_FRAGTEX;
+                return &v3d->fragtex;
                 break;
         case PIPE_SHADER_VERTEX:
-                vc5->dirty |= VC5_DIRTY_VERTTEX;
-                return &vc5->verttex;
+                v3d->dirty |= VC5_DIRTY_VERTTEX;
+                return &v3d->verttex;
                 break;
         default:
                 fprintf(stderr, "Unknown shader target %d\n", shader);
@@ -510,11 +510,11 @@ static uint32_t translate_wrap(uint32_t pipe_wrap, bool using_nearest)
 
 
 static void *
-vc5_create_sampler_state(struct pipe_context *pctx,
+v3d_create_sampler_state(struct pipe_context *pctx,
                          const struct pipe_sampler_state *cso)
 {
-        MAYBE_UNUSED struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_sampler_state *so = CALLOC_STRUCT(vc5_sampler_state);
+        MAYBE_UNUSED struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_sampler_state *so = CALLOC_STRUCT(v3d_sampler_state);
 
         if (!so)
                 return NULL;
@@ -526,9 +526,9 @@ vc5_create_sampler_state(struct pipe_context *pctx,
                  cso->min_img_filter == PIPE_TEX_MIPFILTER_NEAREST);
 
 #if V3D_VERSION >= 40
-        so->bo = vc5_bo_alloc(vc5->screen, cl_packet_length(SAMPLER_STATE),
+        so->bo = v3d_bo_alloc(v3d->screen, cl_packet_length(SAMPLER_STATE),
                               "sampler");
-        void *map = vc5_bo_map(so->bo);
+        void *map = v3d_bo_map(so->bo);
 
         v3dx_pack(map, SAMPLER_STATE, sampler) {
                 sampler.wrap_i_border = false;
@@ -601,12 +601,12 @@ vc5_create_sampler_state(struct pipe_context *pctx,
 }
 
 static void
-vc5_sampler_states_bind(struct pipe_context *pctx,
+v3d_sampler_states_bind(struct pipe_context *pctx,
                         enum pipe_shader_type shader, unsigned start,
                         unsigned nr, void **hwcso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_texture_stateobj *stage_tex = vc5_get_stage_tex(vc5, shader);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_texture_stateobj *stage_tex = v3d_get_stage_tex(v3d, shader);
 
         assert(start == 0);
         unsigned i;
@@ -626,13 +626,13 @@ vc5_sampler_states_bind(struct pipe_context *pctx,
 }
 
 static void
-vc5_sampler_state_delete(struct pipe_context *pctx,
+v3d_sampler_state_delete(struct pipe_context *pctx,
                          void *hwcso)
 {
         struct pipe_sampler_state *psampler = hwcso;
-        struct vc5_sampler_state *sampler = vc5_sampler_state(psampler);
+        struct v3d_sampler_state *sampler = v3d_sampler_state(psampler);
 
-        vc5_bo_unreference(&sampler->bo);
+        v3d_bo_unreference(&sampler->bo);
         free(psampler);
 }
 
@@ -657,13 +657,13 @@ translate_swizzle(unsigned char pipe_swizzle)
 #endif
 
 static struct pipe_sampler_view *
-vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
+v3d_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_screen *screen = vc5->screen;
-        struct vc5_sampler_view *so = CALLOC_STRUCT(vc5_sampler_view);
-        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_screen *screen = v3d->screen;
+        struct v3d_sampler_view *so = CALLOC_STRUCT(v3d_sampler_view);
+        struct v3d_resource *rsc = v3d_resource(prsc);
 
         if (!so)
                 return NULL;
@@ -683,7 +683,7 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 cso->swizzle_a
         };
         const uint8_t *fmt_swizzle =
-                vc5_get_format_swizzle(&screen->devinfo, so->base.format);
+                v3d_get_format_swizzle(&screen->devinfo, so->base.format);
         util_format_compose_swizzles(fmt_swizzle, view_swizzle, so->swizzle);
 
         so->base.texture = prsc;
@@ -693,9 +693,9 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
         int msaa_scale = prsc->nr_samples > 1 ? 2 : 1;
 
 #if V3D_VERSION >= 40
-        so->bo = vc5_bo_alloc(vc5->screen, cl_packet_length(SAMPLER_STATE),
+        so->bo = v3d_bo_alloc(v3d->screen, cl_packet_length(SAMPLER_STATE),
                               "sampler");
-        void *map = vc5_bo_map(so->bo);
+        void *map = v3d_bo_map(so->bo);
 
         v3dx_pack(map, TEXTURE_SHADER_STATE, tex) {
 #else /* V3D_VERSION < 40 */
@@ -752,17 +752,17 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                          * to catch failures.
                          *
                          * We explicitly allow remapping S8Z24 to RGBA8888 for
-                         * vc5_blit.c's stencil blits.
+                         * v3d_blit.c's stencil blits.
                          */
                         assert((util_format_linear(cso->format) ==
                                 util_format_linear(prsc->format)) ||
                                (prsc->format == PIPE_FORMAT_S8_UINT_Z24_UNORM &&
                                 cso->format == PIPE_FORMAT_R8G8B8A8_UNORM));
                         uint32_t output_image_format =
-                                vc5_get_rt_format(&screen->devinfo, cso->format);
+                                v3d_get_rt_format(&screen->devinfo, cso->format);
                         uint32_t internal_type;
                         uint32_t internal_bpp;
-                        vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                        v3d_get_internal_type_bpp_for_output_format(&screen->devinfo,
                                                                     output_image_format,
                                                                     &internal_type,
                                                                     &internal_bpp);
@@ -786,7 +786,7 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                          */
                         tex.srgb = false;
                 } else {
-                        tex.texture_type = vc5_get_tex_format(&screen->devinfo,
+                        tex.texture_type = v3d_get_tex_format(&screen->devinfo,
                                                               cso->format);
                 }
 
@@ -817,24 +817,24 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 }
 
 static void
-vc5_sampler_view_destroy(struct pipe_context *pctx,
+v3d_sampler_view_destroy(struct pipe_context *pctx,
                          struct pipe_sampler_view *psview)
 {
-        struct vc5_sampler_view *sview = vc5_sampler_view(psview);
+        struct v3d_sampler_view *sview = v3d_sampler_view(psview);
 
-        vc5_bo_unreference(&sview->bo);
+        v3d_bo_unreference(&sview->bo);
         pipe_resource_reference(&psview->texture, NULL);
         free(psview);
 }
 
 static void
-vc5_set_sampler_views(struct pipe_context *pctx,
+v3d_set_sampler_views(struct pipe_context *pctx,
                       enum pipe_shader_type shader,
                       unsigned start, unsigned nr,
                       struct pipe_sampler_view **views)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_texture_stateobj *stage_tex = vc5_get_stage_tex(vc5, shader);
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_texture_stateobj *stage_tex = v3d_get_stage_tex(v3d, shader);
         unsigned i;
         unsigned new_nr = 0;
 
@@ -854,7 +854,7 @@ vc5_set_sampler_views(struct pipe_context *pctx,
 }
 
 static struct pipe_stream_output_target *
-vc5_create_stream_output_target(struct pipe_context *pctx,
+v3d_create_stream_output_target(struct pipe_context *pctx,
                                 struct pipe_resource *prsc,
                                 unsigned buffer_offset,
                                 unsigned buffer_size)
@@ -876,7 +876,7 @@ vc5_create_stream_output_target(struct pipe_context *pctx,
 }
 
 static void
-vc5_stream_output_target_destroy(struct pipe_context *pctx,
+v3d_stream_output_target_destroy(struct pipe_context *pctx,
                                  struct pipe_stream_output_target *target)
 {
         pipe_resource_reference(&target->buffer, NULL);
@@ -884,13 +884,13 @@ vc5_stream_output_target_destroy(struct pipe_context *pctx,
 }
 
 static void
-vc5_set_stream_output_targets(struct pipe_context *pctx,
+v3d_set_stream_output_targets(struct pipe_context *pctx,
                               unsigned num_targets,
                               struct pipe_stream_output_target **targets,
                               const unsigned *offsets)
 {
-        struct vc5_context *ctx = vc5_context(pctx);
-        struct vc5_streamout_stateobj *so = &ctx->streamout;
+        struct v3d_context *ctx = v3d_context(pctx);
+        struct v3d_streamout_stateobj *so = &ctx->streamout;
         unsigned i;
 
         assert(num_targets <= ARRAY_SIZE(so->targets));
@@ -909,43 +909,43 @@ vc5_set_stream_output_targets(struct pipe_context *pctx,
 void
 v3dX(state_init)(struct pipe_context *pctx)
 {
-        pctx->set_blend_color = vc5_set_blend_color;
-        pctx->set_stencil_ref = vc5_set_stencil_ref;
-        pctx->set_clip_state = vc5_set_clip_state;
-        pctx->set_sample_mask = vc5_set_sample_mask;
-        pctx->set_constant_buffer = vc5_set_constant_buffer;
-        pctx->set_framebuffer_state = vc5_set_framebuffer_state;
-        pctx->set_polygon_stipple = vc5_set_polygon_stipple;
-        pctx->set_scissor_states = vc5_set_scissor_states;
-        pctx->set_viewport_states = vc5_set_viewport_states;
+        pctx->set_blend_color = v3d_set_blend_color;
+        pctx->set_stencil_ref = v3d_set_stencil_ref;
+        pctx->set_clip_state = v3d_set_clip_state;
+        pctx->set_sample_mask = v3d_set_sample_mask;
+        pctx->set_constant_buffer = v3d_set_constant_buffer;
+        pctx->set_framebuffer_state = v3d_set_framebuffer_state;
+        pctx->set_polygon_stipple = v3d_set_polygon_stipple;
+        pctx->set_scissor_states = v3d_set_scissor_states;
+        pctx->set_viewport_states = v3d_set_viewport_states;
 
-        pctx->set_vertex_buffers = vc5_set_vertex_buffers;
+        pctx->set_vertex_buffers = v3d_set_vertex_buffers;
 
-        pctx->create_blend_state = vc5_create_blend_state;
-        pctx->bind_blend_state = vc5_blend_state_bind;
-        pctx->delete_blend_state = vc5_generic_cso_state_delete;
+        pctx->create_blend_state = v3d_create_blend_state;
+        pctx->bind_blend_state = v3d_blend_state_bind;
+        pctx->delete_blend_state = v3d_generic_cso_state_delete;
 
-        pctx->create_rasterizer_state = vc5_create_rasterizer_state;
-        pctx->bind_rasterizer_state = vc5_rasterizer_state_bind;
-        pctx->delete_rasterizer_state = vc5_generic_cso_state_delete;
+        pctx->create_rasterizer_state = v3d_create_rasterizer_state;
+        pctx->bind_rasterizer_state = v3d_rasterizer_state_bind;
+        pctx->delete_rasterizer_state = v3d_generic_cso_state_delete;
 
-        pctx->create_depth_stencil_alpha_state = vc5_create_depth_stencil_alpha_state;
-        pctx->bind_depth_stencil_alpha_state = vc5_zsa_state_bind;
-        pctx->delete_depth_stencil_alpha_state = vc5_generic_cso_state_delete;
+        pctx->create_depth_stencil_alpha_state = v3d_create_depth_stencil_alpha_state;
+        pctx->bind_depth_stencil_alpha_state = v3d_zsa_state_bind;
+        pctx->delete_depth_stencil_alpha_state = v3d_generic_cso_state_delete;
 
-        pctx->create_vertex_elements_state = vc5_vertex_state_create;
-        pctx->delete_vertex_elements_state = vc5_generic_cso_state_delete;
-        pctx->bind_vertex_elements_state = vc5_vertex_state_bind;
+        pctx->create_vertex_elements_state = v3d_vertex_state_create;
+        pctx->delete_vertex_elements_state = v3d_generic_cso_state_delete;
+        pctx->bind_vertex_elements_state = v3d_vertex_state_bind;
 
-        pctx->create_sampler_state = vc5_create_sampler_state;
-        pctx->delete_sampler_state = vc5_sampler_state_delete;
-        pctx->bind_sampler_states = vc5_sampler_states_bind;
+        pctx->create_sampler_state = v3d_create_sampler_state;
+        pctx->delete_sampler_state = v3d_sampler_state_delete;
+        pctx->bind_sampler_states = v3d_sampler_states_bind;
 
-        pctx->create_sampler_view = vc5_create_sampler_view;
-        pctx->sampler_view_destroy = vc5_sampler_view_destroy;
-        pctx->set_sampler_views = vc5_set_sampler_views;
+        pctx->create_sampler_view = v3d_create_sampler_view;
+        pctx->sampler_view_destroy = v3d_sampler_view_destroy;
+        pctx->set_sampler_views = v3d_set_sampler_views;
 
-        pctx->create_stream_output_target = vc5_create_stream_output_target;
-        pctx->stream_output_target_destroy = vc5_stream_output_target_destroy;
-        pctx->set_stream_output_targets = vc5_set_stream_output_targets;
+        pctx->create_stream_output_target = v3d_create_stream_output_target;
+        pctx->stream_output_target_destroy = v3d_stream_output_target_destroy;
+        pctx->set_stream_output_targets = v3d_set_stream_output_targets;
 }

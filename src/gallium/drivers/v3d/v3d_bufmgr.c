@@ -46,12 +46,12 @@
 static bool dump_stats = false;
 
 static void
-vc5_bo_cache_free_all(struct vc5_bo_cache *cache);
+v3d_bo_cache_free_all(struct v3d_bo_cache *cache);
 
 static void
-vc5_bo_dump_stats(struct vc5_screen *screen)
+v3d_bo_dump_stats(struct v3d_screen *screen)
 {
-        struct vc5_bo_cache *cache = &screen->bo_cache;
+        struct v3d_bo_cache *cache = &screen->bo_cache;
 
         fprintf(stderr, "  BOs allocated:   %d\n", screen->bo_count);
         fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 1024);
@@ -59,10 +59,10 @@ vc5_bo_dump_stats(struct vc5_screen *screen)
         fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 1024);
 
         if (!list_empty(&cache->time_list)) {
-                struct vc5_bo *first = LIST_ENTRY(struct vc5_bo,
+                struct v3d_bo *first = LIST_ENTRY(struct v3d_bo,
                                                   cache->time_list.next,
                                                   time_list);
-                struct vc5_bo *last = LIST_ENTRY(struct vc5_bo,
+                struct v3d_bo *last = LIST_ENTRY(struct v3d_bo,
                                                   cache->time_list.prev,
                                                   time_list);
 
@@ -79,7 +79,7 @@ vc5_bo_dump_stats(struct vc5_screen *screen)
 }
 
 static void
-vc5_bo_remove_from_cache(struct vc5_bo_cache *cache, struct vc5_bo *bo)
+v3d_bo_remove_from_cache(struct v3d_bo_cache *cache, struct v3d_bo *bo)
 {
         list_del(&bo->time_list);
         list_del(&bo->size_list);
@@ -87,32 +87,32 @@ vc5_bo_remove_from_cache(struct vc5_bo_cache *cache, struct vc5_bo *bo)
         cache->bo_size -= bo->size;
 }
 
-static struct vc5_bo *
-vc5_bo_from_cache(struct vc5_screen *screen, uint32_t size, const char *name)
+static struct v3d_bo *
+v3d_bo_from_cache(struct v3d_screen *screen, uint32_t size, const char *name)
 {
-        struct vc5_bo_cache *cache = &screen->bo_cache;
+        struct v3d_bo_cache *cache = &screen->bo_cache;
         uint32_t page_index = size / 4096 - 1;
 
         if (cache->size_list_size <= page_index)
                 return NULL;
 
-        struct vc5_bo *bo = NULL;
+        struct v3d_bo *bo = NULL;
         mtx_lock(&cache->lock);
         if (!list_empty(&cache->size_list[page_index])) {
-                bo = LIST_ENTRY(struct vc5_bo, cache->size_list[page_index].next,
+                bo = LIST_ENTRY(struct v3d_bo, cache->size_list[page_index].next,
                                 size_list);
 
                 /* Check that the BO has gone idle.  If not, then we want to
                  * allocate something new instead, since we assume that the
                  * user will proceed to CPU map it and fill it with stuff.
                  */
-                if (!vc5_bo_wait(bo, 0, NULL)) {
+                if (!v3d_bo_wait(bo, 0, NULL)) {
                         mtx_unlock(&cache->lock);
                         return NULL;
                 }
 
                 pipe_reference_init(&bo->reference, 1);
-                vc5_bo_remove_from_cache(cache, bo);
+                v3d_bo_remove_from_cache(cache, bo);
 
                 bo->name = name;
         }
@@ -120,25 +120,25 @@ vc5_bo_from_cache(struct vc5_screen *screen, uint32_t size, const char *name)
         return bo;
 }
 
-struct vc5_bo *
-vc5_bo_alloc(struct vc5_screen *screen, uint32_t size, const char *name)
+struct v3d_bo *
+v3d_bo_alloc(struct v3d_screen *screen, uint32_t size, const char *name)
 {
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
         int ret;
 
         size = align(size, 4096);
 
-        bo = vc5_bo_from_cache(screen, size, name);
+        bo = v3d_bo_from_cache(screen, size, name);
         if (bo) {
                 if (dump_stats) {
                         fprintf(stderr, "Allocated %s %dkb from cache:\n",
                                 name, size / 1024);
-                        vc5_bo_dump_stats(screen);
+                        v3d_bo_dump_stats(screen);
                 }
                 return bo;
         }
 
-        bo = CALLOC_STRUCT(vc5_bo);
+        bo = CALLOC_STRUCT(v3d_bo);
         if (!bo)
                 return NULL;
 
@@ -156,7 +156,7 @@ vc5_bo_alloc(struct vc5_screen *screen, uint32_t size, const char *name)
                 .size = size
         };
 
-        ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_CREATE_BO, &create);
+        ret = v3d_ioctl(screen->fd, DRM_IOCTL_V3D_CREATE_BO, &create);
         bo->handle = create.handle;
         bo->offset = create.offset;
 
@@ -164,7 +164,7 @@ vc5_bo_alloc(struct vc5_screen *screen, uint32_t size, const char *name)
                 if (!list_empty(&screen->bo_cache.time_list) &&
                     !cleared_and_retried) {
                         cleared_and_retried = true;
-                        vc5_bo_cache_free_all(&screen->bo_cache);
+                        v3d_bo_cache_free_all(&screen->bo_cache);
                         goto retry;
                 }
 
@@ -176,31 +176,31 @@ vc5_bo_alloc(struct vc5_screen *screen, uint32_t size, const char *name)
         screen->bo_size += bo->size;
         if (dump_stats) {
                 fprintf(stderr, "Allocated %s %dkb:\n", name, size / 1024);
-                vc5_bo_dump_stats(screen);
+                v3d_bo_dump_stats(screen);
         }
 
         return bo;
 }
 
 void
-vc5_bo_last_unreference(struct vc5_bo *bo)
+v3d_bo_last_unreference(struct v3d_bo *bo)
 {
-        struct vc5_screen *screen = bo->screen;
+        struct v3d_screen *screen = bo->screen;
 
         struct timespec time;
         clock_gettime(CLOCK_MONOTONIC, &time);
         mtx_lock(&screen->bo_cache.lock);
-        vc5_bo_last_unreference_locked_timed(bo, time.tv_sec);
+        v3d_bo_last_unreference_locked_timed(bo, time.tv_sec);
         mtx_unlock(&screen->bo_cache.lock);
 }
 
 static void
-vc5_bo_free(struct vc5_bo *bo)
+v3d_bo_free(struct v3d_bo *bo)
 {
-        struct vc5_screen *screen = bo->screen;
+        struct v3d_screen *screen = bo->screen;
 
         if (bo->map) {
-                if (using_vc5_simulator && bo->name &&
+                if (using_v3d_simulator && bo->name &&
                     strcmp(bo->name, "winsys") == 0) {
                         free(bo->map);
                 } else {
@@ -212,7 +212,7 @@ vc5_bo_free(struct vc5_bo *bo)
         struct drm_gem_close c;
         memset(&c, 0, sizeof(c));
         c.handle = bo->handle;
-        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_GEM_CLOSE, &c);
+        int ret = v3d_ioctl(screen->fd, DRM_IOCTL_GEM_CLOSE, &c);
         if (ret != 0)
                 fprintf(stderr, "close object %d: %s\n", bo->handle, strerror(errno));
 
@@ -224,30 +224,30 @@ vc5_bo_free(struct vc5_bo *bo)
                         bo->name ? bo->name : "",
                         bo->name ? " " : "",
                         bo->size / 1024);
-                vc5_bo_dump_stats(screen);
+                v3d_bo_dump_stats(screen);
         }
 
         free(bo);
 }
 
 static void
-free_stale_bos(struct vc5_screen *screen, time_t time)
+free_stale_bos(struct v3d_screen *screen, time_t time)
 {
-        struct vc5_bo_cache *cache = &screen->bo_cache;
+        struct v3d_bo_cache *cache = &screen->bo_cache;
         bool freed_any = false;
 
-        list_for_each_entry_safe(struct vc5_bo, bo, &cache->time_list,
+        list_for_each_entry_safe(struct v3d_bo, bo, &cache->time_list,
                                  time_list) {
                 if (dump_stats && !freed_any) {
                         fprintf(stderr, "Freeing stale BOs:\n");
-                        vc5_bo_dump_stats(screen);
+                        v3d_bo_dump_stats(screen);
                         freed_any = true;
                 }
 
                 /* If it's more than a second old, free it. */
                 if (time - bo->free_time > 2) {
-                        vc5_bo_remove_from_cache(cache, bo);
-                        vc5_bo_free(bo);
+                        v3d_bo_remove_from_cache(cache, bo);
+                        v3d_bo_free(bo);
                 } else {
                         break;
                 }
@@ -255,31 +255,31 @@ free_stale_bos(struct vc5_screen *screen, time_t time)
 
         if (dump_stats && freed_any) {
                 fprintf(stderr, "Freed stale BOs:\n");
-                vc5_bo_dump_stats(screen);
+                v3d_bo_dump_stats(screen);
         }
 }
 
 static void
-vc5_bo_cache_free_all(struct vc5_bo_cache *cache)
+v3d_bo_cache_free_all(struct v3d_bo_cache *cache)
 {
         mtx_lock(&cache->lock);
-        list_for_each_entry_safe(struct vc5_bo, bo, &cache->time_list,
+        list_for_each_entry_safe(struct v3d_bo, bo, &cache->time_list,
                                  time_list) {
-                vc5_bo_remove_from_cache(cache, bo);
-                vc5_bo_free(bo);
+                v3d_bo_remove_from_cache(cache, bo);
+                v3d_bo_free(bo);
         }
         mtx_unlock(&cache->lock);
 }
 
 void
-vc5_bo_last_unreference_locked_timed(struct vc5_bo *bo, time_t time)
+v3d_bo_last_unreference_locked_timed(struct v3d_bo *bo, time_t time)
 {
-        struct vc5_screen *screen = bo->screen;
-        struct vc5_bo_cache *cache = &screen->bo_cache;
+        struct v3d_screen *screen = bo->screen;
+        struct v3d_bo_cache *cache = &screen->bo_cache;
         uint32_t page_index = bo->size / 4096 - 1;
 
         if (!bo->private) {
-                vc5_bo_free(bo);
+                v3d_bo_free(bo);
                 return;
         }
 
@@ -316,19 +316,19 @@ vc5_bo_last_unreference_locked_timed(struct vc5_bo *bo, time_t time)
         if (dump_stats) {
                 fprintf(stderr, "Freed %s %dkb to cache:\n",
                         bo->name, bo->size / 1024);
-                vc5_bo_dump_stats(screen);
+                v3d_bo_dump_stats(screen);
         }
         bo->name = NULL;
 
         free_stale_bos(screen, time);
 }
 
-static struct vc5_bo *
-vc5_bo_open_handle(struct vc5_screen *screen,
+static struct v3d_bo *
+v3d_bo_open_handle(struct v3d_screen *screen,
                    uint32_t winsys_stride,
                    uint32_t handle, uint32_t size)
 {
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
 
         assert(size);
 
@@ -340,7 +340,7 @@ vc5_bo_open_handle(struct vc5_screen *screen,
                 goto done;
         }
 
-        bo = CALLOC_STRUCT(vc5_bo);
+        bo = CALLOC_STRUCT(v3d_bo);
         pipe_reference_init(&bo->reference, 1);
         bo->screen = screen;
         bo->handle = handle;
@@ -349,7 +349,7 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         bo->private = false;
 
 #ifdef USE_V3D_SIMULATOR
-        vc5_simulator_open_from_handle(screen->fd, winsys_stride,
+        v3d_simulator_open_from_handle(screen->fd, winsys_stride,
                                        bo->handle, bo->size);
         bo->map = malloc(bo->size);
 #endif
@@ -357,7 +357,7 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         struct drm_v3d_get_bo_offset get = {
                 .handle = handle,
         };
-        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_V3D_GET_BO_OFFSET, &get);
+        int ret = v3d_ioctl(screen->fd, DRM_IOCTL_V3D_GET_BO_OFFSET, &get);
         if (ret) {
                 fprintf(stderr, "Failed to get BO offset: %s\n",
                         strerror(errno));
@@ -375,31 +375,31 @@ done:
         return bo;
 }
 
-struct vc5_bo *
-vc5_bo_open_name(struct vc5_screen *screen, uint32_t name,
+struct v3d_bo *
+v3d_bo_open_name(struct v3d_screen *screen, uint32_t name,
                  uint32_t winsys_stride)
 {
         struct drm_gem_open o = {
                 .name = name
         };
-        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
+        int ret = v3d_ioctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
         if (ret) {
                 fprintf(stderr, "Failed to open bo %d: %s\n",
                         name, strerror(errno));
                 return NULL;
         }
 
-        return vc5_bo_open_handle(screen, winsys_stride, o.handle, o.size);
+        return v3d_bo_open_handle(screen, winsys_stride, o.handle, o.size);
 }
 
-struct vc5_bo *
-vc5_bo_open_dmabuf(struct vc5_screen *screen, int fd, uint32_t winsys_stride)
+struct v3d_bo *
+v3d_bo_open_dmabuf(struct v3d_screen *screen, int fd, uint32_t winsys_stride)
 {
         uint32_t handle;
         int ret = drmPrimeFDToHandle(screen->fd, fd, &handle);
         int size;
         if (ret) {
-                fprintf(stderr, "Failed to get vc5 handle for dmabuf %d\n", fd);
+                fprintf(stderr, "Failed to get v3d handle for dmabuf %d\n", fd);
                 return NULL;
         }
 
@@ -410,11 +410,11 @@ vc5_bo_open_dmabuf(struct vc5_screen *screen, int fd, uint32_t winsys_stride)
                 return NULL;
         }
 
-        return vc5_bo_open_handle(screen, winsys_stride, handle, size);
+        return v3d_bo_open_handle(screen, winsys_stride, handle, size);
 }
 
 int
-vc5_bo_get_dmabuf(struct vc5_bo *bo)
+v3d_bo_get_dmabuf(struct v3d_bo *bo)
 {
         int fd;
         int ret = drmPrimeHandleToFD(bo->screen->fd, bo->handle,
@@ -434,12 +434,12 @@ vc5_bo_get_dmabuf(struct vc5_bo *bo)
 }
 
 bool
-vc5_bo_flink(struct vc5_bo *bo, uint32_t *name)
+v3d_bo_flink(struct v3d_bo *bo, uint32_t *name)
 {
         struct drm_gem_flink flink = {
                 .handle = bo->handle,
         };
-        int ret = vc5_ioctl(bo->screen->fd, DRM_IOCTL_GEM_FLINK, &flink);
+        int ret = v3d_ioctl(bo->screen->fd, DRM_IOCTL_GEM_FLINK, &flink);
         if (ret) {
                 fprintf(stderr, "Failed to flink bo %d: %s\n",
                         bo->handle, strerror(errno));
@@ -453,13 +453,13 @@ vc5_bo_flink(struct vc5_bo *bo, uint32_t *name)
         return true;
 }
 
-static int vc5_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
+static int v3d_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
 {
         struct drm_v3d_wait_bo wait = {
                 .handle = handle,
                 .timeout_ns = timeout_ns,
         };
-        int ret = vc5_ioctl(fd, DRM_IOCTL_V3D_WAIT_BO, &wait);
+        int ret = v3d_ioctl(fd, DRM_IOCTL_V3D_WAIT_BO, &wait);
         if (ret == -1)
                 return -errno;
         else
@@ -468,18 +468,18 @@ static int vc5_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
 }
 
 bool
-vc5_bo_wait(struct vc5_bo *bo, uint64_t timeout_ns, const char *reason)
+v3d_bo_wait(struct v3d_bo *bo, uint64_t timeout_ns, const char *reason)
 {
-        struct vc5_screen *screen = bo->screen;
+        struct v3d_screen *screen = bo->screen;
 
         if (unlikely(V3D_DEBUG & V3D_DEBUG_PERF) && timeout_ns && reason) {
-                if (vc5_wait_bo_ioctl(screen->fd, bo->handle, 0) == -ETIME) {
+                if (v3d_wait_bo_ioctl(screen->fd, bo->handle, 0) == -ETIME) {
                         fprintf(stderr, "Blocking on %s BO for %s\n",
                                 bo->name, reason);
                 }
         }
 
-        int ret = vc5_wait_bo_ioctl(screen->fd, bo->handle, timeout_ns);
+        int ret = v3d_wait_bo_ioctl(screen->fd, bo->handle, timeout_ns);
         if (ret) {
                 if (ret != -ETIME) {
                         fprintf(stderr, "wait failed: %d\n", ret);
@@ -493,7 +493,7 @@ vc5_bo_wait(struct vc5_bo *bo, uint64_t timeout_ns, const char *reason)
 }
 
 void *
-vc5_bo_map_unsynchronized(struct vc5_bo *bo)
+v3d_bo_map_unsynchronized(struct v3d_bo *bo)
 {
         uint64_t offset;
         int ret;
@@ -504,7 +504,7 @@ vc5_bo_map_unsynchronized(struct vc5_bo *bo)
         struct drm_v3d_mmap_bo map;
         memset(&map, 0, sizeof(map));
         map.handle = bo->handle;
-        ret = vc5_ioctl(bo->screen->fd, DRM_IOCTL_V3D_MMAP_BO, &map);
+        ret = v3d_ioctl(bo->screen->fd, DRM_IOCTL_V3D_MMAP_BO, &map);
         offset = map.offset;
         if (ret != 0) {
                 fprintf(stderr, "map ioctl failure\n");
@@ -524,11 +524,11 @@ vc5_bo_map_unsynchronized(struct vc5_bo *bo)
 }
 
 void *
-vc5_bo_map(struct vc5_bo *bo)
+v3d_bo_map(struct v3d_bo *bo)
 {
-        void *map = vc5_bo_map_unsynchronized(bo);
+        void *map = v3d_bo_map_unsynchronized(bo);
 
-        bool ok = vc5_bo_wait(bo, PIPE_TIMEOUT_INFINITE, "bo map");
+        bool ok = v3d_bo_wait(bo, PIPE_TIMEOUT_INFINITE, "bo map");
         if (!ok) {
                 fprintf(stderr, "BO wait for map failed\n");
                 abort();
@@ -538,15 +538,15 @@ vc5_bo_map(struct vc5_bo *bo)
 }
 
 void
-vc5_bufmgr_destroy(struct pipe_screen *pscreen)
+v3d_bufmgr_destroy(struct pipe_screen *pscreen)
 {
-        struct vc5_screen *screen = vc5_screen(pscreen);
-        struct vc5_bo_cache *cache = &screen->bo_cache;
+        struct v3d_screen *screen = v3d_screen(pscreen);
+        struct v3d_bo_cache *cache = &screen->bo_cache;
 
-        vc5_bo_cache_free_all(cache);
+        v3d_bo_cache_free_all(cache);
 
         if (dump_stats) {
                 fprintf(stderr, "BO stats after screen destroy:\n");
-                vc5_bo_dump_stats(screen);
+                v3d_bo_dump_stats(screen);
         }
 }

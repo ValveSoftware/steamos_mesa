@@ -36,18 +36,18 @@
 #include "v3d_context.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
-struct vc5_query
+struct v3d_query
 {
         enum pipe_query_type type;
-        struct vc5_bo *bo;
+        struct v3d_bo *bo;
 
         uint32_t start, end;
 };
 
 static struct pipe_query *
-vc5_create_query(struct pipe_context *pctx, unsigned query_type, unsigned index)
+v3d_create_query(struct pipe_context *pctx, unsigned query_type, unsigned index)
 {
-        struct vc5_query *q = calloc(1, sizeof(*q));
+        struct v3d_query *q = calloc(1, sizeof(*q));
 
         q->type = query_type;
 
@@ -56,34 +56,34 @@ vc5_create_query(struct pipe_context *pctx, unsigned query_type, unsigned index)
 }
 
 static void
-vc5_destroy_query(struct pipe_context *pctx, struct pipe_query *query)
+v3d_destroy_query(struct pipe_context *pctx, struct pipe_query *query)
 {
-        struct vc5_query *q = (struct vc5_query *)query;
+        struct v3d_query *q = (struct v3d_query *)query;
 
-        vc5_bo_unreference(&q->bo);
+        v3d_bo_unreference(&q->bo);
         free(q);
 }
 
 static boolean
-vc5_begin_query(struct pipe_context *pctx, struct pipe_query *query)
+v3d_begin_query(struct pipe_context *pctx, struct pipe_query *query)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_query *q = (struct vc5_query *)query;
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_query *q = (struct v3d_query *)query;
 
         switch (q->type) {
         case PIPE_QUERY_PRIMITIVES_GENERATED:
-                q->start = vc5->prims_generated;
+                q->start = v3d->prims_generated;
                 break;
         case PIPE_QUERY_PRIMITIVES_EMITTED:
-                q->start = vc5->tf_prims_generated;
+                q->start = v3d->tf_prims_generated;
                 break;
         default:
-                q->bo = vc5_bo_alloc(vc5->screen, 4096, "query");
+                q->bo = v3d_bo_alloc(v3d->screen, 4096, "query");
 
-                uint32_t *map = vc5_bo_map(q->bo);
+                uint32_t *map = v3d_bo_map(q->bo);
                 *map = 0;
-                vc5->current_oq = q->bo;
-                vc5->dirty |= VC5_DIRTY_OQ;
+                v3d->current_oq = q->bo;
+                v3d->dirty |= VC5_DIRTY_OQ;
                 break;
         }
 
@@ -91,21 +91,21 @@ vc5_begin_query(struct pipe_context *pctx, struct pipe_query *query)
 }
 
 static bool
-vc5_end_query(struct pipe_context *pctx, struct pipe_query *query)
+v3d_end_query(struct pipe_context *pctx, struct pipe_query *query)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_query *q = (struct vc5_query *)query;
+        struct v3d_context *v3d = v3d_context(pctx);
+        struct v3d_query *q = (struct v3d_query *)query;
 
         switch (q->type) {
         case PIPE_QUERY_PRIMITIVES_GENERATED:
-                q->end = vc5->prims_generated;
+                q->end = v3d->prims_generated;
                 break;
         case PIPE_QUERY_PRIMITIVES_EMITTED:
-                q->end = vc5->tf_prims_generated;
+                q->end = v3d->tf_prims_generated;
                 break;
         default:
-                vc5->current_oq = NULL;
-                vc5->dirty |= VC5_DIRTY_OQ;
+                v3d->current_oq = NULL;
+                v3d->dirty |= VC5_DIRTY_OQ;
                 break;
         }
 
@@ -113,29 +113,29 @@ vc5_end_query(struct pipe_context *pctx, struct pipe_query *query)
 }
 
 static boolean
-vc5_get_query_result(struct pipe_context *pctx, struct pipe_query *query,
+v3d_get_query_result(struct pipe_context *pctx, struct pipe_query *query,
                      boolean wait, union pipe_query_result *vresult)
 {
-        struct vc5_query *q = (struct vc5_query *)query;
+        struct v3d_query *q = (struct v3d_query *)query;
         uint32_t result = 0;
 
         if (q->bo) {
                 /* XXX: Only flush the jobs using this BO. */
-                vc5_flush(pctx);
+                v3d_flush(pctx);
 
                 if (wait) {
-                        if (!vc5_bo_wait(q->bo, 0, "query"))
+                        if (!v3d_bo_wait(q->bo, 0, "query"))
                                 return false;
                 } else {
-                        if (!vc5_bo_wait(q->bo, ~0ull, "query"))
+                        if (!v3d_bo_wait(q->bo, ~0ull, "query"))
                                 return false;
                 }
 
                 /* XXX: Sum up per-core values. */
-                uint32_t *map = vc5_bo_map(q->bo);
+                uint32_t *map = v3d_bo_map(q->bo);
                 result = *map;
 
-                vc5_bo_unreference(&q->bo);
+                v3d_bo_unreference(&q->bo);
         }
 
         switch (q->type) {
@@ -158,23 +158,23 @@ vc5_get_query_result(struct pipe_context *pctx, struct pipe_query *query,
 }
 
 static void
-vc5_set_active_query_state(struct pipe_context *pctx, boolean enable)
+v3d_set_active_query_state(struct pipe_context *pctx, boolean enable)
 {
-        struct vc5_context *vc5 = vc5_context(pctx);
+        struct v3d_context *v3d = v3d_context(pctx);
 
-        vc5->active_queries = enable;
-        vc5->dirty |= VC5_DIRTY_OQ;
-        vc5->dirty |= VC5_DIRTY_STREAMOUT;
+        v3d->active_queries = enable;
+        v3d->dirty |= VC5_DIRTY_OQ;
+        v3d->dirty |= VC5_DIRTY_STREAMOUT;
 }
 
 void
-vc5_query_init(struct pipe_context *pctx)
+v3d_query_init(struct pipe_context *pctx)
 {
-        pctx->create_query = vc5_create_query;
-        pctx->destroy_query = vc5_destroy_query;
-        pctx->begin_query = vc5_begin_query;
-        pctx->end_query = vc5_end_query;
-        pctx->get_query_result = vc5_get_query_result;
-        pctx->set_active_query_state = vc5_set_active_query_state;
+        pctx->create_query = v3d_create_query;
+        pctx->destroy_query = v3d_destroy_query;
+        pctx->begin_query = v3d_begin_query;
+        pctx->end_query = v3d_end_query;
+        pctx->get_query_result = v3d_get_query_result;
+        pctx->set_active_query_state = v3d_set_active_query_state;
 }
 

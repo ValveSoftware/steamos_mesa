@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-/** @file vc5_tiling.c
+/** @file v3d_tiling.c
  *
  * Handles information about the VC5 tiling formats, and loading and storing
  * from them.
@@ -34,7 +34,7 @@
 
 /** Return the width in pixels of a 64-byte microtile. */
 uint32_t
-vc5_utile_width(int cpp)
+v3d_utile_width(int cpp)
 {
         switch (cpp) {
         case 1:
@@ -52,7 +52,7 @@ vc5_utile_width(int cpp)
 
 /** Return the height in pixels of a 64-byte microtile. */
 uint32_t
-vc5_utile_height(int cpp)
+v3d_utile_height(int cpp)
 {
         switch (cpp) {
         case 1:
@@ -75,10 +75,10 @@ vc5_utile_height(int cpp)
  * arrangement.
  */
 static inline uint32_t
-vc5_get_utile_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y)
+v3d_get_utile_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y)
 {
-        uint32_t utile_w = vc5_utile_width(cpp);
-        uint32_t utile_h = vc5_utile_height(cpp);
+        uint32_t utile_w = v3d_utile_width(cpp);
+        uint32_t utile_h = v3d_utile_height(cpp);
 
         assert(x < utile_w && y < utile_h);
 
@@ -91,17 +91,17 @@ vc5_get_utile_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y)
  * LINEARTILE is a single line of utiles in either the X or Y direction.
  */
 static inline uint32_t
-vc5_get_lt_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y)
+v3d_get_lt_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y)
 {
-        uint32_t utile_w = vc5_utile_width(cpp);
-        uint32_t utile_h = vc5_utile_height(cpp);
+        uint32_t utile_w = v3d_utile_width(cpp);
+        uint32_t utile_h = v3d_utile_height(cpp);
         uint32_t utile_index_x = x / utile_w;
         uint32_t utile_index_y = y / utile_h;
 
         assert(utile_index_x == 0 || utile_index_y == 0);
 
         return (64 * (utile_index_x + utile_index_y) +
-                vc5_get_utile_pixel_offset(cpp,
+                v3d_get_utile_pixel_offset(cpp,
                                            x & (utile_w - 1),
                                            y & (utile_h - 1)));
 }
@@ -113,11 +113,11 @@ vc5_get_lt_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y)
  * utiles), and the UIF blocks are in 1 or 2 columns in raster order.
  */
 static inline uint32_t
-vc5_get_ublinear_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y,
+v3d_get_ublinear_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y,
                               int ublinear_number)
 {
-        uint32_t utile_w = vc5_utile_width(cpp);
-        uint32_t utile_h = vc5_utile_height(cpp);
+        uint32_t utile_w = v3d_utile_width(cpp);
+        uint32_t utile_h = v3d_utile_height(cpp);
         uint32_t ub_w = utile_w * 2;
         uint32_t ub_h = utile_h * 2;
         uint32_t ub_x = x / ub_w;
@@ -127,23 +127,23 @@ vc5_get_ublinear_pixel_offset(uint32_t cpp, uint32_t x, uint32_t y,
                        ub_x) +
                 ((x & utile_w) ? 64 : 0) +
                 ((y & utile_h) ? 128 : 0) +
-                + vc5_get_utile_pixel_offset(cpp,
+                + v3d_get_utile_pixel_offset(cpp,
                                              x & (utile_w - 1),
                                              y & (utile_h - 1)));
 }
 
 static inline uint32_t
-vc5_get_ublinear_2_column_pixel_offset(uint32_t cpp, uint32_t image_h,
+v3d_get_ublinear_2_column_pixel_offset(uint32_t cpp, uint32_t image_h,
                                        uint32_t x, uint32_t y)
 {
-        return vc5_get_ublinear_pixel_offset(cpp, x, y, 2);
+        return v3d_get_ublinear_pixel_offset(cpp, x, y, 2);
 }
 
 static inline uint32_t
-vc5_get_ublinear_1_column_pixel_offset(uint32_t cpp, uint32_t image_h,
+v3d_get_ublinear_1_column_pixel_offset(uint32_t cpp, uint32_t image_h,
                                        uint32_t x, uint32_t y)
 {
-        return vc5_get_ublinear_pixel_offset(cpp, x, y, 1);
+        return v3d_get_ublinear_pixel_offset(cpp, x, y, 1);
 }
 
 /**
@@ -154,11 +154,11 @@ vc5_get_ublinear_1_column_pixel_offset(uint32_t cpp, uint32_t image_h,
  * 4x4 groups, and those 4x4 groups are then stored in raster order.
  */
 static inline uint32_t
-vc5_get_uif_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y,
+v3d_get_uif_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y,
                          bool do_xor)
 {
-        uint32_t utile_w = vc5_utile_width(cpp);
-        uint32_t utile_h = vc5_utile_height(cpp);
+        uint32_t utile_w = v3d_utile_width(cpp);
+        uint32_t utile_h = v3d_utile_height(cpp);
         uint32_t mb_width = utile_w * 2;
         uint32_t mb_height = utile_h * 2;
         uint32_t log2_mb_width = ffs(mb_width) - 1;
@@ -190,7 +190,7 @@ vc5_get_uif_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y,
 
         uint32_t mb_pixel_address = (mb_base_addr +
                                      mb_tile_offset +
-                                     vc5_get_utile_pixel_offset(cpp,
+                                     v3d_get_utile_pixel_offset(cpp,
                                                                 utile_x,
                                                                 utile_y));
 
@@ -198,21 +198,21 @@ vc5_get_uif_pixel_offset(uint32_t cpp, uint32_t image_h, uint32_t x, uint32_t y,
 }
 
 static inline uint32_t
-vc5_get_uif_xor_pixel_offset(uint32_t cpp, uint32_t image_h,
+v3d_get_uif_xor_pixel_offset(uint32_t cpp, uint32_t image_h,
                              uint32_t x, uint32_t y)
 {
-        return vc5_get_uif_pixel_offset(cpp, image_h, x, y, true);
+        return v3d_get_uif_pixel_offset(cpp, image_h, x, y, true);
 }
 
 static inline uint32_t
-vc5_get_uif_no_xor_pixel_offset(uint32_t cpp, uint32_t image_h,
+v3d_get_uif_no_xor_pixel_offset(uint32_t cpp, uint32_t image_h,
                                 uint32_t x, uint32_t y)
 {
-        return vc5_get_uif_pixel_offset(cpp, image_h, x, y, false);
+        return v3d_get_uif_pixel_offset(cpp, image_h, x, y, false);
 }
 
 static inline void
-vc5_move_pixels_general_percpp(void *gpu, uint32_t gpu_stride,
+v3d_move_pixels_general_percpp(void *gpu, uint32_t gpu_stride,
                                void *cpu, uint32_t cpu_stride,
                                int cpp, uint32_t image_h,
                                const struct pipe_box *box,
@@ -249,7 +249,7 @@ vc5_move_pixels_general_percpp(void *gpu, uint32_t gpu_stride,
 }
 
 static inline void
-vc5_move_pixels_general(void *gpu, uint32_t gpu_stride,
+v3d_move_pixels_general(void *gpu, uint32_t gpu_stride,
                                void *cpu, uint32_t cpu_stride,
                                int cpp, uint32_t image_h,
                                const struct pipe_box *box,
@@ -260,35 +260,35 @@ vc5_move_pixels_general(void *gpu, uint32_t gpu_stride,
 {
         switch (cpp) {
         case 1:
-                vc5_move_pixels_general_percpp(gpu, gpu_stride,
+                v3d_move_pixels_general_percpp(gpu, gpu_stride,
                                                cpu, cpu_stride,
                                                1, image_h, box,
                                                get_pixel_offset,
                                                is_load);
                 break;
         case 2:
-                vc5_move_pixels_general_percpp(gpu, gpu_stride,
+                v3d_move_pixels_general_percpp(gpu, gpu_stride,
                                                cpu, cpu_stride,
                                                2, image_h, box,
                                                get_pixel_offset,
                                                is_load);
                 break;
         case 4:
-                vc5_move_pixels_general_percpp(gpu, gpu_stride,
+                v3d_move_pixels_general_percpp(gpu, gpu_stride,
                                                cpu, cpu_stride,
                                                4, image_h, box,
                                                get_pixel_offset,
                                                is_load);
                 break;
         case 8:
-                vc5_move_pixels_general_percpp(gpu, gpu_stride,
+                v3d_move_pixels_general_percpp(gpu, gpu_stride,
                                                cpu, cpu_stride,
                                                8, image_h, box,
                                                get_pixel_offset,
                                                is_load);
                 break;
         case 16:
-                vc5_move_pixels_general_percpp(gpu, gpu_stride,
+                v3d_move_pixels_general_percpp(gpu, gpu_stride,
                                                cpu, cpu_stride,
                                                16, image_h, box,
                                                get_pixel_offset,
@@ -298,9 +298,9 @@ vc5_move_pixels_general(void *gpu, uint32_t gpu_stride,
 }
 
 static inline void
-vc5_move_tiled_image(void *gpu, uint32_t gpu_stride,
+v3d_move_tiled_image(void *gpu, uint32_t gpu_stride,
                      void *cpu, uint32_t cpu_stride,
-                     enum vc5_tiling_mode tiling_format,
+                     enum v3d_tiling_mode tiling_format,
                      int cpp,
                      uint32_t image_h,
                      const struct pipe_box *box,
@@ -308,38 +308,38 @@ vc5_move_tiled_image(void *gpu, uint32_t gpu_stride,
 {
         switch (tiling_format) {
         case VC5_TILING_UIF_XOR:
-                vc5_move_pixels_general(gpu, gpu_stride,
+                v3d_move_pixels_general(gpu, gpu_stride,
                                         cpu, cpu_stride,
                                         cpp, image_h, box,
-                                        vc5_get_uif_xor_pixel_offset,
+                                        v3d_get_uif_xor_pixel_offset,
                                         is_load);
                 break;
         case VC5_TILING_UIF_NO_XOR:
-                vc5_move_pixels_general(gpu, gpu_stride,
+                v3d_move_pixels_general(gpu, gpu_stride,
                                         cpu, cpu_stride,
                                         cpp, image_h, box,
-                                        vc5_get_uif_no_xor_pixel_offset,
+                                        v3d_get_uif_no_xor_pixel_offset,
                                         is_load);
                 break;
         case VC5_TILING_UBLINEAR_2_COLUMN:
-                vc5_move_pixels_general(gpu, gpu_stride,
+                v3d_move_pixels_general(gpu, gpu_stride,
                                         cpu, cpu_stride,
                                         cpp, image_h, box,
-                                        vc5_get_ublinear_2_column_pixel_offset,
+                                        v3d_get_ublinear_2_column_pixel_offset,
                                         is_load);
                 break;
         case VC5_TILING_UBLINEAR_1_COLUMN:
-                vc5_move_pixels_general(gpu, gpu_stride,
+                v3d_move_pixels_general(gpu, gpu_stride,
                                         cpu, cpu_stride,
                                         cpp, image_h, box,
-                                        vc5_get_ublinear_1_column_pixel_offset,
+                                        v3d_get_ublinear_1_column_pixel_offset,
                                         is_load);
                 break;
         case VC5_TILING_LINEARTILE:
-                vc5_move_pixels_general(gpu, gpu_stride,
+                v3d_move_pixels_general(gpu, gpu_stride,
                                         cpu, cpu_stride,
                                         cpp, image_h, box,
-                                        vc5_get_lt_pixel_offset,
+                                        v3d_get_lt_pixel_offset,
                                         is_load);
                 break;
         default:
@@ -353,13 +353,13 @@ vc5_move_tiled_image(void *gpu, uint32_t gpu_stride,
  * start of \p dst according to the given tiling format.
  */
 void
-vc5_load_tiled_image(void *dst, uint32_t dst_stride,
+v3d_load_tiled_image(void *dst, uint32_t dst_stride,
                      void *src, uint32_t src_stride,
-                     enum vc5_tiling_mode tiling_format, int cpp,
+                     enum v3d_tiling_mode tiling_format, int cpp,
                      uint32_t image_h,
                      const struct pipe_box *box)
 {
-        vc5_move_tiled_image(src, src_stride,
+        v3d_move_tiled_image(src, src_stride,
                              dst, dst_stride,
                              tiling_format,
                              cpp,
@@ -373,13 +373,13 @@ vc5_load_tiled_image(void *dst, uint32_t dst_stride,
  * \p dst according to the given tiling format.
  */
 void
-vc5_store_tiled_image(void *dst, uint32_t dst_stride,
+v3d_store_tiled_image(void *dst, uint32_t dst_stride,
                       void *src, uint32_t src_stride,
-                      enum vc5_tiling_mode tiling_format, int cpp,
+                      enum v3d_tiling_mode tiling_format, int cpp,
                       uint32_t image_h,
                       const struct pipe_box *box)
 {
-        vc5_move_tiled_image(dst, dst_stride,
+        v3d_move_tiled_image(dst, dst_stride,
                              src, src_stride,
                              tiling_format,
                              cpp,
