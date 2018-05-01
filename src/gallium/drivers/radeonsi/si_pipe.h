@@ -254,6 +254,7 @@ struct r600_texture {
 	unsigned			color_clear_value[2];
 	unsigned			last_msaa_resolve_target_micro_mode;
 	unsigned			num_level0_transfers;
+	unsigned			num_color_samples;
 
 	/* Depth buffer compression and fast clear. */
 	uint64_t			htile_offset;
