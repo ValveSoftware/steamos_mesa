@@ -1154,7 +1154,7 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 			cin.size = sizeof(ADDR2_COMPUTE_CMASK_INFO_INPUT);
 			cout.size = sizeof(ADDR2_COMPUTE_CMASK_INFO_OUTPUT);
 
-			if (in->numSamples) {
+			if (in->numSamples > 1) {
 				/* FMASK is always aligned. */
 				cin.cMaskFlags.pipeAligned = 1;
 				cin.cMaskFlags.rbAligned = 1;
