@@ -594,14 +594,8 @@ ac_get_raster_config(struct radeon_info *info,
 		raster_config_1 = 0x0000002e;
 		break;
 	case CHIP_FIJI:
-		if (info->cik_macrotile_mode_array[0] == 0x000000e8) {
-			/* old kernels with old tiling config */
-			raster_config = 0x16000012;
-			raster_config_1 = 0x0000002a;
-		} else {
-			raster_config = 0x3a00161a;
-			raster_config_1 = 0x0000002e;
-		}
+		raster_config = 0x3a00161a;
+		raster_config_1 = 0x0000002e;
 		break;
 	case CHIP_POLARIS10:
 		raster_config = 0x16000012;
@@ -654,6 +648,15 @@ ac_get_raster_config(struct radeon_info *info,
 	 */
 	if (info->family == CHIP_KAVERI && info->drm_major == 2)
 		raster_config = 0x00000000;
+
+	/* Fiji: Old kernels have incorrect tiling config. This decreases
+	 * RB performance by 25%. (it disables 1 RB in the second packer)
+	 */
+	if (info->family == CHIP_FIJI &&
+	    info->cik_macrotile_mode_array[0] == 0x000000e8) {
+		raster_config = 0x16000012;
+		raster_config_1 = 0x0000002a;
+	}
 
 	*raster_config_p = raster_config;
 	*raster_config_1_p = raster_config_1;
