@@ -1739,95 +1739,9 @@ intel_alloc_aux_buffer(struct brw_context *brw,
    return buf;
 }
 
-static bool
-intel_miptree_alloc_mcs(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt,
-                        GLuint num_samples)
-{
-   assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
-   assert(mt->aux_buf == NULL);
-   assert(mt->aux_usage == ISL_AUX_USAGE_MCS);
-
-   /* Multisampled miptrees are only supported for single level. */
-   assert(mt->first_level == 0);
-   enum isl_aux_state **aux_state =
-      create_aux_state_map(mt, ISL_AUX_STATE_CLEAR);
-   if (!aux_state)
-      return false;
-
-   struct isl_surf temp_mcs_surf;
-
-   MAYBE_UNUSED bool ok =
-      isl_surf_get_mcs_surf(&brw->isl_dev, &mt->surf, &temp_mcs_surf);
-   assert(ok);
-
-   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
-    *
-    *     When MCS buffer is enabled and bound to MSRT, it is required that it
-    *     is cleared prior to any rendering.
-    *
-    * Since we don't use the MCS buffer for any purpose other than rendering,
-    * it makes sense to just clear it immediately upon allocation.
-    *
-    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
-    */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf, true, 0xFF);
-   if (!mt->aux_buf) {
-      free(aux_state);
-      return false;
-   }
-
-   mt->aux_state = aux_state;
-
-   return true;
-}
-
-static bool
-intel_miptree_alloc_ccs(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt)
-{
-   assert(mt->aux_buf == NULL);
-   assert(mt->aux_usage == ISL_AUX_USAGE_CCS_E ||
-          mt->aux_usage == ISL_AUX_USAGE_CCS_D);
-
-   struct isl_surf temp_ccs_surf;
-
-   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &mt->surf, &temp_ccs_surf, 0))
-      return false;
-
-   assert(temp_ccs_surf.size &&
-          (temp_ccs_surf.size % temp_ccs_surf.row_pitch == 0));
-
-   enum isl_aux_state **aux_state =
-      create_aux_state_map(mt, ISL_AUX_STATE_PASS_THROUGH);
-   if (!aux_state)
-      return false;
-
-   /* When CCS_E is used, we need to ensure that the CCS starts off in a valid
-    * state.  From the Sky Lake PRM, "MCS Buffer for Render Target(s)":
-    *
-    *    "If Software wants to enable Color Compression without Fast clear,
-    *    Software needs to initialize MCS with zeros."
-    *
-    * A CCS value of 0 indicates that the corresponding block is in the
-    * pass-through state which is what we want.
-    *
-    * For CCS_D, do the same thing. On gen9+, this avoids having any undefined
-    * bits in the aux buffer.
-    */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf, true, 0);
-   if (!mt->aux_buf) {
-      free(aux_state);
-      return false;
-   }
-
-   mt->aux_state = aux_state;
-
-   return true;
-}
 
 /**
- * Helper for intel_miptree_alloc_hiz() that sets
+ * Helper for intel_miptree_alloc_aux() that sets
  * \c mt->level[level].has_hiz. Return true if and only if
  * \c has_hiz was set.
  */
@@ -1862,39 +1776,6 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
    return true;
 }
 
-bool
-intel_miptree_alloc_hiz(struct brw_context *brw,
-			struct intel_mipmap_tree *mt)
-{
-   assert(mt->aux_buf == NULL);
-   assert(mt->aux_usage == ISL_AUX_USAGE_HIZ);
-
-   enum isl_aux_state **aux_state =
-      create_aux_state_map(mt, ISL_AUX_STATE_AUX_INVALID);
-   if (!aux_state)
-      return false;
-
-   struct isl_surf temp_hiz_surf;
-
-   MAYBE_UNUSED bool ok =
-      isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
-   assert(ok);
-
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf, false, 0);
-
-   if (!mt->aux_buf) {
-      free(aux_state);
-      return false;
-   }
-
-   for (unsigned level = mt->first_level; level <= mt->last_level; ++level)
-      intel_miptree_level_enable_hiz(brw, mt, level);
-
-   mt->aux_state = aux_state;
-
-   return true;
-}
-
 
 /**
  * Allocate the initial aux surface for a miptree based on mt->aux_usage
@@ -1907,33 +1788,101 @@ bool
 intel_miptree_alloc_aux(struct brw_context *brw,
                         struct intel_mipmap_tree *mt)
 {
+   assert(mt->aux_buf == NULL);
+
+   /* Get the aux buf allocation parameters for this miptree. */
+   enum isl_aux_state initial_state;
+   uint8_t memset_value;
+   struct isl_surf aux_surf;
+   bool aux_surf_ok;
+
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_NONE:
-      return true;
-
+      aux_surf.size = 0;
+      aux_surf_ok = true;
+      break;
    case ISL_AUX_USAGE_HIZ:
       assert(!_mesa_is_format_color_format(mt->format));
-      if (!intel_miptree_alloc_hiz(brw, mt))
-         return false;
-      return true;
 
+      initial_state = ISL_AUX_STATE_AUX_INVALID;
+      aux_surf_ok = isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &aux_surf);
+      assert(aux_surf_ok);
+      break;
    case ISL_AUX_USAGE_MCS:
       assert(_mesa_is_format_color_format(mt->format));
-      assert(mt->surf.samples > 1);
-      if (!intel_miptree_alloc_mcs(brw, mt, mt->surf.samples))
-         return false;
-      return true;
+      assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
 
+      /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
+       *
+       *     When MCS buffer is enabled and bound to MSRT, it is required that
+       *     it is cleared prior to any rendering.
+       *
+       * Since we don't use the MCS buffer for any purpose other than
+       * rendering, it makes sense to just clear it immediately upon
+       * allocation.
+       *
+       * Note: the clear value for MCS buffers is all 1's, so we memset to
+       * 0xff.
+       */
+      initial_state = ISL_AUX_STATE_CLEAR;
+      memset_value = 0xFF;
+      aux_surf_ok = isl_surf_get_mcs_surf(&brw->isl_dev, &mt->surf, &aux_surf);
+      assert(aux_surf_ok);
+      break;
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
       assert(_mesa_is_format_color_format(mt->format));
-      assert(mt->surf.samples == 1);
-      if (!intel_miptree_alloc_ccs(brw, mt))
-         return false;
-      return true;
+
+      /* When CCS_E is used, we need to ensure that the CCS starts off in a
+       * valid state.  From the Sky Lake PRM, "MCS Buffer for Render
+       * Target(s)":
+       *
+       *    "If Software wants to enable Color Compression without Fast
+       *    clear, Software needs to initialize MCS with zeros."
+       *
+       * A CCS value of 0 indicates that the corresponding block is in the
+       * pass-through state which is what we want.
+       *
+       * For CCS_D, do the same thing. On gen9+, this avoids having any
+       * undefined bits in the aux buffer.
+       */
+      initial_state = ISL_AUX_STATE_PASS_THROUGH;
+      memset_value = 0;
+      aux_surf_ok =
+         isl_surf_get_ccs_surf(&brw->isl_dev, &mt->surf, &aux_surf, 0);
+      break;
    }
 
-   unreachable("Invalid aux usage");
+   /* Ensure we have a valid aux_surf. */
+   if (aux_surf_ok == false)
+      return false;
+
+   /* No work is needed for a zero-sized auxiliary buffer. */
+   if (aux_surf.size == 0)
+      return true;
+
+   /* Create the aux_state for the auxiliary buffer. */
+   mt->aux_state = create_aux_state_map(mt, initial_state);
+   if (mt->aux_state == NULL)
+      return false;
+
+   /* Allocate the auxiliary buffer. */
+   const bool needs_memset = initial_state != ISL_AUX_STATE_AUX_INVALID;
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &aux_surf, needs_memset,
+                                        memset_value);
+   if (mt->aux_buf == NULL) {
+      free_aux_state_map(mt->aux_state);
+      mt->aux_state = NULL;
+      return false;
+   }
+
+   /* Perform aux_usage-specific initialization. */
+   if (mt->aux_usage == ISL_AUX_USAGE_HIZ) {
+      for (unsigned level = mt->first_level; level <= mt->last_level; ++level)
+         intel_miptree_level_enable_hiz(brw, mt, level);
+   }
+
+   return true;
 }
 
 
