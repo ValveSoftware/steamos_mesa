@@ -1062,9 +1062,10 @@ gen_print_group(FILE *outfile, struct gen_group *group, uint64_t offset,
       if (!gen_field_is_header(iter.field)) {
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
-            uint64_t struct_offset = offset + 4 * iter_dword;
+            int struct_dword = iter.start_bit / 32;
+            uint64_t struct_offset = offset + 4 * struct_dword;
             gen_print_group(outfile, iter.struct_desc, struct_offset,
-                            &p[iter_dword], iter.start_bit % 32, color);
+                            &p[struct_dword], iter.start_bit % 32, color);
          }
       }
    }
