@@ -463,15 +463,6 @@ VkResult radv_CreateInstance(
 		client_version = VK_MAKE_VERSION(1, 0, 0);
 	}
 
-	if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
-	    client_version > VK_MAKE_VERSION(1, 1, 0xfff)) {
-		return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
-				 "Client requested version %d.%d.%d",
-				 VK_VERSION_MAJOR(client_version),
-				 VK_VERSION_MINOR(client_version),
-				 VK_VERSION_PATCH(client_version));
-	}
-
 	instance = vk_zalloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
 			      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!instance)
