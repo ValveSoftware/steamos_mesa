@@ -2119,6 +2119,7 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 				      unsigned sample_count,
 				      unsigned usage)
 {
+	struct si_screen *sscreen = (struct si_screen *)screen;
 	unsigned retval = 0;
 
 	if (target >= PIPE_MAX_TEXTURE_TYPES) {
@@ -2142,6 +2143,10 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		case 8:
 			break;
 		case 16:
+			/* Allow resource_copy_region with nr_samples == 16. */
+			if (sscreen->eqaa_force_coverage_samples == 16 &&
+			    !util_format_is_depth_or_stencil(format))
+				return true;
 			if (format == PIPE_FORMAT_NONE)
 				return true;
 			else

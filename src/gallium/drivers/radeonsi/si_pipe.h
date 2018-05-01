@@ -416,6 +416,9 @@ struct si_screen {
 	unsigned			tess_offchip_ring_size;
 	unsigned			tess_factor_ring_size;
 	unsigned			vgt_hs_offchip_param;
+	unsigned			eqaa_force_coverage_samples;
+	unsigned			eqaa_force_z_samples;
+	unsigned			eqaa_force_color_samples;
 	bool				has_clear_state;
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;

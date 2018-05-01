@@ -1072,6 +1072,31 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
 		sscreen->debug_flags |= DBG_ALL_SHADERS;
 
+	/* Syntax:
+	 *     EQAA=s,z,c
+	 * Example:
+	 *     EQAA=8,4,2
+
+	 * That means 8 coverage samples, 4 Z/S samples, and 2 color samples.
+	 * Constraints:
+	 *     s >= z >= c (ignoring this only wastes memory)
+	 *     s = [2..16]
+	 *     z = [2..8]
+	 *     c = [2..8]
+	 *
+	 * Only MSAA color and depth buffers are overriden.
+	 */
+	if (sscreen->info.drm_major == 3) {
+		const char *eqaa = debug_get_option("EQAA", NULL);
+		unsigned s,z,f;
+
+		if (eqaa && sscanf(eqaa, "%u,%u,%u", &s, &z, &f) == 3 && s && z && f) {
+			sscreen->eqaa_force_coverage_samples = s;
+			sscreen->eqaa_force_z_samples = z;
+			sscreen->eqaa_force_color_samples = f;
+		}
+	}
+
 	for (i = 0; i < num_comp_hi_threads; i++)
 		si_init_compiler(sscreen, &sscreen->compiler[i]);
 	for (i = 0; i < num_comp_lo_threads; i++)

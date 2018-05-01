@@ -1387,9 +1387,14 @@ si_choose_tiling(struct si_screen *sscreen,
 	return RADEON_SURF_MODE_2D;
 }
 
-static unsigned si_get_num_color_samples(const struct pipe_resource *templ,
+static unsigned si_get_num_color_samples(struct si_screen *sscreen,
+					 const struct pipe_resource *templ,
 					 bool imported)
 {
+	if (!imported && templ->nr_samples >= 2 &&
+	    sscreen->eqaa_force_color_samples)
+		return sscreen->eqaa_force_color_samples;
+
 	return CLAMP(templ->nr_samples, 1, 8);
 }
 
@@ -1397,6 +1402,22 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
+	bool is_zs = util_format_is_depth_or_stencil(templ->format);
+
+	if (templ->nr_samples >= 2) {
+		/* This is hackish (overwriting the const pipe_resource template),
+		 * but should be harmless and state trackers can also see
+		 * the overriden number of samples in the created pipe_resource.
+		 */
+		if (is_zs && sscreen->eqaa_force_z_samples) {
+			((struct pipe_resource*)templ)->nr_samples =
+				sscreen->eqaa_force_z_samples;
+		} else if (!is_zs && sscreen->eqaa_force_color_samples) {
+			((struct pipe_resource*)templ)->nr_samples =
+				sscreen->eqaa_force_coverage_samples;
+		}
+	}
+
 	struct radeon_surf surface = {0};
 	bool is_flushed_depth = templ->flags & SI_RESOURCE_FLAG_FLUSHED_DEPTH;
 	bool tc_compatible_htile =
@@ -1412,8 +1433,8 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 		!(sscreen->debug_flags & DBG(NO_HYPERZ)) &&
 		!is_flushed_depth &&
 		templ->nr_samples <= 1 && /* TC-compat HTILE is less efficient with MSAA */
-		util_format_is_depth_or_stencil(templ->format);
-	unsigned num_color_samples = si_get_num_color_samples(templ, false);
+		is_zs;
+	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, false);
 	int r;
 
 	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
@@ -1457,7 +1478,7 @@ static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
 	si_surface_import_metadata(sscreen, &surface, &metadata,
 				     &array_mode, &is_scanout);
 
-	unsigned num_color_samples = si_get_num_color_samples(templ, true);
+	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, true);
 
 	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
 			    array_mode, stride, offset, true, is_scanout,
@@ -2391,7 +2412,7 @@ si_texture_from_memobj(struct pipe_screen *screen,
 		is_scanout = false;
 	}
 
-	unsigned num_color_samples = si_get_num_color_samples(templ, true);
+	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, true);
 
 	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
 			    array_mode, memobj->stride, offset, true,
