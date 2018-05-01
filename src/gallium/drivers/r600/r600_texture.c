@@ -245,8 +245,8 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	if (!(ptex->flags & R600_RESOURCE_FLAG_FORCE_TILING))
 		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
-	r = rscreen->ws->surface_init(rscreen->ws, ptex, flags, bpe,
-				      array_mode, surface);
+	r = rscreen->ws->surface_init(rscreen->ws, ptex, ptex->nr_samples,
+				      flags, bpe, array_mode, surface);
 	if (r) {
 		return r;
 	}
@@ -616,8 +616,8 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 		bpe *= 2;
 	}
 
-	if (rscreen->ws->surface_init(rscreen->ws, &templ, flags, bpe,
-				      RADEON_SURF_MODE_2D, &fmask)) {
+	if (rscreen->ws->surface_init(rscreen->ws, &templ, templ.nr_samples,
+				      flags, bpe, RADEON_SURF_MODE_2D, &fmask)) {
 		R600_ERR("Got error in surface_init while allocating FMASK.\n");
 		return;
 	}

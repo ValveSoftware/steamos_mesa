@@ -649,6 +649,7 @@ struct radeon_winsys {
      */
     int (*surface_init)(struct radeon_winsys *ws,
                         const struct pipe_resource *tex,
+                        unsigned num_color_samples,
                         unsigned flags, unsigned bpe,
                         enum radeon_surf_mode mode,
                         struct radeon_surf *surf);

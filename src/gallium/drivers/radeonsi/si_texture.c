@@ -301,8 +301,8 @@ static int si_init_surface(struct si_screen *sscreen,
 	if (!(ptex->flags & SI_RESOURCE_FLAG_FORCE_TILING))
 		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
-	r = sscreen->ws->surface_init(sscreen->ws, ptex, flags, bpe,
-				      array_mode, surface);
+	r = sscreen->ws->surface_init(sscreen->ws, ptex, ptex->nr_samples,
+				      flags, bpe, array_mode, surface);
 	if (r) {
 		return r;
 	}

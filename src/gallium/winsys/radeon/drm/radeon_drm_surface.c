@@ -222,6 +222,7 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
 
 static int radeon_winsys_surface_init(struct radeon_winsys *rws,
                                       const struct pipe_resource *tex,
+                                      unsigned num_color_samples,
                                       unsigned flags, unsigned bpe,
                                       enum radeon_surf_mode mode,
                                       struct radeon_surf *surf_ws)
@@ -269,8 +270,9 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
             return -1;
         }
 
-        if (radeon_winsys_surface_init(rws, &templ, fmask_flags, bpe,
-                                       RADEON_SURF_MODE_2D, &fmask)) {
+        if (radeon_winsys_surface_init(rws, &templ, num_color_samples,
+				       fmask_flags, bpe, RADEON_SURF_MODE_2D,
+				       &fmask)) {
             fprintf(stderr, "Got error in surface_init while allocating FMASK.\n");
             return -1;
         }

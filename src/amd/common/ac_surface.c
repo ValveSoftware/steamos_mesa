@@ -249,8 +249,25 @@ static int surf_config_sanity(const struct ac_surf_config *config,
 	case 4:
 	case 8:
 		break;
+	case 16:
+		if (flags & RADEON_SURF_Z_OR_SBUFFER)
+			return -EINVAL;
+		break;
 	default:
 		return -EINVAL;
+	}
+
+	if (!(flags & RADEON_SURF_Z_OR_SBUFFER)) {
+		switch (config->info.color_samples) {
+		case 0:
+		case 1:
+		case 2:
+		case 4:
+		case 8:
+			break;
+		default:
+			return -EINVAL;
+		}
 	}
 
 	if (config->is_3d && config->info.array_size > 1)
@@ -607,8 +624,13 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 	}
 
 	AddrDccIn.numSamples = AddrSurfInfoIn.numSamples =
-		config->info.samples ? config->info.samples : 1;
+		MAX2(1, config->info.samples);
 	AddrSurfInfoIn.tileIndex = -1;
+
+	if (!(surf->flags & RADEON_SURF_Z_OR_SBUFFER)) {
+		AddrDccIn.numSamples = AddrSurfInfoIn.numFrags =
+			MAX2(1, config->info.color_samples);
+	}
 
 	/* Set the micro tile type. */
 	if (surf->flags & RADEON_SURF_SCANOUT)
@@ -1317,8 +1339,11 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 	AddrSurfInfoIn.flags.opt4space = 1;
 
 	AddrSurfInfoIn.numMipLevels = config->info.levels;
-	AddrSurfInfoIn.numSamples = config->info.samples ? config->info.samples : 1;
+	AddrSurfInfoIn.numSamples = MAX2(1, config->info.samples);
 	AddrSurfInfoIn.numFrags = AddrSurfInfoIn.numSamples;
+
+	if (!(surf->flags & RADEON_SURF_Z_OR_SBUFFER))
+		AddrSurfInfoIn.numFrags = MAX2(1, config->info.color_samples);
 
 	/* GFX9 doesn't support 1D depth textures, so allocate all 1D textures
 	 * as 2D to avoid having shader variants for 1D vs 2D, so all shaders
