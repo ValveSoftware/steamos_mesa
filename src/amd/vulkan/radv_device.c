@@ -460,7 +460,7 @@ VkResult radv_CreateInstance(
 	    pCreateInfo->pApplicationInfo->apiVersion != 0) {
 		client_version = pCreateInfo->pApplicationInfo->apiVersion;
 	} else {
-		client_version = VK_MAKE_VERSION(1, 0, 0);
+		radv_EnumerateInstanceVersion(&client_version);
 	}
 
 	instance = vk_zalloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
