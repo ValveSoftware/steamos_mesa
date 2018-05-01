@@ -1569,6 +1569,15 @@ static void
 anv_device_init_hiz_clear_value_bo(struct anv_device *device)
 {
    anv_bo_init_new(&device->hiz_clear_bo, device, 4096);
+
+   if (device->instance->physicalDevice.has_exec_async)
+      device->hiz_clear_bo.flags |= EXEC_OBJECT_ASYNC;
+
+   if (device->instance->physicalDevice.use_softpin)
+      device->hiz_clear_bo.flags |= EXEC_OBJECT_PINNED;
+
+   anv_vma_alloc(device, &device->hiz_clear_bo);
+
    uint32_t *map = anv_gem_mmap(device, device->hiz_clear_bo.gem_handle,
                                 0, 4096, 0);
 
