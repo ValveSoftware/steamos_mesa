@@ -545,7 +545,11 @@ static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
     std::string bitcodeBuffer;
     raw_string_ostream bitcodeStream(bitcodeBuffer);
 
+#if LLVM_VERSION_MAJOR >= 7
+    llvm::WriteBitcodeToFile(*M, bitcodeStream);
+#else
     llvm::WriteBitcodeToFile(M, bitcodeStream);
+#endif
     //M->print(bitcodeStream, nullptr, false);
 
     bitcodeStream.flush();
