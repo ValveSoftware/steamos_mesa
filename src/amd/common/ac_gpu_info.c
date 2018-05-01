@@ -316,7 +316,12 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	/* TODO: Enable this once the kernel handles it efficiently. */
 	info->has_local_buffers = info->drm_minor >= 20 &&
 				  !info->has_dedicated_vram;
+
 	info->num_render_backends = amdinfo->rb_pipes;
+	/* The value returned by the kernel driver was wrong. */
+	if (info->family == CHIP_KAVERI)
+		info->num_render_backends = 2;
+
 	info->clock_crystal_freq = amdinfo->gpu_counter_freq;
 	if (!info->clock_crystal_freq) {
 		fprintf(stderr, "amdgpu: clock crystal frequency is 0, timestamps will be wrong\n");
@@ -627,8 +632,7 @@ ac_get_raster_config(struct radeon_info *info,
 		raster_config_1 = 0x00000000;
 		break;
 	case CHIP_KAVERI:
-		/* KV should be 0x00000002, but that causes problems with radeon */
-		raster_config = 0x00000000; /* 0x00000002 */
+		raster_config = 0x00000002;
 		raster_config_1 = 0x00000000;
 		break;
 	case CHIP_KABINI:
@@ -644,6 +648,13 @@ ac_get_raster_config(struct radeon_info *info,
 		raster_config_1 = 0x00000000;
 		break;
 	}
+
+	/* drm/radeon on Kaveri is buggy, so disable 1 RB to work around it.
+	 * This decreases performance by up to 50% when the RB is the bottleneck.
+	 */
+	if (info->family == CHIP_KAVERI && info->drm_major == 2)
+		raster_config = 0x00000000;
+
 	*raster_config_p = raster_config;
 	*raster_config_1_p = raster_config_1;
 }
