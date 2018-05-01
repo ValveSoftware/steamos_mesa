@@ -565,7 +565,6 @@ ac_get_raster_config(struct radeon_info *info,
 		     uint32_t *raster_config_p,
 		     uint32_t *raster_config_1_p)
 {
-	unsigned num_rb = MIN2(info->num_render_backends, 16);
 	unsigned raster_config, raster_config_1;
 	switch (info->family) {
 	case CHIP_TAHITI:
@@ -615,10 +614,7 @@ ac_get_raster_config(struct radeon_info *info,
 		raster_config_1 = 0x0000002a;
 		break;
 	case CHIP_ICELAND:
-		if (num_rb == 1)
-			raster_config = 0x00000000;
-		else
-			raster_config = 0x00000002;
+		raster_config = 0x00000002;
 		raster_config_1 = 0x00000000;
 		break;
 	case CHIP_CARRIZO:
