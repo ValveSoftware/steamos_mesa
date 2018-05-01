@@ -733,58 +733,20 @@ radv_image_get_fmask_info(struct radv_device *device,
 			  unsigned nr_samples,
 			  struct radv_fmask_info *out)
 {
-	/* FMASK is allocated like an ordinary texture. */
-	struct radeon_surf fmask = {};
-	struct ac_surf_info info = image->info;
-	memset(out, 0, sizeof(*out));
-
 	if (device->physical_device->rad_info.chip_class >= GFX9) {
 		out->alignment = image->surface.u.gfx9.fmask_alignment;
 		out->size = image->surface.u.gfx9.fmask_size;
+		out->tile_swizzle = image->surface.u.gfx9.fmask_tile_swizzle;
 		return;
 	}
 
-	fmask.blk_w = image->surface.blk_w;
-	fmask.blk_h = image->surface.blk_h;
-	info.samples = 1;
-	fmask.flags = image->surface.flags | RADEON_SURF_FMASK;
-
-	if (!image->shareable) {
-		info.fmask_surf_index = &device->fmask_mrt_offset_counter;
-		info.surf_index = &device->fmask_mrt_offset_counter;
-	}
-
-	/* Force 2D tiling if it wasn't set. This may occur when creating
-	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
-	 * destination buffer must have an FMASK too. */
-	fmask.flags = RADEON_SURF_CLR(fmask.flags, MODE);
-	fmask.flags |= RADEON_SURF_SET(RADEON_SURF_MODE_2D, MODE);
-
-	switch (nr_samples) {
-	case 2:
-	case 4:
-		fmask.bpe = 1;
-		break;
-	case 8:
-		fmask.bpe = 4;
-		break;
-	default:
-		return;
-	}
-
-	device->ws->surface_init(device->ws, &info, &fmask);
-	assert(fmask.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
-
-	out->slice_tile_max = (fmask.u.legacy.level[0].nblk_x * fmask.u.legacy.level[0].nblk_y) / 64;
-	if (out->slice_tile_max)
-		out->slice_tile_max -= 1;
-
-	out->tile_mode_index = fmask.u.legacy.tiling_index[0];
-	out->pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
-	out->bank_height = fmask.u.legacy.bankh;
-	out->tile_swizzle = fmask.tile_swizzle;
-	out->alignment = MAX2(256, fmask.surf_alignment);
-	out->size = fmask.surf_size;
+	out->slice_tile_max = image->surface.u.legacy.fmask.slice_tile_max;
+	out->tile_mode_index = image->surface.u.legacy.fmask.tiling_index;
+	out->pitch_in_pixels = image->surface.u.legacy.fmask.pitch_in_pixels;
+	out->bank_height = image->surface.u.legacy.fmask.bankh;
+	out->tile_swizzle = image->surface.u.legacy.fmask.tile_swizzle;
+	out->alignment = image->surface.u.legacy.fmask.alignment;
+	out->size = image->surface.u.legacy.fmask.size;
 
 	assert(!out->tile_swizzle || !image->shareable);
 }

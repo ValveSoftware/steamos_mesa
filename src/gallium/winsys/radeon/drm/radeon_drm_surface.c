@@ -243,6 +243,54 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
         return r;
 
     surf_drm_to_winsys(ws, surf_ws, &surf_drm);
+
+    /* Compute FMASK. */
+    if (ws->gen == DRV_SI &&
+        tex->nr_samples >= 2 &&
+        !(flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_FMASK))) {
+        /* FMASK is allocated like an ordinary texture. */
+        struct pipe_resource templ = *tex;
+        struct radeon_surf fmask = {};
+        unsigned fmask_flags, bpe;
+
+        templ.nr_samples = 1;
+        fmask_flags = flags | RADEON_SURF_FMASK;
+
+        switch (tex->nr_samples) {
+        case 2:
+        case 4:
+            bpe = 1;
+            break;
+        case 8:
+            bpe = 4;
+            break;
+        default:
+            fprintf(stderr, "radeon: Invalid sample count for FMASK allocation.\n");
+            return -1;
+        }
+
+        if (radeon_winsys_surface_init(rws, &templ, fmask_flags, bpe,
+                                       RADEON_SURF_MODE_2D, &fmask)) {
+            fprintf(stderr, "Got error in surface_init while allocating FMASK.\n");
+            return -1;
+        }
+
+        assert(fmask.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
+
+        surf_ws->u.legacy.fmask.size = fmask.surf_size;
+        surf_ws->u.legacy.fmask.alignment = MAX2(256, fmask.surf_alignment);
+        surf_ws->u.legacy.fmask.tile_swizzle = fmask.tile_swizzle;
+
+        surf_ws->u.legacy.fmask.slice_tile_max =
+            (fmask.u.legacy.level[0].nblk_x * fmask.u.legacy.level[0].nblk_y) / 64;
+        if (surf_ws->u.legacy.fmask.slice_tile_max)
+            surf_ws->u.legacy.fmask.slice_tile_max -= 1;
+
+        surf_ws->u.legacy.fmask.tiling_index = fmask.u.legacy.tiling_index[0];
+        surf_ws->u.legacy.fmask.bankh = fmask.u.legacy.bankh;
+        surf_ws->u.legacy.fmask.pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
+    }
+
     return 0;
 }
 

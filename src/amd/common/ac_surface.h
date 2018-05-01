@@ -79,6 +79,16 @@ struct legacy_surf_level {
     enum radeon_surf_mode       mode:2;
 };
 
+struct legacy_surf_fmask {
+    uint64_t size;
+    unsigned alignment;
+    unsigned tile_swizzle;
+    unsigned slice_tile_max; /* max 4M */
+    uint8_t tiling_index;    /* max 31 */
+    uint8_t bankh;           /* max 8 */
+    uint16_t pitch_in_pixels;
+};
+
 struct legacy_surf_layout {
     unsigned                    bankw:4;  /* max 8 */
     unsigned                    bankh:4;  /* max 8 */
@@ -101,6 +111,7 @@ struct legacy_surf_layout {
     struct legacy_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
     uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
     uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
+    struct legacy_surf_fmask    fmask;
 };
 
 /* Same as addrlib - AddrResourceType. */
@@ -222,7 +233,7 @@ struct ac_surf_info {
 	uint8_t num_channels; /* heuristic for displayability */
 	uint16_t array_size;
 	uint32_t *surf_index; /* Set a monotonic counter for tile swizzling. */
-	uint32_t *fmask_surf_index; /* GFX9+ */
+	uint32_t *fmask_surf_index;
 };
 
 struct ac_surf_config {

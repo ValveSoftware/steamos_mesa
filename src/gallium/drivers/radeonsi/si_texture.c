@@ -851,13 +851,6 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 			       unsigned nr_samples,
 			       struct r600_fmask_info *out)
 {
-	/* FMASK is allocated like an ordinary texture. */
-	struct pipe_resource templ = rtex->buffer.b.b;
-	struct radeon_surf fmask = {};
-	unsigned flags, bpe;
-
-	memset(out, 0, sizeof(*out));
-
 	if (sscreen->info.chip_class >= GFX9) {
 		out->alignment = rtex->surface.u.gfx9.fmask_alignment;
 		out->size = rtex->surface.u.gfx9.fmask_size;
@@ -865,40 +858,13 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 		return;
 	}
 
-	templ.nr_samples = 1;
-	flags = rtex->surface.flags | RADEON_SURF_FMASK;
-
-	switch (nr_samples) {
-	case 2:
-	case 4:
-		bpe = 1;
-		break;
-	case 8:
-		bpe = 4;
-		break;
-	default:
-		PRINT_ERR("Invalid sample count for FMASK allocation.\n");
-		return;
-	}
-
-	if (sscreen->ws->surface_init(sscreen->ws, &templ, flags, bpe,
-				      RADEON_SURF_MODE_2D, &fmask)) {
-		PRINT_ERR("Got error in surface_init while allocating FMASK.\n");
-		return;
-	}
-
-	assert(fmask.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
-
-	out->slice_tile_max = (fmask.u.legacy.level[0].nblk_x * fmask.u.legacy.level[0].nblk_y) / 64;
-	if (out->slice_tile_max)
-		out->slice_tile_max -= 1;
-
-	out->tile_mode_index = fmask.u.legacy.tiling_index[0];
-	out->pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
-	out->bank_height = fmask.u.legacy.bankh;
-	out->tile_swizzle = fmask.tile_swizzle;
-	out->alignment = MAX2(256, fmask.surf_alignment);
-	out->size = fmask.surf_size;
+	out->slice_tile_max = rtex->surface.u.legacy.fmask.slice_tile_max;
+	out->tile_mode_index = rtex->surface.u.legacy.fmask.tiling_index;
+	out->pitch_in_pixels = rtex->surface.u.legacy.fmask.pitch_in_pixels;
+	out->bank_height = rtex->surface.u.legacy.fmask.bankh;
+	out->tile_swizzle = rtex->surface.u.legacy.fmask.tile_swizzle;
+	out->alignment = rtex->surface.u.legacy.fmask.alignment;
+	out->size = rtex->surface.u.legacy.fmask.size;
 }
 
 static void si_texture_allocate_fmask(struct si_screen *sscreen,
