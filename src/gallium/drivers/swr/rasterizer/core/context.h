@@ -516,7 +516,7 @@ struct SWR_CONTEXT
 
     uint32_t lastFrameChecked;
     uint64_t lastDrawChecked;
-    TileSet singleThreadLockedTiles;
+    TileSet* pSingleThreadLockedTiles;
 
     // ArchRast thread contexts.
     HANDLE* pArContext;

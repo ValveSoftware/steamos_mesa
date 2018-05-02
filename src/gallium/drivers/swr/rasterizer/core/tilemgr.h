@@ -31,6 +31,7 @@
 #include <set>
 #include <unordered_map>
 #include "common/formats.h"
+#include "common/intrin.h"
 #include "fifo.hpp"
 #include "context.h"
 #include "format_traits.h"
@@ -41,7 +42,7 @@
 struct MacroTileQueue
 {
     MacroTileQueue() { }
-    ~MacroTileQueue() { }
+    ~MacroTileQueue() { destroy(); }
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief Returns number of work items queued for this tile.
@@ -110,9 +111,9 @@ public:
     MacroTileMgr(CachingArena& arena);
     ~MacroTileMgr()
     {
-        for (auto &tile : mTiles)
+        for (auto *pTile : mTiles)
         {
-            tile.second.destroy();
+            delete pTile;
         }
     }
 
@@ -136,13 +137,20 @@ public:
 
     static INLINE void getTileIndices(uint32_t tileID, uint32_t &x, uint32_t &y)
     {
-        y = tileID & 0xffff;
-        x = (tileID >> 16) & 0xffff;
+        // Morton / Z order of tiles
+        x = pext_u32(tileID, 0x55555555);
+        y = pext_u32(tileID, 0xAAAAAAAA);
+    }
+
+    static INLINE uint32_t getTileId(uint32_t x, uint32_t y)
+    {
+        // Morton / Z order of tiles
+        return pdep_u32(x, 0x55555555) | pdep_u32(y, 0xAAAAAAAA);
     }
 
 private:
     CachingArena& mArena;
-    std::unordered_map<uint32_t, MacroTileQueue> mTiles;
+    std::vector<MacroTileQueue*> mTiles;
 
     // Any tile that has work queued to it is a dirty tile.
     std::vector<MacroTileQueue*> mDirtyTiles;

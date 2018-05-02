@@ -49,6 +49,7 @@
 #include "rasterizer.h"
 #include "rdtsc_core.h"
 #include "tilemgr.h"
+#include "tileset.h"
 
 
 
@@ -587,7 +588,7 @@ bool WorkOnFifoBE(
             }
 
             // can only work on this draw if it's not in use by other threads
-            if (lockedTiles.find(tileID) != lockedTiles.end())
+            if (lockedTiles.get(tileID))
             {
                 continue;
             }
@@ -645,7 +646,7 @@ bool WorkOnFifoBE(
             else
             {
                 // This tile is already locked. So let's add it to our locked tiles set. This way we don't try locking this one again.
-                lockedTiles.insert(tileID);
+                lockedTiles.set(tileID);
             }
         }
     }

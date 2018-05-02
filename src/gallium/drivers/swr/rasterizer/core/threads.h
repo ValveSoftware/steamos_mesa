@@ -62,7 +62,7 @@ struct THREAD_POOL
     THREAD_DATA *pApiThreadData;
 };
 
-typedef std::unordered_set<uint32_t> TileSet;
+struct TileSet;
 
 void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 void StartThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool);

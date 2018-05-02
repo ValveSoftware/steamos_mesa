@@ -33,8 +33,6 @@
 #include "core/multisample.h"
 #include "rdtsc_core.h"
 
-#define TILE_ID(x,y) ((x << 16 | y))
-
 MacroTileMgr::MacroTileMgr(CachingArena& arena) : mArena(arena)
 {
 }
@@ -50,26 +48,35 @@ void MacroTileMgr::enqueue(uint32_t x, uint32_t y, BE_WORK *pWork)
         return;
     }
 
-    uint32_t id = TILE_ID(x, y);
+    uint32_t id = getTileId(x, y);
 
-    MacroTileQueue &tile = mTiles[id];
-    tile.mWorkItemsFE++;
-    tile.mId = id;
-
-    if (tile.mWorkItemsFE == 1)
+    if (id >= mTiles.size())
     {
-        tile.clear(mArena);
-        mDirtyTiles.push_back(&tile);
+        mTiles.resize((16 + id) * 2);
+    }
+
+    MacroTileQueue *pTile = mTiles[id];
+    if (!pTile)
+    {
+        pTile = mTiles[id] = new MacroTileQueue();
+    }
+    pTile->mWorkItemsFE++;
+    pTile->mId = id;
+
+    if (pTile->mWorkItemsFE == 1)
+    {
+        pTile->clear(mArena);
+        mDirtyTiles.push_back(pTile);
     }
 
     mWorkItemsProduced++;
-    tile.enqueue_try_nosync(mArena, pWork);
+    pTile->enqueue_try_nosync(mArena, pWork);
 }
 
 void MacroTileMgr::markTileComplete(uint32_t id)
 {
-    SWR_ASSERT(mTiles.find(id) != mTiles.end());
-    MacroTileQueue &tile = mTiles[id];
+    SWR_ASSERT(mTiles.size() > id);
+    MacroTileQueue &tile = *mTiles[id];
     uint32_t numTiles = tile.mWorkItemsFE;
     InterlockedExchangeAdd(&mWorkItemsConsumed, numTiles);
 
