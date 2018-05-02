@@ -183,6 +183,11 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    dri_config = dri2_get_dri_config(dri2_conf, type,
                                     dri3_surf->surf.base.GLColorspace);
 
+   if (!dri_config) {
+      _eglError(EGL_BAD_MATCH, "Unsupported surfacetype/colorspace configuration");
+      goto cleanup_pixmap;
+   }
+
    if (loader_dri3_drawable_init(dri2_dpy->conn, drawable,
                                  dri2_dpy->dri_screen,
                                  dri2_dpy->is_different_gpu,
