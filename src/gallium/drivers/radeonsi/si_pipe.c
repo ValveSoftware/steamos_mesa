@@ -286,25 +286,25 @@ static void si_destroy_context(struct pipe_context *context)
 	FREE(sctx);
 }
 
-static enum pipe_reset_status
-si_amdgpu_get_reset_status(struct pipe_context *ctx)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-
-	return sctx->ws->ctx_query_reset_status(sctx->ctx);
-}
-
 static enum pipe_reset_status si_get_reset_status(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned latest = sctx->ws->query_value(sctx->ws,
-						  RADEON_GPU_RESET_COUNTER);
 
-	if (sctx->gpu_reset_counter == latest)
-		return PIPE_NO_RESET;
+	if (sctx->screen->info.has_gpu_reset_status_query)
+		return sctx->ws->ctx_query_reset_status(sctx->ctx);
 
-	sctx->gpu_reset_counter = latest;
-	return PIPE_UNKNOWN_CONTEXT_RESET;
+	if (sctx->screen->info.has_gpu_reset_counter_query) {
+		unsigned latest = sctx->ws->query_value(sctx->ws,
+							RADEON_GPU_RESET_COUNTER);
+
+		if (sctx->gpu_reset_counter == latest)
+			return PIPE_NO_RESET;
+
+		sctx->gpu_reset_counter = latest;
+		return PIPE_UNKNOWN_CONTEXT_RESET;
+	}
+
+	return PIPE_NO_RESET;
 }
 
 static void si_set_device_reset_callback(struct pipe_context *ctx,
@@ -411,13 +411,12 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->family = sscreen->info.family;
 	sctx->chip_class = sscreen->info.chip_class;
 
-	if (sscreen->info.drm_major == 2 && sscreen->info.drm_minor >= 43) {
-		sctx->b.get_device_reset_status = si_get_reset_status;
+	if (sscreen->info.has_gpu_reset_counter_query) {
 		sctx->gpu_reset_counter =
-				sctx->ws->query_value(sctx->ws,
-							RADEON_GPU_RESET_COUNTER);
+			sctx->ws->query_value(sctx->ws, RADEON_GPU_RESET_COUNTER);
 	}
 
+	sctx->b.get_device_reset_status = si_get_reset_status;
 	sctx->b.set_device_reset_callback = si_set_device_reset_callback;
 
 	si_init_context_texture_functions(sctx);
@@ -467,9 +466,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 						       (void*)si_flush_dma_cs,
 						       sctx);
 	}
-
-	if (sscreen->info.drm_major == 3)
-		sctx->b.get_device_reset_status = si_amdgpu_get_reset_status;
 
 	si_init_buffer_functions(sctx);
 	si_init_clear_functions(sctx);

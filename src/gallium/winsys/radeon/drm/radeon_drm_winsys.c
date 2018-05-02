@@ -534,6 +534,8 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
                                              ws->info.drm_minor >= 38;
     ws->info.si_TA_CS_BC_BASE_ADDR_allowed = ws->info.drm_minor >= 48;
     ws->info.has_bo_metadata = false;
+    ws->info.has_gpu_reset_status_query = false;
+    ws->info.has_gpu_reset_counter_query = ws->info.drm_minor >= 43;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 

@@ -203,9 +203,8 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return !SI_BIG_ENDIAN && sscreen->info.has_userptr;
 
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
-		return (sscreen->info.drm_major == 2 &&
-			sscreen->info.drm_minor >= 43) ||
-		       sscreen->info.drm_major == 3;
+		return sscreen->info.has_gpu_reset_status_query ||
+		       sscreen->info.has_gpu_reset_counter_query;
 
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 		/* 2D tiling on CIK is supported since DRM 2.35.0 */

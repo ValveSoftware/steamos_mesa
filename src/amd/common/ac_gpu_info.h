@@ -100,6 +100,8 @@ struct radeon_info {
 	bool                        htile_cmask_support_1d_tiling;
 	bool                        si_TA_CS_BC_BASE_ADDR_allowed;
 	bool                        has_bo_metadata;
+	bool                        has_gpu_reset_status_query;
+	bool                        has_gpu_reset_counter_query;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */
