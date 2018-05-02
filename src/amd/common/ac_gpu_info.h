@@ -98,6 +98,7 @@ struct radeon_info {
 	bool                        has_local_buffers;
 	bool                        kernel_flushes_hdp_before_ib;
 	bool                        htile_cmask_support_1d_tiling;
+	bool                        si_TA_CS_BC_BASE_ADDR_allowed;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */

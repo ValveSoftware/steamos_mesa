@@ -331,9 +331,7 @@ static void si_initialize_compute(struct si_context *sctx)
 		radeon_emit(cs, bc_va >> 8);  /* R_030E00_TA_CS_BC_BASE_ADDR */
 		radeon_emit(cs, S_030E04_ADDRESS(bc_va >> 40)); /* R_030E04_TA_CS_BC_BASE_ADDR_HI */
 	} else {
-		if (sctx->screen->info.drm_major == 3 ||
-		    (sctx->screen->info.drm_major == 2 &&
-		     sctx->screen->info.drm_minor >= 48)) {
+		if (sctx->screen->info.si_TA_CS_BC_BASE_ADDR_allowed) {
 			radeon_set_config_reg(cs, R_00950C_TA_CS_BC_BASE_ADDR,
 					      bc_va >> 8);
 		}

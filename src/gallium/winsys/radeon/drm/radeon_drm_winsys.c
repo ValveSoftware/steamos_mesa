@@ -532,6 +532,7 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     /* HTILE is broken with 1D tiling on old kernels and CIK. */
     ws->info.htile_cmask_support_1d_tiling = ws->info.chip_class != CIK ||
                                              ws->info.drm_minor >= 38;
+    ws->info.si_TA_CS_BC_BASE_ADDR_allowed = ws->info.drm_minor >= 48;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
