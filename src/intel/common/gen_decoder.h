@@ -207,6 +207,8 @@ struct gen_disasm *disasm;
 struct gen_batch_decode_ctx {
    struct gen_batch_decode_bo (*get_bo)(void *user_data,
                                         uint64_t base_address);
+   unsigned (*get_state_size)(void *user_data,
+                              uint32_t offset_from_dynamic_state_base_addr);
    void *user_data;
 
    FILE *fp;
@@ -226,6 +228,8 @@ void gen_batch_decode_ctx_init(struct gen_batch_decode_ctx *ctx,
                                const char *xml_path,
                                struct gen_batch_decode_bo (*get_bo)(void *,
                                                                     uint64_t),
+
+                               unsigned (*get_state_size)(void *, uint32_t),
                                void *user_data);
 void gen_batch_decode_ctx_finish(struct gen_batch_decode_ctx *ctx);
 

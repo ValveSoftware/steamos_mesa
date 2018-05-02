@@ -595,7 +595,7 @@ read_data_file(FILE *file)
 
    struct gen_batch_decode_ctx batch_ctx;
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, stdout, batch_flags,
-                             xml_path, get_gen_batch_bo, NULL);
+                             xml_path, get_gen_batch_bo, NULL, NULL);
 
 
    for (int s = 0; s < sect_num; s++) {

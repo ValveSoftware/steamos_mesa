@@ -33,11 +33,13 @@ gen_batch_decode_ctx_init(struct gen_batch_decode_ctx *ctx,
                           const char *xml_path,
                           struct gen_batch_decode_bo (*get_bo)(void *,
                                                                uint64_t),
+                          unsigned (*get_state_size)(void *, uint32_t),
                           void *user_data)
 {
    memset(ctx, 0, sizeof(*ctx));
 
    ctx->get_bo = get_bo;
+   ctx->get_state_size = get_state_size;
    ctx->user_data = user_data;
    ctx->fp = fp;
    ctx->flags = flags;
@@ -101,6 +103,24 @@ ctx_get_bo(struct gen_batch_decode_ctx *ctx, uint64_t addr)
    }
 
    return bo;
+}
+
+static int
+update_count(struct gen_batch_decode_ctx *ctx,
+             uint32_t offset_from_dsba,
+             unsigned element_dwords,
+             unsigned guess)
+{
+   unsigned size = 0;
+
+   if (ctx->get_state_size)
+      size = ctx->get_state_size(ctx->user_data, offset_from_dsba);
+
+   if (size > 0)
+      return size / (sizeof(uint32_t) * element_dwords);
+
+   /* In the absence of any information, just guess arbitrarily. */
+   return guess;
 }
 
 static void
@@ -196,9 +216,8 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
       return;
    }
 
-   /* If we don't know the actual count, guess. */
    if (count < 0)
-      count = 8;
+      count = update_count(ctx, offset, 1, 8);
 
    if (ctx->surface_base.map == NULL) {
       fprintf(ctx->fp, "  binding table unavailable\n");
@@ -233,9 +252,8 @@ dump_samplers(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
 {
    struct gen_group *strct = gen_spec_find_struct(ctx->spec, "SAMPLER_STATE");
 
-   /* If we don't know the actual count, guess. */
    if (count < 0)
-      count = 4;
+      count = update_count(ctx, offset, strct->dw_length, 4);
 
    if (ctx->dynamic_base.map == NULL) {
       fprintf(ctx->fp, "  samplers unavailable\n");
