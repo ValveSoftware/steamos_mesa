@@ -39,10 +39,6 @@
 extern "C" {
 #endif
 
-GLbitfield64
-brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
-                       GLbitfield64 outputs_written);
-
 void
 brw_upload_vs_prog(struct brw_context *brw);
 

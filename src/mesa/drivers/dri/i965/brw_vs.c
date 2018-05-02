@@ -69,7 +69,7 @@ brw_select_clip_planes(struct gl_context *ctx)
    }
 }
 
-GLbitfield64
+static GLbitfield64
 brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
                        GLbitfield64 user_varyings)
 {
