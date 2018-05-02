@@ -515,6 +515,20 @@ optimizations = [
               ('bfi', ('bfm', 'bits', 'offset'), 'insert', 'base')),
     'options->lower_bitfield_insert'),
 
+   # Alternative lowering that doesn't rely on bfi.
+   (('bitfield_insert', 'base', 'insert', 'offset', 'bits'),
+    ('bcsel', ('ilt', 31, 'bits'),
+     'insert',
+     ('ior',
+      ('iand', 'base', ('inot', ('bfm', 'bits', 'offset'))),
+      ('iand', ('ishl', 'insert', 'offset'), ('bfm', 'bits', 'offset')))),
+    'options->lower_bitfield_insert_to_shifts'),
+
+   # bfm lowering -- note that the NIR opcode is undefined if either arg is 32.
+   (('bfm', 'bits', 'offset'),
+    ('ishl', ('isub', ('ishl', 1, 'bits'), 1), 'offset'),
+    'options->lower_bfm'),
+
    (('ibitfield_extract', 'value', 'offset', 'bits'),
     ('bcsel', ('ilt', 31, 'bits'), 'value',
               ('ibfe', 'value', 'offset', 'bits')),
