@@ -209,7 +209,7 @@ emit_one_texture(struct v3d_context *v3d, struct v3d_texture_stateobj *stage_tex
 
         if (return_size == 32) {
                 min_mip_filter = PIPE_TEX_MIPFILTER_NEAREST;
-                mag_img_filter = PIPE_TEX_FILTER_NEAREST;
+                min_img_filter = PIPE_TEX_FILTER_NEAREST;
                 mag_img_filter = PIPE_TEX_FILTER_NEAREST;
         }
 
