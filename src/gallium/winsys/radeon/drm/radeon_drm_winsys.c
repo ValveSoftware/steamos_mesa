@@ -548,6 +548,8 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     ws->info.has_unaligned_shader_loads = ws->info.chip_class == CIK &&
                                           ws->info.drm_minor >= 50;
     ws->info.has_sparse_vm_mappings = false;
+    /* 2D tiling on CIK is supported since DRM 2.35.0 */
+    ws->info.has_2d_tiling = ws->info.chip_class <= SI || ws->info.drm_minor >= 35;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 

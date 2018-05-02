@@ -337,6 +337,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->has_sparse_vm_mappings =
 		info->chip_class >= CIK && info->chip_class <= VI &&
 		info->drm_minor >= 13;
+	info->has_2d_tiling = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -496,6 +497,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_indirect_compute_dispatch = %u\n", info->has_indirect_compute_dispatch);
 	printf("    has_unaligned_shader_loads = %u\n", info->has_unaligned_shader_loads);
 	printf("    has_sparse_vm_mappings = %u\n", info->has_sparse_vm_mappings);
+	printf("    has_2d_tiling = %u\n", info->has_2d_tiling);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
