@@ -48,6 +48,7 @@
 #include <brw_bufmgr.h>
 
 #include "common/gen_debug.h"
+#include "common/gen_decoder.h"
 #include "intel_screen.h"
 #include "intel_tex_obj.h"
 
@@ -524,6 +525,8 @@ struct intel_batchbuffer {
 
    /** Map from batch offset to brw_state_batch data (with DEBUG_BATCH) */
    struct hash_table *state_batch_sizes;
+
+   struct gen_batch_decode_ctx decoder;
 };
 
 #define BRW_MAX_XFB_STREAMS 4
