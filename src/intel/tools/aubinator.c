@@ -58,6 +58,7 @@
 
 static bool option_full_decode = true;
 static bool option_print_offsets = true;
+static int max_vbo_lines = -1;
 static enum { COLOR_AUTO, COLOR_ALWAYS, COLOR_NEVER } option_color;
 
 /* state */
@@ -179,6 +180,7 @@ aubinator_init(uint16_t aub_pci_id, const char *app_name)
 
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, outfile, batch_flags,
                              xml_path, get_gen_batch_bo, NULL, NULL);
+   batch_ctx.max_vbo_decoded_lines = max_vbo_lines;
 
    char *color = GREEN_HEADER, *reset_color = NORMAL;
    if (option_color == COLOR_NEVER)
@@ -547,14 +549,15 @@ print_help(const char *progname, FILE *file)
            "Usage: %s [OPTION]... [FILE]\n"
            "Decode aub file contents from either FILE or the standard input.\n\n"
            "A valid --gen option must be provided.\n\n"
-           "      --help          display this help and exit\n"
-           "      --gen=platform  decode for given platform (3 letter platform name)\n"
-           "      --headers       decode only command headers\n"
-           "      --color[=WHEN]  colorize the output; WHEN can be 'auto' (default\n"
-           "                        if omitted), 'always', or 'never'\n"
-           "      --no-pager      don't launch pager\n"
-           "      --no-offsets    don't print instruction offsets\n"
-           "      --xml=DIR       load hardware xml description from directory DIR\n",
+           "      --help             display this help and exit\n"
+           "      --gen=platform     decode for given platform (3 letter platform name)\n"
+           "      --headers          decode only command headers\n"
+           "      --color[=WHEN]     colorize the output; WHEN can be 'auto' (default\n"
+           "                         if omitted), 'always', or 'never'\n"
+           "      --max-vbo-lines=N  limit the number of decoded VBO lines\n"
+           "      --no-pager         don't launch pager\n"
+           "      --no-offsets       don't print instruction offsets\n"
+           "      --xml=DIR          load hardware xml description from directory DIR\n",
            progname);
 }
 
@@ -564,14 +567,15 @@ int main(int argc, char *argv[])
    int c, i;
    bool help = false, pager = true;
    const struct option aubinator_opts[] = {
-      { "help",       no_argument,       (int *) &help,                 true },
-      { "no-pager",   no_argument,       (int *) &pager,                false },
-      { "no-offsets", no_argument,       (int *) &option_print_offsets, false },
-      { "gen",        required_argument, NULL,                          'g' },
-      { "headers",    no_argument,       (int *) &option_full_decode,   false },
-      { "color",      required_argument, NULL,                          'c' },
-      { "xml",        required_argument, NULL,                          'x' },
-      { NULL,         0,                 NULL,                          0 }
+      { "help",          no_argument,       (int *) &help,                 true },
+      { "no-pager",      no_argument,       (int *) &pager,                false },
+      { "no-offsets",    no_argument,       (int *) &option_print_offsets, false },
+      { "gen",           required_argument, NULL,                          'g' },
+      { "headers",       no_argument,       (int *) &option_full_decode,   false },
+      { "color",         required_argument, NULL,                          'c' },
+      { "xml",           required_argument, NULL,                          'x' },
+      { "max-vbo-lines", required_argument, NULL,                          'v' },
+      { NULL,            0,                 NULL,                          0 }
    };
 
    outfile = stdout;
@@ -604,6 +608,9 @@ int main(int argc, char *argv[])
          break;
       case 'x':
          xml_path = strdup(optarg);
+         break;
+      case 'v':
+         max_vbo_lines = atoi(optarg);
          break;
       default:
          break;
