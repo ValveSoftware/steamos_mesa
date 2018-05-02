@@ -107,12 +107,12 @@ static const uint64_t centroid_priority_8x = 0x3542017635420176ull;
  */
 static const uint32_t sample_locs_4x_16x[] = {
 	FILL_SREG(-5,-2,   5, 3,  -2, 6,   3,-5),
-	FILL_SREG(-7,-8,   1, 1,  -6, 4,   7,-4),
+	FILL_SREG(-6,-7,   1, 1,  -6, 4,   7,-3),
 	FILL_SREG(-1,-3,   6, 7,  -3, 2,   0,-7),
 	FILL_SREG(-4,-6,   2, 5,  -8, 0,   4,-1),
 };
 static const uint64_t centroid_priority_4x = 0x2310231023102310ull;
-static const uint64_t centroid_priority_16x = 0x497ec6b231d0fa85ull;
+static const uint64_t centroid_priority_16x = 0x49e7c6b231d0fa85ull;
 
 static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
 				   unsigned sample_index, float *out_value)
