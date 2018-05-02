@@ -130,10 +130,7 @@ store_general(struct v3d_job *job,
                 store.address = cl_address(rsc->bo, surf->offset);
 
 #if V3D_VERSION >= 40
-                store.clear_buffer_being_stored =
-                        ((job->cleared & pipe_bit) &&
-                         (general_color_clear ||
-                          !(pipe_bit & PIPE_CLEAR_COLOR_BUFFERS)));
+                store.clear_buffer_being_stored = false;
 
                 if (separate_stencil)
                         store.output_image_format = V3D_OUTPUT_IMAGE_FORMAT_S8;
@@ -269,6 +266,7 @@ v3d_rcl_emit_loads(struct v3d_job *job, struct v3d_cl *cl)
 static void
 v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
 {
+#if V3D_VERSION < 40
         MAYBE_UNUSED bool needs_color_clear = job->cleared & PIPE_CLEAR_COLOR_BUFFERS;
         MAYBE_UNUSED bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
         MAYBE_UNUSED bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
@@ -290,6 +288,9 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
         bool general_color_clear = (needs_color_clear &&
                                     (job->cleared & PIPE_CLEAR_COLOR_BUFFERS) ==
                                     (job->resolve & PIPE_CLEAR_COLOR_BUFFERS));
+#else
+        bool general_color_clear = false;
+#endif
 
         uint32_t stores_pending = job->resolve;
 
@@ -342,8 +343,8 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
                 }
         }
 
-        if (stores_pending) {
 #if V3D_VERSION < 40
+        if (stores_pending) {
                 cl_emit(cl, STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED, store) {
 
                         store.disable_color_buffer_write =
@@ -362,23 +363,29 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
                         store.disable_stencil_buffer_clear_on_write =
                                 !needs_s_clear;
                 };
-#else /* V3D_VERSION >= 40 */
-                unreachable("All color buffers should have been stored.");
-#endif /* V3D_VERSION >= 40 */
         } else if (needs_color_clear && !general_color_clear) {
                 /* If we didn't do our color clears in the general packet,
                  * then emit a packet to clear all the TLB color buffers now.
                  */
-#if V3D_VERSION < 40
                 cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
                         store.buffer_to_store = NONE;
                 }
+        }
 #else /* V3D_VERSION >= 40 */
+        assert(!stores_pending);
+
+        /* GFXH-1461/GFXH-1689: The per-buffer store command's clear
+         * buffer bit is broken for depth/stencil.  In addition, the
+         * clear packet's Z/S bit is broken, but the RTs bit ends up
+         * clearing Z/S.
+         */
+        if (job->cleared) {
                 cl_emit(cl, CLEAR_TILE_BUFFERS, clear) {
+                        clear.clear_z_stencil_buffer = true;
                         clear.clear_all_render_targets = true;
                 }
-#endif /* V3D_VERSION >= 40 */
         }
+#endif /* V3D_VERSION >= 40 */
 }
 
 static void
