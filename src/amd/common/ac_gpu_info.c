@@ -327,6 +327,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	/* DRM 3.1.0 doesn't flush TC for VI correctly. */
 	info->kernel_flushes_tc_l2_after_ib = info->chip_class != VI ||
 					      info->drm_minor >= 2;
+	info->has_indirect_compute_dispatch = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -483,6 +484,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_eqaa_surface_allocator = %u\n", info->has_eqaa_surface_allocator);
 	printf("    has_format_bc1_through_bc7 = %u\n", info->has_format_bc1_through_bc7);
 	printf("    kernel_flushes_tc_l2_after_ib = %u\n", info->kernel_flushes_tc_l2_after_ib);
+	printf("    has_indirect_compute_dispatch = %u\n", info->has_indirect_compute_dispatch);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);

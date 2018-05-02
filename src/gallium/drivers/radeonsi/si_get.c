@@ -83,16 +83,6 @@ const char *si_get_family_name(const struct si_screen *sscreen)
 	}
 }
 
-static bool si_have_tgsi_compute(struct si_screen *sscreen)
-{
-	/* Old kernels disallowed some register writes for SI
-	 * that are used for indirect dispatches. */
-	return (sscreen->info.chip_class >= CIK ||
-		sscreen->info.drm_major == 3 ||
-		(sscreen->info.drm_major == 2 &&
-		 sscreen->info.drm_minor >= 45));
-}
-
 static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
@@ -225,7 +215,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
-		if (si_have_tgsi_compute(sscreen))
+		if (sscreen->info.has_indirect_compute_dispatch)
 			return 450;
 		return 420;
 
@@ -294,7 +284,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return sscreen->info.has_fence_to_handle;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
-		return si_have_tgsi_compute(sscreen);
+		return sscreen->info.has_indirect_compute_dispatch;
 
 	case PIPE_CAP_DRAW_PARAMETERS:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
@@ -408,7 +398,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 		case PIPE_SHADER_CAP_SUPPORTED_IRS: {
 			int ir = 1 << PIPE_SHADER_IR_NATIVE;
 
-			if (si_have_tgsi_compute(sscreen))
+			if (sscreen->info.has_indirect_compute_dispatch)
 				ir |= 1 << PIPE_SHADER_IR_TGSI;
 
 			return ir;

@@ -105,6 +105,7 @@ struct radeon_info {
 	bool                        has_eqaa_surface_allocator;
 	bool                        has_format_bc1_through_bc7;
 	bool                        kernel_flushes_tc_l2_after_ib;
+	bool                        has_indirect_compute_dispatch;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */
