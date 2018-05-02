@@ -1268,7 +1268,6 @@ anv_queue_init(struct anv_device *device, struct anv_queue *queue)
 {
    queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    queue->device = device;
-   queue->pool = &device->surface_state_pool;
    queue->flags = 0;
 }
 
