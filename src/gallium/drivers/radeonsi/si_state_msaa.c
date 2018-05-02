@@ -92,11 +92,6 @@ static const uint32_t sample_locs_2x =
 	FILL_SREG(-4,-4,   4, 4,   0, 0,   0, 0); /* S2 & S3 fields are not used by 2x MSAA */
 static const uint64_t centroid_priority_2x = 0x1010101010101010ull;
 
-/* 4x MSAA */
-static const uint32_t sample_locs_4x =
-	FILL_SREG(-2,-6,   2, 6,  -6, 2,   6,-2);
-static const uint64_t centroid_priority_4x = 0x3210321032103210ull;
-
 /* 8x MSAA */
 static const uint32_t sample_locs_8x[] = {
 	FILL_SREG(-3,-5,   5, 1,  -5, 5,   7,-7),
@@ -106,13 +101,17 @@ static const uint32_t sample_locs_8x[] = {
 };
 static const uint64_t centroid_priority_8x = 0x3542017635420176ull;
 
-/* 16x MSAA */
-static const uint32_t sample_locs_16x[] = {
+/* 4x and 16x MSAA
+ * (the first 4 locations happen to be optimal for 4x MSAA, better than
+ *  the standard DX 4x locations)
+ */
+static const uint32_t sample_locs_4x_16x[] = {
 	FILL_SREG(-5,-2,   5, 3,  -2, 6,   3,-5),
 	FILL_SREG(-7,-8,   1, 1,  -6, 4,   7,-4),
 	FILL_SREG(-1,-3,   6, 7,  -3, 2,   0,-7),
 	FILL_SREG(-4,-6,   2, 5,  -8, 0,   4,-1),
 };
+static const uint64_t centroid_priority_4x = 0x2310231023102310ull;
 static const uint64_t centroid_priority_16x = 0x497ec6b231d0fa85ull;
 
 static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
@@ -129,13 +128,13 @@ static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_cou
 		sample_locs = &sample_locs_2x;
 		break;
 	case 4:
-		sample_locs = &sample_locs_4x;
+		sample_locs = sample_locs_4x_16x;
 		break;
 	case 8:
 		sample_locs = sample_locs_8x;
 		break;
 	case 16:
-		sample_locs = sample_locs_16x;
+		sample_locs = sample_locs_4x_16x;
 		break;
 	}
 
@@ -183,13 +182,13 @@ void si_emit_sample_locations(struct radeon_winsys_cs *cs, int nr_samples)
 		si_emit_max_4_sample_locs(cs, centroid_priority_2x, sample_locs_2x);
 		break;
 	case 4:
-		si_emit_max_4_sample_locs(cs, centroid_priority_4x, sample_locs_4x);
+		si_emit_max_4_sample_locs(cs, centroid_priority_4x, sample_locs_4x_16x[0]);
 		break;
 	case 8:
 		si_emit_max_16_sample_locs(cs, centroid_priority_8x, sample_locs_8x, 8);
 		break;
 	case 16:
-		si_emit_max_16_sample_locs(cs, centroid_priority_16x, sample_locs_16x, 16);
+		si_emit_max_16_sample_locs(cs, centroid_priority_16x, sample_locs_4x_16x, 16);
 		break;
 	}
 }
