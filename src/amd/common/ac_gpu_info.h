@@ -104,6 +104,7 @@ struct radeon_info {
 	bool                        has_gpu_reset_counter_query;
 	bool                        has_eqaa_surface_allocator;
 	bool                        has_format_bc1_through_bc7;
+	bool                        kernel_flushes_tc_l2_after_ib;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */

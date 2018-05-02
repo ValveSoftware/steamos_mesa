@@ -74,8 +74,7 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 	if (ctx->gfx_flush_in_progress)
 		return;
 
-	if (ctx->chip_class == VI && ctx->screen->info.drm_minor <= 1) {
-		/* DRM 3.1.0 doesn't flush TC for VI correctly. */
+	if (!ctx->screen->info.kernel_flushes_tc_l2_after_ib) {
 		wait_flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 			      SI_CONTEXT_CS_PARTIAL_FLUSH |
 			      SI_CONTEXT_INV_GLOBAL_L2;
