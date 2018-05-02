@@ -543,31 +543,41 @@ static void
 decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 {
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+   struct gen_group *body =
+      gen_spec_find_struct(ctx->spec, "3DSTATE_CONSTANT_BODY");
 
    uint32_t read_length[4];
    struct gen_batch_decode_bo buffer[4];
    memset(buffer, 0, sizeof(buffer));
 
-   int rlidx = 0, bidx = 0;
-
-   struct gen_field_iterator iter;
-   gen_field_iterator_init(&iter, inst, p, 0, false);
-   while (gen_field_iterator_next(&iter)) {
-      if (strcmp(iter.name, "Read Length") == 0) {
-         read_length[rlidx++] = iter.raw_value;
-      } else if (strcmp(iter.name, "Buffer") == 0) {
-         buffer[bidx++] = ctx_get_bo(ctx, iter.raw_value);
-      }
-   }
-
-   for (int i = 0; i < 4; i++) {
-      if (read_length[i] == 0 || buffer[i].map == NULL)
+   struct gen_field_iterator outer;
+   gen_field_iterator_init(&outer, inst, p, 0, false);
+   while (gen_field_iterator_next(&outer)) {
+      if (outer.struct_desc != body)
          continue;
 
-      unsigned size = read_length[i] * 32;
-      fprintf(ctx->fp, "constant buffer %d, size %u\n", i, size);
+      struct gen_field_iterator iter;
+      gen_field_iterator_init(&iter, body, &outer.p[outer.start_bit / 32],
+                              0, false);
 
-      ctx_print_buffer(ctx, buffer[i], size, 0);
+      while (gen_field_iterator_next(&iter)) {
+         int idx;
+         if (sscanf(iter.name, "Read Length[%d]", &idx) == 1) {
+            read_length[idx] = iter.raw_value;
+         } else if (sscanf(iter.name, "Buffer[%d]", &idx) == 1) {
+            buffer[idx] = ctx_get_bo(ctx, iter.raw_value);
+         }
+      }
+
+      for (int i = 0; i < 4; i++) {
+         if (read_length[i] == 0 || buffer[i].map == NULL)
+            continue;
+
+         unsigned size = read_length[i] * 32;
+         fprintf(ctx->fp, "constant buffer %d, size %u\n", i, size);
+
+         ctx_print_buffer(ctx, buffer[i], size, 0);
+      }
    }
 }
 
