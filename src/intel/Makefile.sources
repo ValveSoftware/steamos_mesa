@@ -9,10 +9,13 @@ BLORP_FILES = \
 
 COMMON_FILES = \
 	common/gen_clflush.h \
+	common/gen_batch_decoder.c \
 	common/gen_debug.c \
 	common/gen_debug.h \
 	common/gen_decoder.c \
 	common/gen_decoder.h \
+	common/gen_disasm.c \
+	common/gen_disasm.h \
 	common/gen_defines.h \
 	common/gen_l3_config.c \
 	common/gen_l3_config.h \
