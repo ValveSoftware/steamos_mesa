@@ -241,7 +241,8 @@ class Field(object):
             self.prefix = None
 
         if "default" in attrs:
-            self.default = int(attrs["default"])
+            # Base 0 recognizes 0x, 0o, 0b prefixes in addition to decimal ints.
+            self.default = int(attrs["default"], base=0)
         else:
             self.default = None
 
