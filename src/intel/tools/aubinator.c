@@ -40,8 +40,8 @@
 #include "util/macros.h"
 
 #include "common/gen_decoder.h"
+#include "common/gen_disasm.h"
 #include "intel_aub.h"
-#include "gen_disasm.h"
 
 /* Below is the only command missing from intel_aub.h in libdrm
  * So, reuse intel_aub.h from libdrm and #define the
