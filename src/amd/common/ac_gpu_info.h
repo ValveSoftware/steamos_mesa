@@ -86,7 +86,7 @@ struct radeon_info {
 	uint32_t                    vce_fw_version;
 	uint32_t                    vce_harvest_config;
 
-	/* Kernel info. */
+	/* Kernel & winsys capabilities. */
 	uint32_t                    drm_major; /* version */
 	uint32_t                    drm_minor;
 	uint32_t                    drm_patchlevel;
@@ -102,6 +102,7 @@ struct radeon_info {
 	bool                        has_bo_metadata;
 	bool                        has_gpu_reset_status_query;
 	bool                        has_gpu_reset_counter_query;
+	bool                        has_eqaa_surface_allocator;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */

@@ -322,6 +322,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->has_bo_metadata = true;
 	info->has_gpu_reset_status_query = true;
 	info->has_gpu_reset_counter_query = false;
+	info->has_eqaa_surface_allocator = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -460,7 +461,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    vce_fw_version = %u\n", info->vce_fw_version);
 	printf("    vce_harvest_config = %i\n", info->vce_harvest_config);
 
-	printf("Kernel info:\n");
+	printf("Kernel & winsys capabilities:\n");
 	printf("    drm = %i.%i.%i\n", info->drm_major,
 	       info->drm_minor, info->drm_patchlevel);
 	printf("    has_userptr = %i\n", info->has_userptr);
@@ -475,6 +476,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_bo_metadata = %u\n", info->has_bo_metadata);
 	printf("    has_gpu_reset_status_query = %u\n", info->has_gpu_reset_status_query);
 	printf("    has_gpu_reset_counter_query = %u\n", info->has_gpu_reset_counter_query);
+	printf("    has_eqaa_surface_allocator = %u\n", info->has_eqaa_surface_allocator);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);

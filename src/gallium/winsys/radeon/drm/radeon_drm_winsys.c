@@ -536,6 +536,7 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     ws->info.has_bo_metadata = false;
     ws->info.has_gpu_reset_status_query = false;
     ws->info.has_gpu_reset_counter_query = ws->info.drm_minor >= 43;
+    ws->info.has_eqaa_surface_allocator = false;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
