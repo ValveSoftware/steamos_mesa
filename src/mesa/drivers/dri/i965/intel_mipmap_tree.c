@@ -1659,8 +1659,7 @@ static struct intel_miptree_aux_buffer *
 intel_alloc_aux_buffer(struct brw_context *brw,
                        const struct isl_surf *aux_surf,
                        bool wants_memset,
-                       uint8_t memset_value,
-                       struct intel_mipmap_tree *mt)
+                       uint8_t memset_value)
 {
    struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
    if (!buf)
@@ -1766,7 +1765,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf, true, 0xFF, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf, true, 0xFF);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
@@ -1810,7 +1809,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * For CCS_D, do the same thing. On gen9+, this avoids having any undefined
     * bits in the aux buffer.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf, true, 0, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf, true, 0);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
@@ -1875,7 +1874,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
       isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
    assert(ok);
 
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf, false, 0, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf, false, 0);
 
    if (!mt->aux_buf) {
       free(aux_state);
