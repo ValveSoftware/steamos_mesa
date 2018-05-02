@@ -330,6 +330,13 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->has_indirect_compute_dispatch = true;
 	/* SI doesn't support unaligned loads. */
 	info->has_unaligned_shader_loads = info->chip_class != SI;
+	/* Disable sparse mappings on SI due to VM faults in CP DMA. Enable them once
+	 * these faults are mitigated in software.
+	 * Disable sparse mappings on GFX9 due to hangs.
+	 */
+	info->has_sparse_vm_mappings =
+		info->chip_class >= CIK && info->chip_class <= VI &&
+		info->drm_minor >= 13;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -488,6 +495,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    kernel_flushes_tc_l2_after_ib = %u\n", info->kernel_flushes_tc_l2_after_ib);
 	printf("    has_indirect_compute_dispatch = %u\n", info->has_indirect_compute_dispatch);
 	printf("    has_unaligned_shader_loads = %u\n", info->has_unaligned_shader_loads);
+	printf("    has_sparse_vm_mappings = %u\n", info->has_sparse_vm_mappings);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);

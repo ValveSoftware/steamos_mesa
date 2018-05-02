@@ -229,17 +229,8 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return !sscreen->info.has_unaligned_shader_loads;
 
 	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
-		/* TODO: GFX9 hangs. */
-		if (sscreen->info.chip_class >= GFX9)
-			return 0;
-		/* Disable on SI due to VM faults in CP DMA. Enable once these
-		 * faults are mitigated in software.
-		 */
-		if (sscreen->info.chip_class >= CIK &&
-		    sscreen->info.drm_major == 3 &&
-		    sscreen->info.drm_minor >= 13)
-			return RADEON_SPARSE_PAGE_SIZE;
-		return 0;
+		return sscreen->info.has_sparse_vm_mappings ?
+				RADEON_SPARSE_PAGE_SIZE : 0;
 
 	case PIPE_CAP_PACKED_UNIFORMS:
 		if (sscreen->debug_flags & DBG(NIR))
