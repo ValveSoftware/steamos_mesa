@@ -92,26 +92,20 @@ static const uint32_t sample_locs_2x =
 	FILL_SREG(-4,-4,   4, 4,   0, 0,   0, 0); /* S2 & S3 fields are not used by 2x MSAA */
 static const uint64_t centroid_priority_2x = 0x1010101010101010ull;
 
-/* 8x MSAA */
-static const uint32_t sample_locs_8x[] = {
-	FILL_SREG(-3,-5,   5, 1,  -5, 5,   7,-7),
-	FILL_SREG(-7,-1,   3, 7,  -1, 3,   1,-3),
-	FILL_SREG( 0, 0,   0, 0,   0, 0,   0, 0), /* S8, S9 etc. are not used by 8x */
-	FILL_SREG( 0, 0,   0, 0,   0, 0,   0, 0),
-};
-static const uint64_t centroid_priority_8x = 0x3542017635420176ull;
-
-/* 4x and 16x MSAA
- * (the first 4 locations happen to be optimal for 4x MSAA, better than
- *  the standard DX 4x locations)
+/* 4x, 8x, and 16x MSAA
+ * - The first 4 locations happen to be optimal for 4x MSAA, better than
+ *   the standard DX 4x locations.
+ * - The first 8 locations happen to be almost as good as 8x DX locations,
+ *   but the DX locations are horrible for worst-case EQAA 8s4f and 8s2f.
  */
-static const uint32_t sample_locs_4x_16x[] = {
+static const uint32_t sample_locs_4x_8x_16x[] = {
 	FILL_SREG(-5,-2,   5, 3,  -2, 6,   3,-5),
 	FILL_SREG(-6,-7,   1, 1,  -6, 4,   7,-3),
 	FILL_SREG(-1,-3,   6, 7,  -3, 2,   0,-7),
 	FILL_SREG(-4,-6,   2, 5,  -8, 0,   4,-1),
 };
 static const uint64_t centroid_priority_4x = 0x2310231023102310ull;
+static const uint64_t centroid_priority_8x = 0x4762310547623105ull;
 static const uint64_t centroid_priority_16x = 0x49e7c6b231d0fa85ull;
 
 static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
@@ -128,13 +122,9 @@ static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_cou
 		sample_locs = &sample_locs_2x;
 		break;
 	case 4:
-		sample_locs = sample_locs_4x_16x;
-		break;
 	case 8:
-		sample_locs = sample_locs_8x;
-		break;
 	case 16:
-		sample_locs = sample_locs_4x_16x;
+		sample_locs = sample_locs_4x_8x_16x;
 		break;
 	}
 
@@ -182,13 +172,13 @@ void si_emit_sample_locations(struct radeon_winsys_cs *cs, int nr_samples)
 		si_emit_max_4_sample_locs(cs, centroid_priority_2x, sample_locs_2x);
 		break;
 	case 4:
-		si_emit_max_4_sample_locs(cs, centroid_priority_4x, sample_locs_4x_16x[0]);
+		si_emit_max_4_sample_locs(cs, centroid_priority_4x, sample_locs_4x_8x_16x[0]);
 		break;
 	case 8:
-		si_emit_max_16_sample_locs(cs, centroid_priority_8x, sample_locs_8x, 8);
+		si_emit_max_16_sample_locs(cs, centroid_priority_8x, sample_locs_4x_8x_16x, 8);
 		break;
 	case 16:
-		si_emit_max_16_sample_locs(cs, centroid_priority_16x, sample_locs_4x_16x, 16);
+		si_emit_max_16_sample_locs(cs, centroid_priority_16x, sample_locs_4x_8x_16x, 16);
 		break;
 	}
 }
