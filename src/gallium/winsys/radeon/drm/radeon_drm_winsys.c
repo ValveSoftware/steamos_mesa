@@ -529,6 +529,9 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     ws->info.tcc_cache_line_size = 64; /* TC L2 line size on GCN */
     ws->info.ib_start_alignment = 4096;
     ws->info.kernel_flushes_hdp_before_ib = ws->info.drm_minor >= 40;
+    /* HTILE is broken with 1D tiling on old kernels and CIK. */
+    ws->info.htile_cmask_support_1d_tiling = ws->info.chip_class != CIK ||
+                                             ws->info.drm_minor >= 38;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 

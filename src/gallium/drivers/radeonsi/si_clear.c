@@ -437,13 +437,10 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		    !(tex->buffer.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
 			continue;
 
-		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
-		if (sctx->chip_class == CIK &&
+		if (sctx->chip_class <= VI &&
 		    tex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_1D &&
-		    sctx->screen->info.drm_major == 2 &&
-		    sctx->screen->info.drm_minor < 38) {
+		    !sctx->screen->info.htile_cmask_support_1d_tiling)
 			continue;
-		}
 
 		/* Fast clear is the most appropriate place to enable DCC for
 		 * displayable surfaces.

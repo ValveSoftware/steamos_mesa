@@ -922,10 +922,8 @@ static void si_texture_get_htile_size(struct si_screen *sscreen,
 
 	rtex->surface.htile_size = 0;
 
-	/* HTILE is broken with 1D tiling on old kernels and CIK. */
-	if (sscreen->info.chip_class >= CIK &&
-	    rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_1D &&
-	    sscreen->info.drm_major == 2 && sscreen->info.drm_minor < 38)
+	if (rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_1D &&
+	    !sscreen->info.htile_cmask_support_1d_tiling)
 		return;
 
 	/* Overalign HTILE on P2 configs to work around GPU hangs in

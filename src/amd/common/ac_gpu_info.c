@@ -317,6 +317,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->has_local_buffers = info->drm_minor >= 20 &&
 				  !info->has_dedicated_vram;
 	info->kernel_flushes_hdp_before_ib = true;
+	info->htile_cmask_support_1d_tiling = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -465,6 +466,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_ctx_priority = %u\n", info->has_ctx_priority);
 	printf("    has_local_buffers = %u\n", info->has_local_buffers);
 	printf("    kernel_flushes_hdp_before_ib = %u\n", info->kernel_flushes_hdp_before_ib);
+	printf("    htile_cmask_support_1d_tiling = %u\n", info->htile_cmask_support_1d_tiling);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
