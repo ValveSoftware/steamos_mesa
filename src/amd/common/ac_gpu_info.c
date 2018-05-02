@@ -323,6 +323,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->has_gpu_reset_status_query = true;
 	info->has_gpu_reset_counter_query = false;
 	info->has_eqaa_surface_allocator = true;
+	info->has_format_bc1_through_bc7 = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -477,6 +478,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_gpu_reset_status_query = %u\n", info->has_gpu_reset_status_query);
 	printf("    has_gpu_reset_counter_query = %u\n", info->has_gpu_reset_counter_query);
 	printf("    has_eqaa_surface_allocator = %u\n", info->has_eqaa_surface_allocator);
+	printf("    has_format_bc1_through_bc7 = %u\n", info->has_format_bc1_through_bc7);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
