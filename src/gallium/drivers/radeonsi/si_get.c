@@ -151,6 +151,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
+	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 	case PIPE_CAP_QUERY_MEMORY_INFO:
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
@@ -282,9 +283,6 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_NATIVE_FENCE_FD:
 		return sscreen->info.has_fence_to_handle;
-
-	case PIPE_CAP_QUERY_BUFFER_OBJECT:
-		return sscreen->info.has_indirect_compute_dispatch;
 
 	case PIPE_CAP_DRAW_PARAMETERS:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
