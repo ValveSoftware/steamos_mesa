@@ -2353,6 +2353,8 @@ RegAlloc::InsertConstraintsPass::insertConstraintMove(Instruction *cst, int s)
 
    cst->setSrc(s, mov->getDef(0));
    cst->bb->insertBefore(cst, mov);
+
+   cst->getDef(0)->asLValue()->noSpill = 1; // doesn't help
 }
 
 // Insert extra moves so that, if multiple register constraints on a value are
@@ -2397,8 +2399,6 @@ RegAlloc::InsertConstraintsPass::insertConstraintMoves()
             }
 
             insertConstraintMove(cst, s);
-
-            cst->getDef(0)->asLValue()->noSpill = 1; // doesn't help
          }
       }
    }
