@@ -1658,7 +1658,6 @@ intel_miptree_copy_teximage(struct brw_context *brw,
 static struct intel_miptree_aux_buffer *
 intel_alloc_aux_buffer(struct brw_context *brw,
                        const struct isl_surf *aux_surf,
-                       uint32_t alloc_flags,
                        bool wants_memset,
                        uint8_t memset_value,
                        struct intel_mipmap_tree *mt)
@@ -1679,6 +1678,17 @@ intel_alloc_aux_buffer(struct brw_context *brw,
       size += brw->isl_dev.ss.clear_color_state_size;
    }
 
+   /* If the buffer needs to be initialised (requiring the buffer to be
+    * immediately mapped to cpu space for writing), do not use the gpu access
+    * flag which can cause an unnecessary delay if the backing pages happened
+    * to be just used by the GPU.
+    */
+   const bool alloc_zeroed = wants_memset && memset_value == 0;
+   const bool needs_memset =
+      !alloc_zeroed && (wants_memset || has_indirect_clear);
+   const uint32_t alloc_flags =
+      alloc_zeroed ? BO_ALLOC_ZEROED : (needs_memset ? 0 : BO_ALLOC_BUSY);
+
    /* ISL has stricter set of alignment rules then the drm allocator.
     * Therefore one can pass the ISL dimensions in terms of bytes instead of
     * trying to recalculate based on different format block sizes.
@@ -1692,7 +1702,6 @@ intel_alloc_aux_buffer(struct brw_context *brw,
    }
 
    /* Initialize the bo to the desired value */
-   const bool needs_memset = wants_memset || has_indirect_clear;
    if (needs_memset) {
       assert(!(alloc_flags & BO_ALLOC_BUSY));
 
@@ -1747,12 +1756,6 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
       isl_surf_get_mcs_surf(&brw->isl_dev, &mt->surf, &temp_mcs_surf);
    assert(ok);
 
-   /* Buffer needs to be initialised requiring the buffer to be immediately
-    * mapped to cpu space for writing. Therefore do not use the gpu access
-    * flag which can cause an unnecessary delay if the backing pages happened
-    * to be just used by the GPU.
-    */
-   const uint32_t alloc_flags = 0;
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *
     *     When MCS buffer is enabled and bound to MSRT, it is required that it
@@ -1763,8 +1766,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf,
-                                        alloc_flags, true, 0xFF, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_mcs_surf, true, 0xFF, mt);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
@@ -1808,8 +1810,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * For CCS_D, do the same thing. On gen9+, this avoids having any undefined
     * bits in the aux buffer.
     */
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf,
-                                        BO_ALLOC_ZEROED, false, 0, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_ccs_surf, true, 0, mt);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
@@ -1874,9 +1875,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
       isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
    assert(ok);
 
-   const uint32_t alloc_flags = 0;
-   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf,
-                                        alloc_flags, false, 0, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, &temp_hiz_surf, false, 0, mt);
 
    if (!mt->aux_buf) {
       free(aux_state);
