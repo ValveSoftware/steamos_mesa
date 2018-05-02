@@ -125,8 +125,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 		/* Older kernels didn't always flush the HDP cache before
 		 * CS execution
 		 */
-		if (sscreen->info.drm_major == 2 &&
-		    sscreen->info.drm_minor < 40) {
+		if (!sscreen->info.kernel_flushes_hdp_before_ib) {
 			res->domains = RADEON_DOMAIN_GTT;
 			res->flags |= RADEON_FLAG_GTT_WC;
 			break;
@@ -153,8 +152,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 		 * ensures all CPU writes finish before the GPU
 		 * executes a command stream.
 		 */
-		if (sscreen->info.drm_major == 2 &&
-		    sscreen->info.drm_minor < 40)
+		if (!sscreen->info.kernel_flushes_hdp_before_ib)
 			res->domains = RADEON_DOMAIN_GTT;
 	}
 
