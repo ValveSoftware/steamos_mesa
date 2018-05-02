@@ -1801,13 +1801,11 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * A CCS value of 0 indicates that the corresponding block is in the
     * pass-through state which is what we want.
     *
-    * For CCS_D, on the other hand, we don't care as we're about to perform a
-    * fast-clear operation.  In that case, being hot in caches more useful.
+    * For CCS_D, do the same thing. On gen9+, this avoids having any undefined
+    * bits in the aux buffer.
     */
-   const uint32_t alloc_flags = mt->aux_usage == ISL_AUX_USAGE_CCS_E ?
-                                BO_ALLOC_ZEROED : BO_ALLOC_BUSY;
-   mt->aux_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
-                                        &temp_ccs_surf, alloc_flags, mt);
+   mt->aux_buf = intel_alloc_aux_buffer(brw, "ccs-miptree", &temp_ccs_surf,
+                                        BO_ALLOC_ZEROED, mt);
    if (!mt->aux_buf) {
       free(aux_state);
       return false;
