@@ -608,8 +608,7 @@ static void si_query_opaque_metadata(struct si_screen *sscreen,
 	uint32_t desc[8], i;
 	bool is_array = util_texture_is_array(res->target);
 
-	/* DRM 2.x.x doesn't support this. */
-	if (sscreen->info.drm_major != 3)
+	if (!sscreen->info.has_bo_metadata)
 		return;
 
 	assert(rtex->dcc_separate_buffer == NULL);

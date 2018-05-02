@@ -319,6 +319,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->kernel_flushes_hdp_before_ib = true;
 	info->htile_cmask_support_1d_tiling = true;
 	info->si_TA_CS_BC_BASE_ADDR_allowed = true;
+	info->has_bo_metadata = true;
 
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
@@ -469,6 +470,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    kernel_flushes_hdp_before_ib = %u\n", info->kernel_flushes_hdp_before_ib);
 	printf("    htile_cmask_support_1d_tiling = %u\n", info->htile_cmask_support_1d_tiling);
 	printf("    si_TA_CS_BC_BASE_ADDR_allowed = %u\n", info->si_TA_CS_BC_BASE_ADDR_allowed);
+	printf("    has_bo_metadata = %u\n", info->has_bo_metadata);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
