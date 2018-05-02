@@ -226,11 +226,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_BUFFER_OFFSET_4BYTE_ALIGNED_ONLY:
 	case PIPE_CAP_VERTEX_BUFFER_STRIDE_4BYTE_ALIGNED_ONLY:
 	case PIPE_CAP_VERTEX_ELEMENT_SRC_OFFSET_4BYTE_ALIGNED_ONLY:
-		/* SI doesn't support unaligned loads.
-		 * CIK needs DRM 2.50.0 on radeon. */
-		return sscreen->info.chip_class == SI ||
-		       (sscreen->info.drm_major == 2 &&
-			sscreen->info.drm_minor < 50);
+		return !sscreen->info.has_unaligned_shader_loads;
 
 	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
 		/* TODO: GFX9 hangs. */

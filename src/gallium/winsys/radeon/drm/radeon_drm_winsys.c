@@ -544,6 +544,9 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     ws->info.has_indirect_compute_dispatch = ws->info.chip_class == CIK ||
                                              (ws->info.chip_class == SI &&
                                               ws->info.drm_minor >= 45);
+    /* SI doesn't support unaligned loads. */
+    ws->info.has_unaligned_shader_loads = ws->info.chip_class == CIK &&
+                                          ws->info.drm_minor >= 50;
 
     ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
