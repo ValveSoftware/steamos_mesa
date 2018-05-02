@@ -374,6 +374,28 @@ vtn_pointer_for_variable(struct vtn_builder *b,
    return pointer;
 }
 
+/* Returns an atomic_uint type based on the original uint type. The returned
+ * type will be equivalent to the original one but will have an atomic_uint
+ * type as leaf instead of an uint.
+ *
+ * Manages uint scalars, arrays, and arrays of arrays of any nested depth.
+ */
+static const struct glsl_type *
+repair_atomic_type(const struct glsl_type *type)
+{
+   assert(glsl_get_base_type(glsl_without_array(type)) == GLSL_TYPE_UINT);
+   assert(glsl_type_is_scalar(glsl_without_array(type)));
+
+   if (glsl_type_is_array(type)) {
+      const struct glsl_type *atomic =
+         repair_atomic_type(glsl_get_array_element(type));
+
+      return glsl_array_type(atomic, glsl_get_length(type));
+   } else {
+      return glsl_atomic_uint_type();
+   }
+}
+
 nir_deref_instr *
 vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
 {
@@ -1648,9 +1670,8 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
        * the access to storage_class, that is the one that points us that is
        * an atomic uint.
        */
-      if (glsl_get_base_type(var->type->type) == GLSL_TYPE_UINT &&
-          storage_class == SpvStorageClassAtomicCounter) {
-         var->var->type = glsl_atomic_uint_type();
+      if (storage_class == SpvStorageClassAtomicCounter) {
+         var->var->type = repair_atomic_type(var->type->type);
       } else {
          var->var->type = var->type->type;
       }
