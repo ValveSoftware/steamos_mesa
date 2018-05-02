@@ -220,6 +220,8 @@ struct gen_batch_decode_ctx {
    struct gen_batch_decode_bo surface_base;
    struct gen_batch_decode_bo dynamic_base;
    struct gen_batch_decode_bo instruction_base;
+
+   int max_vbo_decoded_lines;
 };
 
 void gen_batch_decode_ctx_init(struct gen_batch_decode_ctx *ctx,

@@ -43,6 +43,7 @@ gen_batch_decode_ctx_init(struct gen_batch_decode_ctx *ctx,
    ctx->user_data = user_data;
    ctx->fp = fp;
    ctx->flags = flags;
+   ctx->max_vbo_decoded_lines = -1; /* No limit! */
 
    if (xml_path == NULL)
       ctx->spec = gen_spec_load(devinfo);
@@ -165,24 +166,29 @@ static void
 ctx_print_buffer(struct gen_batch_decode_ctx *ctx,
                  struct gen_batch_decode_bo bo,
                  uint32_t read_length,
-                 uint32_t pitch)
+                 uint32_t pitch,
+                 int max_lines)
 {
    const uint32_t *dw_end = bo.map + MIN2(bo.size, read_length);
 
-   unsigned line_count = 0;
+   int column_count = 0, line_count = -1;
    for (const uint32_t *dw = bo.map; dw < dw_end; dw++) {
-      if (line_count * 4 == pitch || line_count == 8) {
+      if (column_count * 4 == pitch || column_count == 8) {
          fprintf(ctx->fp, "\n");
-         line_count = 0;
+         column_count = 0;
+         line_count++;
+
+         if (max_lines >= 0 && line_count >= max_lines)
+            break;
       }
-      fprintf(ctx->fp, line_count == 0 ? "  " : " ");
+      fprintf(ctx->fp, column_count == 0 ? "  " : " ");
 
       if ((ctx->flags & GEN_BATCH_DECODE_FLOATS) && probably_float(*dw))
          fprintf(ctx->fp, "  %8.2f", *(float *) dw);
       else
          fprintf(ctx->fp, "  0x%08x", *dw);
 
-      line_count++;
+      column_count++;
    }
    fprintf(ctx->fp, "\n");
 }
@@ -387,7 +393,7 @@ handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
          if (vb.map == 0 || vb_size == 0)
             continue;
 
-         ctx_print_buffer(ctx, vb, vb_size, pitch);
+         ctx_print_buffer(ctx, vb, vb_size, pitch, ctx->max_vbo_decoded_lines);
 
          vb.map = NULL;
          vb_size = 0;
@@ -576,7 +582,7 @@ decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
          unsigned size = read_length[i] * 32;
          fprintf(ctx->fp, "constant buffer %d, size %u\n", i, size);
 
-         ctx_print_buffer(ctx, buffer[i], size, 0);
+         ctx_print_buffer(ctx, buffer[i], size, 0, -1);
       }
    }
 }
