@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-nir_depends = files('nir_opcodes.py')
+nir_depends = files('nir_opcodes.py', 'nir_intrinsics.py')
 
 nir_builder_opcodes_h = custom_target(
   'nir_builder_opcodes.h',
