@@ -119,7 +119,8 @@ struct brw_bufmgr {
    bool has_llc:1;
    bool has_mmap_wc:1;
    bool bo_reuse:1;
-   bool supports_48b_addresses:1;
+
+   uint64_t initial_kflags;
 };
 
 static int bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode,
@@ -407,8 +408,7 @@ retry:
    bo->reusable = true;
    bo->cache_coherent = bufmgr->has_llc;
    bo->index = -1;
-   if (bufmgr->supports_48b_addresses)
-      bo->kflags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+   bo->kflags = bufmgr->initial_kflags;
 
    mtx_unlock(&bufmgr->lock);
 
@@ -537,6 +537,7 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
    bo->global_name = handle;
    bo->reusable = false;
    bo->external = true;
+   bo->kflags = bufmgr->initial_kflags;
 
    _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
    _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
@@ -641,7 +642,6 @@ bo_unreference_final(struct brw_bo *bo, time_t time)
       bo->free_time = time;
 
       bo->name = NULL;
-      bo->kflags = 0;
 
       list_addtail(&bo->head, &bucket->head);
    } else {
@@ -1157,6 +1157,7 @@ brw_bo_gem_create_from_prime_internal(struct brw_bufmgr *bufmgr, int prime_fd,
    bo->name = "prime";
    bo->reusable = false;
    bo->external = true;
+   bo->kflags = bufmgr->initial_kflags;
 
    if (tiling_mode < 0) {
       struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
@@ -1438,8 +1439,12 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
 
    bufmgr->has_llc = devinfo->has_llc;
    bufmgr->has_mmap_wc = gem_param(fd, I915_PARAM_MMAP_VERSION) > 0;
-   bufmgr->supports_48b_addresses = devinfo->gen >= 8 &&
-      gtt_size > (4ULL << 30 /* GiB */);
+
+   const uint64_t _4GB = 4ull << 30;
+
+   if (devinfo->gen >= 8 && gtt_size > _4GB) {
+      bufmgr->initial_kflags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+   }
 
    init_cache_buckets(bufmgr);
 
