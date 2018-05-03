@@ -109,6 +109,7 @@ struct radeon_info {
 	bool                        has_unaligned_shader_loads;
 	bool                        has_sparse_vm_mappings;
 	bool                        has_2d_tiling;
+	bool                        has_read_registers_query;
 
 	/* Shader cores. */
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */
