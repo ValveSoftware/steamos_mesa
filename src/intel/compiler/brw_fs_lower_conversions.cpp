@@ -54,7 +54,7 @@ fs_visitor::lower_conversions()
       bool saturate = inst->saturate;
 
       if (supports_type_conversion(inst)) {
-         if (type_sz(inst->dst.type) < get_exec_type_size(inst)) {
+         if (get_exec_type_size(inst) == 8 && type_sz(inst->dst.type) < 8) {
             /* From the Broadwell PRM, 3D Media GPGPU, "Double Precision Float to
              * Single Precision Float":
              *
@@ -64,9 +64,6 @@ fs_visitor::lower_conversions()
              * So we need to allocate a temporary that's two registers, and then do
              * a strided MOV to get the lower DWord of every Qword that has the
              * result.
-             *
-             * This restriction applies, in general, whenever we convert to
-             * a type with a smaller bit-size.
              */
             fs_reg temp = ibld.vgrf(get_exec_type(inst));
             fs_reg strided_temp = subscript(temp, dst.type, 0);
