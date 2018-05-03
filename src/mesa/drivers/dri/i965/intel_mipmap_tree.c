@@ -60,10 +60,6 @@ static void *intel_miptree_map_raw(struct brw_context *brw,
 static void intel_miptree_unmap_raw(struct intel_mipmap_tree *mt);
 
 static bool
-intel_miptree_alloc_aux(struct brw_context *brw,
-                        struct intel_mipmap_tree *mt);
-
-static bool
 intel_miptree_supports_mcs(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt)
 {
@@ -791,7 +787,12 @@ intel_miptree_create(struct brw_context *brw,
 
    mt->offset = 0;
 
-   if (!intel_miptree_alloc_aux(brw, mt)) {
+   /* Create the auxiliary surface up-front. CCS_D, on the other hand, can only
+    * compress clear color so we wait until an actual fast-clear to allocate
+    * it.
+    */
+   if (mt->aux_usage != ISL_AUX_USAGE_CCS_D &&
+       !intel_miptree_alloc_aux(brw, mt)) {
       intel_miptree_release(&mt);
       return NULL;
    }
@@ -882,7 +883,12 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    if (!(flags & MIPTREE_CREATE_NO_AUX)) {
       intel_miptree_choose_aux_usage(brw, mt);
 
-      if (!intel_miptree_alloc_aux(brw, mt)) {
+      /* Create the auxiliary surface up-front. CCS_D, on the other hand, can
+       * only compress clear color so we wait until an actual fast-clear to
+       * allocate it.
+       */
+      if (mt->aux_usage != ISL_AUX_USAGE_CCS_D &&
+          !intel_miptree_alloc_aux(brw, mt)) {
          intel_miptree_release(&mt);
          return NULL;
       }
@@ -1776,7 +1782,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    return true;
 }
 
-bool
+static bool
 intel_miptree_alloc_ccs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt)
 {
@@ -1897,7 +1903,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
  * create the auxiliary surfaces up-front.  CCS_D, on the other hand, can only
  * compress clear color so we wait until an actual fast-clear to allocate it.
  */
-static bool
+bool
 intel_miptree_alloc_aux(struct brw_context *brw,
                         struct intel_mipmap_tree *mt)
 {
@@ -1919,11 +1925,6 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       return true;
 
    case ISL_AUX_USAGE_CCS_D:
-      /* Since CCS_D can only compress clear color so we wait until an actual
-       * fast-clear to allocate it.
-       */
-      return true;
-
    case ISL_AUX_USAGE_CCS_E:
       assert(_mesa_is_format_color_format(mt->format));
       assert(mt->surf.samples == 1);
