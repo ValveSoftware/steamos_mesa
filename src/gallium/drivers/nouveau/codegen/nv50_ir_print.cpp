@@ -217,7 +217,7 @@ static const char *shflOpStr[] =
 
 static const char *pixldOpStr[] =
 {
-   "count", "covmask", "offset", "cent_offset", "sampleid"
+   "count", "covmask", "covered", "offset", "cent_offset", "sampleid"
 };
 
 static const char *rcprsqOpStr[] =
