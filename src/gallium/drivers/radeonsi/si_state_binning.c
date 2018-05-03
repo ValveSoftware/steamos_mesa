@@ -343,7 +343,7 @@ void si_emit_dpbb_state(struct si_context *sctx)
 
 	assert(sctx->chip_class >= GFX9);
 
-	if (!sscreen->dpbb_allowed || !blend || !dsa) {
+	if (!sscreen->dpbb_allowed || !blend || !dsa || sctx->dpbb_force_off) {
 		si_emit_dpbb_disable(sctx);
 		return;
 	}
