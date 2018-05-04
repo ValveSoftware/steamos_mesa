@@ -785,12 +785,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        *        the same qword.
        *     (...)"
        *
-       * This means that 32-bit to 64-bit conversions need to have the 32-bit
-       * data elements aligned to 64-bit. This restriction does not apply to
-       * BDW and later.
+       * This means that conversions from bit-sizes smaller than 64-bit to
+       * 64-bit need to have the source data elements aligned to 64-bit.
+       * This restriction does not apply to BDW and later.
        */
       if (nir_dest_bit_size(instr->dest.dest) == 64 &&
-          nir_src_bit_size(instr->src[0].src) == 32 &&
+          nir_src_bit_size(instr->src[0].src) < 64 &&
           (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
          fs_reg tmp = bld.vgrf(result.type, 1);
          tmp = subscript(tmp, op[0].type, 0);
