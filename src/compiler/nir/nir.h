@@ -1915,6 +1915,8 @@ typedef struct nir_shader_compiler_options {
    bool lower_bfm;
    /** Lowers ifind_msb to compare and ufind_msb */
    bool lower_ifind_msb;
+   /** Lowers find_lsb to ufind_msb and logic ops */
+   bool lower_find_lsb;
    bool lower_uadd_carry;
    bool lower_usub_borrow;
    /** lowers fneg and ineg to fsub and isub. */

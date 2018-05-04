@@ -559,6 +559,10 @@ optimizations = [
     ('ufind_msb', ('bcsel', ('ilt', 'value', 0), ('inot', 'value'), 'value')),
     'options->lower_ifind_msb'),
 
+   (('find_lsb', 'value'),
+    ('ufind_msb', ('iand', 'value', ('ineg', 'value'))),
+    'options->lower_find_lsb'),
+
    (('extract_i8', a, 'b@32'),
     ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 24),
     'options->lower_extract_byte'),
