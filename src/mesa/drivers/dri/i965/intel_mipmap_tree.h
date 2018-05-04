@@ -162,31 +162,6 @@ struct intel_miptree_aux_buffer
     */
    uint32_t offset;
 
-   /*
-    * Size of the MCS surface.
-    *
-    * This is needed when doing any gtt mapped operations on the buffer (which
-    * will be Y-tiled). It is possible that it will not be the same as bo->size
-    * when the drm allocator rounds up the requested size.
-    */
-   size_t size;
-
-   /**
-    * Pitch in bytes.
-    *
-    * @see RENDER_SURFACE_STATE.AuxiliarySurfacePitch
-    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfacePitch
-    */
-   uint32_t pitch;
-
-   /**
-    * The distance in rows between array slices.
-    *
-    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceQPitch
-    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
-    */
-   uint32_t qpitch;
-
    /**
     * Buffer object containing the indirect clear color.
     *

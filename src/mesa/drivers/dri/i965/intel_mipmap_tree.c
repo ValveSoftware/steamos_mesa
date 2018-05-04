@@ -994,9 +994,6 @@ create_ccs_buf_for_image(struct brw_context *brw,
    brw_bo_reference(image->bo);
 
    mt->aux_buf->offset = image->aux_offset;
-   mt->aux_buf->size = image->bo->size - image->aux_offset;
-   mt->aux_buf->pitch = image->aux_pitch;
-   mt->aux_buf->qpitch = 0;
    mt->aux_buf->surf = temp_ccs_surf;
 
    return true;
@@ -1683,7 +1680,7 @@ intel_miptree_init_mcs(struct brw_context *brw,
       return;
    }
    void *data = map;
-   memset(data, init_value, mt->aux_buf->size);
+   memset(data, init_value, mt->aux_buf->surf.size);
    brw_bo_unmap(mt->aux_buf->bo);
 }
 
@@ -1698,7 +1695,7 @@ intel_alloc_aux_buffer(struct brw_context *brw,
    if (!buf)
       return false;
 
-   buf->size = aux_surf->size;
+   uint64_t size = aux_surf->size;
 
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    if (devinfo->gen >= 10) {
@@ -1706,19 +1703,17 @@ intel_alloc_aux_buffer(struct brw_context *brw,
        * will set a pointer to a dword somewhere that contains the color. So,
        * allocate the space for the clear color value here on the aux buffer.
        */
-      buf->clear_color_offset = buf->size;
-      buf->size += brw->isl_dev.ss.clear_color_state_size;
+      buf->clear_color_offset = size;
+      size += brw->isl_dev.ss.clear_color_state_size;
    }
-
-   buf->pitch = aux_surf->row_pitch;
-   buf->qpitch = isl_surf_get_array_pitch_sa_rows(aux_surf);
 
    /* ISL has stricter set of alignment rules then the drm allocator.
     * Therefore one can pass the ISL dimensions in terms of bytes instead of
     * trying to recalculate based on different format block sizes.
     */
-   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, name, buf->size,
-                                I915_TILING_Y, buf->pitch, alloc_flags);
+   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, name, size,
+                                I915_TILING_Y, aux_surf->row_pitch,
+                                alloc_flags);
    if (!buf->bo) {
       free(buf);
       return NULL;
