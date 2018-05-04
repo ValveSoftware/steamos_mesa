@@ -755,19 +755,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        */
 
    case nir_op_f2f16_undef:
-   case nir_op_i2i16:
-   case nir_op_u2u16: {
-      /* TODO: Fixing aligment rules for conversions from 32-bits to
-       * 16-bit types should be moved to lower_conversions
-       */
-      fs_reg tmp = bld.vgrf(op[0].type, 1);
-      tmp = subscript(tmp, result.type, 0);
-      inst = bld.MOV(tmp, op[0]);
-      inst->saturate = instr->dest.saturate;
-      inst = bld.MOV(result, tmp);
+      inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
-   }
 
    case nir_op_f2f64:
    case nir_op_f2i64:
@@ -807,6 +797,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_f2u16:
    case nir_op_i2i32:
    case nir_op_u2u32:
+   case nir_op_i2i16:
+   case nir_op_u2u16:
    case nir_op_i2f16:
    case nir_op_u2f16:
       inst = bld.MOV(result, op[0]);
