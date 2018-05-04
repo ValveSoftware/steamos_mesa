@@ -461,11 +461,9 @@ static void evergreen_delete_compute_state(struct pipe_context *ctx, void *state
 	} else {
 #ifdef HAVE_OPENCL
 		radeon_shader_binary_clean(&shader->binary);
+		pipe_resource_reference(&shader->code_bo, NULL);
 #endif
 		r600_destroy_shader(&shader->bc);
-
-		/* TODO destroy shader->code_bo, shader->const_bo
-		 * we'll need something like r600_buffer_free */
 	}
 	FREE(shader);
 }
