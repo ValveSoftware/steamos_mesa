@@ -130,8 +130,10 @@ dri2_surfaceless_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    config = dri2_get_dri_config(dri2_conf, type,
                                 dri2_surf->base.GLColorspace);
 
-   if (!config)
+   if (!config) {
+      _eglError(EGL_BAD_MATCH, "Unsupported surfacetype/colorspace configuration");
       goto cleanup_surface;
+   }
 
    dri2_surf->dri_drawable =
       dri2_dpy->image_driver->createNewDrawable(dri2_dpy->dri_screen, config,
