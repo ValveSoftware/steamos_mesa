@@ -1913,6 +1913,8 @@ typedef struct nir_shader_compiler_options {
    bool lower_bitfield_insert_to_shifts;
    /** Lowers bfm to shifts and subtracts. */
    bool lower_bfm;
+   /** Lowers ifind_msb to compare and ufind_msb */
+   bool lower_ifind_msb;
    bool lower_uadd_carry;
    bool lower_usub_borrow;
    /** lowers fneg and ineg to fsub and isub. */

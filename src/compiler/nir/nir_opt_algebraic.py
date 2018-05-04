@@ -555,6 +555,10 @@ optimizations = [
       ('bfm', 'bits', 0))),
     'options->lower_bitfield_extract_to_shifts'),
 
+   (('ifind_msb', 'value'),
+    ('ufind_msb', ('bcsel', ('ilt', 'value', 0), ('inot', 'value'), 'value')),
+    'options->lower_ifind_msb'),
+
    (('extract_i8', a, 'b@32'),
     ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 24),
     'options->lower_extract_byte'),
