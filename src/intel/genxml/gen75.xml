@@ -3021,7 +3021,7 @@
       <value name="Invalid and Unloaded PD fault" value="3"/>
     </field>
     <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
-    <field name="GTTSEL" start="11" end="1" type="uint">
+    <field name="GTTSEL" start="11" end="11" type="uint">
       <value name="PPGTT" value="0"/>
       <value name="GGTT" value="1"/>
     </field>
@@ -3037,7 +3037,7 @@
       <value name="Invalid and Unloaded PD fault" value="3"/>
     </field>
     <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
-    <field name="GTTSEL" start="11" end="1" type="uint">
+    <field name="GTTSEL" start="11" end="11" type="uint">
       <value name="PPGTT" value="0"/>
       <value name="GGTT" value="1"/>
     </field>
@@ -3053,7 +3053,7 @@
       <value name="Invalid and Unloaded PD fault" value="3"/>
     </field>
     <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
-    <field name="GTTSEL" start="11" end="1" type="uint">
+    <field name="GTTSEL" start="11" end="11" type="uint">
       <value name="PPGTT" value="0"/>
       <value name="GGTT" value="1"/>
     </field>
@@ -3069,7 +3069,7 @@
       <value name="Invalid and Unloaded PD fault" value="3"/>
     </field>
     <field name= "SRCID of Fault" start="3" end="10" type="uint"/>
-    <field name="GTTSEL" start="11" end="1" type="uint">
+    <field name="GTTSEL" start="11" end="11" type="uint">
       <value name="PPGTT" value="0"/>
       <value name="GGTT" value="1"/>
     </field>
