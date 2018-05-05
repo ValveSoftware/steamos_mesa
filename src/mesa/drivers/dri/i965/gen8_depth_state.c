@@ -82,24 +82,6 @@ emit_depth_packets(struct brw_context *brw,
               (depth_mt ? depth_mt->surf.array_pitch_el_rows >> 2 : 0));
    ADVANCE_BATCH();
 
-   if (!hiz) {
-      BEGIN_BATCH(5);
-      OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   } else {
-      assert(depth_mt);
-      BEGIN_BATCH(5);
-      OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
-      OUT_BATCH((depth_mt->aux_buf->pitch - 1) | mocs_wb << 25);
-      OUT_RELOC64(depth_mt->aux_buf->bo, RELOC_WRITE, 0);
-      OUT_BATCH(depth_mt->aux_buf->qpitch >> 2);
-      ADVANCE_BATCH();
-   }
-
    if (stencil_mt == NULL) {
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (5 - 2));
@@ -115,6 +97,24 @@ emit_depth_packets(struct brw_context *brw,
                 (stencil_mt->surf.row_pitch - 1));
       OUT_RELOC64(stencil_mt->bo, RELOC_WRITE, 0);
       OUT_BATCH(stencil_mt->surf.array_pitch_el_rows >> 2);
+      ADVANCE_BATCH();
+   }
+
+   if (!hiz) {
+      BEGIN_BATCH(5);
+      OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   } else {
+      assert(depth_mt);
+      BEGIN_BATCH(5);
+      OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
+      OUT_BATCH((depth_mt->aux_buf->pitch - 1) | mocs_wb << 25);
+      OUT_RELOC64(depth_mt->aux_buf->bo, RELOC_WRITE, 0);
+      OUT_BATCH(depth_mt->aux_buf->qpitch >> 2);
       ADVANCE_BATCH();
    }
 

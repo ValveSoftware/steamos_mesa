@@ -155,27 +155,6 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
        * failure to do so causes hangs on gen5 and a stall on gen6.
        */
 
-      /* Emit hiz buffer. */
-      if (hiz) {
-         assert(depth_mt);
-
-         uint32_t offset;
-         isl_surf_get_image_offset_B_tile_sa(&depth_mt->aux_buf->surf,
-                                             lod, 0, 0, &offset, NULL, NULL);
-
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(depth_mt->aux_buf->surf.row_pitch - 1);
-	 OUT_RELOC(depth_mt->aux_buf->bo, RELOC_WRITE, offset);
-	 ADVANCE_BATCH();
-      } else {
-	 BEGIN_BATCH(3);
-	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(0);
-	 OUT_BATCH(0);
-	 ADVANCE_BATCH();
-      }
-
       /* Emit stencil buffer. */
       if (separate_stencil) {
          assert(stencil_mt->format == MESA_FORMAT_S_UINT8);
@@ -193,6 +172,27 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
       } else {
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_STENCIL_BUFFER << 16) | (3 - 2));
+	 OUT_BATCH(0);
+	 OUT_BATCH(0);
+	 ADVANCE_BATCH();
+      }
+
+      /* Emit hiz buffer. */
+      if (hiz) {
+         assert(depth_mt);
+
+         uint32_t offset;
+         isl_surf_get_image_offset_B_tile_sa(&depth_mt->aux_buf->surf,
+                                             lod, 0, 0, &offset, NULL, NULL);
+
+	 BEGIN_BATCH(3);
+	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
+	 OUT_BATCH(depth_mt->aux_buf->surf.row_pitch - 1);
+	 OUT_RELOC(depth_mt->aux_buf->bo, RELOC_WRITE, offset);
+	 ADVANCE_BATCH();
+      } else {
+	 BEGIN_BATCH(3);
+	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
 	 OUT_BATCH(0);
 	 OUT_BATCH(0);
 	 ADVANCE_BATCH();
