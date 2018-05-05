@@ -256,20 +256,33 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
 
 static void
 brw_emit_depth_stencil_hiz(struct brw_context *brw,
+                           struct intel_renderbuffer *depth_irb,
                            struct intel_mipmap_tree *depth_mt,
-                           uint32_t depth_offset, uint32_t depthbuffer_format,
-                           uint32_t depth_surface_type,
-                           struct intel_mipmap_tree *stencil_mt,
-                           bool hiz, bool separate_stencil,
-                           uint32_t width, uint32_t height,
-                           uint32_t tile_x, uint32_t tile_y)
+                           struct intel_renderbuffer *stencil_irb,
+                           struct intel_mipmap_tree *stencil_mt)
 {
-   (void)hiz;
-   (void)separate_stencil;
-   (void)stencil_mt;
+   uint32_t tile_x = brw->depthstencil.tile_x;
+   uint32_t tile_y = brw->depthstencil.tile_y;
+   uint32_t depth_surface_type = BRW_SURFACE_NULL;
+   uint32_t depthbuffer_format = BRW_DEPTHFORMAT_D32_FLOAT;
+   uint32_t depth_offset = 0;
+   uint32_t width = 1, height = 1;
 
-   assert(!hiz);
-   assert(!separate_stencil);
+   /* If there's a packed depth/stencil bound to stencil only, we need to
+    * emit the packed depth/stencil buffer packet.
+    */
+   if (!depth_irb && stencil_irb) {
+      depth_irb = stencil_irb;
+      depth_mt = stencil_mt;
+   }
+
+   if (depth_irb && depth_mt) {
+      depthbuffer_format = brw_depthbuffer_format(brw);
+      depth_surface_type = BRW_SURFACE_2D;
+      depth_offset = brw->depthstencil.depth_offset;
+      width = depth_irb->Base.Base.Width;
+      height = depth_irb->Base.Base.Height;
+   }
 
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const unsigned len = (devinfo->is_g4x || devinfo->gen == 5) ? 6 : 5;
@@ -314,72 +327,6 @@ brw_emit_depthbuffer(struct brw_context *brw)
    struct intel_renderbuffer *stencil_irb = intel_get_renderbuffer(fb, BUFFER_STENCIL);
    struct intel_mipmap_tree *depth_mt = intel_renderbuffer_get_mt(depth_irb);
    struct intel_mipmap_tree *stencil_mt = get_stencil_miptree(stencil_irb);
-   uint32_t tile_x = brw->depthstencil.tile_x;
-   uint32_t tile_y = brw->depthstencil.tile_y;
-   bool hiz = depth_irb && intel_renderbuffer_has_hiz(depth_irb);
-   bool separate_stencil = false;
-   uint32_t depth_surface_type = BRW_SURFACE_NULL;
-   uint32_t depthbuffer_format = BRW_DEPTHFORMAT_D32_FLOAT;
-   uint32_t depth_offset = 0;
-   uint32_t width = 1, height = 1;
-
-   if (stencil_mt) {
-      separate_stencil = stencil_mt->format == MESA_FORMAT_S_UINT8;
-
-      /* Gen7 supports only separate stencil */
-      assert(separate_stencil || devinfo->gen < 7);
-   }
-
-   /* If there's a packed depth/stencil bound to stencil only, we need to
-    * emit the packed depth/stencil buffer packet.
-    */
-   if (!depth_irb && stencil_irb && !separate_stencil) {
-      depth_irb = stencil_irb;
-      depth_mt = stencil_mt;
-   }
-
-   if (depth_irb && depth_mt) {
-      /* When 3DSTATE_DEPTH_BUFFER.Separate_Stencil_Enable is set, then
-       * 3DSTATE_DEPTH_BUFFER.Surface_Format is not permitted to be a packed
-       * depthstencil format.
-       *
-       * Gens prior to 7 require that HiZ_Enable and Separate_Stencil_Enable be
-       * set to the same value. Gens after 7 implicitly always set
-       * Separate_Stencil_Enable; software cannot disable it.
-       */
-      if ((devinfo->gen < 7 && hiz) || devinfo->gen >= 7) {
-         assert(!_mesa_is_format_packed_depth_stencil(depth_mt->format));
-      }
-
-      /* Prior to Gen7, if using separate stencil, hiz must be enabled. */
-      assert(devinfo->gen >= 7 || !separate_stencil || hiz);
-
-      assert(devinfo->gen < 6 || depth_mt->surf.tiling == ISL_TILING_Y0);
-      assert(!hiz || depth_mt->surf.tiling == ISL_TILING_Y0);
-
-      depthbuffer_format = brw_depthbuffer_format(brw);
-      depth_surface_type = BRW_SURFACE_2D;
-      depth_offset = brw->depthstencil.depth_offset;
-      width = depth_irb->Base.Base.Width;
-      height = depth_irb->Base.Base.Height;
-   } else if (separate_stencil) {
-      /*
-       * There exists a separate stencil buffer but no depth buffer.
-       *
-       * The stencil buffer inherits most of its fields from
-       * 3DSTATE_DEPTH_BUFFER: namely the tile walk, surface type, width, and
-       * height.
-       *
-       * The tiled bit must be set. From the Sandybridge PRM, Volume 2, Part 1,
-       * Section 7.5.5.1.1 3DSTATE_DEPTH_BUFFER, Bit 1.27 Tiled Surface:
-       *     [DevGT+]: This field must be set to TRUE.
-       */
-      assert(brw->has_separate_stencil);
-
-      depth_surface_type = BRW_SURFACE_2D;
-      width = stencil_irb->Base.Base.Width;
-      height = stencil_irb->Base.Base.Height;
-   }
 
    if (depth_mt)
       brw_cache_flush_for_depth(brw, depth_mt->bo);
@@ -387,10 +334,8 @@ brw_emit_depthbuffer(struct brw_context *brw)
       brw_cache_flush_for_depth(brw, stencil_mt->bo);
 
    if (devinfo->gen < 6) {
-      brw_emit_depth_stencil_hiz(brw, depth_mt, depth_offset,
-                                 depthbuffer_format, depth_surface_type,
-                                 stencil_mt, hiz, separate_stencil,
-                                 width, height, tile_x, tile_y);
+      brw_emit_depth_stencil_hiz(brw, depth_irb, depth_mt,
+                                 stencil_irb, stencil_mt);
       return;
    }
 
