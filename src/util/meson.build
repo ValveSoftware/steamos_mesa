@@ -159,4 +159,5 @@ if with_tests
 
   subdir('tests/hash_table')
   subdir('tests/string_buffer')
+  subdir('tests/vma')
 endif
