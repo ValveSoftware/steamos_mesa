@@ -262,7 +262,46 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
                            struct intel_mipmap_tree *stencil_mt,
                            bool hiz, bool separate_stencil,
                            uint32_t width, uint32_t height,
-                           uint32_t tile_x, uint32_t tile_y);
+                           uint32_t tile_x, uint32_t tile_y)
+{
+   (void)hiz;
+   (void)separate_stencil;
+   (void)stencil_mt;
+
+   assert(!hiz);
+   assert(!separate_stencil);
+
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const unsigned len = (devinfo->is_g4x || devinfo->gen == 5) ? 6 : 5;
+
+   BEGIN_BATCH(len);
+   OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
+   OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
+             (depthbuffer_format << 18) |
+             (BRW_TILEWALK_YMAJOR << 26) |
+             (1 << 27) |
+             (depth_surface_type << 29));
+
+   if (depth_mt) {
+      OUT_RELOC(depth_mt->bo, RELOC_WRITE, depth_offset);
+   } else {
+      OUT_BATCH(0);
+   }
+
+   OUT_BATCH(((width + tile_x - 1) << 6) |
+             ((height + tile_y - 1) << 19));
+   OUT_BATCH(0);
+
+   if (devinfo->is_g4x || devinfo->gen >= 5)
+      OUT_BATCH(tile_x | (tile_y << 16));
+   else
+      assert(tile_x == 0 && tile_y == 0);
+
+   if (devinfo->gen >= 6)
+      OUT_BATCH(0);
+
+   ADVANCE_BATCH();
+}
 
 void
 brw_emit_depthbuffer(struct brw_context *brw)
@@ -467,55 +506,6 @@ brw_emit_depthbuffer(struct brw_context *brw)
    intel_batchbuffer_advance(brw);
 
    brw->no_depth_or_stencil = !depth_mt && !stencil_mt;
-}
-
-static void
-brw_emit_depth_stencil_hiz(struct brw_context *brw,
-                           struct intel_mipmap_tree *depth_mt,
-                           uint32_t depth_offset, uint32_t depthbuffer_format,
-                           uint32_t depth_surface_type,
-                           struct intel_mipmap_tree *stencil_mt,
-                           bool hiz, bool separate_stencil,
-                           uint32_t width, uint32_t height,
-                           uint32_t tile_x, uint32_t tile_y)
-{
-   (void)hiz;
-   (void)separate_stencil;
-   (void)stencil_mt;
-
-   assert(!hiz);
-   assert(!separate_stencil);
-
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const unsigned len = (devinfo->is_g4x || devinfo->gen == 5) ? 6 : 5;
-
-   BEGIN_BATCH(len);
-   OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
-   OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
-             (depthbuffer_format << 18) |
-             (BRW_TILEWALK_YMAJOR << 26) |
-             (1 << 27) |
-             (depth_surface_type << 29));
-
-   if (depth_mt) {
-      OUT_RELOC(depth_mt->bo, RELOC_WRITE, depth_offset);
-   } else {
-      OUT_BATCH(0);
-   }
-
-   OUT_BATCH(((width + tile_x - 1) << 6) |
-             ((height + tile_y - 1) << 19));
-   OUT_BATCH(0);
-
-   if (devinfo->is_g4x || devinfo->gen >= 5)
-      OUT_BATCH(tile_x | (tile_y << 16));
-   else
-      assert(tile_x == 0 && tile_y == 0);
-
-   if (devinfo->gen >= 6)
-      OUT_BATCH(0);
-
-   ADVANCE_BATCH();
 }
 
 const struct brw_tracked_state brw_depthbuffer = {
