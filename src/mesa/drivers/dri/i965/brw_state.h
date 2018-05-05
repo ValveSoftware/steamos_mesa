@@ -114,9 +114,6 @@ void brw_upload_invariant_state(struct brw_context *brw);
 uint32_t
 brw_depthbuffer_format(struct brw_context *brw);
 
-uint32_t
-brw_convert_depth_value(mesa_format format, float value);
-
 void brw_upload_state_base_address(struct brw_context *brw);
 
 /* gen8_depth_state.c */

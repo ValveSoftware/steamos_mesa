@@ -254,6 +254,16 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
        rebase_depth_stencil(brw, stencil_irb, invalidate_stencil);
 }
 
+static void
+brw_emit_depth_stencil_hiz(struct brw_context *brw,
+                           struct intel_mipmap_tree *depth_mt,
+                           uint32_t depth_offset, uint32_t depthbuffer_format,
+                           uint32_t depth_surface_type,
+                           struct intel_mipmap_tree *stencil_mt,
+                           bool hiz, bool separate_stencil,
+                           uint32_t width, uint32_t height,
+                           uint32_t tile_x, uint32_t tile_y);
+
 void
 brw_emit_depthbuffer(struct brw_context *brw)
 {
@@ -337,28 +347,129 @@ brw_emit_depthbuffer(struct brw_context *brw)
    if (stencil_mt)
       brw_cache_flush_for_depth(brw, stencil_mt->bo);
 
-   brw->vtbl.emit_depth_stencil_hiz(brw, depth_mt, depth_offset,
-                                    depthbuffer_format, depth_surface_type,
-                                    stencil_mt, hiz, separate_stencil,
-                                    width, height, tile_x, tile_y);
-}
-
-uint32_t
-brw_convert_depth_value(mesa_format format, float value)
-{
-   switch (format) {
-   case MESA_FORMAT_Z_FLOAT32:
-      return float_as_int(value);
-   case MESA_FORMAT_Z_UNORM16:
-      return value * ((1u << 16) - 1);
-   case MESA_FORMAT_Z24_UNORM_X8_UINT:
-      return value * ((1u << 24) - 1);
-   default:
-      unreachable("Invalid depth format");
+   if (devinfo->gen < 6) {
+      brw_emit_depth_stencil_hiz(brw, depth_mt, depth_offset,
+                                 depthbuffer_format, depth_surface_type,
+                                 stencil_mt, hiz, separate_stencil,
+                                 width, height, tile_x, tile_y);
+      return;
    }
+
+   /* Skip repeated NULL depth/stencil emits (think 2D rendering). */
+   if (!depth_mt && !stencil_mt && brw->no_depth_or_stencil) {
+      assert(brw->hw_ctx);
+      return;
+   }
+
+   brw_emit_depth_stall_flushes(brw);
+
+   const unsigned ds_dwords = brw->isl_dev.ds.size / 4;
+   intel_batchbuffer_begin(brw, ds_dwords, RENDER_RING);
+   uint32_t *ds_map = brw->batch.map_next;
+   const uint32_t ds_offset = (char *)ds_map - (char *)brw->batch.batch.map;
+
+   struct isl_view view = {
+      /* Some nice defaults */
+      .base_level = 0,
+      .levels = 1,
+      .base_array_layer = 0,
+      .array_len = 1,
+      .swizzle = ISL_SWIZZLE_IDENTITY,
+   };
+
+   struct isl_depth_stencil_hiz_emit_info info = {
+      .view = &view,
+   };
+
+   if (depth_mt) {
+      view.usage |= ISL_SURF_USAGE_DEPTH_BIT;
+      info.depth_surf = &depth_mt->surf;
+
+      info.depth_address =
+         brw_batch_reloc(&brw->batch,
+                         ds_offset + brw->isl_dev.ds.depth_offset,
+                         depth_mt->bo, depth_mt->offset, RELOC_WRITE);
+
+      info.mocs = brw_get_bo_mocs(devinfo, depth_mt->bo);
+      view.base_level = depth_irb->mt_level - depth_irb->mt->first_level;
+      view.base_array_layer = depth_irb->mt_layer;
+      view.array_len = MAX2(depth_irb->layer_count, 1);
+      view.format = depth_mt->surf.format;
+
+      info.hiz_usage = depth_mt->aux_usage;
+      if (!intel_renderbuffer_has_hiz(depth_irb)) {
+         /* Just because a miptree has ISL_AUX_USAGE_HIZ does not mean that
+          * all miplevels of that miptree are guaranteed to support HiZ.  See
+          * intel_miptree_level_enable_hiz for details.
+          */
+         info.hiz_usage = ISL_AUX_USAGE_NONE;
+      }
+
+      if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
+         info.hiz_surf = &depth_mt->aux_buf->surf;
+
+         uint32_t hiz_offset = 0;
+         if (devinfo->gen == 6) {
+            /* HiZ surfaces on Sandy Bridge technically don't support
+             * mip-mapping.  However, we can fake it by offsetting to the
+             * first slice of LOD0 in the HiZ surface.
+             */
+            isl_surf_get_image_offset_B_tile_sa(&depth_mt->aux_buf->surf,
+                                                view.base_level, 0, 0,
+                                                &hiz_offset, NULL, NULL);
+         }
+
+         info.hiz_address =
+            brw_batch_reloc(&brw->batch,
+                            ds_offset + brw->isl_dev.ds.hiz_offset,
+                            depth_mt->aux_buf->bo,
+                            depth_mt->aux_buf->offset + hiz_offset,
+                            RELOC_WRITE);
+      }
+
+      info.depth_clear_value = depth_mt->fast_clear_color.f32[0];
+   }
+
+   if (stencil_mt) {
+      view.usage |= ISL_SURF_USAGE_STENCIL_BIT;
+      info.stencil_surf = &stencil_mt->surf;
+
+      if (!depth_mt) {
+         info.mocs = brw_get_bo_mocs(devinfo, stencil_mt->bo);
+         view.base_level = stencil_irb->mt_level - stencil_irb->mt->first_level;
+         view.base_array_layer = stencil_irb->mt_layer;
+         view.array_len = MAX2(stencil_irb->layer_count, 1);
+         view.format = stencil_mt->surf.format;
+      }
+
+      uint32_t stencil_offset = 0;
+      if (devinfo->gen == 6) {
+         /* Stencil surfaces on Sandy Bridge technically don't support
+          * mip-mapping.  However, we can fake it by offsetting to the
+          * first slice of LOD0 in the stencil surface.
+          */
+         isl_surf_get_image_offset_B_tile_sa(&stencil_mt->surf,
+                                             view.base_level, 0, 0,
+                                             &stencil_offset, NULL, NULL);
+      }
+
+      info.stencil_address =
+         brw_batch_reloc(&brw->batch,
+                         ds_offset + brw->isl_dev.ds.stencil_offset,
+                         stencil_mt->bo,
+                         stencil_mt->offset + stencil_offset,
+                         RELOC_WRITE);
+   }
+
+   isl_emit_depth_stencil_hiz_s(&brw->isl_dev, ds_map, &info);
+
+   brw->batch.map_next += ds_dwords;
+   intel_batchbuffer_advance(brw);
+
+   brw->no_depth_or_stencil = !depth_mt && !stencil_mt;
 }
 
-void
+static void
 brw_emit_depth_stencil_hiz(struct brw_context *brw,
                            struct intel_mipmap_tree *depth_mt,
                            uint32_t depth_offset, uint32_t depthbuffer_format,

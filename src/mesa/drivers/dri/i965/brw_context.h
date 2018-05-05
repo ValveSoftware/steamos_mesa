@@ -742,20 +742,6 @@ struct brw_context
    struct
    {
       /**
-       * Send the appropriate state packets to configure depth, stencil, and
-       * HiZ buffers (i965+ only)
-       */
-      void (*emit_depth_stencil_hiz)(struct brw_context *brw,
-                                     struct intel_mipmap_tree *depth_mt,
-                                     uint32_t depth_offset,
-                                     uint32_t depthbuffer_format,
-                                     uint32_t depth_surface_type,
-                                     struct intel_mipmap_tree *stencil_mt,
-                                     bool hiz, bool separate_stencil,
-                                     uint32_t width, uint32_t height,
-                                     uint32_t tile_x, uint32_t tile_y);
-
-      /**
        * Emit an MI_REPORT_PERF_COUNT command packet.
        *
        * This asks the GPU to write a report of the current OA counter values
@@ -1707,45 +1693,6 @@ brw_depth_writes_enabled(const struct brw_context *brw)
 
 void
 brw_emit_depthbuffer(struct brw_context *brw);
-
-void
-brw_emit_depth_stencil_hiz(struct brw_context *brw,
-                           struct intel_mipmap_tree *depth_mt,
-                           uint32_t depth_offset, uint32_t depthbuffer_format,
-                           uint32_t depth_surface_type,
-                           struct intel_mipmap_tree *stencil_mt,
-                           bool hiz, bool separate_stencil,
-                           uint32_t width, uint32_t height,
-                           uint32_t tile_x, uint32_t tile_y);
-
-void
-gen6_emit_depth_stencil_hiz(struct brw_context *brw,
-                            struct intel_mipmap_tree *depth_mt,
-                            uint32_t depth_offset, uint32_t depthbuffer_format,
-                            uint32_t depth_surface_type,
-                            struct intel_mipmap_tree *stencil_mt,
-                            bool hiz, bool separate_stencil,
-                            uint32_t width, uint32_t height,
-                            uint32_t tile_x, uint32_t tile_y);
-
-void
-gen7_emit_depth_stencil_hiz(struct brw_context *brw,
-                            struct intel_mipmap_tree *depth_mt,
-                            uint32_t depth_offset, uint32_t depthbuffer_format,
-                            uint32_t depth_surface_type,
-                            struct intel_mipmap_tree *stencil_mt,
-                            bool hiz, bool separate_stencil,
-                            uint32_t width, uint32_t height,
-                            uint32_t tile_x, uint32_t tile_y);
-void
-gen8_emit_depth_stencil_hiz(struct brw_context *brw,
-                            struct intel_mipmap_tree *depth_mt,
-                            uint32_t depth_offset, uint32_t depthbuffer_format,
-                            uint32_t depth_surface_type,
-                            struct intel_mipmap_tree *stencil_mt,
-                            bool hiz, bool separate_stencil,
-                            uint32_t width, uint32_t height,
-                            uint32_t tile_x, uint32_t tile_y);
 
 uint32_t get_hw_prim_for_gl_prim(int mode);
 

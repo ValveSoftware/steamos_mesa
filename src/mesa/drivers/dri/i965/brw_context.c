@@ -922,15 +922,6 @@ brwCreateContext(gl_api api,
    brw->gs.base.stage = MESA_SHADER_GEOMETRY;
    brw->wm.base.stage = MESA_SHADER_FRAGMENT;
    brw->cs.base.stage = MESA_SHADER_COMPUTE;
-   if (devinfo->gen >= 8) {
-      brw->vtbl.emit_depth_stencil_hiz = gen8_emit_depth_stencil_hiz;
-   } else if (devinfo->gen >= 7) {
-      brw->vtbl.emit_depth_stencil_hiz = gen7_emit_depth_stencil_hiz;
-   } else if (devinfo->gen >= 6) {
-      brw->vtbl.emit_depth_stencil_hiz = gen6_emit_depth_stencil_hiz;
-   } else {
-      brw->vtbl.emit_depth_stencil_hiz = brw_emit_depth_stencil_hiz;
-   }
 
    brw_init_driver_functions(brw, &functions);
 
