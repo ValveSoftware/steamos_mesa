@@ -410,7 +410,8 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
 const struct brw_tracked_state brw_depthbuffer = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
-      .brw = BRW_NEW_BATCH |
+      .brw = BRW_NEW_AUX_STATE |
+             BRW_NEW_BATCH |
              BRW_NEW_BLORP,
    },
    .emit = brw_emit_depthbuffer,

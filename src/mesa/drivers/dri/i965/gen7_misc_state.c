@@ -186,16 +186,3 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
 
    brw->no_depth_or_stencil = !mt;
 }
-
-/**
- * \see brw_context.state.depth_region
- */
-const struct brw_tracked_state gen7_depthbuffer = {
-   .dirty = {
-      .mesa = _NEW_BUFFERS,
-      .brw = BRW_NEW_AUX_STATE |
-             BRW_NEW_BATCH |
-             BRW_NEW_BLORP,
-   },
-   .emit = brw_emit_depthbuffer,
-};
