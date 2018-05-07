@@ -102,6 +102,7 @@ if with_platform_x11
   if with_dri3
     files_egl += files('drivers/dri2/platform_x11_dri3.c')
     link_for_egl += libloader_dri3_helper
+    incs_for_egl += inc_loader
   endif
   deps_for_egl += [dep_x11_xcb, dep_xcb_dri2, dep_xcb_xfixes]
 endif
