@@ -235,6 +235,13 @@ class Field(object):
         self.end = int(attrs["end"])
         self.type = attrs["type"]
 
+        assert self.start <= self.end, \
+               'field {} has end ({}) < start ({})'.format(self.name, self.end,
+                                                           self.start)
+        if self.type == 'bool':
+            assert self.end == self.start, \
+                   'bool field ({}) is too wide'.format(self.name)
+
         if "prefix" in attrs:
             self.prefix = attrs["prefix"]
         else:
