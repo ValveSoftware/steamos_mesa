@@ -2546,7 +2546,7 @@
   <instruction name="MI_SET_PREDICATE" bias="1" length="1">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="1"/>
-    <field name="PREDICATE ENABLE" start="0" end="1" type="bool" default="6"/>
+    <field name="PREDICATE ENABLE" start="0" end="1" type="uint"/>
   </instruction>
 
   <instruction name="MI_STORE_DATA_IMM" bias="2" length="4">
