@@ -639,7 +639,6 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->MaxGeometryTotalOutputComponents = MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS;
 
    /* Shading language version */
-   consts->GLSLVersion = 120;
    _mesa_override_glsl_version(consts);
 
 #ifdef DEBUG
