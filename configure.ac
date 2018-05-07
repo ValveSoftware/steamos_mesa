@@ -434,28 +434,38 @@ fi
 AM_CONDITIONAL([SSE41_SUPPORTED], [test x$SSE41_SUPPORTED = x1])
 AC_SUBST([SSE41_CFLAGS], $SSE41_CFLAGS)
 
-dnl Check for new-style atomic builtins
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+dnl Check for new-style atomic builtins. We first check without linking to
+dnl -latomic.
+AC_MSG_CHECKING(whether __atomic_load_n is supported)
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#include <stdint.h>
 int main() {
-    int n;
-    return __atomic_load_n(&n, __ATOMIC_ACQUIRE);
-}]])], GCC_ATOMIC_BUILTINS_SUPPORTED=1)
-if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" = x1; then
-    DEFINES="$DEFINES -DUSE_GCC_ATOMIC_BUILTINS"
-    dnl On some platforms, new-style atomics need a helper library
-    AC_MSG_CHECKING(whether -latomic is needed)
-    AC_LINK_IFELSE([AC_LANG_SOURCE([[
-    #include <stdint.h>
     struct {
         uint64_t *v;
     } x;
-    int main() {
+    return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
+}]])], GCC_ATOMIC_BUILTINS_SUPPORTED=yes, GCC_ATOMIC_BUILTINS_SUPPORTED=no)
+
+dnl If that didn't work, we try linking with -latomic, which is needed on some
+dnl platforms.
+if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" != xyes; then
+   save_LDFLAGS=$LDFLAGS
+   LDFLAGS="$LDFLAGS -latomic"
+   AC_LINK_IFELSE([AC_LANG_SOURCE([[
+   #include <stdint.h>
+   int main() {
+        struct {
+            uint64_t *v;
+        } x;
         return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
-    }]])], GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC=no, GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC=yes)
-    AC_MSG_RESULT($GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC)
-    if test "x$GCC_ATOMIC_BUILTINS_NEED_LIBATOMIC" = xyes; then
-        LIBATOMIC_LIBS="-latomic"
-    fi
+   }]])], GCC_ATOMIC_BUILTINS_SUPPORTED=yes LIBATOMIC_LIBS="-latomic",
+          GCC_ATOMIC_BUILTINS_SUPPORTED=no)
+   LDFLAGS=$save_LDFLAGS
+fi
+AC_MSG_RESULT($GCC_ATOMIC_BUILTINS_SUPPORTED)
+
+if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" = xyes; then
+    DEFINES="$DEFINES -DUSE_GCC_ATOMIC_BUILTINS"
 fi
 AC_SUBST([LIBATOMIC_LIBS])
 
