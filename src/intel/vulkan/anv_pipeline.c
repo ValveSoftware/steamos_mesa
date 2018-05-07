@@ -1247,8 +1247,18 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
       if (subpass && subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED)
          assert(info->pDepthStencilState);
 
-      if (subpass && subpass->color_count > 0)
-         assert(info->pColorBlendState);
+      if (subpass && subpass->color_count > 0) {
+         bool all_color_unused = true;
+         for (int i = 0; i < subpass->color_count; i++) {
+            if (subpass->color_attachments[i].attachment != VK_ATTACHMENT_UNUSED)
+               all_color_unused = false;
+         }
+         /* pColorBlendState is ignored if the pipeline has rasterization
+          * disabled or if the subpass of the render pass the pipeline is
+          * created against does not use any color attachments.
+          */
+         assert(info->pColorBlendState || all_color_unused);
+      }
    }
 
    for (uint32_t i = 0; i < info->stageCount; ++i) {

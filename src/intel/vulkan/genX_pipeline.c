@@ -1361,7 +1361,7 @@ has_color_buffer_write_enabled(const struct anv_pipeline *pipeline,
       if (binding->index == UINT32_MAX)
          continue;
 
-      if (blend->pAttachments[binding->index].colorWriteMask != 0)
+      if (blend && blend->pAttachments[binding->index].colorWriteMask != 0)
          return true;
    }
 
