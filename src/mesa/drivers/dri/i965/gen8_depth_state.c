@@ -39,9 +39,7 @@ emit_depth_packets(struct brw_context *brw,
                    struct intel_mipmap_tree *depth_mt,
                    uint32_t depthbuffer_format,
                    uint32_t depth_surface_type,
-                   bool depth_writable,
                    struct intel_mipmap_tree *stencil_mt,
-                   bool stencil_writable,
                    bool hiz,
                    uint32_t width,
                    uint32_t height,
@@ -64,8 +62,8 @@ emit_depth_packets(struct brw_context *brw,
    BEGIN_BATCH(8);
    OUT_BATCH(GEN7_3DSTATE_DEPTH_BUFFER << 16 | (8 - 2));
    OUT_BATCH(depth_surface_type << 29 |
-             (depth_writable ? (1 << 28) : 0) |
-             (stencil_mt != NULL && stencil_writable) << 27 |
+             (depth_mt != NULL) << 28 | /* Depth Write Enable */
+             (stencil_mt != NULL) << 27 | /* Stencil Write Enable */
              (hiz ? 1 : 0) << 22 |
              depthbuffer_format << 18 |
              (depth_mt ? depth_mt->surf.row_pitch - 1 : 0));
@@ -204,8 +202,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
    }
 
    emit_depth_packets(brw, depth_mt, brw_depthbuffer_format(brw), surftype,
-                      brw_depth_writes_enabled(brw),
-                      stencil_mt, brw->stencil_write_enabled,
+                      stencil_mt,
                       hiz, width, height, depth, lod, min_array_element);
 }
 

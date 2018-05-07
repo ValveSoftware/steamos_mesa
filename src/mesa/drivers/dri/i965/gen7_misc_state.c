@@ -109,8 +109,8 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
              (depthbuffer_format << 18) |
              ((hiz ? 1 : 0) << 22) |
-             ((stencil_mt != NULL && brw->stencil_write_enabled) << 27) |
-             (brw_depth_writes_enabled(brw) << 28) |
+             ((stencil_mt != NULL) << 27) | /* Stencil Write Enable */
+             ((depth_mt != NULL) << 28) | /* Depth Write Enable */
              (surftype << 29));
 
    /* 3DSTATE_DEPTH_BUFFER dw2 */
@@ -192,9 +192,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
  */
 const struct brw_tracked_state gen7_depthbuffer = {
    .dirty = {
-      .mesa = _NEW_BUFFERS |
-              _NEW_DEPTH |
-              _NEW_STENCIL,
+      .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_AUX_STATE |
              BRW_NEW_BATCH |
              BRW_NEW_BLORP,
