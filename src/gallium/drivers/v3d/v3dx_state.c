@@ -88,7 +88,7 @@ v3d_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
 {
         struct v3d_context *v3d = v3d_context(pctx);
         v3d->sample_mask = sample_mask & ((1 << VC5_MAX_SAMPLES) - 1);
-        v3d->dirty |= VC5_DIRTY_SAMPLE_MASK;
+        v3d->dirty |= VC5_DIRTY_SAMPLE_STATE;
 }
 
 static uint16_t

@@ -475,6 +475,11 @@
     <field name="Varying offset V0" size="4" start="0" type="uint"/>
   </packet>
 
+  <packet code="91" name="Sample State">
+    <field name="Coverage" size="16" start="16" type="uint"/> <!-- float-1-8-7 -->
+    <field name="Mask" size="4" start="0" type="uint"/>
+  </packet>
+
   <packet code="92" name="Occlusion Query Counter">
     <field name="address" size="32" start="0" type="address"/>
   </packet>

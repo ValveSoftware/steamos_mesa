@@ -61,7 +61,7 @@ void v3d_job_add_bo(struct v3d_job *job, struct v3d_bo *bo);
 
 #define VC5_DIRTY_BLEND_COLOR   (1 <<  7)
 #define VC5_DIRTY_STENCIL_REF   (1 <<  8)
-#define VC5_DIRTY_SAMPLE_MASK   (1 <<  9)
+#define VC5_DIRTY_SAMPLE_STATE  (1 <<  9)
 #define VC5_DIRTY_FRAMEBUFFER   (1 << 10)
 #define VC5_DIRTY_STIPPLE       (1 << 11)
 #define VC5_DIRTY_VIEWPORT      (1 << 12)

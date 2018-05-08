@@ -475,7 +475,7 @@ v3d_set_shader_uniform_dirty_flags(struct v3d_compiled_shader *shader)
                         break;
 
                 case QUNIFORM_SAMPLE_MASK:
-                        dirty |= VC5_DIRTY_SAMPLE_MASK;
+                        dirty |= VC5_DIRTY_SAMPLE_STATE;
                         break;
 
                 default:

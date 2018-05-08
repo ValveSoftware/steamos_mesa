@@ -387,8 +387,17 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         config.enable_depth_offset =
                                 v3d->rasterizer->base.offset_tri;
 
+                        /* V3D follows GL behavior where the sample mask only
+                         * applies when MSAA is enabled.  Gallium has sample
+                         * mask apply anyway, and the MSAA blit shaders will
+                         * set sample mask without explicitly setting
+                         * rasterizer oversample.  Just force it on here,
+                         * since the blit shaders are the only way to have
+                         * !multisample && samplemask != 0xf.
+                         */
                         config.rasterizer_oversample_mode =
-                                v3d->rasterizer->base.multisample;
+                                v3d->rasterizer->base.multisample ||
+                                v3d->sample_mask != 0xf;
 
                         config.direct3d_provoking_vertex =
                                 v3d->rasterizer->base.flatshade_first;
@@ -719,4 +728,16 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         }
                 }
         }
+
+#if V3D_VERSION >= 40
+        if (v3d->dirty & VC5_DIRTY_SAMPLE_STATE) {
+                cl_emit(&job->bcl, SAMPLE_STATE, state) {
+                        /* Note: SampleCoverage was handled at the
+                         * state_tracker level by converting to sample_mask.
+                         */
+                        state.coverage = fui(1.0) >> 16;
+                        state.mask = job->msaa ? v3d->sample_mask : 0xf;
+                }
+        }
+#endif
 }

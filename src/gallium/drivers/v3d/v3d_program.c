@@ -399,7 +399,7 @@ v3d_update_compiled_fs(struct v3d_context *v3d, uint8_t prim_mode)
                             VC5_DIRTY_FRAMEBUFFER |
                             VC5_DIRTY_ZSA |
                             VC5_DIRTY_RASTERIZER |
-                            VC5_DIRTY_SAMPLE_MASK |
+                            VC5_DIRTY_SAMPLE_STATE |
                             VC5_DIRTY_FRAGTEX |
                             VC5_DIRTY_UNCOMPILED_FS))) {
                 return;
