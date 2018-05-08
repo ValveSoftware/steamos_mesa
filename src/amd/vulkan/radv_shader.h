@@ -282,14 +282,15 @@ struct radv_shader_slab {
 };
 
 void
-radv_optimize_nir(struct nir_shader *shader);
+radv_optimize_nir(struct nir_shader *shader, bool optimize_conservatively);
 
 nir_shader *
 radv_shader_compile_to_nir(struct radv_device *device,
 			   struct radv_shader_module *module,
 			   const char *entrypoint_name,
 			   gl_shader_stage stage,
-			   const VkSpecializationInfo *spec_info);
+			   const VkSpecializationInfo *spec_info,
+			   const VkPipelineCreateFlags flags);
 
 void *
 radv_alloc_shader_memory(struct radv_device *device,

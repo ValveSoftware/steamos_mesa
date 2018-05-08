@@ -360,6 +360,7 @@ struct radv_pipeline_key {
 	uint8_t log2_num_samples;
 	uint32_t multisample : 1;
 	uint32_t has_multiview_view_index : 1;
+	uint32_t optimisations_disabled : 1;
 };
 
 void

@@ -117,7 +117,7 @@ void radv_DestroyShaderModule(
 }
 
 void
-radv_optimize_nir(struct nir_shader *shader)
+radv_optimize_nir(struct nir_shader *shader, bool optimize_conservatively)
 {
         bool progress;
 
@@ -149,7 +149,7 @@ radv_optimize_nir(struct nir_shader *shader)
                 if (shader->options->max_unroll_iterations) {
                         NIR_PASS(progress, shader, nir_opt_loop_unroll, 0);
                 }
-        } while (progress);
+        } while (progress && !optimize_conservatively);
 
         NIR_PASS(progress, shader, nir_opt_shrink_load);
         NIR_PASS(progress, shader, nir_opt_move_load_ubo);
@@ -160,7 +160,8 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			   struct radv_shader_module *module,
 			   const char *entrypoint_name,
 			   gl_shader_stage stage,
-			   const VkSpecializationInfo *spec_info)
+			   const VkSpecializationInfo *spec_info,
+			   const VkPipelineCreateFlags flags)
 {
 	if (strcmp(entrypoint_name, "main") != 0) {
 		radv_finishme("Multiple shaders per module not really supported");
@@ -293,7 +294,8 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			.lower_vote_eq_to_ballot = 1,
 		});
 
-	radv_optimize_nir(nir);
+	if (!(flags & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT))
+		radv_optimize_nir(nir, false);
 
 	/* Indirect lowering must be called after the radv_optimize_nir() loop
 	 * has been called at least once. Otherwise indirect lowering can
@@ -301,7 +303,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	 * considered too large for unrolling.
 	 */
 	ac_lower_indirect_derefs(nir, device->physical_device->rad_info.chip_class);
-	radv_optimize_nir(nir);
+	radv_optimize_nir(nir, flags & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT);
 
 	return nir;
 }

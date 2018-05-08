@@ -1724,13 +1724,13 @@ radv_link_shaders(struct radv_pipeline *pipeline, nir_shader **shaders)
 				ac_lower_indirect_derefs(ordered_shaders[i],
 				                         pipeline->device->physical_device->rad_info.chip_class);
 			}
-			radv_optimize_nir(ordered_shaders[i]);
+			radv_optimize_nir(ordered_shaders[i], false);
 
 			if (nir_lower_global_vars_to_local(ordered_shaders[i - 1])) {
 				ac_lower_indirect_derefs(ordered_shaders[i - 1],
 				                         pipeline->device->physical_device->rad_info.chip_class);
 			}
-			radv_optimize_nir(ordered_shaders[i - 1]);
+			radv_optimize_nir(ordered_shaders[i - 1], false);
 		}
 	}
 }
@@ -1749,6 +1749,9 @@ radv_generate_graphics_pipeline_key(struct radv_pipeline *pipeline,
 
 	struct radv_pipeline_key key;
 	memset(&key, 0, sizeof(key));
+
+	if (pCreateInfo->flags & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT)
+		key.optimisations_disabled = 1;
 
 	key.has_multiview_view_index = has_view_index;
 
@@ -1878,7 +1881,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
                          struct radv_device *device,
                          struct radv_pipeline_cache *cache,
                          struct radv_pipeline_key key,
-                         const VkPipelineShaderStageCreateInfo **pStages)
+                         const VkPipelineShaderStageCreateInfo **pStages,
+                         const VkPipelineCreateFlags flags)
 {
 	struct radv_shader_module fs_m = {0};
 	struct radv_shader_module *modules[MESA_SHADER_STAGES] = { 0, };
@@ -1944,7 +1948,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 		nir[i] = radv_shader_compile_to_nir(device, modules[i],
 						    stage ? stage->pName : "main", i,
-						    stage ? stage->pSpecializationInfo : NULL);
+						    stage ? stage->pSpecializationInfo : NULL,
+						    flags);
 		pipeline->active_stages |= mesa_to_vk_shader_stage(i);
 
 		/* We don't want to alter meta shaders IR directly so clone it
@@ -1963,8 +1968,10 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			if (i != last)
 				mask = mask | nir_var_shader_out;
 
-			nir_lower_io_to_scalar_early(nir[i], mask);
-			radv_optimize_nir(nir[i]);
+			if (!(flags & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT)) {
+				nir_lower_io_to_scalar_early(nir[i], mask);
+				radv_optimize_nir(nir[i], false);
+			}
 		}
 	}
 
@@ -1973,7 +1980,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		merge_tess_info(&nir[MESA_SHADER_TESS_EVAL]->info, &nir[MESA_SHADER_TESS_CTRL]->info);
 	}
 
-	radv_link_shaders(pipeline, nir);
+	if (!(flags & VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT))
+		radv_link_shaders(pipeline, nir);
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		if (modules[i] && radv_can_dump_shader(device, modules[i]))
@@ -3349,7 +3357,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	radv_create_shaders(pipeline, device, cache, 
 	                    radv_generate_graphics_pipeline_key(pipeline, pCreateInfo, &blend, has_view_index),
-	                    pStages);
+	                    pStages, pCreateInfo->flags);
 
 	pipeline->graphics.spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	radv_pipeline_init_multisample_state(pipeline, &blend, pCreateInfo);
@@ -3582,7 +3590,7 @@ static VkResult radv_compute_pipeline_create(
 	assert(pipeline->layout);
 
 	pStages[MESA_SHADER_COMPUTE] = &pCreateInfo->stage;
-	radv_create_shaders(pipeline, device, cache, (struct radv_pipeline_key) {0}, pStages);
+	radv_create_shaders(pipeline, device, cache, (struct radv_pipeline_key) {0}, pStages, pCreateInfo->flags);
 
 	pipeline->user_data_0[MESA_SHADER_COMPUTE] = radv_pipeline_stage_to_user_data_0(pipeline, MESA_SHADER_COMPUTE, device->physical_device->rad_info.chip_class);
 	pipeline->need_indirect_descriptor_sets |= pipeline->shaders[MESA_SHADER_COMPUTE]->info.need_indirect_descriptor_sets;
