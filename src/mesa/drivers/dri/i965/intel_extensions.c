@@ -148,6 +148,12 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Const.GLSLVersion = 330;
    else
       ctx->Const.GLSLVersion = 120;
+
+   if (devinfo->gen >= 6)
+      ctx->Const.GLSLVersionCompat = 130;
+   else
+      ctx->Const.GLSLVersionCompat = 120;
+
    _mesa_override_glsl_version(&ctx->Const);
 
    ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;

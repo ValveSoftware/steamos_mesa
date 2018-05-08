@@ -3649,6 +3649,7 @@ struct gl_constants
    GLuint MaxGeometryTotalOutputComponents;
 
    GLuint GLSLVersion;  /**< Desktop GLSL version supported (ex: 120 = 1.20) */
+   GLuint GLSLVersionCompat;  /**< Desktop compat GLSL version supported  */
 
    /**
     * Changes default GLSL extension behavior from "error" to "warn".  It's out
