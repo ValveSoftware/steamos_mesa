@@ -183,7 +183,9 @@ v3d_emit_gl_shader_state(struct v3d_context *v3d,
                 shader.number_of_varyings_in_fragment_shader =
                         v3d->prog.fs->prog_data.base->num_inputs;
 
-                shader.propagate_nans = true;
+                shader.coordinate_shader_propagate_nans = true;
+                shader.vertex_shader_propagate_nans = true;
+                shader.fragment_shader_propagate_nans = true;
 
                 shader.coordinate_shader_code_address =
                         cl_address(v3d->prog.cs->bo, 0);
