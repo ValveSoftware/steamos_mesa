@@ -187,7 +187,7 @@ fd_bc_invalidate_context(struct fd_context *ctx)
 
 	foreach_batch(batch, cache, cache->batch_mask) {
 		if (batch->ctx == ctx)
-			fd_batch_reference_locked(&batch, NULL);
+			fd_bc_invalidate_batch(batch, true);
 	}
 
 	mtx_unlock(&ctx->screen->lock);
