@@ -162,6 +162,7 @@ nir_variable_create(nir_shader *shader, nir_variable_mode mode,
    var->name = ralloc_strdup(var, name);
    var->type = type;
    var->data.mode = mode;
+   var->data.how_declared = nir_var_declared_normally;
 
    if ((mode == nir_var_shader_in &&
         shader->info.stage != MESA_SHADER_VERTEX) ||
