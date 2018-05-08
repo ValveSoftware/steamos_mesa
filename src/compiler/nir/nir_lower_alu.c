@@ -50,6 +50,50 @@ lower_alu_instr(nir_alu_instr *instr, nir_builder *b)
    b->exact = instr->exact;
 
    switch (instr->op) {
+   case nir_op_bitfield_reverse:
+      if (b->shader->options->lower_bitfield_reverse) {
+         /* For more details, see:
+          *
+          * http://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
+          */
+         nir_ssa_def *c1 = nir_imm_int(b, 1);
+         nir_ssa_def *c2 = nir_imm_int(b, 2);
+         nir_ssa_def *c4 = nir_imm_int(b, 4);
+         nir_ssa_def *c8 = nir_imm_int(b, 8);
+         nir_ssa_def *c16 = nir_imm_int(b, 16);
+         nir_ssa_def *c33333333 = nir_imm_int(b, 0x33333333);
+         nir_ssa_def *c55555555 = nir_imm_int(b, 0x55555555);
+         nir_ssa_def *c0f0f0f0f = nir_imm_int(b, 0x0f0f0f0f);
+         nir_ssa_def *c00ff00ff = nir_imm_int(b, 0x00ff00ff);
+
+         lowered = nir_ssa_for_alu_src(b, instr, 0);
+
+         /* Swap odd and even bits. */
+         lowered = nir_ior(b,
+                           nir_iand(b, nir_ushr(b, lowered, c1), c55555555),
+                           nir_ishl(b, nir_iand(b, lowered, c55555555), c1));
+
+         /* Swap consecutive pairs. */
+         lowered = nir_ior(b,
+                           nir_iand(b, nir_ushr(b, lowered, c2), c33333333),
+                           nir_ishl(b, nir_iand(b, lowered, c33333333), c2));
+
+         /* Swap nibbles. */
+         lowered = nir_ior(b,
+                           nir_iand(b, nir_ushr(b, lowered, c4), c0f0f0f0f),
+                           nir_ishl(b, nir_iand(b, lowered, c0f0f0f0f), c4));
+
+         /* Swap bytes. */
+         lowered = nir_ior(b,
+                           nir_iand(b, nir_ushr(b, lowered, c8), c00ff00ff),
+                           nir_ishl(b, nir_iand(b, lowered, c00ff00ff), c8));
+
+         lowered = nir_ior(b,
+                           nir_ushr(b, lowered, c16),
+                           nir_ishl(b, lowered, c16));
+      }
+      break;
+
    case nir_op_imul_high:
    case nir_op_umul_high:
       if (b->shader->options->lower_mul_high) {
@@ -136,7 +180,8 @@ nir_lower_alu(nir_shader *shader)
 {
    bool progress = false;
 
-   if (!shader->options->lower_mul_high)
+   if (!shader->options->lower_bitfield_reverse &&
+       !shader->options->lower_mul_high)
       return false;
 
    nir_foreach_function(function, shader) {
