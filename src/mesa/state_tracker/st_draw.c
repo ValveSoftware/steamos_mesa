@@ -419,15 +419,7 @@ st_draw_quad(struct st_context *st,
 
    u_upload_unmap(st->pipe->stream_uploader);
 
-   /* At the time of writing, cso_get_aux_vertex_buffer_slot() always returns
-    * zero.  If that ever changes we need to audit the calls to that function
-    * and make sure the slot number is used consistently everywhere.
-    */
-   assert(cso_get_aux_vertex_buffer_slot(st->cso_context) == 0);
-
-   cso_set_vertex_buffers(st->cso_context,
-                          cso_get_aux_vertex_buffer_slot(st->cso_context),
-                          1, &vb);
+   cso_set_vertex_buffers(st->cso_context, 0, 1, &vb);
 
    if (num_instances > 1) {
       cso_draw_arrays_instanced(st->cso_context, PIPE_PRIM_TRIANGLE_FAN, 0, 4,
