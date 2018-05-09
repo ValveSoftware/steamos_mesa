@@ -2,7 +2,7 @@
 
 include $(top_srcdir)/src/gallium/Automake.inc
 
-EXTRA_DIST = SConscript
+EXTRA_DIST = SConscript meson.build
 
 AM_CFLAGS = \
 	$(GALLIUM_CFLAGS)
@@ -32,5 +32,3 @@ u_format_test_SOURCES = u_format_test.c
 u_format_compatible_test_SOURCES = u_format_compatible_test.c
 
 translate_test_SOURCES = translate_test.c
-
-EXTRA_DIST = meson.build
