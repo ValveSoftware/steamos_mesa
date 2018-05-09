@@ -134,7 +134,7 @@ brw_queryobj_get_results(struct gl_context *ctx,
 			 struct brw_query_object *query)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    int i;
    uint64_t *results;
@@ -261,7 +261,7 @@ brw_begin_query(struct gl_context *ctx, struct gl_query_object *q)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_query_object *query = (struct brw_query_object *)q;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    assert(devinfo->gen < 6);
 
@@ -333,7 +333,7 @@ brw_end_query(struct gl_context *ctx, struct gl_query_object *q)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_query_object *query = (struct brw_query_object *)q;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    assert(devinfo->gen < 6);
 
@@ -387,7 +387,8 @@ brw_end_query(struct gl_context *ctx, struct gl_query_object *q)
 static void brw_wait_query(struct gl_context *ctx, struct gl_query_object *q)
 {
    struct brw_query_object *query = (struct brw_query_object *)q;
-   const struct gen_device_info *devinfo = &brw_context(ctx)->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo =
+      &brw_context(ctx)->screen->devinfo;
 
    assert(devinfo->gen < 6);
 
@@ -405,7 +406,7 @@ static void brw_check_query(struct gl_context *ctx, struct gl_query_object *q)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_query_object *query = (struct brw_query_object *)q;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    assert(devinfo->gen < 6);
 
@@ -435,7 +436,7 @@ static void
 ensure_bo_has_space(struct gl_context *ctx, struct brw_query_object *query)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    assert(devinfo->gen < 6);
 
