@@ -1434,6 +1434,7 @@ emit_isp_disable(struct anv_cmd_buffer *cmd_buffer)
    }
    anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.IndirectStatePointersDisable = true;
+         pc.CommandStreamerStallEnable = true;
    }
 }
 

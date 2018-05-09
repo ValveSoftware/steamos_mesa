@@ -362,7 +362,8 @@ gen10_emit_isp_disable(struct brw_context *brw)
                          PIPE_CONTROL_CS_STALL,
                          NULL, 0, 0);
    brw_emit_pipe_control(brw,
-                         PIPE_CONTROL_ISP_DIS,
+                         PIPE_CONTROL_ISP_DIS |
+                         PIPE_CONTROL_CS_STALL,
                          NULL, 0, 0);
 
    brw->vs.base.push_constants_dirty = true;
