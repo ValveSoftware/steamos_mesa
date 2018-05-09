@@ -1034,6 +1034,7 @@ gen_device_info_update_from_topology(struct gen_device_info *devinfo,
       }
       n_subslices += devinfo->num_subslices[s];
    }
+   assert(n_subslices > 0);
 
    uint32_t eu_mask_len =
       topology->eu_stride * topology->max_subslices * topology->max_slices;
