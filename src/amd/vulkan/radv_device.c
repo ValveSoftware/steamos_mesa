@@ -428,10 +428,12 @@ radv_handle_per_app_options(struct radv_instance *instance,
 
 	if (!strcmp(name, "Talos - Linux - 32bit") ||
 	    !strcmp(name, "Talos - Linux - 64bit")) {
-		/* Force enable LLVM sisched for Talos because it looks safe
-		 * and it gives few more FPS.
-		 */
-		instance->perftest_flags |= RADV_PERFTEST_SISCHED;
+		if (!(instance->debug_flags & RADV_DEBUG_NO_SISCHED)) {
+			/* Force enable LLVM sisched for Talos because it looks
+			 * safe and it gives few more FPS.
+			 */
+			instance->perftest_flags |= RADV_PERFTEST_SISCHED;
+		}
 	}
 }
 
@@ -507,14 +509,6 @@ VkResult radv_CreateInstance(
 						   radv_perftest_options);
 
 	radv_handle_per_app_options(instance, pCreateInfo->pApplicationInfo);
-
-	if (instance->debug_flags & RADV_DEBUG_NO_SISCHED) {
-		/* Disable sisched when the user requests it, this is mostly
-		 * useful when the driver force-enable sisched for the given
-		 * application.
-		 */
-		instance->perftest_flags &= ~RADV_PERFTEST_SISCHED;
-	}
 
 	*pInstance = radv_instance_to_handle(instance);
 
