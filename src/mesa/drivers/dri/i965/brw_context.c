@@ -1098,7 +1098,6 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    struct brw_context *brw =
       (struct brw_context *) driContextPriv->driverPrivate;
    struct gl_context *ctx = &brw->ctx;
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    _mesa_meta_free(&brw->ctx);
 
