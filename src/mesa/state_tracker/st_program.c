@@ -37,6 +37,7 @@
 #include "main/mtypes.h"
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
+#include "program/prog_to_nir.h"
 #include "program/programopt.h"
 
 #include "compiler/nir/nir.h"
@@ -378,6 +379,28 @@ st_release_cp_variants(struct st_context *st, struct st_compute_program *stcp)
 }
 
 /**
+ * Translate ARB (asm) program to NIR
+ */
+static nir_shader *
+st_translate_prog_to_nir(struct st_context *st, struct gl_program *prog,
+                         gl_shader_stage stage)
+{
+   const struct gl_shader_compiler_options *options =
+      &st->ctx->Const.ShaderCompilerOptions[stage];
+
+   /* Translate to NIR */
+   nir_shader *nir = prog_to_nir(prog, options->NirOptions);
+   NIR_PASS_V(nir, nir_lower_regs_to_ssa); /* turn registers into SSA */
+   nir_validate_shader(nir);
+
+   /* Optimise NIR */
+   st_nir_opts(nir);
+   nir_validate_shader(nir);
+
+   return nir;
+}
+
+/**
  * Translate a vertex program.
  */
 bool
@@ -458,15 +481,28 @@ st_translate_vertex_program(struct st_context *st,
       /* No samplers are allowed in ARB_vp. */
    }
 
-   if (stvp->shader_program) {
-      struct gl_program *prog = stvp->shader_program->last_vert_prog;
-      if (prog) {
-         st_translate_stream_output_info2(prog->sh.LinkedTransformFeedback,
-                                          stvp->result_to_output,
-                                          &stvp->tgsi.stream_output);
+   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+      st->pipe->screen->get_shader_param(st->pipe->screen, PIPE_SHADER_VERTEX,
+                                         PIPE_SHADER_CAP_PREFERRED_IR);
+
+   if (preferred_ir == PIPE_SHADER_IR_NIR) {
+      if (stvp->shader_program) {
+         struct gl_program *prog = stvp->shader_program->last_vert_prog;
+         if (prog) {
+            st_translate_stream_output_info2(prog->sh.LinkedTransformFeedback,
+                                             stvp->result_to_output,
+                                             &stvp->tgsi.stream_output);
+         }
+
+         st_store_ir_in_disk_cache(st, &stvp->Base, true);
+      } else {
+         nir_shader *nir = st_translate_prog_to_nir(st, &stvp->Base,
+                                                    MESA_SHADER_VERTEX);
+
+         stvp->tgsi.type = PIPE_SHADER_IR_NIR;
+         stvp->tgsi.ir.nir = nir;
       }
 
-      st_store_ir_in_disk_cache(st, &stvp->Base, true);
       return true;
    }
 
@@ -704,6 +740,21 @@ st_translate_fragment_program(struct st_context *st,
             stfp->affected_states |= ST_NEW_FS_SAMPLER_VIEWS |
                                      ST_NEW_FS_SAMPLERS;
       }
+   }
+
+   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+      st->pipe->screen->get_shader_param(st->pipe->screen,
+                                         PIPE_SHADER_FRAGMENT,
+                                         PIPE_SHADER_CAP_PREFERRED_IR);
+
+   if (preferred_ir == PIPE_SHADER_IR_NIR) {
+      nir_shader *nir = st_translate_prog_to_nir(st, &stfp->Base,
+                                                 MESA_SHADER_FRAGMENT);
+
+      stfp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stfp->tgsi.ir.nir = nir;
+
+      return true;
    }
 
    /*
