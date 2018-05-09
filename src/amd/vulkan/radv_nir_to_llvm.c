@@ -2522,7 +2522,7 @@ ac_build_insert_new_block(struct radv_shader_context *ctx, const char *name)
 	/* get current basic block */
 	current_block = LLVMGetInsertBlock(ctx->ac.builder);
 
-	/* chqeck if there's another block after this one */
+	/* check if there's another block after this one */
 	next_block = LLVMGetNextBasicBlock(current_block);
 	if (next_block) {
 		/* insert the new block before the next block */
@@ -2647,7 +2647,7 @@ write_tess_factors(struct radv_shader_context *ctx)
 		outer[i] = LLVMGetUndef(ctx->ac.i32);
 	}
 
-	// LINES reverseal
+	// LINES reversal
 	if (ctx->options->key.tcs.primitive_mode == GL_ISOLINES) {
 		outer[0] = out[1] = ac_lds_load(&ctx->ac, lds_outer);
 		lds_outer = LLVMBuildAdd(ctx->ac.builder, lds_outer,
