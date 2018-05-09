@@ -2748,6 +2748,9 @@ const struct function gles31_functions_possible[] = {
    /* GL_OES_texture_storage_multisample_2d_array */
    { "glTexStorage3DMultisampleOES", 31, -1 },
 
+   /* GL_OES_texture_view */
+   { "glTextureViewOES", 31, -1 },
+
    /* GL_EXT_buffer_storage */
    { "glBufferStorageEXT", 31, -1 },
 
