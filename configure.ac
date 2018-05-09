@@ -119,6 +119,7 @@ dnl other CC/CXX flags related help
 AC_ARG_VAR([CXX11_CXXFLAGS], [Compiler flag to enable C++11 support (only needed if not
                               enabled by default and different  from -std=c++11)])
 AM_PROG_CC_C_O
+AC_PROG_GREP
 AC_PROG_NM
 AM_PROG_AS
 AX_CHECK_GNU_MAKE
