@@ -638,10 +638,6 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    struct intel_mipmap_tree *src_mt = src_irb->mt;
    struct intel_mipmap_tree *dst_mt = intel_image->mt;
 
-   /* There is support for only up to eight samples. */
-   if (src_mt->surf.samples > 8 || dst_mt->surf.samples > 8)
-      return false;
-
    if (_mesa_get_format_base_format(src_rb->Format) !=
        _mesa_get_format_base_format(dst_image->TexFormat)) {
       return false;
