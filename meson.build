@@ -121,23 +121,6 @@ with_dri_swrast = _drivers.contains('swrast')
 
 with_dri = _drivers.length() != 0 and _drivers != ['']
 
-with_gallium = false
-with_gallium_pl111 = false
-with_gallium_radeonsi = false
-with_gallium_r300 = false
-with_gallium_r600 = false
-with_gallium_nouveau = false
-with_gallium_freedreno = false
-with_gallium_softpipe = false
-with_gallium_vc4 = false
-with_gallium_v3d = false
-with_gallium_etnaviv = false
-with_gallium_imx = false
-with_gallium_tegra = false
-with_gallium_i915 = false
-with_gallium_svga = false
-with_gallium_virgl = false
-with_gallium_swr = false
 _drivers = get_option('gallium-drivers')
 if _drivers.contains('auto')
   if system_has_kms_drm
@@ -160,30 +143,30 @@ if _drivers.contains('auto')
     error('Unknown OS. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
 endif
-if _drivers != ['']
-  with_gallium_pl111 = _drivers.contains('pl111')
-  with_gallium_radeonsi = _drivers.contains('radeonsi')
-  with_gallium_r300 = _drivers.contains('r300')
-  with_gallium_r600 = _drivers.contains('r600')
-  with_gallium_nouveau = _drivers.contains('nouveau')
-  with_gallium_freedreno = _drivers.contains('freedreno')
-  with_gallium_softpipe = _drivers.contains('swrast')
-  with_gallium_v3d = _drivers.contains('v3d')
-  with_gallium_vc4 = _drivers.contains('vc4')
-  with_gallium_etnaviv = _drivers.contains('etnaviv')
-  with_gallium_imx = _drivers.contains('imx')
-  with_gallium_tegra = _drivers.contains('tegra')
-  with_gallium_i915 = _drivers.contains('i915')
-  with_gallium_svga = _drivers.contains('svga')
-  with_gallium_virgl = _drivers.contains('virgl')
-  with_gallium_swr = _drivers.contains('swr')
-  with_gallium = true
-  if system_has_kms_drm
-    _glx = get_option('glx')
-    _egl = get_option('egl')
-    if _glx == 'dri' or _egl == 'true' or (_glx == 'disabled' and _egl != 'false')
-      with_dri = true
-    endif
+with_gallium_pl111 = _drivers.contains('pl111')
+with_gallium_radeonsi = _drivers.contains('radeonsi')
+with_gallium_r300 = _drivers.contains('r300')
+with_gallium_r600 = _drivers.contains('r600')
+with_gallium_nouveau = _drivers.contains('nouveau')
+with_gallium_freedreno = _drivers.contains('freedreno')
+with_gallium_softpipe = _drivers.contains('swrast')
+with_gallium_vc4 = _drivers.contains('vc4')
+with_gallium_v3d = _drivers.contains('v3d')
+with_gallium_etnaviv = _drivers.contains('etnaviv')
+with_gallium_imx = _drivers.contains('imx')
+with_gallium_tegra = _drivers.contains('tegra')
+with_gallium_i915 = _drivers.contains('i915')
+with_gallium_svga = _drivers.contains('svga')
+with_gallium_virgl = _drivers.contains('virgl')
+with_gallium_swr = _drivers.contains('swr')
+
+with_gallium = _drivers.length() != 0 and _drivers != ['']
+
+if with_gallium and system_has_kms_drm
+  _glx = get_option('glx')
+  _egl = get_option('egl')
+  if _glx == 'dri' or _egl == 'true' or (_glx == 'disabled' and _egl != 'false')
+    with_dri = true
   endif
 endif
 
