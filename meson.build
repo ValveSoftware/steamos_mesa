@@ -93,13 +93,6 @@ endif
 
 system_has_kms_drm = ['openbsd', 'netbsd', 'freebsd', 'dragonfly', 'linux'].contains(host_machine.system())
 
-with_dri = false
-with_dri_i915 = false
-with_dri_i965 = false
-with_dri_r100 = false
-with_dri_r200 = false
-with_dri_nouveau = false
-with_dri_swrast = false
 _drivers = get_option('dri-drivers')
 if _drivers.contains('auto')
   if system_has_kms_drm
@@ -118,15 +111,15 @@ if _drivers.contains('auto')
     error('Unknown OS. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
 endif
-if _drivers != ['']
-  with_dri_i915 = _drivers.contains('i915')
-  with_dri_i965 = _drivers.contains('i965')
-  with_dri_r100 = _drivers.contains('r100')
-  with_dri_r200 = _drivers.contains('r200')
-  with_dri_nouveau = _drivers.contains('nouveau')
-  with_dri_swrast = _drivers.contains('swrast')
-  with_dri = true
-endif
+
+with_dri_i915 = _drivers.contains('i915')
+with_dri_i965 = _drivers.contains('i965')
+with_dri_r100 = _drivers.contains('r100')
+with_dri_r200 = _drivers.contains('r200')
+with_dri_nouveau = _drivers.contains('nouveau')
+with_dri_swrast = _drivers.contains('swrast')
+
+with_dri = _drivers.length() != 0 and _drivers != ['']
 
 with_gallium = false
 with_gallium_pl111 = false
