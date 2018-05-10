@@ -221,12 +221,6 @@ else
   with_dri_platform = 'none'
 endif
 
-with_platform_android = false
-with_platform_wayland = false
-with_platform_x11 = false
-with_platform_drm = false
-with_platform_surfaceless = false
-egl_native_platform = ''
 _platforms = get_option('platforms')
 if _platforms.contains('auto')
   if system_has_kms_drm
@@ -239,13 +233,17 @@ if _platforms.contains('auto')
     error('Unknown OS. Please pass -Dplatforms to set platforms. Patches gladly accepted to fix this.')
   endif
 endif
-if _platforms != ['']
-  with_platform_android = _platforms.contains('android')
-  with_platform_x11 = _platforms.contains('x11')
-  with_platform_wayland = _platforms.contains('wayland')
-  with_platform_drm = _platforms.contains('drm')
-  with_platform_haiku = _platforms.contains('haiku')
-  with_platform_surfaceless = _platforms.contains('surfaceless')
+
+with_platform_android = _platforms.contains('android')
+with_platform_x11 = _platforms.contains('x11')
+with_platform_wayland = _platforms.contains('wayland')
+with_platform_drm = _platforms.contains('drm')
+with_platform_haiku = _platforms.contains('haiku')
+with_platform_surfaceless = _platforms.contains('surfaceless')
+
+with_platforms = false
+if _platforms.length() != 0 and _platforms != ['']
+  with_platforms = true
   egl_native_platform = _platforms[0]
 endif
 
@@ -288,13 +286,13 @@ endif
 
 _egl = get_option('egl')
 if _egl == 'auto'
-  with_egl = with_dri and with_shared_glapi and egl_native_platform != ''
+  with_egl = with_dri and with_shared_glapi and with_platforms
 elif _egl == 'true'
   if not with_dri
     error('EGL requires dri')
   elif not with_shared_glapi
     error('EGL requires shared-glapi')
-  elif egl_native_platform == ''
+  elif with_platforms
     error('No platforms specified, consider -Dplatforms=drm,x11 at least')
   elif not ['disabled', 'dri'].contains(with_glx)
     error('EGL requires dri, but a GLX is being built without dri')
