@@ -100,13 +100,13 @@ if _drivers.contains('auto')
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = ['i915', 'i965', 'r100', 'r200', 'nouveau']
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
-      _drivers = ['']
+      _drivers = []
     else
       error('Unknown architecture. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
   elif ['darwin', 'windows', 'cygwin', 'haiku'].contains(host_machine.system())
     # only swrast would make sense here, but gallium swrast is a much better default
-    _drivers = ['']
+    _drivers = []
   else
     error('Unknown OS. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
@@ -180,7 +180,7 @@ if _vulkan_drivers.contains('auto')
     endif
   elif ['darwin', 'windows', 'cygwin', 'haiku'].contains(host_machine.system())
     # No vulkan driver supports windows or macOS currently
-    _vulkan_drivers = ['']
+    _vulkan_drivers = []
   else
     error('Unknown OS. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
