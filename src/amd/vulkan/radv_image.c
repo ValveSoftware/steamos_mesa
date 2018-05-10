@@ -110,12 +110,19 @@ radv_use_dcc_for_image(struct radv_device *device,
 {
 	bool dcc_compatible_formats;
 	bool blendable;
+	bool shareable = vk_find_struct_const(pCreateInfo->pNext,
+	                                      EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHR) != NULL;
 
 	/* DCC (Delta Color Compression) is only available for GFX8+. */
 	if (device->physical_device->rad_info.chip_class < VI)
 		return false;
 
 	if (device->instance->debug_flags & RADV_DEBUG_NO_DCC)
+		return false;
+
+	/* FIXME: DCC is broken for shareable images starting with GFX9 */
+	if (device->physical_device->rad_info.chip_class >= GFX9 &&
+	    shareable)
 		return false;
 
 	/* TODO: Enable DCC for storage images. */
