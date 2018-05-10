@@ -170,9 +170,6 @@ if with_gallium and system_has_kms_drm
   endif
 endif
 
-with_intel_vk = false
-with_amd_vk = false
-with_any_vk = false
 _vulkan_drivers = get_option('vulkan-drivers')
 if _vulkan_drivers.contains('auto')
   if system_has_kms_drm
@@ -188,11 +185,10 @@ if _vulkan_drivers.contains('auto')
     error('Unknown OS. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
 endif
-if _vulkan_drivers != ['']
-  with_intel_vk = _vulkan_drivers.contains('intel')
-  with_amd_vk = _vulkan_drivers.contains('amd')
-  with_any_vk = true
-endif
+
+with_intel_vk = _vulkan_drivers.contains('intel')
+with_amd_vk = _vulkan_drivers.contains('amd')
+with_any_vk = _vulkan_drivers.length() != 0 and _vulkan_drivers != ['']
 
 if with_dri_swrast and (with_gallium_softpipe or with_gallium_swr)
   error('Only one swrast provider can be built')
