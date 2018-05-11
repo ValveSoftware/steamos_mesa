@@ -163,7 +163,8 @@ intelDrawPixels(struct gl_context * ctx,
       return;
    }
 
-   if (_mesa_is_bufferobj(unpack->BufferObj)) {
+   if (brw->screen->devinfo.gen < 6 &&
+       _mesa_is_bufferobj(unpack->BufferObj)) {
       if (do_blit_drawpixels(ctx, x, y, width, height, format, type, unpack,
 			     pixels)) {
 	 return;
