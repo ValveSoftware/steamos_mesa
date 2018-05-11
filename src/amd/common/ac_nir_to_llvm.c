@@ -1134,10 +1134,11 @@ get_buffer_size(struct ac_nir_context *ctx, LLVMValueRef descriptor, bool in_ele
 }
 
 static LLVMValueRef lower_gather4_integer(struct ac_llvm_context *ctx,
+					  nir_variable *var,
 					  struct ac_image_args *args,
 					  const nir_tex_instr *instr)
 {
-	enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
+	enum glsl_base_type stype = glsl_get_sampler_result_type(var->type);
 	LLVMValueRef half_texel[2];
 	LLVMValueRef compare_cube_wa = NULL;
 	LLVMValueRef result;
@@ -1244,6 +1245,22 @@ static LLVMValueRef lower_gather4_integer(struct ac_llvm_context *ctx,
 	return result;
 }
 
+static nir_deref_instr *get_tex_texture_deref(const nir_tex_instr *instr)
+{
+	nir_deref_instr *texture_deref_instr = NULL;
+
+	for (unsigned i = 0; i < instr->num_srcs; i++) {
+		switch (instr->src[i].src_type) {
+		case nir_tex_src_texture_deref:
+			texture_deref_instr = nir_src_as_deref(instr->src[i].src);
+			break;
+		default:
+			break;
+		}
+	}
+	return texture_deref_instr;
+}
+
 static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 					const nir_tex_instr *instr,
 					struct ac_image_args *args)
@@ -1304,9 +1321,11 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 	}
 
 	if (instr->op == nir_texop_tg4 && ctx->ac.chip_class <= VI) {
-		enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
+		nir_deref_instr *texture_deref_instr = get_tex_texture_deref(instr);
+		nir_variable *var = texture_deref_instr ? nir_deref_instr_get_variable(texture_deref_instr) : instr->texture->var;
+		enum glsl_base_type stype = glsl_get_sampler_result_type(var->type);
 		if (stype == GLSL_TYPE_UINT || stype == GLSL_TYPE_INT) {
-			return lower_gather4_integer(&ctx->ac, args, instr);
+			return lower_gather4_integer(&ctx->ac, var, args, instr);
 		}
 	}
 
