@@ -91,11 +91,11 @@ build_dcc_decompress_compute_shader(struct radv_device *dev)
 	nir_builder_instr_insert(&b, &bar->instr);
 
 	nir_ssa_def *outval = &tex->dest.ssa;
-	nir_intrinsic_instr *store = nir_intrinsic_instr_create(b.shader, nir_intrinsic_image_var_store);
-	store->src[0] = nir_src_for_ssa(global_id);
-	store->src[1] = nir_src_for_ssa(nir_ssa_undef(&b, 1, 32));
-	store->src[2] = nir_src_for_ssa(outval);
-	store->variables[0] = nir_deref_var_create(store, output_img);
+	nir_intrinsic_instr *store = nir_intrinsic_instr_create(b.shader, nir_intrinsic_image_deref_store);
+	store->src[0] = nir_src_for_ssa(&nir_build_deref_var(&b, output_img)->dest.ssa);
+	store->src[1] = nir_src_for_ssa(global_id);
+	store->src[2] = nir_src_for_ssa(nir_ssa_undef(&b, 1, 32));
+	store->src[3] = nir_src_for_ssa(outval);
 
 	nir_builder_instr_insert(&b, &store->instr);
 	return b.shader;
