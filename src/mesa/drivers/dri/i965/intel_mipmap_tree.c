@@ -1567,6 +1567,7 @@ intel_miptree_copy_slice(struct brw_context *brw,
                          unsigned dst_level, unsigned dst_layer)
 
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    mesa_format format = src_mt->format;
    unsigned width = minify(src_mt->surf.phys_level0_sa.width,
                            src_level - src_mt->first_level);
@@ -1579,6 +1580,32 @@ intel_miptree_copy_slice(struct brw_context *brw,
    assert(_mesa_get_srgb_format_linear(src_mt->format) ==
           _mesa_get_srgb_format_linear(dst_mt->format));
 
+   DBG("validate blit mt %s %p %d,%d -> mt %s %p %d,%d (%dx%d)\n",
+       _mesa_get_format_name(src_mt->format),
+       src_mt, src_level, src_layer,
+       _mesa_get_format_name(dst_mt->format),
+       dst_mt, dst_level, dst_layer,
+       width, height);
+
+   if (devinfo->gen >= 6) {
+      /* On gen6 and above, we just use blorp.  It's faster than the blitter
+       * and can handle everything without software fallbacks.
+       */
+      brw_blorp_copy_miptrees(brw,
+                              src_mt, src_level, src_layer,
+                              dst_mt, dst_level, dst_layer,
+                              0, 0, 0, 0, width, height);
+
+      if (src_mt->stencil_mt) {
+         assert(dst_mt->stencil_mt);
+         brw_blorp_copy_miptrees(brw,
+                                 src_mt->stencil_mt, src_level, src_layer,
+                                 dst_mt->stencil_mt, dst_level, dst_layer,
+                                 0, 0, 0, 0, width, height);
+      }
+      return;
+   }
+
    if (dst_mt->compressed) {
       unsigned int i, j;
       _mesa_get_format_block_size(dst_mt->format, &i, &j);
@@ -1586,17 +1613,8 @@ intel_miptree_copy_slice(struct brw_context *brw,
       width = ALIGN_NPOT(width, i) / i;
    }
 
-   /* If it's a packed depth/stencil buffer with separate stencil, the blit
-    * below won't apply since we can't do the depth's Y tiling or the
-    * stencil's W tiling in the blitter.
-    */
-   if (src_mt->stencil_mt) {
-      intel_miptree_copy_slice_sw(brw,
-                                  src_mt, src_level, src_layer,
-                                  dst_mt, dst_level, dst_layer,
-                                  width, height);
-      return;
-   }
+   /* Gen4-5 doesn't support separate stencil */
+   assert(!src_mt->stencil_mt);
 
    uint32_t dst_x, dst_y, src_x, src_y;
    intel_miptree_get_image_offset(dst_mt, dst_level, dst_layer,
