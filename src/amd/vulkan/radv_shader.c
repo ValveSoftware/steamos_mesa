@@ -371,6 +371,7 @@ radv_fill_shader_variant(struct radv_device *device,
 			 gl_shader_stage stage)
 {
 	bool scratch_enabled = variant->config.scratch_bytes_per_wave > 0;
+	struct radv_shader_info *info = &variant->info.info;
 	unsigned vgpr_comp_cnt = 0;
 
 	if (scratch_enabled && !device->llvm_supports_spill)
@@ -378,9 +379,9 @@ radv_fill_shader_variant(struct radv_device *device,
 
 	variant->code_size = binary->code_size;
 	variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
-			S_00B12C_SCRATCH_EN(scratch_enabled);
+			 S_00B12C_SCRATCH_EN(scratch_enabled);
 
-	variant->rsrc1 =  S_00B848_VGPRS((variant->config.num_vgprs - 1) / 4) |
+	variant->rsrc1 = S_00B848_VGPRS((variant->config.num_vgprs - 1) / 4) |
 		S_00B848_SGPRS((variant->config.num_sgprs - 1) / 8) |
 		S_00B848_DX10_CLAMP(1) |
 		S_00B848_FLOAT_MODE(variant->config.float_mode);
@@ -391,10 +392,11 @@ radv_fill_shader_variant(struct radv_device *device,
 		variant->rsrc2 |= S_00B12C_OC_LDS_EN(1);
 		break;
 	case MESA_SHADER_TESS_CTRL:
-		if (device->physical_device->rad_info.chip_class >= GFX9)
+		if (device->physical_device->rad_info.chip_class >= GFX9) {
 			vgpr_comp_cnt = variant->info.vs.vgpr_comp_cnt;
-		else
+		} else {
 			variant->rsrc2 |= S_00B12C_OC_LDS_EN(1);
+		}
 		break;
 	case MESA_SHADER_VERTEX:
 	case MESA_SHADER_GEOMETRY:
@@ -402,8 +404,7 @@ radv_fill_shader_variant(struct radv_device *device,
 		break;
 	case MESA_SHADER_FRAGMENT:
 		break;
-	case MESA_SHADER_COMPUTE: {
-		struct radv_shader_info *info = &variant->info.info;
+	case MESA_SHADER_COMPUTE:
 		variant->rsrc2 |=
 			S_00B84C_TGID_X_EN(info->cs.uses_block_id[0]) |
 			S_00B84C_TGID_Y_EN(info->cs.uses_block_id[1]) |
@@ -413,7 +414,6 @@ radv_fill_shader_variant(struct radv_device *device,
 			S_00B84C_TG_SIZE_EN(info->cs.uses_local_invocation_idx) |
 			S_00B84C_LDS_SIZE(variant->config.lds_size);
 		break;
-	}
 	default:
 		unreachable("unsupported shader type");
 		break;
@@ -421,7 +421,6 @@ radv_fill_shader_variant(struct radv_device *device,
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 &&
 	    stage == MESA_SHADER_GEOMETRY) {
-		struct radv_shader_info *info = &variant->info.info;
 		unsigned es_type = variant->info.gs.es_type;
 		unsigned gs_vgpr_comp_cnt, es_vgpr_comp_cnt;
 
@@ -436,23 +435,25 @@ radv_fill_shader_variant(struct radv_device *device,
 		/* If offsets 4, 5 are used, GS_VGPR_COMP_CNT is ignored and
 		 * VGPR[0:4] are always loaded.
 		 */
-		if (info->uses_invocation_id)
+		if (info->uses_invocation_id) {
 			gs_vgpr_comp_cnt = 3; /* VGPR3 contains InvocationID. */
-		else if (info->uses_prim_id)
+		} else if (info->uses_prim_id) {
 			gs_vgpr_comp_cnt = 2; /* VGPR2 contains PrimitiveID. */
-		else if (variant->info.gs.vertices_in >= 3)
+		} else if (variant->info.gs.vertices_in >= 3) {
 			gs_vgpr_comp_cnt = 1; /* VGPR1 contains offsets 2, 3 */
-		else
+		} else {
 			gs_vgpr_comp_cnt = 0; /* VGPR0 contains offsets 0, 1 */
+		}
 
 		variant->rsrc1 |= S_00B228_GS_VGPR_COMP_CNT(gs_vgpr_comp_cnt);
 		variant->rsrc2 |= S_00B22C_ES_VGPR_COMP_CNT(es_vgpr_comp_cnt) |
 		                  S_00B22C_OC_LDS_EN(es_type == MESA_SHADER_TESS_EVAL);
 	} else if (device->physical_device->rad_info.chip_class >= GFX9 &&
-	    stage == MESA_SHADER_TESS_CTRL)
+		   stage == MESA_SHADER_TESS_CTRL) {
 		variant->rsrc1 |= S_00B428_LS_VGPR_COMP_CNT(vgpr_comp_cnt);
-	else
+	} else {
 		variant->rsrc1 |= S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt);
+	}
 
 	void *ptr = radv_alloc_shader_memory(device, variant);
 	memcpy(ptr, binary->code, binary->code_size);
