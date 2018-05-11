@@ -569,7 +569,7 @@ qbw_done:
    mov $r2 0x831
    send (extrinsrt 0x0 $r2 0 12 11) /* sends 0x418800 */
    /* Subpixel precision */
-   mov $r2 (extrinsrt 0x0 $r1 0 3 0)
+   mov $r2 (extrinsrt 0x0 $r1 0 4 0)
    mov $r2 (extrinsrt $r2 $r1 4 4 8)
    maddr 0x8287 /* SUBPIXEL_PRECISION[0] (incrementing by 8 methods) */
    mov $r3 16 /* loop counter */
