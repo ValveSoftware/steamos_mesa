@@ -2562,7 +2562,7 @@ blorp_copy(struct blorp_batch *batch,
                                               params.src.view.format));
       uint32_t packed[4];
       isl_color_value_pack(&params.src.clear_color,
-                           params.src.surf.format, packed);
+                           linear_src_format, packed);
       isl_color_value_unpack(&params.src.clear_color,
                              params.src.view.format, packed);
    }
@@ -2576,7 +2576,7 @@ blorp_copy(struct blorp_batch *batch,
                                               params.dst.view.format));
       uint32_t packed[4];
       isl_color_value_pack(&params.dst.clear_color,
-                           params.dst.surf.format, packed);
+                           linear_dst_format, packed);
       isl_color_value_unpack(&params.dst.clear_color,
                              params.dst.view.format, packed);
    }
