@@ -3053,6 +3053,9 @@ intel_miptree_map_gtt(struct brw_context *brw,
    y /= bh;
    x /= bw;
 
+   intel_miptree_access_raw(brw, mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
+
    base = intel_miptree_map_raw(brw, mt, map->mode);
 
    if (base == NULL)
@@ -3191,6 +3194,8 @@ intel_miptree_map_movntdqa(struct brw_context *brw,
    assert(map->mode & GL_MAP_READ_BIT);
    assert(!(map->mode & GL_MAP_WRITE_BIT));
 
+   intel_miptree_access_raw(brw, mt, level, slice, false);
+
    DBG("%s: %d,%d %dx%d from mt %p (%s) %d,%d = %p/%d\n", __func__,
        map->x, map->y, map->w, map->h,
        mt, _mesa_get_format_name(mt->format),
@@ -3285,6 +3290,9 @@ intel_miptree_map_s8(struct brw_context *brw,
    if (!map->buffer)
       return;
 
+   intel_miptree_access_raw(brw, mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
+
    /* One of either READ_BIT or WRITE_BIT or both is set.  READ_BIT implies no
     * INVALIDATE_RANGE_BIT.  WRITE_BIT needs the original values read in unless
     * invalidate is set, since we'll be writing the whole rectangle from our
@@ -3366,6 +3374,8 @@ intel_miptree_map_etc(struct brw_context *brw,
 
    assert(map->mode & GL_MAP_WRITE_BIT);
    assert(map->mode & GL_MAP_INVALIDATE_RANGE_BIT);
+
+   intel_miptree_access_raw(brw, mt, level, slice, true);
 
    map->stride = _mesa_format_row_stride(mt->etc_format, map->w);
    map->buffer = malloc(_mesa_format_image_size(mt->etc_format,
@@ -3459,6 +3469,9 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
    map->buffer = map->ptr = malloc(map->stride * map->h);
    if (!map->buffer)
       return;
+
+   intel_miptree_access_raw(brw, mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
 
    /* One of either READ_BIT or WRITE_BIT or both is set.  READ_BIT implies no
     * INVALIDATE_RANGE_BIT.  WRITE_BIT needs the original values read in unless
@@ -3640,9 +3653,6 @@ intel_miptree_map(struct brw_context *brw,
       *out_stride = 0;
       return;
    }
-
-   intel_miptree_access_raw(brw, mt, level, slice,
-                            map->mode & GL_MAP_WRITE_BIT);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       intel_miptree_map_s8(brw, mt, map, level, slice);
