@@ -32,6 +32,30 @@
 #include "compiler/nir/nir.h"
 #include "compiler/nir_types.h"
 
+static nir_variable* tex_get_texture_var(nir_tex_instr *instr)
+{
+	if (instr->texture)
+		return instr->texture->var;
+
+	for (unsigned i = 0; i < instr->num_srcs; i++) {
+		switch (instr->src[i].src_type) {
+		case nir_tex_src_texture_deref:
+			return nir_deref_instr_get_variable(nir_src_as_deref(instr->src[i].src));
+		default:
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+static nir_variable* intrinsic_get_var(nir_intrinsic_instr *instr)
+{
+	if (instr->variables[0])
+		return instr->variables[0]->var;
+
+	return nir_deref_instr_get_variable(nir_src_as_deref(instr->src[0]));
+}
 
 static void scan_instruction(struct tgsi_shader_info *info,
 			     nir_instr *instr)
@@ -53,12 +77,13 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		}
 	} else if (instr->type == nir_instr_type_tex) {
 		nir_tex_instr *tex = nir_instr_as_tex(instr);
+		nir_variable *texture = tex_get_texture_var(tex);
 
-		if (!tex->texture) {
+		if (!texture) {
 			info->samplers_declared |=
 				u_bit_consecutive(tex->sampler_index, 1);
 		} else {
-			if (tex->texture->var->data.bindless)
+			if (texture->data.bindless)
 				info->uses_bindless_samplers = true;
 		}
 
@@ -126,8 +151,11 @@ static void scan_instruction(struct tgsi_shader_info *info,
 			break;
 		case nir_intrinsic_image_var_load:
 		case nir_intrinsic_image_var_size:
-		case nir_intrinsic_image_var_samples: {
-			nir_variable *var = intr->variables[0]->var;
+		case nir_intrinsic_image_var_samples:
+		case nir_intrinsic_image_deref_load:
+		case nir_intrinsic_image_deref_size:
+		case nir_intrinsic_image_deref_samples: {
+			nir_variable *var = intrinsic_get_var(intr);
 			if (var->data.bindless)
 				info->uses_bindless_images = true;
 
@@ -141,8 +169,17 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_image_var_atomic_or:
 		case nir_intrinsic_image_var_atomic_xor:
 		case nir_intrinsic_image_var_atomic_exchange:
-		case nir_intrinsic_image_var_atomic_comp_swap: {
-			nir_variable *var = intr->variables[0]->var;
+		case nir_intrinsic_image_var_atomic_comp_swap:
+		case nir_intrinsic_image_deref_store:
+		case nir_intrinsic_image_deref_atomic_add:
+		case nir_intrinsic_image_deref_atomic_min:
+		case nir_intrinsic_image_deref_atomic_max:
+		case nir_intrinsic_image_deref_atomic_and:
+		case nir_intrinsic_image_deref_atomic_or:
+		case nir_intrinsic_image_deref_atomic_xor:
+		case nir_intrinsic_image_deref_atomic_exchange:
+		case nir_intrinsic_image_deref_atomic_comp_swap: {
+			nir_variable *var = intrinsic_get_var(intr);
 			if (var->data.bindless)
 				info->uses_bindless_images = true;
 
@@ -161,8 +198,9 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_ssbo_atomic_comp_swap:
 			info->writes_memory = true;
 			break;
-		case nir_intrinsic_load_var: {
-			nir_variable *var = intr->variables[0]->var;
+		case nir_intrinsic_load_var:
+		case nir_intrinsic_load_deref: {
+			nir_variable *var = intrinsic_get_var(intr);
 			nir_variable_mode mode = var->data.mode;
 			enum glsl_base_type base_type =
 				glsl_get_base_type(glsl_without_array(var->type));
@@ -197,23 +235,29 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		}
 		case nir_intrinsic_interp_var_at_centroid:
 		case nir_intrinsic_interp_var_at_sample:
-		case nir_intrinsic_interp_var_at_offset: {
-			enum glsl_interp_mode interp =
-				intr->variables[0]->var->data.interpolation;
+		case nir_intrinsic_interp_var_at_offset:
+		case nir_intrinsic_interp_deref_at_centroid:
+		case nir_intrinsic_interp_deref_at_sample:
+		case nir_intrinsic_interp_deref_at_offset: {
+			enum glsl_interp_mode interp = intrinsic_get_var(intr)->data.interpolation;
 			switch (interp) {
 			case INTERP_MODE_SMOOTH:
 			case INTERP_MODE_NONE:
-				if (intr->intrinsic == nir_intrinsic_interp_var_at_centroid)
+				if (intr->intrinsic == nir_intrinsic_interp_var_at_centroid ||
+				    intr->intrinsic == nir_intrinsic_interp_deref_at_centroid)
 					info->uses_persp_opcode_interp_centroid = true;
-				else if (intr->intrinsic == nir_intrinsic_interp_var_at_sample)
+				else if (intr->intrinsic == nir_intrinsic_interp_var_at_sample ||
+				         intr->intrinsic == nir_intrinsic_interp_deref_at_sample)
 					info->uses_persp_opcode_interp_sample = true;
 				else
 					info->uses_persp_opcode_interp_offset = true;
 				break;
 			case INTERP_MODE_NOPERSPECTIVE:
-				if (intr->intrinsic == nir_intrinsic_interp_var_at_centroid)
+				if (intr->intrinsic == nir_intrinsic_interp_var_at_centroid ||
+				    intr->intrinsic == nir_intrinsic_interp_deref_at_centroid)
 					info->uses_linear_opcode_interp_centroid = true;
-				else if (intr->intrinsic == nir_intrinsic_interp_var_at_sample)
+				else if (intr->intrinsic == nir_intrinsic_interp_var_at_sample ||
+				         intr->intrinsic == nir_intrinsic_interp_deref_at_sample)
 					info->uses_linear_opcode_interp_sample = true;
 				else
 					info->uses_linear_opcode_interp_offset = true;
