@@ -776,17 +776,11 @@ submit_batch(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
        *   To avoid stalling, execobject.offset should match the current
        *   address of that object within the active context.
        */
-      int flags = I915_EXEC_NO_RELOC;
+      assert(devinfo->gen < 6 || batch->ring == RENDER_RING);
+      int flags = I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
 
-      if (devinfo->gen >= 6 && batch->ring == BLT_RING) {
-         flags |= I915_EXEC_BLT;
-      } else {
-         flags |= I915_EXEC_RENDER;
-      }
       if (batch->needs_sol_reset)
          flags |= I915_EXEC_GEN7_SOL_RESET;
-
-      uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
 
       /* Set statebuffer relocations */
       const unsigned state_index = batch->state.bo->index;
@@ -817,7 +811,7 @@ submit_batch(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
          batch->validation_list[index] = tmp;
       }
 
-      ret = execbuffer(dri_screen->fd, batch, hw_ctx,
+      ret = execbuffer(dri_screen->fd, batch, brw->hw_ctx,
                        4 * USED_BATCH(*batch),
                        in_fence_fd, out_fence_fd, flags);
 
