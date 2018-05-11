@@ -1,5 +1,6 @@
 # Generated source files
 /anv_extensions.c
+/anv_extensions.h
 /anv_entrypoints.c
 /anv_entrypoints.h
 /anv_timestamp.h
