@@ -706,62 +706,6 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
    return true;
 }
 
-/* We don't have a memmove-type blit like some other hardware, so we'll do a
- * rectangular blit covering a large space, then emit 1-scanline blit at the
- * end to cover the last if we need.
- */
-void
-intel_emit_linear_blit(struct brw_context *brw,
-		       struct brw_bo *dst_bo,
-		       unsigned int dst_offset,
-		       struct brw_bo *src_bo,
-		       unsigned int src_offset,
-		       unsigned int size)
-{
-   struct gl_context *ctx = &brw->ctx;
-   GLuint pitch, height;
-   int16_t src_x, dst_x;
-   bool ok;
-
-   do {
-      /* The pitch given to the GPU must be DWORD aligned, and
-       * we want width to match pitch. Max width is (1 << 15 - 1),
-       * rounding that down to the nearest DWORD is 1 << 15 - 4
-       */
-      pitch = ROUND_DOWN_TO(MIN2(size, (1 << 15) - 64), 4);
-      height = (size < pitch || pitch == 0) ? 1 : size / pitch;
-
-      src_x = src_offset % 64;
-      dst_x = dst_offset % 64;
-      pitch = ALIGN(MIN2(size, (1 << 15) - 64), 4);
-      assert(src_x + pitch < 1 << 15);
-      assert(dst_x + pitch < 1 << 15);
-
-      ok = emit_copy_blit(brw, 1,
-                          pitch, src_bo, src_offset - src_x,
-                          ISL_TILING_LINEAR,
-                          pitch, dst_bo, dst_offset - dst_x,
-                          ISL_TILING_LINEAR,
-                          src_x, 0, /* src x/y */
-                          dst_x, 0, /* dst x/y */
-                          MIN2(size, pitch), height, /* w, h */
-                          COLOR_LOGICOP_COPY);
-      if (!ok) {
-         _mesa_problem(ctx, "Failed to linear blit %dx%d\n",
-                       MIN2(size, pitch), height);
-         return;
-      }
-
-      pitch *= height;
-      if (size <= pitch)
-         return;
-
-      src_offset += pitch;
-      dst_offset += pitch;
-      size -= pitch;
-   } while (1);
-}
-
 /**
  * Used to initialize the alpha value of an ARGB8888 miptree after copying
  * into it from an XRGB8888 source.
