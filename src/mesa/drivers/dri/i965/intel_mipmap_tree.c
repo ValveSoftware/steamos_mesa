@@ -3087,16 +3087,23 @@ intel_miptree_unmap_blit(struct brw_context *brw,
 			 unsigned int level,
 			 unsigned int slice)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
    intel_miptree_unmap_raw(map->linear_mt);
 
    if (map->mode & GL_MAP_WRITE_BIT) {
-      bool ok = intel_miptree_copy(brw,
-                                   map->linear_mt, 0, 0, 0, 0,
-                                   mt, level, slice, map->x, map->y,
-                                   map->w, map->h);
-      WARN_ONCE(!ok, "Failed to blit from linear temporary mapping");
+      if (devinfo->gen >= 6) {
+         brw_blorp_copy_miptrees(brw, map->linear_mt, 0, 0,
+                                 mt, level, slice,
+                                 0, 0, map->x, map->y, map->w, map->h);
+      } else {
+         bool ok = intel_miptree_copy(brw,
+                                      map->linear_mt, 0, 0, 0, 0,
+                                      mt, level, slice, map->x, map->y,
+                                      map->w, map->h);
+         WARN_ONCE(!ok, "Failed to blit from linear temporary mapping");
+      }
    }
 
    intel_miptree_release(&map->linear_mt);
@@ -3108,6 +3115,7 @@ intel_miptree_map_blit(struct brw_context *brw,
 		       struct intel_miptree_map *map,
 		       unsigned int level, unsigned int slice)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    map->linear_mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
                                          /* first_level */ 0,
                                          /* last_level */ 0,
@@ -3127,12 +3135,18 @@ intel_miptree_map_blit(struct brw_context *brw,
     * temporary buffer back out.
     */
    if (!(map->mode & GL_MAP_INVALIDATE_RANGE_BIT)) {
-      if (!intel_miptree_copy(brw,
-                              mt, level, slice, map->x, map->y,
-                              map->linear_mt, 0, 0, 0, 0,
-                              map->w, map->h)) {
-         fprintf(stderr, "Failed to blit\n");
-         goto fail;
+      if (devinfo->gen >= 6) {
+         brw_blorp_copy_miptrees(brw, mt, level, slice,
+                                 map->linear_mt, 0, 0,
+                                 map->x, map->y, 0, 0, map->w, map->h);
+      } else {
+         if (!intel_miptree_copy(brw,
+                                 mt, level, slice, map->x, map->y,
+                                 map->linear_mt, 0, 0, 0, 0,
+                                 map->w, map->h)) {
+            fprintf(stderr, "Failed to blit\n");
+            goto fail;
+         }
       }
    }
 
