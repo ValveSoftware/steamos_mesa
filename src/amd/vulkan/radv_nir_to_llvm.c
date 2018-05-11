@@ -124,6 +124,98 @@ radv_shader_context_from_abi(struct ac_shader_abi *abi)
 	return container_of(abi, ctx, abi);
 }
 
+struct ac_build_if_state
+{
+	struct radv_shader_context *ctx;
+	LLVMValueRef condition;
+	LLVMBasicBlockRef entry_block;
+	LLVMBasicBlockRef true_block;
+	LLVMBasicBlockRef false_block;
+	LLVMBasicBlockRef merge_block;
+};
+
+static LLVMBasicBlockRef
+ac_build_insert_new_block(struct radv_shader_context *ctx, const char *name)
+{
+	LLVMBasicBlockRef current_block;
+	LLVMBasicBlockRef next_block;
+	LLVMBasicBlockRef new_block;
+
+	/* get current basic block */
+	current_block = LLVMGetInsertBlock(ctx->ac.builder);
+
+	/* chqeck if there's another block after this one */
+	next_block = LLVMGetNextBasicBlock(current_block);
+	if (next_block) {
+		/* insert the new block before the next block */
+		new_block = LLVMInsertBasicBlockInContext(ctx->context, next_block, name);
+	}
+	else {
+		/* append new block after current block */
+		LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
+		new_block = LLVMAppendBasicBlockInContext(ctx->context, function, name);
+	}
+	return new_block;
+}
+
+static void
+ac_nir_build_if(struct ac_build_if_state *ifthen,
+		struct radv_shader_context *ctx,
+		LLVMValueRef condition)
+{
+	LLVMBasicBlockRef block = LLVMGetInsertBlock(ctx->ac.builder);
+
+	memset(ifthen, 0, sizeof *ifthen);
+	ifthen->ctx = ctx;
+	ifthen->condition = condition;
+	ifthen->entry_block = block;
+
+	/* create endif/merge basic block for the phi functions */
+	ifthen->merge_block = ac_build_insert_new_block(ctx, "endif-block");
+
+	/* create/insert true_block before merge_block */
+	ifthen->true_block =
+		LLVMInsertBasicBlockInContext(ctx->context,
+					      ifthen->merge_block,
+					      "if-true-block");
+
+	/* successive code goes into the true block */
+	LLVMPositionBuilderAtEnd(ctx->ac.builder, ifthen->true_block);
+}
+
+/**
+ * End a conditional.
+ */
+static void
+ac_nir_build_endif(struct ac_build_if_state *ifthen)
+{
+	LLVMBuilderRef builder = ifthen->ctx->ac.builder;
+
+	/* Insert branch to the merge block from current block */
+	LLVMBuildBr(builder, ifthen->merge_block);
+
+	/*
+	 * Now patch in the various branch instructions.
+	 */
+
+	/* Insert the conditional branch instruction at the end of entry_block */
+	LLVMPositionBuilderAtEnd(builder, ifthen->entry_block);
+	if (ifthen->false_block) {
+		/* we have an else clause */
+		LLVMBuildCondBr(builder, ifthen->condition,
+				ifthen->true_block, ifthen->false_block);
+	}
+	else {
+		/* no else clause */
+		LLVMBuildCondBr(builder, ifthen->condition,
+				ifthen->true_block, ifthen->merge_block);
+	}
+
+	/* Resume building code at end of the ifthen->merge_block */
+	LLVMPositionBuilderAtEnd(builder, ifthen->merge_block);
+}
+
+
 static LLVMValueRef get_rel_patch_id(struct radv_shader_context *ctx)
 {
 	switch (ctx->stage) {
@@ -2500,97 +2592,6 @@ handle_ls_outputs_post(struct radv_shader_context *ctx)
 			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr, ctx->ac.i32_1, "");
 		}
 	}
-}
-
-struct ac_build_if_state
-{
-	struct radv_shader_context *ctx;
-	LLVMValueRef condition;
-	LLVMBasicBlockRef entry_block;
-	LLVMBasicBlockRef true_block;
-	LLVMBasicBlockRef false_block;
-	LLVMBasicBlockRef merge_block;
-};
-
-static LLVMBasicBlockRef
-ac_build_insert_new_block(struct radv_shader_context *ctx, const char *name)
-{
-	LLVMBasicBlockRef current_block;
-	LLVMBasicBlockRef next_block;
-	LLVMBasicBlockRef new_block;
-
-	/* get current basic block */
-	current_block = LLVMGetInsertBlock(ctx->ac.builder);
-
-	/* check if there's another block after this one */
-	next_block = LLVMGetNextBasicBlock(current_block);
-	if (next_block) {
-		/* insert the new block before the next block */
-		new_block = LLVMInsertBasicBlockInContext(ctx->context, next_block, name);
-	}
-	else {
-		/* append new block after current block */
-		LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
-		new_block = LLVMAppendBasicBlockInContext(ctx->context, function, name);
-	}
-	return new_block;
-}
-
-static void
-ac_nir_build_if(struct ac_build_if_state *ifthen,
-		struct radv_shader_context *ctx,
-		LLVMValueRef condition)
-{
-	LLVMBasicBlockRef block = LLVMGetInsertBlock(ctx->ac.builder);
-
-	memset(ifthen, 0, sizeof *ifthen);
-	ifthen->ctx = ctx;
-	ifthen->condition = condition;
-	ifthen->entry_block = block;
-
-	/* create endif/merge basic block for the phi functions */
-	ifthen->merge_block = ac_build_insert_new_block(ctx, "endif-block");
-
-	/* create/insert true_block before merge_block */
-	ifthen->true_block =
-		LLVMInsertBasicBlockInContext(ctx->context,
-					      ifthen->merge_block,
-					      "if-true-block");
-
-	/* successive code goes into the true block */
-	LLVMPositionBuilderAtEnd(ctx->ac.builder, ifthen->true_block);
-}
-
-/**
- * End a conditional.
- */
-static void
-ac_nir_build_endif(struct ac_build_if_state *ifthen)
-{
-	LLVMBuilderRef builder = ifthen->ctx->ac.builder;
-
-	/* Insert branch to the merge block from current block */
-	LLVMBuildBr(builder, ifthen->merge_block);
-
-	/*
-	 * Now patch in the various branch instructions.
-	 */
-
-	/* Insert the conditional branch instruction at the end of entry_block */
-	LLVMPositionBuilderAtEnd(builder, ifthen->entry_block);
-	if (ifthen->false_block) {
-		/* we have an else clause */
-		LLVMBuildCondBr(builder, ifthen->condition,
-				ifthen->true_block, ifthen->false_block);
-	}
-	else {
-		/* no else clause */
-		LLVMBuildCondBr(builder, ifthen->condition,
-				ifthen->true_block, ifthen->merge_block);
-	}
-
-	/* Resume building code at end of the ifthen->merge_block */
-	LLVMPositionBuilderAtEnd(builder, ifthen->merge_block);
 }
 
 static void
