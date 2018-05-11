@@ -759,7 +759,6 @@ descriptor=[
   [ "PIXEL_MAP_S_TO_S_SIZE", "CONTEXT_INT(PixelMaps.StoS.Size), NO_EXTRA" ],
   [ "POINT_SIZE_GRANULARITY", "CONTEXT_FLOAT(Const.PointSizeGranularity), NO_EXTRA" ],
   [ "POLYGON_MODE", "CONTEXT_ENUM2(Polygon.FrontMode), NO_EXTRA" ],
-  [ "POLYGON_OFFSET_BIAS_EXT", "CONTEXT_FLOAT(Polygon.OffsetUnits), NO_EXTRA" ],
   [ "POLYGON_OFFSET_POINT", "CONTEXT_BOOL(Polygon.OffsetPoint), NO_EXTRA" ],
   [ "POLYGON_OFFSET_LINE", "CONTEXT_BOOL(Polygon.OffsetLine), NO_EXTRA" ],
   [ "POLYGON_SMOOTH", "CONTEXT_BOOL(Polygon.SmoothFlag), NO_EXTRA" ],

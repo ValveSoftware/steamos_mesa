@@ -3486,14 +3486,6 @@ save_PolygonOffset(GLfloat factor, GLfloat units)
 
 
 static void GLAPIENTRY
-save_PolygonOffsetEXT(GLfloat factor, GLfloat bias)
-{
-   GET_CURRENT_CONTEXT(ctx);
-   /* XXX mult by DepthMaxF here??? */
-   save_PolygonOffset(factor, ctx->DrawBuffer->_DepthMaxF * bias);
-}
-
-static void GLAPIENTRY
 save_PolygonOffsetClampEXT(GLfloat factor, GLfloat units, GLfloat clamp)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -9838,9 +9830,6 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
 #if 0
    SET_BlendColorEXT(table, save_BlendColorEXT);
 #endif
-
-   /* 3. GL_EXT_polygon_offset */
-   SET_PolygonOffsetEXT(table, save_PolygonOffsetEXT);
 
    /* 6. GL_EXT_texture3d */
 #if 0
