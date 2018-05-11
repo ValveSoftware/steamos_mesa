@@ -329,11 +329,14 @@ radv_shader_dump_stats(struct radv_device *device,
 
 static inline bool
 radv_can_dump_shader(struct radv_device *device,
-		     struct radv_shader_module *module)
+		     struct radv_shader_module *module,
+		     bool is_gs_copy_shader)
 {
+	if (!(device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS))
+		return false;
+
 	/* Only dump non-meta shaders, useful for debugging purposes. */
-	return device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS &&
-	       module && !module->nir;
+	return (module && !module->nir) || is_gs_copy_shader;
 }
 
 static inline bool

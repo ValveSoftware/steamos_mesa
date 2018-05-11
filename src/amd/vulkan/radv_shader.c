@@ -484,7 +484,7 @@ shader_variant_create(struct radv_device *device,
 
 	options->family = chip_family;
 	options->chip_class = device->physical_device->rad_info.chip_class;
-	options->dump_shader = radv_can_dump_shader(device, module);
+	options->dump_shader = radv_can_dump_shader(device, module, gs_copy_shader);
 	options->dump_preoptir = options->dump_shader &&
 				 device->instance->debug_flags & RADV_DEBUG_PREOPTIR;
 	options->record_llvm_ir = device->keep_shader_info;
