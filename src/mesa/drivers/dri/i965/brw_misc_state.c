@@ -348,7 +348,7 @@ brw_emit_depthbuffer(struct brw_context *brw)
    brw_emit_depth_stall_flushes(brw);
 
    const unsigned ds_dwords = brw->isl_dev.ds.size / 4;
-   intel_batchbuffer_begin(brw, ds_dwords, RENDER_RING);
+   intel_batchbuffer_begin(brw, ds_dwords);
    uint32_t *ds_map = brw->batch.map_next;
    const uint32_t ds_offset = (char *)ds_map - (char *)brw->batch.batch.map;
 

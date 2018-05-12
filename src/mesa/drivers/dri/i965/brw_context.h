@@ -461,12 +461,6 @@ struct brw_query_object {
    bool flushed;
 };
 
-enum brw_gpu_ring {
-   UNKNOWN_RING,
-   RENDER_RING,
-   BLT_RING,
-};
-
 struct brw_reloc_list {
    struct drm_i915_gem_relocation_entry *relocs;
    int reloc_count;
@@ -497,7 +491,6 @@ struct intel_batchbuffer {
    uint32_t *map_next;
    uint32_t state_used;
 
-   enum brw_gpu_ring ring;
    bool use_shadow_copy;
    bool use_batch_first;
    bool needs_sol_reset;

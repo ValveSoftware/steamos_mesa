@@ -274,11 +274,6 @@ intel_batchbuffer_reset(struct brw_context *brw)
    batch->needs_sol_reset = false;
    batch->state_base_address_emitted = false;
 
-   /* We don't know what ring the new batch will be sent to until we see the
-    * first BEGIN_BATCH or BEGIN_BATCH_BLT.  Mark it as unknown.
-    */
-   batch->ring = UNKNOWN_RING;
-
    if (batch->state_batch_sizes)
       _mesa_hash_table_clear(batch->state_batch_sizes, NULL);
 }
@@ -311,8 +306,6 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
    brw->batch.exec_count = brw->batch.saved.exec_count;
 
    brw->batch.map_next = brw->batch.saved.map_next;
-   if (USED_BATCH(brw->batch) == 0)
-      brw->batch.ring = UNKNOWN_RING;
 }
 
 void
@@ -507,17 +500,9 @@ grow_buffer(struct brw_context *brw,
 }
 
 void
-intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
-                                enum brw_gpu_ring ring)
+intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_batchbuffer *batch = &brw->batch;
-
-   /* If we're switching rings, implicitly flush the batch. */
-   if (unlikely(ring != brw->batch.ring) && brw->batch.ring != UNKNOWN_RING &&
-       devinfo->gen >= 6) {
-      intel_batchbuffer_flush(brw);
-   }
 
    const unsigned batch_used = USED_BATCH(*batch) * 4;
    if (batch_used + sz >= BATCH_SZ && !batch->no_wrap) {
@@ -530,11 +515,6 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
       batch->map_next = (void *) batch->batch.map + batch_used;
       assert(batch_used + sz < batch->batch.bo->size);
    }
-
-   /* The intel_batchbuffer_flush() calls above might have changed
-    * brw->batch.ring to UNKNOWN_RING, so we need to set it here at the end.
-    */
-   brw->batch.ring = ring;
 }
 
 /**
@@ -601,46 +581,44 @@ brw_finish_batch(struct brw_context *brw)
     */
    brw_emit_query_end(brw);
 
-   if (brw->batch.ring == RENDER_RING) {
-      /* Work around L3 state leaks into contexts set MI_RESTORE_INHIBIT which
-       * assume that the L3 cache is configured according to the hardware
-       * defaults.  On Kernel 4.16+, we no longer need to do this.
+   /* Work around L3 state leaks into contexts set MI_RESTORE_INHIBIT which
+    * assume that the L3 cache is configured according to the hardware
+    * defaults.  On Kernel 4.16+, we no longer need to do this.
+    */
+   if (devinfo->gen >= 7 &&
+       !(brw->screen->kernel_features & KERNEL_ALLOWS_CONTEXT_ISOLATION))
+      gen7_restore_default_l3_config(brw);
+
+   if (devinfo->is_haswell) {
+      /* From the Haswell PRM, Volume 2b, Command Reference: Instructions,
+       * 3DSTATE_CC_STATE_POINTERS > "Note":
+       *
+       * "SW must program 3DSTATE_CC_STATE_POINTERS command at the end of every
+       *  3D batch buffer followed by a PIPE_CONTROL with RC flush and CS stall."
+       *
+       * From the example in the docs, it seems to expect a regular pipe control
+       * flush here as well. We may have done it already, but meh.
+       *
+       * See also WaAvoidRCZCounterRollover.
        */
-      if (devinfo->gen >= 7 &&
-          !(brw->screen->kernel_features & KERNEL_ALLOWS_CONTEXT_ISOLATION))
-         gen7_restore_default_l3_config(brw);
-
-      if (devinfo->is_haswell) {
-         /* From the Haswell PRM, Volume 2b, Command Reference: Instructions,
-          * 3DSTATE_CC_STATE_POINTERS > "Note":
-          *
-          * "SW must program 3DSTATE_CC_STATE_POINTERS command at the end of every
-          *  3D batch buffer followed by a PIPE_CONTROL with RC flush and CS stall."
-          *
-          * From the example in the docs, it seems to expect a regular pipe control
-          * flush here as well. We may have done it already, but meh.
-          *
-          * See also WaAvoidRCZCounterRollover.
-          */
-         brw_emit_mi_flush(brw);
-         BEGIN_BATCH(2);
-         OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (2 - 2));
-         OUT_BATCH(brw->cc.state_offset | 1);
-         ADVANCE_BATCH();
-         brw_emit_pipe_control_flush(brw, PIPE_CONTROL_RENDER_TARGET_FLUSH |
-                                          PIPE_CONTROL_CS_STALL);
-      }
-
-      /* Do not restore push constant packets during context restore. */
-      if (devinfo->gen >= 7)
-         gen10_emit_isp_disable(brw);
+      brw_emit_mi_flush(brw);
+      BEGIN_BATCH(2);
+      OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (2 - 2));
+      OUT_BATCH(brw->cc.state_offset | 1);
+      ADVANCE_BATCH();
+      brw_emit_pipe_control_flush(brw, PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                       PIPE_CONTROL_CS_STALL);
    }
+
+   /* Do not restore push constant packets during context restore. */
+   if (devinfo->gen >= 7)
+      gen10_emit_isp_disable(brw);
 
    /* Emit MI_BATCH_BUFFER_END to finish our batch.  Note that execbuf2
     * requires our batch size to be QWord aligned, so we pad it out if
     * necessary by emitting an extra MI_NOOP after the end.
     */
-   intel_batchbuffer_require_space(brw, 8, brw->batch.ring);
+   intel_batchbuffer_require_space(brw, 8);
    *brw->batch.map_next++ = MI_BATCH_BUFFER_END;
    if (USED_BATCH(brw->batch) & 1) {
       *brw->batch.map_next++ = MI_NOOP;
@@ -747,7 +725,6 @@ execbuffer(int fd,
 static int
 submit_batch(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
@@ -776,7 +753,6 @@ submit_batch(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
        *   To avoid stalling, execobject.offset should match the current
        *   address of that object within the active context.
        */
-      assert(devinfo->gen < 6 || batch->ring == RENDER_RING);
       int flags = I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
 
       if (batch->needs_sol_reset)
@@ -1045,10 +1021,10 @@ brw_state_batch(struct brw_context *brw,
 
 void
 intel_batchbuffer_data(struct brw_context *brw,
-                       const void *data, GLuint bytes, enum brw_gpu_ring ring)
+                       const void *data, GLuint bytes)
 {
    assert((bytes & 3) == 0);
-   intel_batchbuffer_require_space(brw, bytes, ring);
+   intel_batchbuffer_require_space(brw, bytes);
    memcpy(brw->batch.map_next, data, bytes);
    brw->batch.map_next += bytes >> 2;
 }

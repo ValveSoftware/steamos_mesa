@@ -44,7 +44,7 @@ blorp_emit_dwords(struct blorp_batch *batch, unsigned n)
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
 
-   intel_batchbuffer_begin(brw, n, RENDER_RING);
+   intel_batchbuffer_begin(brw, n);
    uint32_t *map = brw->batch.map_next;
    brw->batch.map_next += n;
    intel_batchbuffer_advance(brw);
@@ -277,7 +277,7 @@ genX(blorp_exec)(struct blorp_batch *batch,
    brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
 
 retry:
-   intel_batchbuffer_require_space(brw, 1400, RENDER_RING);
+   intel_batchbuffer_require_space(brw, 1400);
    brw_require_statebuffer_space(brw, 600);
    intel_batchbuffer_save_state(brw);
    brw->batch.no_wrap = true;

@@ -544,29 +544,17 @@ brw_emit_mi_flush(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (brw->batch.ring == BLT_RING && devinfo->gen >= 6) {
-      const unsigned n_dwords = devinfo->gen >= 8 ? 5 : 4;
-      BEGIN_BATCH_BLT(n_dwords);
-      OUT_BATCH(MI_FLUSH_DW | (n_dwords - 2));
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      OUT_BATCH(0);
-      if (n_dwords == 5)
-         OUT_BATCH(0);
-      ADVANCE_BATCH();
-   } else {
-      int flags = PIPE_CONTROL_RENDER_TARGET_FLUSH;
-      if (devinfo->gen >= 6) {
-         flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
-                  PIPE_CONTROL_CONST_CACHE_INVALIDATE |
-                  PIPE_CONTROL_DATA_CACHE_FLUSH |
-                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
-                  PIPE_CONTROL_VF_CACHE_INVALIDATE |
-                  PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
-                  PIPE_CONTROL_CS_STALL;
-      }
-      brw_emit_pipe_control_flush(brw, flags);
+   int flags = PIPE_CONTROL_RENDER_TARGET_FLUSH;
+   if (devinfo->gen >= 6) {
+      flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
+               PIPE_CONTROL_CONST_CACHE_INVALIDATE |
+               PIPE_CONTROL_DATA_CACHE_FLUSH |
+               PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+               PIPE_CONTROL_VF_CACHE_INVALIDATE |
+               PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
+               PIPE_CONTROL_CS_STALL;
    }
+   brw_emit_pipe_control_flush(brw, flags);
 }
 
 int
