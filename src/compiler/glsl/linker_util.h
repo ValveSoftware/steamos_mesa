@@ -36,6 +36,11 @@ linker_error(struct gl_shader_program *prog, const char *fmt, ...);
 void
 linker_warning(struct gl_shader_program *prog, const char *fmt, ...);
 
+bool
+link_util_add_program_resource(struct gl_shader_program *prog,
+                               struct set *resource_set,
+                               GLenum type, const void *data, uint8_t stages);
+
 #ifdef __cplusplus
 }
 #endif
