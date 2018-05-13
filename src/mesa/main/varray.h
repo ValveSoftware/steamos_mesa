@@ -64,20 +64,20 @@ _mesa_update_array_format(struct gl_context *ctx,
 extern void
 _mesa_enable_vertex_array_attrib(struct gl_context *ctx,
                                  struct gl_vertex_array_object *vao,
-                                 gl_vert_attrib attrib, bool flush_vertices);
+                                 gl_vert_attrib attrib);
 
 
 extern void
 _mesa_disable_vertex_array_attrib(struct gl_context *ctx,
                                   struct gl_vertex_array_object *vao,
-                                  gl_vert_attrib attrib, bool flush_vertices);
+                                  gl_vert_attrib attrib);
 
 
 extern void
 _mesa_vertex_attrib_binding(struct gl_context *ctx,
                             struct gl_vertex_array_object *vao,
                             gl_vert_attrib attribIndex,
-                            GLuint bindingIndex, bool flush_vertices);
+                            GLuint bindingIndex);
 
 
 extern void
@@ -85,7 +85,7 @@ _mesa_bind_vertex_buffer(struct gl_context *ctx,
                          struct gl_vertex_array_object *vao,
                          GLuint index,
                          struct gl_buffer_object *vbo,
-                         GLintptr offset, GLsizei stride, bool flush_vertices);
+                         GLintptr offset, GLsizei stride);
 
 extern void GLAPIENTRY
 _mesa_VertexPointer_no_error(GLint size, GLenum type, GLsizei stride,

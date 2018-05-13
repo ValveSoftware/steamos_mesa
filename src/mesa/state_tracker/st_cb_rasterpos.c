@@ -197,10 +197,10 @@ new_draw_rastpos_stage(struct gl_context *ctx, struct draw_context *draw)
    rs->ctx = ctx;
 
    rs->VAO = _mesa_new_vao(ctx, ~((GLuint)0));
-   _mesa_vertex_attrib_binding(ctx, rs->VAO, VERT_ATTRIB_POS, 0, false);
+   _mesa_vertex_attrib_binding(ctx, rs->VAO, VERT_ATTRIB_POS, 0);
    _mesa_update_array_format(ctx, rs->VAO, VERT_ATTRIB_POS, 4, GL_FLOAT,
                              GL_RGBA, GL_FALSE, GL_FALSE, GL_FALSE, 0);
-   _mesa_enable_vertex_array_attrib(ctx, rs->VAO, 0, false);
+   _mesa_enable_vertex_array_attrib(ctx, rs->VAO, 0);
 
    rs->prim.mode = GL_POINTS;
    rs->prim.indexed = 0;

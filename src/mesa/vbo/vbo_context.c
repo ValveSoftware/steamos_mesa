@@ -202,7 +202,7 @@ _vbo_CreateContext(struct gl_context *ctx)
    vbo->VAO = _mesa_new_vao(ctx, ~((GLuint)0));
    /* The exec VAO assumes to have all arributes bound to binding 0 */
    for (unsigned i = 0; i < VERT_ATTRIB_MAX; ++i)
-      _mesa_vertex_attrib_binding(ctx, vbo->VAO, i, 0, false);
+      _mesa_vertex_attrib_binding(ctx, vbo->VAO, i, 0);
 
    _math_init_eval();
 
