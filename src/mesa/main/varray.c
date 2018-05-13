@@ -178,7 +178,8 @@ _mesa_vertex_attrib_binding(struct gl_context *ctx,
       array->BufferBindingIndex = bindingIndex;
 
       vao->NewArrays |= vao->_Enabled & array_bit;
-      ctx->NewState |= _NEW_ARRAY;
+      if (vao == ctx->Array.VAO)
+         ctx->NewState |= _NEW_ARRAY;
    }
 }
 
@@ -213,7 +214,8 @@ _mesa_bind_vertex_buffer(struct gl_context *ctx,
          vao->VertexAttribBufferMask |= binding->_BoundArrays;
 
       vao->NewArrays |= vao->_Enabled & binding->_BoundArrays;
-      ctx->NewState |= _NEW_ARRAY;
+      if (vao == ctx->Array.VAO)
+         ctx->NewState |= _NEW_ARRAY;
    }
 }
 
@@ -235,7 +237,8 @@ vertex_binding_divisor(struct gl_context *ctx,
    if (binding->InstanceDivisor != divisor) {
       binding->InstanceDivisor = divisor;
       vao->NewArrays |= vao->_Enabled & binding->_BoundArrays;
-      ctx->NewState |= _NEW_ARRAY;
+      if (vao == ctx->Array.VAO)
+         ctx->NewState |= _NEW_ARRAY;
    }
 }
 
@@ -345,7 +348,8 @@ _mesa_update_array_format(struct gl_context *ctx,
    array->_ElementSize = elementSize;
 
    vao->NewArrays |= vao->_Enabled & VERT_BIT(attrib);
-   ctx->NewState |= _NEW_ARRAY;
+   if (vao == ctx->Array.VAO)
+      ctx->NewState |= _NEW_ARRAY;
 }
 
 /**
@@ -1080,7 +1084,9 @@ _mesa_enable_vertex_array_attrib(struct gl_context *ctx,
       const GLbitfield array_bit = VERT_BIT(attrib);
       vao->_Enabled |= array_bit;
       vao->NewArrays |= array_bit;
-      ctx->NewState |= _NEW_ARRAY;
+
+      if (vao == ctx->Array.VAO)
+         ctx->NewState |= _NEW_ARRAY;
 
       /* Update the map mode if needed */
       if (array_bit & (VERT_BIT_POS|VERT_BIT_GENERIC0))
@@ -1165,7 +1171,9 @@ _mesa_disable_vertex_array_attrib(struct gl_context *ctx,
       const GLbitfield array_bit = VERT_BIT(attrib);
       vao->_Enabled &= ~array_bit;
       vao->NewArrays |= array_bit;
-      ctx->NewState |= _NEW_ARRAY;
+
+      if (vao == ctx->Array.VAO)
+         ctx->NewState |= _NEW_ARRAY;
 
       /* Update the map mode if needed */
       if (array_bit & (VERT_BIT_POS|VERT_BIT_GENERIC0))
