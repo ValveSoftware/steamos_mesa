@@ -157,7 +157,7 @@ vbo_exec_invalidate_state(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
 
-   if (ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
+   if (ctx->NewState & _NEW_ARRAY) {
       _ae_invalidate_state(ctx);
    }
    if (ctx->NewState & _NEW_EVAL)
