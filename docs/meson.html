@@ -87,6 +87,7 @@ each configuration you want to build.
 http://mesonbuild.com/Using-multiple-build-directories.html
 </p>
 
+<dl>
 <dt><code>Environment Variables</code></dt>
 <dd><p>Meson supports the standard CC and CXX environment variables for
 changing the default compiler, and CFLAGS, CXXFLAGS, and LDFLAGS for setting
@@ -117,7 +118,6 @@ change compiler in a configured build directory.
 </dd>
 
 
-<dl>
 <dt><code>LLVM</code></dt>
 <dd><p>Meson includes upstream logic to wrap llvm-config using it's standard
 dependency interface. It will search $PATH (or %PATH% on windows) for
@@ -143,7 +143,7 @@ One of the oddities of meson is that some options are different when passed to
 the <code>meson</code> than to <code>meson configure</code>. These options are
 passed as --option=foo to <code>meson</code>, but -Doption=foo to <code>meson
 configure</code>. Mesa defined options are always passed as -Doption=foo.
-<p>
+</p>
 
 <p>For those coming from autotools be aware of the following:</p>
 
@@ -173,3 +173,7 @@ is unrelated to the <code>buildtype</code>; setting the latter to
 </p>
 </dd>
 </dl>
+
+</div>
+</body>
+</html>
