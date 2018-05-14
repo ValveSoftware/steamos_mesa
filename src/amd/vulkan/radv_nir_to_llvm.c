@@ -2493,10 +2493,9 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 			output_usage_mask =
 				ctx->shader_info->info.tes.output_usage_mask[i];
 		} else {
-			/* Enable all channels for the GS copy shader because
-			 * we don't know the output usage mask currently.
-			 */
-			output_usage_mask = 0xf;
+			assert(ctx->is_gs_copy_shader);
+			output_usage_mask =
+				ctx->shader_info->info.gs.output_usage_mask[i];
 		}
 
 		radv_export_param(ctx, param_count, values, output_usage_mask);
