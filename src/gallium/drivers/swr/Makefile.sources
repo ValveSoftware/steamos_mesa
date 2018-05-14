@@ -132,6 +132,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/threads.h \
 	rasterizer/core/tilemgr.cpp \
 	rasterizer/core/tilemgr.h \
+	rasterizer/core/tileset.h \
 	rasterizer/core/utils.h
 
 JITTER_CXX_SOURCES := \

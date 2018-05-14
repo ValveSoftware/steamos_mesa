@@ -1,4 +1,4 @@
-# Copyright © 2017-2018 Intel Corporation
+# Copyright Â© 2017-2018 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -131,6 +131,7 @@ files_swr_arch = files(
   'rasterizer/core/threads.h',
   'rasterizer/core/tilemgr.cpp',
   'rasterizer/core/tilemgr.h',
+  'rasterizer/core/tileset.h',
   'rasterizer/core/utils.h',
   'rasterizer/memory/ClearTile.cpp',
   'rasterizer/memory/Convert.h',
