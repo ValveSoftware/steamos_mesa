@@ -33,7 +33,7 @@ out in odd ways.
 <p>
 The meson program is used to configure the source directory and generates
 either a ninja build file or Visual Studio® build files. The latter must
-be enabled via the --backend switch, as ninja is the default backend on all
+be enabled via the <code>--backend</code> switch, as ninja is the default backend on all
 operating systems. Meson only supports out-of-tree builds, and must be passed a
 directory to put built and generated sources into. We'll call that directory
 "build" for examples.
@@ -60,7 +60,7 @@ directory, but this feature is being discussed upstream.
 <p>
 With additional arguments <code>meson configure</code> is used to change
 options on already configured build directory. All options passed to this
-command are in the form -D "command"="value".
+command are in the form <code>-D "command"="value"</code>.
 </p>
 
 <pre>
@@ -114,13 +114,13 @@ change compiler in a configured build directory.
     CFLAGS=-Wno-typedef-redefinition ninja -C build-clang
 </pre>
 
-<p>Meson also honors DESTDIR for installs</p>
+<p>Meson also honors <code>DESTDIR</code> for installs</p>
 </dd>
 
 
 <dt><code>LLVM</code></dt>
 <dd><p>Meson includes upstream logic to wrap llvm-config using it's standard
-dependency interface. It will search $PATH (or %PATH% on windows) for
+dependency interface. It will search <code>$PATH</code> (or <code>%PATH%</code> on windows) for
 llvm-config, so using an LLVM from a non-standard path is as easy as
 <code>PATH=/path/with/llvm-config:$PATH meson build</code>.
 </p></dd>
@@ -152,13 +152,13 @@ configure</code>. Mesa defined options are always passed as -Doption=foo.
 <dd><p>This option will set the compiler debug/optimisation levels to aid
 debugging the Mesa libraries.</p>
 
-<p>Note that in meson this defaults to "debugoptimized", and  not setting it to
-"release" will yield non-optimal performance and binary size. Not using "debug"
-may interfere with debugging as some code and validation will be optimized
-away.
+<p>Note that in meson this defaults to <code>debugoptimized</code>, and
+not setting it to <code>release</code> will yield non-optimal
+performance and binary size. Not using <code>debug</code> may interfere
+with debugging as some code and validation will be optimized away.
 </p>
 
-<p> For those wishing to pass their own optimization flags, use the "plain"
+<p> For those wishing to pass their own optimization flags, use the <code>plain</code>
 buildtype, which causes meson to inject no additional compiler arguments, only
 those in the C/CXXFLAGS and those that mesa itself defines.</p>
 </dd>
@@ -166,7 +166,7 @@ those in the C/CXXFLAGS and those that mesa itself defines.</p>
 
 <dl>
 <dt><code>-Db_ndebug</code></dt>
-<dd><p>This option controls assertions in meson projects. When set to false
+<dd><p>This option controls assertions in meson projects. When set to <code>false</code>
 (the default) assertions are enabled, when set to true they are disabled. This
 is unrelated to the <code>buildtype</code>; setting the latter to
 <code>release</code> will not turn off assertions.
