@@ -134,6 +134,12 @@ gather_intrinsic_store_var_info(const nir_shader *nir,
 					instr->const_index[0] << comp;
 			}
 			break;
+		case MESA_SHADER_GEOMETRY:
+			for (unsigned i = 0; i < attrib_count; i++) {
+				info->gs.output_usage_mask[idx + i + const_offset] |=
+					instr->const_index[0] << comp;
+			}
+			break;
 		case MESA_SHADER_TESS_EVAL:
 			for (unsigned i = 0; i < attrib_count; i++) {
 				info->tes.output_usage_mask[idx + i + const_offset] |=

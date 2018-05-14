@@ -159,6 +159,9 @@ struct radv_shader_info {
 	} vs;
 	struct {
 		uint8_t output_usage_mask[VARYING_SLOT_VAR31 + 1];
+	} gs;
+	struct {
+		uint8_t output_usage_mask[VARYING_SLOT_VAR31 + 1];
 	} tes;
 	struct {
 		bool force_persample;
