@@ -24,6 +24,7 @@
 
 #include "pipe/p_state.h"
 #include "util/u_format.h"
+#include "util/u_framebuffer.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
@@ -441,21 +442,10 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
 {
         struct vc5_context *vc5 = vc5_context(pctx);
         struct pipe_framebuffer_state *cso = &vc5->framebuffer;
-        unsigned i;
 
         vc5->job = NULL;
 
-        for (i = 0; i < framebuffer->nr_cbufs; i++)
-                pipe_surface_reference(&cso->cbufs[i], framebuffer->cbufs[i]);
-        for (; i < vc5->framebuffer.nr_cbufs; i++)
-                pipe_surface_reference(&cso->cbufs[i], NULL);
-
-        cso->nr_cbufs = framebuffer->nr_cbufs;
-
-        pipe_surface_reference(&cso->zsbuf, framebuffer->zsbuf);
-
-        cso->width = framebuffer->width;
-        cso->height = framebuffer->height;
+        util_copy_framebuffer_state(cso, framebuffer);
 
         vc5->swap_color_rb = 0;
         vc5->blend_dst_alpha_one = 0;
