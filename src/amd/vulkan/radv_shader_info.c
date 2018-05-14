@@ -424,7 +424,7 @@ radv_nir_shader_info_pass(const struct nir_shader *nir,
 	struct nir_function *func =
 		(struct nir_function *)exec_list_get_head_const(&nir->functions);
 
-	if (options->layout->dynamic_offset_count)
+	if (options->layout && options->layout->dynamic_offset_count)
 		info->loads_push_constants = true;
 
 	nir_foreach_variable(variable, &nir->inputs)
