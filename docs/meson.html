@@ -49,7 +49,7 @@ along with a build directory to view the selected options for. This will show
 your meson global arguments and project arguments, along with their defaults
 and your local settings.
 
-Moes does not currently support listing options before configure a build
+Meson does not currently support listing options before configure a build
 directory, but this feature is being discussed upstream.
 </p>
 
@@ -88,7 +88,7 @@ http://mesonbuild.com/Using-multiple-build-directories.html
 </p>
 
 <dt><code>Environment Variables</code></dt>
-<dd><p>Meson supports the standard CC and CXX envrionment variables for
+<dd><p>Meson supports the standard CC and CXX environment variables for
 changing the default compiler, and CFLAGS, CXXFLAGS, and LDFLAGS for setting
 options to the compiler and linker.
 
@@ -99,9 +99,9 @@ the popular compilers, a complete list is available
 These arguments are consumed and stored by meson when it is initialized or
 re-initialized. Therefore passing them to meson configure will not do anything,
 and passing them to ninja will only do something if ninja decides to
-re-initialze meson, for example, if a meson.build file has been changed.
+re-initialize meson, for example, if a meson.build file has been changed.
 Changing these variables will not cause all targets to be rebuilt, so running
-ninja clean is recomended when changing CFLAGS or CXXFLAGS. meson will never
+ninja clean is recommended when changing CFLAGS or CXXFLAGS. Meson will never
 change compiler in a configured build directory.
 </p>
 
@@ -120,7 +120,7 @@ change compiler in a configured build directory.
 <dl>
 <dt><code>LLVM</code></dt>
 <dd><p>Meson includes upstream logic to wrap llvm-config using it's standard
-dependncy interface. It will search $PATH (or %PATH% on windows) for
+dependency interface. It will search $PATH (or %PATH% on windows) for
 llvm-config, so using an LLVM from a non-standard path is as easy as
 <code>PATH=/path/with/llvm-config:$PATH meson build</code>.
 </p></dd>
@@ -154,7 +154,7 @@ debugging the Mesa libraries.</p>
 
 <p>Note that in meson this defaults to "debugoptimized", and  not setting it to
 "release" will yield non-optimal performance and binary size. Not using "debug"
-may interfer with debbugging as some code and validation will be optimized
+may interfere with debugging as some code and validation will be optimized
 away.
 </p>
 
