@@ -3549,6 +3549,8 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 	ctx.ac.builder = ac_create_builder(ctx.context, float_mode);
 	ctx.stage = MESA_SHADER_VERTEX;
 
+	radv_nir_shader_info_pass(geom_shader, options, &shader_info->info);
+
 	create_function(&ctx, MESA_SHADER_VERTEX, false, MESA_SHADER_VERTEX);
 
 	ctx.gs_max_out_vertices = geom_shader->info.gs.vertices_out;
