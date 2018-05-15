@@ -888,11 +888,18 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    bool writeonly_memory,
 			    bool swizzle_enable_hint)
 {
+	static unsigned dfmt[] = {
+		V_008F0C_BUF_DATA_FORMAT_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
+	};
+
 	/* SWIZZLE_ENABLE requires that soffset isn't folded into voffset
 	 * (voffset is swizzled, but soffset isn't swizzled).
 	 * llvm.amdgcn.buffer.store doesn't have a separate soffset parameter.
 	 */
-	if (!swizzle_enable_hint) {
+	if (!swizzle_enable_hint || HAVE_LLVM >= 0x0500) {
 		/* Split 3 channel stores, becase LLVM doesn't support 3-channel
 		 * intrinsics. */
 		if (num_channels == 3) {
@@ -915,42 +922,63 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 		}
 
 		unsigned func = CLAMP(num_channels, 1, 3) - 1;
-		static const char *types[] = {"f32", "v2f32", "v4f32"};
 		char name[256];
-		LLVMValueRef offset = soffset;
 
-		if (inst_offset)
-			offset = LLVMBuildAdd(ctx->builder, offset,
-					      LLVMConstInt(ctx->i32, inst_offset, 0), "");
-		if (voffset)
-			offset = LLVMBuildAdd(ctx->builder, offset, voffset, "");
+		if (!swizzle_enable_hint) {
+			LLVMValueRef offset = soffset;
 
-		LLVMValueRef args[] = {
-			ac_to_float(ctx, vdata),
-			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-			LLVMConstInt(ctx->i32, 0, 0),
-			offset,
-			LLVMConstInt(ctx->i1, glc, 0),
-			LLVMConstInt(ctx->i1, slc, 0),
-		};
+			static const char *types[] = {"f32", "v2f32", "v4f32"};
 
-		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.store.%s",
-			 types[func]);
+			if (inst_offset)
+				offset = LLVMBuildAdd(ctx->builder, offset,
+						      LLVMConstInt(ctx->i32, inst_offset, 0), "");
+			if (voffset)
+				offset = LLVMBuildAdd(ctx->builder, offset, voffset, "");
 
-		ac_build_intrinsic(ctx, name, ctx->voidt,
-				   args, ARRAY_SIZE(args),
-				   writeonly_memory ?
+			LLVMValueRef args[] = {
+				ac_to_float(ctx, vdata),
+				LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+				LLVMConstInt(ctx->i32, 0, 0),
+				offset,
+				LLVMConstInt(ctx->i1, glc, 0),
+				LLVMConstInt(ctx->i1, slc, 0),
+			};
+
+			snprintf(name, sizeof(name), "llvm.amdgcn.buffer.store.%s",
+				 types[func]);
+
+			ac_build_intrinsic(ctx, name, ctx->voidt,
+					   args, ARRAY_SIZE(args),
+					   writeonly_memory ?
 					   AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
 					   AC_FUNC_ATTR_WRITEONLY);
-		return;
+			return;
+		} else {
+			static const char *types[] = {"i32", "v2i32", "v4i32"};
+			LLVMValueRef args[] = {
+				vdata,
+				LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+				LLVMConstInt(ctx->i32, 0, 0),
+				voffset ? voffset : LLVMConstInt(ctx->i32, 0, 0),
+				soffset,
+				LLVMConstInt(ctx->i32, inst_offset, 0),
+				LLVMConstInt(ctx->i32, dfmt[num_channels - 1], 0),
+				LLVMConstInt(ctx->i32, V_008F0C_BUF_NUM_FORMAT_UINT, 0),
+				LLVMConstInt(ctx->i1, glc, 0),
+				LLVMConstInt(ctx->i1, slc, 0),
+			};
+			snprintf(name, sizeof(name), "llvm.amdgcn.tbuffer.store.%s",
+				 types[func]);
+
+			ac_build_intrinsic(ctx, name, ctx->voidt,
+					   args, ARRAY_SIZE(args),
+					   writeonly_memory ?
+					   AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
+					   AC_FUNC_ATTR_WRITEONLY);
+			return;
+		}
 	}
 
-	static unsigned dfmt[] = {
-		V_008F0C_BUF_DATA_FORMAT_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
-	};
 	assert(num_channels >= 1 && num_channels <= 4);
 
 	LLVMValueRef args[] = {
