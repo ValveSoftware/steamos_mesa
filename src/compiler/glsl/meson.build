@@ -68,7 +68,6 @@ files_libglsl = files(
   'generate_ir.cpp',
   'gl_nir_lower_atomics.c',
   'gl_nir_lower_samplers.c',
-  'gl_nir_lower_samplers_legacy.c',
   'gl_nir_lower_samplers_as_deref.c',
   'gl_nir_link_uniform_initializers.c',
   'gl_nir_link_uniforms.c',

@@ -37,8 +37,6 @@ bool gl_nir_lower_atomics(nir_shader *shader,
 
 bool gl_nir_lower_samplers(nir_shader *shader,
                            const struct gl_shader_program *shader_program);
-bool gl_nir_lower_samplers_legacy(nir_shader *shader,
-                           const struct gl_shader_program *shader_program);
 bool gl_nir_lower_samplers_as_deref(nir_shader *shader,
                                     const struct gl_shader_program *shader_program);
 
