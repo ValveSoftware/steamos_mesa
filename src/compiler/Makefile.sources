@@ -27,6 +27,7 @@ LIBGLSL_FILES = \
 	glsl/generate_ir.cpp \
 	glsl/gl_nir_lower_atomics.c \
 	glsl/gl_nir_lower_samplers.c \
+	glsl/gl_nir_lower_samplers_legacy.c \
 	glsl/gl_nir_lower_samplers_as_deref.c \
 	glsl/gl_nir_link_uniform_initializers.c \
 	glsl/gl_nir_link_uniforms.c \

@@ -842,7 +842,7 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, gl_nir_lower_samplers_as_deref, shader_program);
    else
-      NIR_PASS_V(nir, gl_nir_lower_samplers, shader_program);
+      NIR_PASS_V(nir, gl_nir_lower_samplers_legacy, shader_program);
 }
 
 } /* extern "C" */
