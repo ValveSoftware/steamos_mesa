@@ -3017,9 +3017,16 @@ ac_nir_eliminate_const_vs_outputs(struct radv_shader_context *ctx)
 static void
 ac_setup_rings(struct radv_shader_context *ctx)
 {
-	if ((ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) ||
-	    (ctx->stage == MESA_SHADER_TESS_EVAL && ctx->options->key.tes.as_es)) {
-		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_ESGS_VS, false));
+	if (ctx->options->chip_class <= VI &&
+	    (ctx->stage == MESA_SHADER_GEOMETRY ||
+	     ctx->options->key.vs.as_es || ctx->options->key.tes.as_es)) {
+		unsigned ring = ctx->stage == MESA_SHADER_GEOMETRY ? RING_ESGS_GS
+								   : RING_ESGS_VS;
+		LLVMValueRef offset = LLVMConstInt(ctx->ac.i32, ring, false);
+
+		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac,
+						       ctx->ring_offsets,
+						       offset);
 	}
 
 	if (ctx->is_gs_copy_shader) {
@@ -3030,7 +3037,6 @@ ac_setup_rings(struct radv_shader_context *ctx)
 		uint32_t num_entries = 64;
 		LLVMValueRef gsvs_ring_stride = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size, false);
 		LLVMValueRef gsvs_ring_desc = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size << 16, false);
-		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_ESGS_GS, false));
 		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.v4i32, "");
