@@ -634,13 +634,6 @@ st_create_vp_variant(struct st_context *st,
          fprintf(stderr, "mesa: cannot emulate deprecated features\n");
    }
 
-   for (unsigned index = 0; index < vpv->num_inputs; ++index) {
-      unsigned attr = stvp->index_to_input[index];
-      if (attr == ST_DOUBLE_ATTRIB_PLACEHOLDER)
-         continue;
-      vpv->vert_attrib_mask |= 1u << attr;
-   }
-
    if (ST_DEBUG & DEBUG_TGSI) {
       tgsi_dump(vpv->tgsi.tokens, 0);
       debug_printf("\n");
@@ -672,6 +665,13 @@ st_get_vp_variant(struct st_context *st,
       /* create now */
       vpv = st_create_vp_variant(st, stvp, key);
       if (vpv) {
+          for (unsigned index = 0; index < vpv->num_inputs; ++index) {
+             unsigned attr = stvp->index_to_input[index];
+             if (attr == ST_DOUBLE_ATTRIB_PLACEHOLDER)
+                continue;
+             vpv->vert_attrib_mask |= 1u << attr;
+          }
+
          /* insert into list */
          vpv->next = stvp->variants;
          stvp->variants = vpv;
