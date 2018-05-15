@@ -201,7 +201,6 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
 
    /* Bind the buffer object */
    const GLuint stride = exec->vtx.vertex_size*sizeof(GLfloat);
-   assert(stride <= ctx->Const.MaxVertexAttribStride);
    _mesa_bind_vertex_buffer(ctx, vao, 0, exec->vtx.bufferobj, buffer_offset,
                             stride);
 
