@@ -1600,63 +1600,78 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
                                       const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef results[2];
-	int load_components;
+	int load_bytes;
+	int elem_size_bytes = instr->dest.ssa.bit_size / 8;
 	int num_components = instr->num_components;
-	if (instr->dest.ssa.bit_size == 64)
-		num_components *= 2;
+	int num_bytes = num_components * elem_size_bytes;
 
-	for (int i = 0; i < num_components; i += load_components) {
-		load_components = MIN2(num_components - i, 4);
+	for (int i = 0; i < num_bytes; i += load_bytes) {
+		load_bytes = MIN2(num_bytes - i, 16);
 		const char *load_name;
-		LLVMTypeRef data_type = ctx->ac.f32;
-		LLVMValueRef offset = LLVMConstInt(ctx->ac.i32, i * 4, false);
-		offset = LLVMBuildAdd(ctx->ac.builder, get_src(ctx, instr->src[1]), offset, "");
+		LLVMTypeRef data_type;
+		LLVMValueRef offset = get_src(ctx, instr->src[1]);
+		LLVMValueRef immoffset = LLVMConstInt(ctx->ac.i32, i, false);
+		LLVMValueRef rsrc = ctx->abi->load_ssbo(ctx->abi,
+							get_src(ctx, instr->src[0]), false);
+		LLVMValueRef vindex = ctx->ac.i32_0;
 
-		if (load_components == 3)
-			data_type = LLVMVectorType(ctx->ac.f32, 4);
-		else if (load_components > 1)
-			data_type = LLVMVectorType(ctx->ac.f32, load_components);
-
-		if (load_components >= 3)
-			load_name = "llvm.amdgcn.buffer.load.v4f32";
-		else if (load_components == 2)
-			load_name = "llvm.amdgcn.buffer.load.v2f32";
-		else if (load_components == 1)
-			load_name = "llvm.amdgcn.buffer.load.f32";
-		else
-			unreachable("unhandled number of components");
-
-		LLVMValueRef params[] = {
-			ctx->abi->load_ssbo(ctx->abi,
-					    get_src(ctx, instr->src[0]),
-					    false),
-			ctx->ac.i32_0,
-			offset,
-			ctx->ac.i1false,
-			ctx->ac.i1false,
-		};
-
-		results[i > 0 ? 1 : 0] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+		int idx = i ? 1 : 0;
+		if (load_bytes == 2) {
+			results[idx] = ac_build_tbuffer_load_short(&ctx->ac,
+								   rsrc,
+								   vindex,
+								   offset,
+								   ctx->ac.i32_0,
+								   immoffset);
+		} else {
+			switch (load_bytes) {
+			case 16:
+			case 12:
+				load_name = "llvm.amdgcn.buffer.load.v4f32";
+				data_type = ctx->ac.v4f32;
+				break;
+			case 8:
+			case 6:
+				load_name = "llvm.amdgcn.buffer.load.v2f32";
+				data_type = ctx->ac.v2f32;
+				break;
+			case 4:
+				load_name = "llvm.amdgcn.buffer.load.f32";
+				data_type = ctx->ac.f32;
+				break;
+			default:
+				unreachable("Malformed load buffer.");
+			}
+			LLVMValueRef params[] = {
+				rsrc,
+				vindex,
+				LLVMBuildAdd(ctx->ac.builder, offset, immoffset, ""),
+				ctx->ac.i1false,
+				ctx->ac.i1false,
+			};
+			results[idx] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+			unsigned num_elems = ac_get_type_size(data_type) / elem_size_bytes;
+			LLVMTypeRef resTy = LLVMVectorType(LLVMIntType(instr->dest.ssa.bit_size), num_elems);
+			results[idx] = LLVMBuildBitCast(ctx->ac.builder, results[idx], resTy, "");
+		}
 	}
 
 	assume(results[0]);
 	LLVMValueRef ret = results[0];
-	if (num_components > 4 || num_components == 3) {
+	if (num_bytes > 16 || num_components == 3) {
 		LLVMValueRef masks[] = {
 		        LLVMConstInt(ctx->ac.i32, 0, false), LLVMConstInt(ctx->ac.i32, 1, false),
 		        LLVMConstInt(ctx->ac.i32, 2, false), LLVMConstInt(ctx->ac.i32, 3, false),
-			LLVMConstInt(ctx->ac.i32, 4, false), LLVMConstInt(ctx->ac.i32, 5, false),
-		        LLVMConstInt(ctx->ac.i32, 6, false), LLVMConstInt(ctx->ac.i32, 7, false)
 		};
 
-		if (num_components == 6) {
+		if (num_bytes > 16 && num_components == 3) {
 			/* we end up with a v4f32 and v2f32 but shuffle fails on that */
-			results[1] = ac_build_expand_to_vec4(&ctx->ac, results[1], 4);
+			results[1] = ac_build_expand_to_vec4(&ctx->ac, results[1], 2);
 		}
 
 		LLVMValueRef swizzle = LLVMConstVector(masks, num_components);
 		ret = LLVMBuildShuffleVector(ctx->ac.builder, results[0],
-					     results[num_components > 4 ? 1 : 0], swizzle, "");
+					     results[num_bytes > 16 ? 1 : 0], swizzle, "");
 	}
 
 	return LLVMBuildBitCast(ctx->ac.builder, ret,
