@@ -1817,6 +1817,10 @@ static LLVMValueRef load_tess_varyings(struct ac_nir_context *ctx,
 					      var->data.location_frac,
 					      instr->num_components,
 					      is_patch, is_compact, load_inputs);
+	if (instr->dest.ssa.bit_size == 16) {
+		result = ac_to_integer(&ctx->ac, result);
+		result = LLVMBuildTrunc(ctx->ac.builder, result, dest_type, "");
+	}
 	return LLVMBuildBitCast(ctx->ac.builder, result, dest_type, "");
 }
 
@@ -3817,10 +3821,12 @@ ac_handle_shader_output_decl(struct ac_llvm_context *ctx,
 		}
 	}
 
+	bool is_16bit = glsl_type_is_16bit(variable->type);
+	LLVMTypeRef type = is_16bit ? ctx->f16 : ctx->f32;
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
 			abi->outputs[ac_llvm_reg_index_soa(output_loc + i, chan)] =
-		                       ac_build_alloca_undef(ctx, ctx->f32, "");
+		                       ac_build_alloca_undef(ctx, type, "");
 		}
 	}
 }
