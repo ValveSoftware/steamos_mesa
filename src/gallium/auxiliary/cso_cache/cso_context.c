@@ -1147,6 +1147,9 @@ void cso_set_vertex_buffers(struct cso_context *ctx,
 {
    struct u_vbuf *vbuf = ctx->vbuf;
 
+   if (!count)
+      return;
+
    if (vbuf) {
       u_vbuf_set_vertex_buffers(vbuf, start_slot, count, buffers);
       return;
