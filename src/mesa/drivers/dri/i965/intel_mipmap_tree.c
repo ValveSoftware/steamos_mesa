@@ -1804,13 +1804,10 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       aux_surf_ok = true;
       break;
    case ISL_AUX_USAGE_HIZ:
-      assert(!_mesa_is_format_color_format(mt->format));
-
       initial_state = ISL_AUX_STATE_AUX_INVALID;
       aux_surf_ok = isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &aux_surf);
       break;
    case ISL_AUX_USAGE_MCS:
-      assert(_mesa_is_format_color_format(mt->format));
       assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
 
       /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
@@ -1831,8 +1828,6 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       break;
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
-      assert(_mesa_is_format_color_format(mt->format));
-
       /* When CCS_E is used, we need to ensure that the CCS starts off in a
        * valid state.  From the Sky Lake PRM, "MCS Buffer for Render
        * Target(s)":
