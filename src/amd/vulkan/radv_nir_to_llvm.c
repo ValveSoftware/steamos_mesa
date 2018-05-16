@@ -2582,14 +2582,26 @@ handle_es_outputs_post(struct radv_shader_context *ctx,
 	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef dw_addr = NULL;
 		LLVMValueRef *out_ptr = &ctx->abi.outputs[i * 4];
+		unsigned output_usage_mask;
 		int param_index;
 		int length = 4;
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		if (i == VARYING_SLOT_CLIP_DIST0)
+		if (ctx->stage == MESA_SHADER_VERTEX) {
+			output_usage_mask =
+				ctx->shader_info->info.vs.output_usage_mask[i];
+		} else {
+			assert(ctx->stage == MESA_SHADER_TESS_EVAL);
+			output_usage_mask =
+				ctx->shader_info->info.tes.output_usage_mask[i];
+		}
+
+		if (i == VARYING_SLOT_CLIP_DIST0) {
 			length = ctx->num_output_clips + ctx->num_output_culls;
+			output_usage_mask = (1 << length) - 1;
+		}
 
 		param_index = shader_io_get_unique_index(i);
 
@@ -2598,14 +2610,22 @@ handle_es_outputs_post(struct radv_shader_context *ctx,
 			                       LLVMConstInt(ctx->ac.i32, param_index * 4, false),
 			                       "");
 		}
+
 		for (j = 0; j < length; j++) {
+			if (!(output_usage_mask & (1 << j)))
+				continue;
+
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->ac.builder, out_ptr[j], "");
 			out_val = LLVMBuildBitCast(ctx->ac.builder, out_val, ctx->ac.i32, "");
 
 			if (ctx->ac.chip_class  >= GFX9) {
-				ac_lds_store(&ctx->ac, dw_addr,
+				LLVMValueRef dw_addr_offset =
+					LLVMBuildAdd(ctx->ac.builder, dw_addr,
+						     LLVMConstInt(ctx->ac.i32,
+								  j, false), "");
+
+				ac_lds_store(&ctx->ac, dw_addr_offset,
 					     LLVMBuildLoad(ctx->ac.builder, out_ptr[j], ""));
-				dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr, ctx->ac.i32_1, "");
 			} else {
 				ac_build_buffer_store_dword(&ctx->ac,
 				                            ctx->esgs_ring,
