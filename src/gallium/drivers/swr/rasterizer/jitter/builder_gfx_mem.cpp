@@ -57,14 +57,15 @@ namespace SwrJit
 
 
     //////////////////////////////////////////////////////////////////////////
-    /// @brief Generate a masked gather operation in LLVM IR.  If not  
+    /// @brief Generate a masked gather operation in LLVM IR.  If not
     /// supported on the underlying platform, emulate it with loads
     /// @param vSrc - SIMD wide value that will be loaded if mask is invalid
     /// @param pBase - Int8* base VB address pointer value
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value* BuilderGfxMem::GATHERPS(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
+    Value* BuilderGfxMem::GATHERPS(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask,
+                                   uint8_t scale, JIT_MEM_CLIENT usage)
     {
         // address may be coming in as 64bit int now so get the pointer
         if (pBase->getType() == mInt64Ty)
@@ -77,14 +78,15 @@ namespace SwrJit
     }
 
     //////////////////////////////////////////////////////////////////////////
-    /// @brief Generate a masked gather operation in LLVM IR.  If not  
+    /// @brief Generate a masked gather operation in LLVM IR.  If not
     /// supported on the underlying platform, emulate it with loads
     /// @param vSrc - SIMD wide value that will be loaded if mask is invalid
     /// @param pBase - Int8* base VB address pointer value
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value* BuilderGfxMem::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
+    Value* BuilderGfxMem::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask,
+                                   uint8_t scale, JIT_MEM_CLIENT usage)
     {
 
         // address may be coming in as 64bit int now so get the pointer
@@ -98,38 +100,39 @@ namespace SwrJit
     }
 
 
-    Value* BuilderGfxMem::OFFSET_TO_NEXT_COMPONENT(Value* base, Constant *offset)
+    Value* BuilderGfxMem::OFFSET_TO_NEXT_COMPONENT(Value* base, Constant* offset)
     {
         return ADD(base, offset);
     }
-    
-    Value* BuilderGfxMem::GEP(Value* Ptr, Value* Idx, Type *Ty, const Twine &Name)
+
+    Value* BuilderGfxMem::GEP(Value* Ptr, Value* Idx, Type* Ty, const Twine& Name)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, Idx, nullptr, Name);
     }
 
-    Value* BuilderGfxMem::GEP(Type *Ty, Value* Ptr, Value* Idx, const Twine &Name)
+    Value* BuilderGfxMem::GEP(Type* Ty, Value* Ptr, Value* Idx, const Twine& Name)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ty, Ptr, Idx, Name);
     }
 
-    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<Value*> &indexList, Type *Ty)
+    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<Value*>& indexList, Type* Ty)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, indexList);
     }
 
-    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<uint32_t> &indexList, Type *Ty)
+    Value* BuilderGfxMem::GEP(Value* Ptr, const std::initializer_list<uint32_t>& indexList, Type* Ty)
     {
         Ptr = TranslationHelper(Ptr, Ty);
         return Builder::GEP(Ptr, indexList);
     }
 
-    Value* BuilderGfxMem::TranslationHelper(Value* Ptr, Type *Ty)
+    Value* BuilderGfxMem::TranslationHelper(Value* Ptr, Type* Ty)
     {
-        SWR_ASSERT(!(Ptr->getType() == mInt64Ty && Ty == nullptr), "Access of GFX pointers must have non-null type specified.");
+        SWR_ASSERT(!(Ptr->getType() == mInt64Ty && Ty == nullptr),
+                   "Access of GFX pointers must have non-null type specified.");
 
 
         // address may be coming in as 64bit int now so get the pointer

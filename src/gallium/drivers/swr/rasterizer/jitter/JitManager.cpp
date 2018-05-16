@@ -580,7 +580,6 @@ int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::s
     return ExecCmd(CmdLine, "", pStdOut, pStdErr);
 }
 
-
 /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
 void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj)
 {

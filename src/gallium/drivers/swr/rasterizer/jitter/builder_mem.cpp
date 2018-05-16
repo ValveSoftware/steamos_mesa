@@ -33,7 +33,6 @@
 
 #include <cstdarg>
 
-
 namespace SwrJit
 {
     void Builder::AssertMemoryUsageParams(Value* ptr, JIT_MEM_CLIENT usage)

@@ -54,8 +54,8 @@ namespace SwrJit
         virtual CallInst* MASKED_LOAD(Value *Ptr, unsigned Align, Value *Mask, Value *PassThru = nullptr, const Twine &Name = "", Type *Ty = nullptr, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
         virtual Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-
         virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+
 
         Value* TranslateGfxAddress(Value* xpGfxAddress, Type* PtrTy = nullptr, const Twine &Name = "", JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
         template <typename T>
