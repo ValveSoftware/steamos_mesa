@@ -3412,8 +3412,7 @@ static void si_emit_msaa_config(struct si_context *sctx)
 		};
 		unsigned log_samples = util_logbase2(coverage_samples);
 		unsigned ps_iter_samples = si_get_ps_iter_samples(sctx);
-		unsigned log_ps_iter_samples =
-			util_logbase2(util_next_power_of_two(ps_iter_samples));
+		unsigned log_ps_iter_samples = util_logbase2(ps_iter_samples);
 
 		radeon_set_context_reg_seq(cs, R_028BDC_PA_SC_LINE_CNTL, 2);
 		radeon_emit(cs, sc_line_cntl |
@@ -3467,6 +3466,9 @@ void si_update_ps_iter_samples(struct si_context *sctx)
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+
+	/* The hardware can only do sample shading with 2^n samples. */
+	min_samples = util_next_power_of_two(min_samples);
 
 	if (sctx->ps_iter_samples == min_samples)
 		return;

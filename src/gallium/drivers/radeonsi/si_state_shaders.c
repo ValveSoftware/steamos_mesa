@@ -1414,7 +1414,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			if (sctx->ps_iter_samples > 1 &&
 			    sel->info.reads_samplemask) {
 				key->part.ps.prolog.samplemask_log_ps_iter =
-					util_logbase2(util_next_power_of_two(sctx->ps_iter_samples));
+					util_logbase2(sctx->ps_iter_samples);
 			}
 
 			if (rs->force_persample_interp &&
