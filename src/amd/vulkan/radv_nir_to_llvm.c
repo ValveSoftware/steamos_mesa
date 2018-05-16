@@ -569,7 +569,10 @@ set_loc_shader(struct radv_shader_context *ctx, int idx, uint8_t *sgpr_idx,
 static void
 set_loc_shader_ptr(struct radv_shader_context *ctx, int idx, uint8_t *sgpr_idx)
 {
-	set_loc_shader(ctx, idx, sgpr_idx, 2);
+	bool use_32bit_pointers = HAVE_32BIT_POINTERS &&
+				  idx != AC_UD_SCRATCH_RING_OFFSETS;
+
+	set_loc_shader(ctx, idx, sgpr_idx, use_32bit_pointers ? 1 : 2);
 }
 
 static void
@@ -580,7 +583,7 @@ set_loc_desc(struct radv_shader_context *ctx, int idx,  uint8_t *sgpr_idx,
 		&ctx->shader_info->user_sgprs_locs.descriptor_sets[idx];
 	assert(ud_info);
 
-	set_loc(ud_info, sgpr_idx, 2, indirect_offset);
+	set_loc(ud_info, sgpr_idx, HAVE_32BIT_POINTERS ? 1 : 2, indirect_offset);
 }
 
 struct user_sgpr_info {
@@ -618,7 +621,8 @@ count_vs_user_sgprs(struct radv_shader_context *ctx)
 {
 	uint8_t count = 0;
 
-	count += ctx->shader_info->info.vs.has_vertex_buffers ? 2 : 0;
+	if (ctx->shader_info->info.vs.has_vertex_buffers)
+		count += HAVE_32BIT_POINTERS ? 1 : 2;
 	count += ctx->shader_info->info.vs.needs_draw_id ? 3 : 2;
 
 	return count;
@@ -685,13 +689,13 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 		user_sgpr_info->sgpr_count++;
 
 	if (ctx->shader_info->info.loads_push_constants)
-		user_sgpr_info->sgpr_count += 2;
+		user_sgpr_info->sgpr_count += HAVE_32BIT_POINTERS ? 1 : 2;
 
 	uint32_t available_sgprs = ctx->options->chip_class >= GFX9 ? 32 : 16;
 	uint32_t remaining_sgprs = available_sgprs - user_sgpr_info->sgpr_count;
 
 	if (remaining_sgprs / 2 < util_bitcount(ctx->shader_info->info.desc_set_used_mask)) {
-		user_sgpr_info->sgpr_count += 2;
+		user_sgpr_info->sgpr_count += HAVE_32BIT_POINTERS ? 1 : 2;
 		user_sgpr_info->indirect_all_descriptor_sets = true;
 	} else {
 		user_sgpr_info->sgpr_count += util_bitcount(ctx->shader_info->info.desc_set_used_mask) * 2;
@@ -707,7 +711,7 @@ declare_global_input_sgprs(struct radv_shader_context *ctx,
 			   struct arg_info *args,
 			   LLVMValueRef *desc_sets)
 {
-	LLVMTypeRef type = ac_array_in_const_addr_space(ctx->ac.i8);
+	LLVMTypeRef type = ac_array_in_const32_addr_space(ctx->ac.i8);
 	unsigned num_sets = ctx->options->layout ?
 			    ctx->options->layout->num_sets : 0;
 	unsigned stage_mask = 1 << stage;
@@ -725,7 +729,7 @@ declare_global_input_sgprs(struct radv_shader_context *ctx,
 			}
 		}
 	} else {
-		add_array_arg(args, ac_array_in_const_addr_space(type), desc_sets);
+		add_array_arg(args, ac_array_in_const32_addr_space(type), desc_sets);
 	}
 
 	if (ctx->shader_info->info.loads_push_constants) {
@@ -745,7 +749,8 @@ declare_vs_specific_input_sgprs(struct radv_shader_context *ctx,
 	    (stage == MESA_SHADER_VERTEX ||
 	     (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
 		if (ctx->shader_info->info.vs.has_vertex_buffers) {
-			add_arg(args, ARG_SGPR, ac_array_in_const_addr_space(ctx->ac.v4i32),
+			add_arg(args, ARG_SGPR,
+				ac_array_in_const32_addr_space(ctx->ac.v4i32),
 				&ctx->vertex_buffers);
 		}
 		add_arg(args, ARG_SGPR, ctx->ac.i32, &ctx->abi.base_vertex);
@@ -1878,7 +1883,8 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 	index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->ac.i32, stride / type_size, 0), "");
 
 	list = ac_build_gep0(&ctx->ac, list, LLVMConstInt(ctx->ac.i32, offset, 0));
-	list = LLVMBuildPointerCast(builder, list, ac_array_in_const_addr_space(type), "");
+	list = LLVMBuildPointerCast(builder, list,
+				    ac_array_in_const32_addr_space(type), "");
 
 	return ac_build_load_to_sgpr(&ctx->ac, list, index);
 }

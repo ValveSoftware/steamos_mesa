@@ -586,11 +586,12 @@ radv_emit_userdata_address(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t base_reg = pipeline->user_data_0[stage];
 	if (loc->sgpr_idx == -1)
 		return;
-	assert(loc->num_sgprs == 2);
+
+	assert(loc->num_sgprs == (HAVE_32BIT_POINTERS ? 1 : 2));
 	assert(!loc->indirect);
 
-	radv_emit_shader_pointer(cmd_buffer->cs,
-				 base_reg + loc->sgpr_idx * 4, va);
+	radv_emit_shader_pointer(cmd_buffer->device, cmd_buffer->cs,
+				 base_reg + loc->sgpr_idx * 4, va, false);
 }
 
 static void
@@ -1442,10 +1443,10 @@ emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 		return;
 
 	assert(!desc_set_loc->indirect);
-	assert(desc_set_loc->num_sgprs == 2);
+	assert(desc_set_loc->num_sgprs == (HAVE_32BIT_POINTERS ? 1 : 2));
 
-	radv_emit_shader_pointer(cmd_buffer->cs,
-				 base_reg + desc_set_loc->sgpr_idx * 4, va);
+	radv_emit_shader_pointer(cmd_buffer->device, cmd_buffer->cs,
+				 base_reg + desc_set_loc->sgpr_idx * 4, va, false);
 }
 
 static void
