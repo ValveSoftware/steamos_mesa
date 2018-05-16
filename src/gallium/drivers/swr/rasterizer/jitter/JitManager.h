@@ -108,12 +108,12 @@ public:
     }
 
     /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
-    virtual void notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj);
+    void notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj) override;
 
     /// Returns a pointer to a newly allocated MemoryBuffer that contains the
     /// object which corresponds with Module M, or 0 if an object is not
     /// available.
-    virtual std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* M);
+    std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* M) override;
 
 private:
     std::string mCpu;
