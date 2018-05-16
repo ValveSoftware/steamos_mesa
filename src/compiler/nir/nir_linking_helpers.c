@@ -133,6 +133,8 @@ nir_remove_unused_varyings(nir_shader *producer, nir_shader *consumer)
 {
    assert(producer->info.stage != MESA_SHADER_FRAGMENT);
    assert(consumer->info.stage != MESA_SHADER_VERTEX);
+   nir_assert_lowered_derefs(producer, nir_lower_load_store_derefs);
+   nir_assert_lowered_derefs(consumer, nir_lower_load_store_derefs);
 
    uint64_t read[4] = { 0 }, written[4] = { 0 };
    uint64_t patches_read[4] = { 0 }, patches_written[4] = { 0 };

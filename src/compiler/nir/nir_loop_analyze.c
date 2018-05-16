@@ -827,6 +827,7 @@ void
 nir_loop_analyze_impl(nir_function_impl *impl,
                       nir_variable_mode indirect_mask)
 {
+   nir_assert_lowered_derefs(impl->function->shader, nir_lower_load_store_derefs);
    nir_index_ssa_defs(impl);
    foreach_list_typed(nir_cf_node, node, node, &impl->body)
       process_loops(node, indirect_mask);

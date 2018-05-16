@@ -289,6 +289,8 @@ nir_lower_io_to_scalar_early(nir_shader *shader, nir_variable_mode mask)
       _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                               _mesa_key_pointer_equal);
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs | nir_lower_interp_derefs);
+
    nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_builder b;

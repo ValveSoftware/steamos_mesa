@@ -194,6 +194,8 @@ nir_lower_clip_cull_distance_arrays(nir_shader *nir)
 {
    bool progress = false;
 
+   nir_assert_lowered_derefs(nir, nir_lower_load_store_derefs);
+
    if (nir->info.stage <= MESA_SHADER_GEOMETRY)
       progress |= combine_clip_cull(nir, &nir->outputs, true);
 

@@ -292,6 +292,8 @@ nir_lower_locals_to_regs(nir_shader *shader)
 {
    bool progress = false;
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress = nir_lower_locals_to_regs_impl(function->impl) || progress;

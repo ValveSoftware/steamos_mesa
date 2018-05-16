@@ -350,5 +350,7 @@ nir_lower_deref_instrs(nir_shader *shader,
       progress |= nir_lower_deref_instrs_impl(function->impl, flags);
    }
 
+   shader->lowered_derefs |= flags;
+
    return progress;
 }

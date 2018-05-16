@@ -161,6 +161,8 @@ nir_lower_io_types(nir_shader *shader)
 {
    struct lower_io_types_state state;
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    state.shader = shader;
    exec_list_make_empty(&state.new_ins);
    exec_list_make_empty(&state.new_outs);

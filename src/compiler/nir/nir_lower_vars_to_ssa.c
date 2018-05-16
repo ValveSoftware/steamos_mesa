@@ -737,6 +737,8 @@ nir_lower_vars_to_ssa(nir_shader *shader)
 {
    bool progress = false;
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= nir_lower_vars_to_ssa_impl(function->impl);

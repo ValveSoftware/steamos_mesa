@@ -133,6 +133,8 @@ nir_opt_undef(nir_shader *shader)
    nir_builder b;
    bool progress = false;
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    nir_foreach_function(function, shader) {
       if (function->impl) {
          nir_builder_init(&b, function->impl);

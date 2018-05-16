@@ -134,6 +134,8 @@ nir_lower_clamp_color_outputs(nir_shader *shader)
       .shader = shader,
    };
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    nir_foreach_function(function, shader) {
       if (function->impl)
          progress |= lower_impl(&state, function->impl);

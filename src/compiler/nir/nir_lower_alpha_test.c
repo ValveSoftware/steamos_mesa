@@ -41,6 +41,8 @@ nir_lower_alpha_test(nir_shader *shader, enum compare_func func,
 {
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    nir_foreach_function(function, shader) {
       nir_function_impl *impl = function->impl;
       nir_builder b;

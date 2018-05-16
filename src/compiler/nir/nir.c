@@ -64,6 +64,7 @@ nir_shader_create(void *mem_ctx,
    shader->num_outputs = 0;
    shader->num_uniforms = 0;
    shader->num_shared = 0;
+   shader->lowered_derefs = 0;
 
    return shader;
 }

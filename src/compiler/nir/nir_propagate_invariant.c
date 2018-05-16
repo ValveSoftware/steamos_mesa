@@ -184,6 +184,8 @@ nir_propagate_invariant(nir_shader *shader)
    struct set *invariants = _mesa_set_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    bool progress = false;
    nir_foreach_function(function, shader) {
       if (function->impl && propagate_invariant_impl(function->impl, invariants))

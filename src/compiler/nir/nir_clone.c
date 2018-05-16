@@ -816,6 +816,7 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
    ns->num_uniforms = s->num_uniforms;
    ns->num_outputs = s->num_outputs;
    ns->num_shared = s->num_shared;
+   ns->lowered_derefs = s->lowered_derefs;
 
    free_clone_state(&state);
 

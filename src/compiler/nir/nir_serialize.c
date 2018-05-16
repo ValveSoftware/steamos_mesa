@@ -1215,6 +1215,7 @@ nir_serialize(struct blob *blob, const nir_shader *nir)
    blob_write_uint32(blob, nir->num_uniforms);
    blob_write_uint32(blob, nir->num_outputs);
    blob_write_uint32(blob, nir->num_shared);
+   blob_write_uint32(blob, nir->lowered_derefs);
 
    blob_write_uint32(blob, exec_list_length(&nir->functions));
    nir_foreach_function(fxn, nir) {
@@ -1270,6 +1271,7 @@ nir_deserialize(void *mem_ctx,
    ctx.nir->num_uniforms = blob_read_uint32(blob);
    ctx.nir->num_outputs = blob_read_uint32(blob);
    ctx.nir->num_shared = blob_read_uint32(blob);
+   ctx.nir->lowered_derefs = blob_read_uint32(blob);
 
    unsigned num_functions = blob_read_uint32(blob);
    for (unsigned i = 0; i < num_functions; i++)

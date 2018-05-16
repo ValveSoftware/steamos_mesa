@@ -352,6 +352,8 @@ nir_lower_wpos_ytransform(nir_shader *shader,
       .shader = shader,
    };
 
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
+
    assert(shader->info.stage == MESA_SHADER_FRAGMENT);
 
    nir_foreach_function(function, shader) {

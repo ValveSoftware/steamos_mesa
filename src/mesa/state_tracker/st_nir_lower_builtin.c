@@ -239,6 +239,7 @@ lower_builtin_impl(lower_builtin_state *state, nir_function_impl *impl)
 void
 st_nir_lower_builtin(nir_shader *shader)
 {
+   nir_assert_lowered_derefs(shader, nir_lower_load_store_derefs);
    lower_builtin_state state;
    state.shader = shader;
    nir_foreach_function(function, shader) {
