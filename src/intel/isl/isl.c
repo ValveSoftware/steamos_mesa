@@ -1642,6 +1642,8 @@ isl_surf_get_mcs_surf(const struct isl_device *dev,
                       const struct isl_surf *surf,
                       struct isl_surf *mcs_surf)
 {
+   assert(ISL_DEV_GEN(dev) >= 7);
+
    /* It must be multisampled with an array layout */
    assert(surf->samples > 1 && surf->msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
 

@@ -1808,8 +1808,6 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       aux_surf_ok = isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &aux_surf);
       break;
    case ISL_AUX_USAGE_MCS:
-      assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
-
       /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
        *
        *     When MCS buffer is enabled and bound to MSRT, it is required that
