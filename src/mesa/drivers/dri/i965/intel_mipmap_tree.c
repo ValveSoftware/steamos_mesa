@@ -159,12 +159,8 @@ intel_miptree_supports_ccs(struct brw_context *brw,
       return false;
 
    /* MCS is only supported for color buffers */
-   switch (_mesa_get_format_base_format(mt->format)) {
-   case GL_DEPTH_COMPONENT:
-   case GL_DEPTH_STENCIL:
-   case GL_STENCIL_INDEX:
+   if (!_mesa_is_format_color_format(mt->format))
       return false;
-   }
 
    if (mt->cpp != 4 && mt->cpp != 8 && mt->cpp != 16)
       return false;
