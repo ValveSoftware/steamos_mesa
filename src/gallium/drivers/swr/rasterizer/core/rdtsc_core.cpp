@@ -54,6 +54,7 @@ BUCKET_DESC gCoreBuckets[] = {
     { "FEClipPoints", "", false, 0xffffffff },
     { "FEClipLines", "", false, 0xffffffff },
     { "FEClipTriangles", "", false, 0xffffffff },
+    { "FEClipRectangles", "", false, 0xffffffff },
     { "FECullZeroAreaAndBackface", "", false, 0xffffffff },
     { "FECullBetweenCenters", "", false, 0xffffffff },
     { "FEEarlyRastEnter", "", false, 0xffffffff },
