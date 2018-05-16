@@ -3068,7 +3068,7 @@ _mesa_GetFixedv(GLenum pname, GLfixed *params)
       break;
 
    case TYPE_ENUM16:
-      params[0] = INT_TO_FIXED(((GLenum16 *) p)[0]);
+      params[0] = INT_TO_FIXED((GLint)(((GLenum16 *) p)[0]));
       break;
 
    case TYPE_INT_N:
