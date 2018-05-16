@@ -3412,7 +3412,6 @@ static void si_emit_msaa_config(struct si_context *sctx)
 		};
 		unsigned log_samples = util_logbase2(coverage_samples);
 		unsigned ps_iter_samples = si_get_ps_iter_samples(sctx);
-		ps_iter_samples = MIN2(ps_iter_samples, color_samples);
 		unsigned log_ps_iter_samples =
 			util_logbase2(util_next_power_of_two(ps_iter_samples));
 
