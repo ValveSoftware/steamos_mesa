@@ -329,6 +329,9 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
+	if ((device->instance->debug_flags & RADV_DEBUG_INFO))
+		ac_print_gpu_info(&device->rad_info);
+
 	return VK_SUCCESS;
 
 fail:
@@ -391,6 +394,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"preoptir", RADV_DEBUG_PREOPTIR},
 	{"nodynamicbounds", RADV_DEBUG_NO_DYNAMIC_BOUNDS},
 	{"nooutoforder", RADV_DEBUG_NO_OUT_OF_ORDER},
+	{"info", RADV_DEBUG_INFO},
 	{NULL, 0}
 };
 
