@@ -481,6 +481,7 @@ struct PA_STATE_CUT : public PA_STATE
         case TOP_LINE_LIST_ADJ:     pfnPa = gsEnabled ? &PA_STATE_CUT::ProcessVertLineListAdj : &PA_STATE_CUT::ProcessVertLineListAdjNoGs; break;
         case TOP_LINE_STRIP:        pfnPa = &PA_STATE_CUT::ProcessVertLineStrip; break;
         case TOP_LISTSTRIP_ADJ:     pfnPa = gsEnabled ? &PA_STATE_CUT::ProcessVertLineStripAdj : &PA_STATE_CUT::ProcessVertLineStripAdjNoGs; break;
+        case TOP_RECT_LIST:         pfnPa = &PA_STATE_CUT::ProcessVertRectList; break;
         default: assert(0 && "Unimplemented topology");
         }
     }
@@ -719,6 +720,20 @@ struct PA_STATE_CUT : public PA_STATE
             }
         }
 
+        // compute the implied 4th vertex, v3
+        if (this->binTopology == TOP_RECT_LIST)
+        {
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                // v1, v3 = v1 + v2 - v0, v2
+                // v1 stored in verts[0], v0 stored in verts[1], v2 stored in verts[2]
+                simd16scalar temp = _simd16_add_ps(verts[0].v[c], verts[2].v[c]);
+                temp = _simd16_sub_ps(temp, verts[1].v[c]);
+                temp = _simd16_blend_ps(verts[1].v[c], temp, 0xAAAA); // 1010 1010 1010 1010
+                verts[1].v[c] = _simd16_extract_ps(temp, 0);
+            }
+        }
+
         return true;
     }
 
@@ -766,6 +781,19 @@ struct PA_STATE_CUT : public PA_STATE
             }
         }
 
+        // compute the implied 4th vertex, v3
+        if (this->binTopology == TOP_RECT_LIST)
+        {
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                // v1, v3 = v1 + v2 - v0, v2
+                // v1 stored in verts[0], v0 stored in verts[1], v2 stored in verts[2]
+                simd16scalar temp = _simd16_add_ps(verts[0].v[c], verts[2].v[c]);
+                temp = _simd16_sub_ps(temp, verts[1].v[c]);
+                verts[1].v[c] = _simd16_blend_ps(verts[1].v[c], temp, 0xAAAA); // 1010 1010 1010 1010
+            }
+        }
+
         return true;
     }
 
@@ -788,6 +816,21 @@ struct PA_STATE_CUT : public PA_STATE
                 float* pComponent = (float*)(this->pStreamBase + offset);
                 pVert[c] = *pComponent;
                 offset += SIMD_WIDTH * sizeof(float);
+            }
+        }
+
+        // compute the implied 4th vertex, v3
+        if ((this->binTopology == TOP_RECT_LIST) && (triIndex % 2 == 1))
+        {
+            // v1, v3 = v1 + v2 - v0, v2
+            // v1 stored in tri[0], v0 stored in tri[1], v2 stored in tri[2]
+            float* pVert0 = (float*)&tri[1];
+            float* pVert1 = (float*)&tri[0];
+            float* pVert2 = (float*)&tri[2];
+            float* pVert3 = (float*)&tri[1];
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                pVert3[c] = pVert1[c] + pVert2[c] - pVert0[c];
             }
         }
     }
@@ -1132,6 +1175,31 @@ struct PA_STATE_CUT : public PA_STATE
         {
             this->indices[0][this->numPrimsAssembled] = this->vert[0];
             this->numPrimsAssembled++;
+            this->curIndex = 0;
+        }
+    }
+
+    void ProcessVertRectList(uint32_t index, bool finish)
+    {
+        this->vert[this->curIndex] = index;
+        this->curIndex++;
+        if (this->curIndex == 3)
+        {
+            // assembled enough verts for prim, add to gather indices
+            this->indices[0][this->numPrimsAssembled] = this->vert[0];
+            this->indices[1][this->numPrimsAssembled] = this->vert[1];
+            this->indices[2][this->numPrimsAssembled] = this->vert[2];
+
+            // second triangle in the rectangle
+            // v1, v3 = v1 + v2 - v0, v2
+            this->indices[0][this->numPrimsAssembled+1] = this->vert[1];
+            this->indices[1][this->numPrimsAssembled+1] = this->vert[0];
+            this->indices[2][this->numPrimsAssembled+1] = this->vert[2];
+
+            // increment numPrimsAssembled
+            this->numPrimsAssembled += 2;
+
+            // set up next prim state
             this->curIndex = 0;
         }
     }

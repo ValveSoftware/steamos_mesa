@@ -868,6 +868,7 @@ static void GeometryShaderStage(
     {
         switch (pState->outputTopology)
         {
+        case TOP_RECT_LIST:         pfnClipFunc = ClipRectangles_simd16; break;
         case TOP_TRIANGLE_STRIP:    pfnClipFunc = ClipTriangles_simd16; break;
         case TOP_LINE_STRIP:        pfnClipFunc = ClipLines_simd16; break;
         case TOP_POINT_LIST:        pfnClipFunc = ClipPoints_simd16; break;
@@ -881,6 +882,7 @@ static void GeometryShaderStage(
     {
         switch (pState->outputTopology)
         {
+        case TOP_RECT_LIST:         pfnClipFunc = ClipRectangles; break;
         case TOP_TRIANGLE_STRIP:    pfnClipFunc = ClipTriangles; break;
         case TOP_LINE_STRIP:        pfnClipFunc = ClipLines; break;
         case TOP_POINT_LIST:        pfnClipFunc = ClipPoints; break;

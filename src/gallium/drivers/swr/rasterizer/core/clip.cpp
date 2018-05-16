@@ -160,6 +160,15 @@ int ClipTriToPlane( const float *pInPts, int numInPts,
     return i;
 }
 
+void ClipRectangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask,
+    simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx)
+{
+    RDTSC_BEGIN(FEClipRectangles, pDC->drawId);
+    Clipper<SIMD256, 3> clipper(workerId, pDC);
+    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx, rtIdx);
+    RDTSC_END(FEClipRectangles, 1);
+}
+
 void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask,
                    simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx)
 {
@@ -188,6 +197,21 @@ void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector p
 }
 
 #if USE_SIMD16_FRONTEND
+void SIMDCALL ClipRectangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask,
+    simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx)
+{
+    RDTSC_BEGIN(FEClipRectangles, pDC->drawId);
+
+    enum { VERTS_PER_PRIM = 3 };
+
+    Clipper<SIMD512, VERTS_PER_PRIM> clipper(workerId, pDC);
+
+    pa.useAlternateOffset = false;
+    clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx, rtIdx);
+
+    RDTSC_END(FEClipRectangles, 1);
+}
+
 void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask,
                                    simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx)
 {

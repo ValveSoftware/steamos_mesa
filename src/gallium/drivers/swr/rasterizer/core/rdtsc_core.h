@@ -59,6 +59,7 @@ enum CORE_BUCKETS
     FEClipPoints,
     FEClipLines,
     FEClipTriangles,
+    FEClipRectangles,
     FECullZeroAreaAndBackface,
     FECullBetweenCenters,
     FEEarlyRastEnter,
