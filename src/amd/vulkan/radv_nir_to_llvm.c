@@ -1684,6 +1684,8 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 	/* loop num outputs */
 	idx = 0;
 	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
+		unsigned output_usage_mask =
+			ctx->shader_info->info.gs.output_usage_mask[i];
 		LLVMValueRef *out_ptr = &addrs[i * 4];
 		int length = 4;
 		int slot = idx;
@@ -1697,8 +1699,13 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 			length = ctx->num_output_clips + ctx->num_output_culls;
 			if (length > 4)
 				slot_inc = 2;
+			output_usage_mask = (1 << length) - 1;
 		}
+
 		for (unsigned j = 0; j < length; j++) {
+			if (!(output_usage_mask & (1 << j)))
+				continue;
+
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->ac.builder,
 							     out_ptr[j], "");
 			LLVMValueRef voffset = LLVMConstInt(ctx->ac.i32, (slot * 4 + j) * ctx->gs_max_out_vertices, false);
