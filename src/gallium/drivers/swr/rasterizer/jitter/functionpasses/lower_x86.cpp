@@ -265,8 +265,16 @@ namespace SwrJit
                 // Assuming the intrinsics are consistent and place the src operand and mask last in the argument list.
                 if (mTarget == AVX512)
                 {
-                    args.push_back(GetZeroVec(vecWidth, pElemTy));
-                    args.push_back(GetMask(vecWidth));
+                    if (pFunc->getName().equals("meta.intrinsic.VCVTPD2PS")) {
+                        args.push_back(GetZeroVec(W256, pCallInst->getType()->getScalarType()));
+                        args.push_back(GetMask(W256));
+                        // for AVX512 VCVTPD2PS, we also have to add rounding mode
+                        args.push_back(B->C(_MM_FROUND_TO_NEAREST_INT |
+                                            _MM_FROUND_NO_EXC));
+                    } else {
+                        args.push_back(GetZeroVec(vecWidth, pElemTy));
+                        args.push_back(GetMask(vecWidth));
+                    }
                 }
 
                 return B->CALLA(pIntrin, args);
