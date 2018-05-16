@@ -306,7 +306,8 @@ radv_amdgpu_winsys_bo_create(struct radeon_winsys *_ws,
 
 	r = amdgpu_va_range_alloc(ws->dev, amdgpu_gpu_va_range_general,
 				  size, alignment, 0, &va, &va_handle,
-				  AMDGPU_VA_RANGE_HIGH);
+				  (flags & RADEON_FLAG_32BIT ? AMDGPU_VA_RANGE_32_BIT : 0) |
+				   AMDGPU_VA_RANGE_HIGH);
 	if (r)
 		goto error_va_alloc;
 
