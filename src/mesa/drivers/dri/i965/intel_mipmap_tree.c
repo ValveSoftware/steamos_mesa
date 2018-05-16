@@ -204,6 +204,13 @@ intel_miptree_supports_ccs(struct brw_context *brw,
    if (devinfo->gen < 8 && (mip_mapped || arrayed))
       return false;
 
+   /* The PRM doesn't say this explicitly, but fast-clears don't appear to
+    * work for 3D textures until gen9 where the layout of 3D textures changes
+    * to match 2D array textures.
+    */
+   if (devinfo->gen <= 8 && mt->surf.dim != ISL_SURF_DIM_2D)
+      return false;
+
    /* There's no point in using an MCS buffer if the surface isn't in a
     * renderable format.
     */
@@ -1793,7 +1800,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
    enum isl_aux_state initial_state;
    uint8_t memset_value;
    struct isl_surf aux_surf;
-   bool aux_surf_ok;
+   MAYBE_UNUSED bool aux_surf_ok;
 
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_NONE:
@@ -1805,7 +1812,6 @@ intel_miptree_alloc_aux(struct brw_context *brw,
 
       initial_state = ISL_AUX_STATE_AUX_INVALID;
       aux_surf_ok = isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &aux_surf);
-      assert(aux_surf_ok);
       break;
    case ISL_AUX_USAGE_MCS:
       assert(_mesa_is_format_color_format(mt->format));
@@ -1826,7 +1832,6 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       initial_state = ISL_AUX_STATE_CLEAR;
       memset_value = 0xFF;
       aux_surf_ok = isl_surf_get_mcs_surf(&brw->isl_dev, &mt->surf, &aux_surf);
-      assert(aux_surf_ok);
       break;
    case ISL_AUX_USAGE_CCS_D:
    case ISL_AUX_USAGE_CCS_E:
@@ -1852,9 +1857,8 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       break;
    }
 
-   /* Ensure we have a valid aux_surf. */
-   if (aux_surf_ok == false)
-      return false;
+   /* We should have a valid aux_surf. */
+   assert(aux_surf_ok);
 
    /* No work is needed for a zero-sized auxiliary buffer. */
    if (aux_surf.size == 0)
