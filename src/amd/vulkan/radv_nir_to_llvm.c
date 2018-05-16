@@ -511,6 +511,12 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 		}
 	}
 
+	if (options->address32_hi) {
+		ac_llvm_add_target_dep_function_attr(main_function,
+						     "amdgpu-32bit-address-high-bits",
+						     options->address32_hi);
+	}
+
 	if (max_workgroup_size) {
 		ac_llvm_add_target_dep_function_attr(main_function,
 						     "amdgpu-max-work-group-size",

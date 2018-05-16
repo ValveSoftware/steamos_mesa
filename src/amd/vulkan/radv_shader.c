@@ -482,6 +482,7 @@ shader_variant_create(struct radv_device *device,
 				 device->instance->debug_flags & RADV_DEBUG_PREOPTIR;
 	options->record_llvm_ir = device->keep_shader_info;
 	options->tess_offchip_block_dw_size = device->tess_offchip_block_dw_size;
+	options->address32_hi = device->physical_device->rad_info.address32_hi;
 
 	if (options->supports_spill)
 		tm_options |= AC_TM_SUPPORTS_SPILL;
