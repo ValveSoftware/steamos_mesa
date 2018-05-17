@@ -596,7 +596,7 @@ st_nir_get_mesa_program(struct gl_context *ctx,
 static void
 st_nir_link_shaders(nir_shader **producer, nir_shader **consumer, bool scalar)
 {
-   nir_lower_io_arrays_to_elements(*producer, *consumer);
+   /* nir_lower_io_arrays_to_elements(*producer, *consumer); */
 
    NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
    NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
