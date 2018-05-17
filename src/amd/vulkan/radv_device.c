@@ -108,12 +108,9 @@ radv_get_device_name(enum radeon_family family, char *name, size_t name_len)
 	default: chip_string = "AMD RADV unknown"; break;
 	}
 
-	if (HAVE_LLVM > 0) {
-		snprintf(llvm_string, sizeof(llvm_string),
-			 " (LLVM %i.%i.%i)", (HAVE_LLVM >> 8) & 0xff,
-			 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
-	}
-
+	snprintf(llvm_string, sizeof(llvm_string),
+		 " (LLVM %i.%i.%i)", (HAVE_LLVM >> 8) & 0xff,
+		 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
 	snprintf(name, name_len, "%s%s", chip_string, llvm_string);
 }
 

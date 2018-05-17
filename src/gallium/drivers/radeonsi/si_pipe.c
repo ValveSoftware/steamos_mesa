@@ -164,7 +164,7 @@ static void si_destroy_compiler(struct si_compiler *compiler)
 		LLVMDisposeMessage((char*)compiler->data_layout);
 	if (compiler->passmgr)
 		LLVMDisposePassManager(compiler->passmgr);
-#if HAVE_LLVM < 0x0500 || HAVE_LLVM >= 0x0700
+#if HAVE_LLVM >= 0x0700
 	/* This crashes on LLVM 5.0 and 6.0 and Ubuntu 18.04, so leak it there. */
 	if (compiler->target_library_info)
 		gallivm_dispose_target_library_info(compiler->target_library_info);

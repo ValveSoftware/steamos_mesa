@@ -851,7 +851,7 @@ static void set_llvm_calling_convention(LLVMValueRef func,
 		calling_conv = RADEON_LLVM_AMDGPU_GS;
 		break;
 	case MESA_SHADER_TESS_CTRL:
-		calling_conv = HAVE_LLVM >= 0x0500 ? RADEON_LLVM_AMDGPU_HS : RADEON_LLVM_AMDGPU_VS;
+		calling_conv = RADEON_LLVM_AMDGPU_HS;
 		break;
 	case MESA_SHADER_FRAGMENT:
 		calling_conv = RADEON_LLVM_AMDGPU_PS;

@@ -1181,8 +1181,7 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 		call_conv = RADEON_LLVM_AMDGPU_VS;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		call_conv = HAVE_LLVM >= 0x0500 ? RADEON_LLVM_AMDGPU_HS :
-						  RADEON_LLVM_AMDGPU_VS;
+		call_conv = RADEON_LLVM_AMDGPU_HS;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		call_conv = RADEON_LLVM_AMDGPU_GS;
