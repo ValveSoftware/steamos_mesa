@@ -587,9 +587,9 @@ radv_emit_userdata_address(struct radv_cmd_buffer *cmd_buffer,
 		return;
 	assert(loc->num_sgprs == 2);
 	assert(!loc->indirect);
-	radeon_set_sh_reg_seq(cmd_buffer->cs, base_reg + loc->sgpr_idx * 4, 2);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
+
+	radv_emit_shader_pointer(cmd_buffer->cs,
+				 base_reg + loc->sgpr_idx * 4, va);
 }
 
 static void
@@ -1442,10 +1442,9 @@ emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 
 	assert(!desc_set_loc->indirect);
 	assert(desc_set_loc->num_sgprs == 2);
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-			      base_reg + desc_set_loc->sgpr_idx * 4, 2);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
+
+	radv_emit_shader_pointer(cmd_buffer->cs,
+				 base_reg + desc_set_loc->sgpr_idx * 4, va);
 }
 
 static void
