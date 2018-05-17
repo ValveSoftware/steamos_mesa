@@ -624,7 +624,6 @@ struct radv_device {
 	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
 
 	bool always_use_syncobj;
-	bool llvm_supports_spill;
 	bool has_distributed_tess;
 	bool pbb_allowed;
 	bool dfsm_allowed;

@@ -376,9 +376,6 @@ radv_fill_shader_variant(struct radv_device *device,
 	struct radv_shader_info *info = &variant->info.info;
 	unsigned vgpr_comp_cnt = 0;
 
-	if (scratch_enabled && !device->llvm_supports_spill)
-		radv_finishme("shader scratch support only available with LLVM 4.0");
-
 	variant->code_size = binary->code_size;
 	variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
 			 S_00B12C_SCRATCH_EN(scratch_enabled);
@@ -554,7 +551,7 @@ radv_shader_variant_create(struct radv_device *device,
 		options.key = *key;
 
 	options.unsafe_math = !!(device->instance->debug_flags & RADV_DEBUG_UNSAFE_MATH);
-	options.supports_spill = device->llvm_supports_spill;
+	options.supports_spill = true;
 
 	return shader_variant_create(device, module, shaders, shader_count, shaders[shader_count - 1]->info.stage,
 				     &options, false, code_out, code_size_out);
