@@ -589,8 +589,6 @@ st_nir_get_mesa_program(struct gl_context *ctx,
 
    nir_shader *nir = st_glsl_to_nir(st, prog, shader_program, shader->Stage);
 
-   nir_lower_deref_instrs(nir, (nir_lower_deref_flags)~0);
-
    set_st_program(prog, shader_program, nir);
    prog->nir = nir;
 }
@@ -676,6 +674,7 @@ st_link_nir(struct gl_context *ctx,
          mask = (nir_variable_mode)(mask | nir_var_shader_out);
 
       nir_shader *nir = shader->Program->nir;
+      NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
       NIR_PASS_V(nir, nir_lower_io_to_scalar_early, mask);
       st_nir_opts(nir, is_scalar[i]);
    }

@@ -2034,6 +2034,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			nir[i] = nir_shader_clone(NULL, nir[i]);
 		}
 
+		NIR_PASS_V(nir[i], nir_lower_deref_instrs, ~0);
+
 		if (first != last) {
 			nir_variable_mode mask = 0;
 
