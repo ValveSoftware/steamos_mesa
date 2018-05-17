@@ -3235,7 +3235,18 @@ fs_visitor::emit_repclear_shader()
       write->mlen = 1;
    } else {
       assume(key->nr_color_regions > 0);
+
+      struct brw_reg header =
+         retype(brw_message_reg(base_mrf), BRW_REGISTER_TYPE_UD);
+      bld.exec_all().group(16, 0)
+         .MOV(header, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+
       for (int i = 0; i < key->nr_color_regions; ++i) {
+         if (i > 0) {
+            bld.exec_all().group(1, 0)
+               .MOV(component(header, 2), brw_imm_ud(i));
+         }
+
          write = bld.emit(FS_OPCODE_REP_FB_WRITE);
          write->saturate = key->clamp_fragment_color;
          write->base_mrf = base_mrf;
@@ -3960,25 +3971,83 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    int header_size = 2, payload_header_size;
    unsigned length = 0;
 
-   /* From the Sandy Bridge PRM, volume 4, page 198:
-    *
-    *     "Dispatched Pixel Enables. One bit per pixel indicating
-    *      which pixels were originally enabled when the thread was
-    *      dispatched. This field is only required for the end-of-
-    *      thread message and on all dual-source messages."
-    */
-   if (devinfo->gen >= 6 &&
-       (devinfo->is_haswell || devinfo->gen >= 8 || !prog_data->uses_kill) &&
-       color1.file == BAD_FILE &&
-       key->nr_color_regions == 1) {
-      header_size = 0;
-   }
+   if (devinfo->gen < 6) {
+      /* For gen4-5, we always have a header consisting of g0 and g1.  We have
+       * an implied MOV from g0,g1 to the start of the message.  The MOV from
+       * g0 is handled by the hardware and the MOV from g1 is provided by the
+       * generator.  This is required because, on gen4-5, the generator may
+       * generate two write messages with different message lengths in order
+       * to handle AA data properly.
+       *
+       * Also, since the pixel mask goes in the g0 portion of the message and
+       * since render target writes are the last thing in the shader, we write
+       * the pixel mask directly into g0 and it will get copied as part of the
+       * implied write.
+       */
+      if (prog_data->uses_kill) {
+         bld.exec_all().group(1, 0)
+            .MOV(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UW),
+                 brw_flag_reg(0, 1));
+      }
 
-   if (header_size != 0) {
-      assert(header_size == 2);
-      /* Allocate 2 registers for a header */
-      length += 2;
+      assert(length == 0);
+      length = 2;
+   } else if ((devinfo->gen <= 7 && !devinfo->is_haswell &&
+               prog_data->uses_kill) ||
+              color1.file != BAD_FILE ||
+              key->nr_color_regions > 1) {
+      /* From the Sandy Bridge PRM, volume 4, page 198:
+       *
+       *     "Dispatched Pixel Enables. One bit per pixel indicating
+       *      which pixels were originally enabled when the thread was
+       *      dispatched. This field is only required for the end-of-
+       *      thread message and on all dual-source messages."
+       */
+      const fs_builder ubld = bld.exec_all().group(8, 0);
+
+      /* The header starts off as g0 and g1 */
+      fs_reg header = ubld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+      ubld.group(16, 0).MOV(header, retype(brw_vec8_grf(0, 0),
+                                           BRW_REGISTER_TYPE_UD));
+
+      uint32_t g00_bits = 0;
+
+      /* Set "Source0 Alpha Present to RenderTarget" bit in message
+       * header.
+       */
+      if (inst->target > 0 && key->replicate_alpha)
+         g00_bits |= 1 << 11;
+
+      /* Set computes stencil to render target */
+      if (prog_data->computed_stencil)
+         g00_bits |= 1 << 14;
+
+      if (g00_bits) {
+         /* OR extra bits into g0.0 */
+         ubld.group(1, 0).OR(component(header, 0),
+                             retype(brw_vec1_grf(0, 0),
+                                    BRW_REGISTER_TYPE_UD),
+                             brw_imm_ud(g00_bits));
+      }
+
+      /* Set the render target index for choosing BLEND_STATE. */
+      if (inst->target > 0) {
+         ubld.group(1, 0).MOV(component(header, 2), brw_imm_ud(inst->target));
+      }
+
+      if (prog_data->uses_kill) {
+         ubld.group(1, 0).MOV(retype(component(header, 15),
+                                     BRW_REGISTER_TYPE_UW),
+                              brw_flag_reg(0, 1));
+      }
+
+      assert(length == 0);
+      sources[0] = header;
+      sources[1] = horiz_offset(header, 8);
+      length = 2;
    }
+   assert(length == 0 || length == 2);
+   header_size = length;
 
    if (payload.aa_dest_stencil_reg) {
       sources[length] = fs_reg(VGRF, bld.shader->alloc.allocate(1));

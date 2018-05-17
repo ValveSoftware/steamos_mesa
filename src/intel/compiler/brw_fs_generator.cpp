@@ -307,9 +307,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
 void
 fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 {
-   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
-   const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
-
    if (devinfo->gen < 8 && !devinfo->is_haswell) {
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
    }
@@ -319,69 +316,6 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 
    if (inst->base_mrf >= 0)
       payload = brw_message_reg(inst->base_mrf);
-
-   /* Header is 2 regs, g0 and g1 are the contents. g0 will be implied
-    * move, here's g1.
-    */
-   if (inst->header_size != 0) {
-      brw_push_insn_state(p);
-      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_set_default_exec_size(p, BRW_EXECUTE_1);
-      brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      brw_set_default_flag_reg(p, 0, 0);
-
-      /* On HSW, the GPU will use the predicate on SENDC, unless the header is
-       * present.
-       */
-      if (prog_data->uses_kill) {
-         struct brw_reg pixel_mask;
-
-         if (devinfo->gen >= 6)
-            pixel_mask = retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UW);
-         else
-            pixel_mask = retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UW);
-
-         brw_MOV(p, pixel_mask, brw_flag_reg(0, 1));
-      }
-
-      if (devinfo->gen >= 6) {
-         brw_push_insn_state(p);
-         brw_set_default_exec_size(p, BRW_EXECUTE_16);
-	 brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
-	 brw_MOV(p,
-		 retype(payload, BRW_REGISTER_TYPE_UD),
-		 retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
-         brw_pop_insn_state(p);
-
-         if (inst->target > 0 && key->replicate_alpha) {
-            /* Set "Source0 Alpha Present to RenderTarget" bit in message
-             * header.
-             */
-            brw_OR(p,
-		   vec1(retype(payload, BRW_REGISTER_TYPE_UD)),
-		   vec1(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
-		   brw_imm_ud(0x1 << 11));
-         }
-
-	 if (inst->target > 0) {
-	    /* Set the render target index for choosing BLEND_STATE. */
-	    brw_MOV(p, retype(vec1(suboffset(payload, 2)),
-                              BRW_REGISTER_TYPE_UD),
-		    brw_imm_ud(inst->target));
-	 }
-
-         /* Set computes stencil to render target */
-         if (prog_data->computed_stencil) {
-            brw_OR(p,
-                   vec1(retype(payload, BRW_REGISTER_TYPE_UD)),
-                   vec1(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
-                   brw_imm_ud(0x1 << 14));
-         }
-      }
-
-      brw_pop_insn_state(p);
-   }
 
    if (!runtime_check_aads_emit) {
       fire_fb_write(inst, payload, implied_header, inst->mlen);
