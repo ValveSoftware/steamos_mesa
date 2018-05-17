@@ -816,6 +816,15 @@ fs_inst::size_read(int arg) const
 {
    switch (opcode) {
    case FS_OPCODE_FB_WRITE:
+   case FS_OPCODE_REP_FB_WRITE:
+      if (arg == 0) {
+         if (base_mrf >= 0)
+            return src[0].file == BAD_FILE ? 0 : 2 * REG_SIZE;
+         else
+            return mlen * REG_SIZE;
+      }
+      break;
+
    case FS_OPCODE_FB_READ:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
@@ -4074,7 +4083,13 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       if (devinfo->gen < 6 && bld.dispatch_width() == 16)
          load->dst.nr |= BRW_MRF_COMPR4;
 
-      inst->resize_sources(0);
+      if (devinfo->gen < 6) {
+         /* Set up src[0] for the implied MOV from grf0-1 */
+         inst->resize_sources(1);
+         inst->src[0] = brw_vec8_grf(0, 0);
+      } else {
+         inst->resize_sources(0);
+      }
       inst->base_mrf = 1;
    }
 
