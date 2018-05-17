@@ -1006,6 +1006,24 @@ dri2_x11_copy_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
    return EGL_TRUE;
 }
 
+uint32_t
+dri2_format_for_depth(uint32_t depth)
+{
+   switch (depth) {
+   case 16:
+      return __DRI_IMAGE_FORMAT_RGB565;
+   case 24:
+      return __DRI_IMAGE_FORMAT_XRGB8888;
+   case 30:
+      return __DRI_IMAGE_FORMAT_XRGB2101010;
+   case 32:
+      return __DRI_IMAGE_FORMAT_ARGB8888;
+   default:
+      return __DRI_IMAGE_FORMAT_NONE;
+   }
+}
+
+
 static _EGLImage *
 dri2_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
 			     EGLClientBuffer buffer, const EGLint *attr_list)
@@ -1050,20 +1068,9 @@ dri2_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
       return NULL;
    }
 
-   switch (geometry_reply->depth) {
-   case 16:
-      format = __DRI_IMAGE_FORMAT_RGB565;
-      break;
-   case 24:
-      format = __DRI_IMAGE_FORMAT_XRGB8888;
-      break;
-   case 30:
-      format = __DRI_IMAGE_FORMAT_XRGB2101010;
-      break;
-   case 32:
-      format = __DRI_IMAGE_FORMAT_ARGB8888;
-      break;
-   default:
+   format = dri2_format_for_depth(geometry_reply->depth);
+
+   if (format == __DRI_IMAGE_FORMAT_NONE) {
       _eglError(EGL_BAD_PARAMETER,
 		"dri2_create_image_khr: unsupported pixmap depth");
       free(buffers_reply);
