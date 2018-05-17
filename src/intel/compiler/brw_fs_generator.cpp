@@ -781,6 +781,7 @@ fs_generator::generate_linterp(fs_inst *inst,
       struct brw_reg dwQ = suboffset(interp, 1);
       struct brw_reg dwR = suboffset(interp, 3);
 
+      brw_push_insn_state(p);
       brw_set_default_exec_size(p, BRW_EXECUTE_8);
 
       if (inst->exec_size == 8) {
@@ -795,15 +796,13 @@ fs_generator::generate_linterp(fs_inst *inst,
           */
          brw_inst_set_saturate(p->devinfo, i[0], false);
       } else {
-         brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
+         brw_set_default_group(p, inst->group);
          i[0] = brw_MAD(p,            acc, dwR, offset(delta_x, 0), dwP);
          i[1] = brw_MAD(p, offset(dst, 0), acc, offset(delta_x, 1), dwQ);
 
-         brw_set_default_compression_control(p, BRW_COMPRESSION_2NDHALF);
+         brw_set_default_group(p, inst->group + 8);
          i[2] = brw_MAD(p,            acc, dwR, offset(delta_y, 0), dwP);
          i[3] = brw_MAD(p, offset(dst, 1), acc, offset(delta_y, 1), dwQ);
-
-         brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
 
          brw_inst_set_cond_modifier(p->devinfo, i[1], inst->conditional_mod);
          brw_inst_set_cond_modifier(p->devinfo, i[3], inst->conditional_mod);
@@ -815,6 +814,8 @@ fs_generator::generate_linterp(fs_inst *inst,
          brw_inst_set_saturate(p->devinfo, i[0], false);
          brw_inst_set_saturate(p->devinfo, i[2], false);
       }
+
+      brw_pop_insn_state(p);
 
       return true;
    } else if (devinfo->has_pln) {
