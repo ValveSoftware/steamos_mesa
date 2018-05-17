@@ -817,8 +817,14 @@ fs_generator::generate_linterp(fs_inst *inst,
       }
 
       return true;
-   } else if (devinfo->has_pln &&
-              (devinfo->gen >= 7 || (delta_x.nr & 1) == 0)) {
+   } else if (devinfo->has_pln) {
+      /* From the Sandy Bridge PRM Vol. 4, Pt. 2, Section 8.3.53, "Plane":
+       *
+       *    "[DevSNB]:<src1> must be even register aligned.
+       *
+       * This restriction is lifted on Ivy Bridge.
+       */
+      assert(devinfo->gen >= 7 || (delta_x.nr & 1) == 0);
       brw_PLN(p, dst, interp, delta_x);
 
       return false;
