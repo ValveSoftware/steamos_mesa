@@ -2472,6 +2472,8 @@ VkResult radv_QueueSubmit(
 
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j += advance) {
 			struct radeon_winsys_cs *initial_preamble = (do_flush && !j) ? initial_flush_preamble_cs : initial_preamble_cs;
+			const struct radv_winsys_bo_list *bo_list = NULL;
+
 			advance = MIN2(max_cs_submission,
 				       pSubmits[i].commandBufferCount - j);
 
@@ -2481,12 +2483,14 @@ VkResult radv_QueueSubmit(
 			sem_info.cs_emit_wait = j == 0;
 			sem_info.cs_emit_signal = j + advance == pSubmits[i].commandBufferCount;
 
-			if (unlikely(queue->device->use_global_bo_list))
+			if (unlikely(queue->device->use_global_bo_list)) {
 				pthread_mutex_lock(&queue->device->bo_list.mutex);
+				bo_list = &queue->device->bo_list.list;
+			}
 
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array + j,
 							advance, initial_preamble, continue_preamble_cs,
-							&sem_info, &queue->device->bo_list.list,
+							&sem_info, bo_list,
 							can_patch, base_fence);
 
 			if (unlikely(queue->device->use_global_bo_list))
