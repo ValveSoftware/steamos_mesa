@@ -163,10 +163,6 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			   const VkSpecializationInfo *spec_info,
 			   const VkPipelineCreateFlags flags)
 {
-	if (strcmp(entrypoint_name, "main") != 0) {
-		radv_finishme("Multiple shaders per module not really supported");
-	}
-
 	nir_shader *nir;
 	nir_function *entry_point;
 	if (module->nir) {
