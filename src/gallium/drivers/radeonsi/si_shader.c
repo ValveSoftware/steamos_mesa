@@ -3598,6 +3598,9 @@ static void si_llvm_emit_es_epilogue(struct ac_shader_abi *abi,
 						      info->output_semantic_index[i]);
 
 		for (chan = 0; chan < 4; chan++) {
+			if (!(info->output_usagemask[i] & (1 << chan)))
+				continue;
+
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->ac.builder, addrs[4 * i + chan], "");
 			out_val = ac_to_integer(&ctx->ac, out_val);
 
