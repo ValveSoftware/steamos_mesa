@@ -210,30 +210,6 @@ static void interp(const struct clip_stage *clip,
 }
 
 /**
- * Checks whether the specified triangle is empty and if it is returns
- * true, otherwise returns false.
- * Triangle is considered null/empty if its area is equal to zero.
- */
-static inline boolean
-is_tri_null(const struct clip_stage *clip, const struct prim_header *header)
-{
-   const unsigned pos_attr = clip->pos_attr;
-   float x1 = header->v[1]->data[pos_attr][0] - header->v[0]->data[pos_attr][0];
-   float y1 = header->v[1]->data[pos_attr][1] - header->v[0]->data[pos_attr][1];
-   float z1 = header->v[1]->data[pos_attr][2] - header->v[0]->data[pos_attr][2];
-
-   float x2 = header->v[2]->data[pos_attr][0] - header->v[0]->data[pos_attr][0];
-   float y2 = header->v[2]->data[pos_attr][1] - header->v[0]->data[pos_attr][1];
-   float z2 = header->v[2]->data[pos_attr][2] - header->v[0]->data[pos_attr][2];
-
-   float vx = y1 * z2 - z1 * y2;
-   float vy = x1 * z2 - z1 * x2;
-   float vz = x1 * y2 - y1 * x2;
-
-   return (vx*vx  + vy*vy + vz*vz) == 0.f;
-}
-
-/**
  * Emit a post-clip polygon to the next pipeline stage.  The polygon
  * will be convex and the provoking vertex will always be vertex[0].
  */
@@ -247,7 +223,6 @@ static void emit_poly(struct draw_stage *stage,
    struct prim_header header;
    unsigned i;
    ushort edge_first, edge_middle, edge_last;
-   boolean tri_emitted = FALSE;
 
    if (stage->draw->rasterizer->flatshade_first) {
       edge_first  = DRAW_PIPE_EDGE_FLAG_0;
@@ -269,7 +244,6 @@ static void emit_poly(struct draw_stage *stage,
    header.pad = 0;
 
    for (i = 2; i < n; i++, header.flags = edge_middle) {
-      boolean tri_null;
       /* order the triangle verts to respect the provoking vertex mode */
       if (stage->draw->rasterizer->flatshade_first) {
          header.v[0] = inlist[0];  /* the provoking vertex */
@@ -281,18 +255,6 @@ static void emit_poly(struct draw_stage *stage,
          header.v[1] = inlist[i];
          header.v[2] = inlist[0];  /* the provoking vertex */
       }
-
-      tri_null = is_tri_null(clipper, &header);
-      /*
-       * If we ever generated a tri (regardless if it had area or not),
-       * skip all subsequent null tris.
-       * FIXME: I think this logic was hiding bugs elsewhere. It should
-       * be possible now to always emit all tris.
-       */
-      if (tri_null && tri_emitted) {
-         continue;
-      }
-      tri_emitted = TRUE;
 
       if (!edgeflags[i-1]) {
          header.flags &= ~edge_middle;
