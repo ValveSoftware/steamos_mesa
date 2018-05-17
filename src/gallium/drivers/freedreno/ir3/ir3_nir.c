@@ -57,9 +57,7 @@ static const nir_shader_compiler_options options = {
 struct nir_shader *
 ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 {
-	struct nir_shader *shader = tgsi_to_nir(tokens, &options);
-	NIR_PASS_V(shader, nir_lower_deref_instrs, ~0);
-	return shader;
+	return tgsi_to_nir(tokens, &options);
 }
 
 const nir_shader_compiler_options *

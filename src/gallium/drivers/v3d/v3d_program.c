@@ -209,7 +209,6 @@ v3d_shader_state_create(struct pipe_context *pctx,
                         fprintf(stderr, "\n");
                 }
                 s = tgsi_to_nir(cso->tokens, &v3d_nir_options);
-                NIR_PASS_V(s, nir_lower_deref_instrs, ~0);
 
                 so->was_tgsi = true;
         }

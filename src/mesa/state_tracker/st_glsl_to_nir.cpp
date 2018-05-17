@@ -841,8 +841,6 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
       NIR_PASS_V(nir, gl_nir_lower_samplers_as_deref, shader_program);
    else
       NIR_PASS_V(nir, gl_nir_lower_samplers, shader_program);
-
-   NIR_PASS_V(nir, nir_lower_deref_instrs, (nir_lower_deref_flags)~0);
 }
 
 } /* extern "C" */

@@ -206,6 +206,8 @@ compile_init(struct ir3_compiler *compiler,
 		ctx->s = so->shader->nir;
 	}
 
+	NIR_PASS_V(ctx->s, nir_lower_deref_instrs, ~0);
+
 	/* this needs to be the last pass run, so do this here instead of
 	 * in ir3_optimize_nir():
 	 */
