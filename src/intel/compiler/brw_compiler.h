@@ -745,6 +745,91 @@ struct brw_wm_prog_data {
    int urb_setup[VARYING_SLOT_MAX];
 };
 
+/** Returns the SIMD width corresponding to a given KSP index
+ *
+ * The "Variable Pixel Dispatch" table in the PRM (which can be found, for
+ * example in Vol. 7 of the SKL PRM) has a mapping from dispatch widths to
+ * kernel start pointer (KSP) indices that is based on what dispatch widths
+ * are enabled.  This function provides, effectively, the reverse mapping.
+ *
+ * If the given KSP is valid with respect to the SIMD8/16/32 enables, a SIMD
+ * width of 8, 16, or 32 is returned.  If the KSP is invalid, 0 is returned.
+ */
+static inline unsigned
+brw_fs_simd_width_for_ksp(unsigned ksp_idx, bool simd8_enabled,
+                          bool simd16_enabled, bool simd32_enabled)
+{
+   /* This function strictly ignores contiguous dispatch */
+   switch (ksp_idx) {
+   case 0:
+      return simd8_enabled ? 8 :
+             (simd16_enabled && !simd32_enabled) ? 16 :
+             (simd32_enabled && !simd16_enabled) ? 32 : 0;
+   case 1:
+      return (simd32_enabled && (simd16_enabled || simd8_enabled)) ? 32 : 0;
+   case 2:
+      return (simd16_enabled && (simd32_enabled || simd8_enabled)) ? 16 : 0;
+   default:
+      unreachable("Invalid KSP index");
+   }
+}
+
+#define brw_wm_state_simd_width_for_ksp(wm_state, ksp_idx) \
+   brw_fs_simd_width_for_ksp((ksp_idx), (wm_state)._8PixelDispatchEnable, \
+                             (wm_state)._16PixelDispatchEnable, \
+                             (wm_state)._32PixelDispatchEnable)
+
+#define brw_wm_state_has_ksp(wm_state, ksp_idx) \
+   (brw_wm_state_simd_width_for_ksp((wm_state), (ksp_idx)) != 0)
+
+static inline uint32_t
+_brw_wm_prog_data_prog_offset(const struct brw_wm_prog_data *prog_data,
+                              unsigned ksp_idx)
+{
+   switch (ksp_idx) {
+   case 0: return 0;
+   case 1: return 0;
+   case 2: return prog_data->prog_offset_2;
+   default:
+      unreachable("Invalid KSP index");
+   }
+}
+
+#define brw_wm_prog_data_prog_offset(prog_data, wm_state, ksp_idx) \
+   _brw_wm_prog_data_prog_offset(prog_data, ksp_idx)
+
+static inline uint8_t
+_brw_wm_prog_data_dispatch_grf_start_reg(const struct brw_wm_prog_data *prog_data,
+                                         unsigned ksp_idx)
+{
+   switch (ksp_idx) {
+   case 0: return prog_data->base.dispatch_grf_start_reg;
+   case 1: return 0;
+   case 2: return prog_data->dispatch_grf_start_reg_2;
+   default:
+      unreachable("Invalid KSP index");
+   }
+}
+
+#define brw_wm_prog_data_dispatch_grf_start_reg(prog_data, wm_state, ksp_idx) \
+   _brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ksp_idx)
+
+static inline uint8_t
+_brw_wm_prog_data_reg_blocks(const struct brw_wm_prog_data *prog_data,
+                             unsigned ksp_idx)
+{
+   switch (ksp_idx) {
+   case 0: return prog_data->reg_blocks_0;
+   case 1: return 0;
+   case 2: return prog_data->reg_blocks_2;
+   default:
+      unreachable("Invalid KSP index");
+   }
+}
+
+#define brw_wm_prog_data_reg_blocks(prog_data, wm_state, ksp_idx) \
+   _brw_wm_prog_data_reg_blocks(prog_data, ksp_idx)
+
 struct brw_push_const_block {
    unsigned dwords;     /* Dword count, not reg aligned */
    unsigned regs;

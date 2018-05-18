@@ -1488,13 +1488,16 @@ emit_3dstate_ps(struct anv_pipeline *pipeline,
 #endif
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-      ps.KernelStartPointer0        = fs_bin->kernel.offset;
-      ps.KernelStartPointer1        = 0;
-      ps.KernelStartPointer2        = fs_bin->kernel.offset +
-                                      wm_prog_data->prog_offset_2;
       ps._8PixelDispatchEnable      = wm_prog_data->dispatch_8;
       ps._16PixelDispatchEnable     = wm_prog_data->dispatch_16;
       ps._32PixelDispatchEnable     = false;
+
+      ps.KernelStartPointer0 = fs_bin->kernel.offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, ps, 0);
+      ps.KernelStartPointer1 = fs_bin->kernel.offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, ps, 1);
+      ps.KernelStartPointer2 = fs_bin->kernel.offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, ps, 2);
 
       ps.SingleProgramFlow          = false;
       ps.VectorMaskEnable           = true;
@@ -1526,10 +1529,11 @@ emit_3dstate_ps(struct anv_pipeline *pipeline,
 #endif
 
       ps.DispatchGRFStartRegisterForConstantSetupData0 =
-         wm_prog_data->base.dispatch_grf_start_reg;
-      ps.DispatchGRFStartRegisterForConstantSetupData1 = 0;
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, ps, 0);
+      ps.DispatchGRFStartRegisterForConstantSetupData1 =
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, ps, 1);
       ps.DispatchGRFStartRegisterForConstantSetupData2 =
-         wm_prog_data->dispatch_grf_start_reg_2;
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, ps, 2);
 
       ps.PerThreadScratchSpace   = get_scratch_space(fs_bin);
       ps.ScratchSpaceBasePointer =

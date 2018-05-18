@@ -1899,43 +1899,57 @@ genX(upload_wm)(struct brw_context *brw)
 
 #if GEN_GEN == 4
       /* On gen4, we only have one shader kernel */
-      if (wm_prog_data->dispatch_8 || wm_prog_data->dispatch_16) {
+      if (brw_wm_state_has_ksp(wm, 0)) {
+         assert(brw_wm_prog_data_prog_offset(wm_prog_data, wm, 0) == 0);
          wm.KernelStartPointer0 = KSP(brw, stage_state->prog_offset);
-         wm.GRFRegisterCount0 = wm_prog_data->reg_blocks_0;
+         wm.GRFRegisterCount0 = brw_wm_prog_data_reg_blocks(wm_prog_data, wm, 0);
          wm.DispatchGRFStartRegisterForConstantSetupData0 =
-            wm_prog_data->base.dispatch_grf_start_reg;
+            brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 0);
       }
 #elif GEN_GEN == 5
       /* On gen5, we have multiple shader kernels but only one GRF start
        * register for all kernels
        */
-      wm.KernelStartPointer0 = stage_state->prog_offset;
+      wm.KernelStartPointer0 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 0);
+      wm.KernelStartPointer1 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 1);
       wm.KernelStartPointer2 = stage_state->prog_offset +
-                               wm_prog_data->prog_offset_2;
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 2);
 
-      wm.GRFRegisterCount0 = wm_prog_data->reg_blocks_0;
-      wm.GRFRegisterCount2 = wm_prog_data->reg_blocks_2;
+      wm.GRFRegisterCount0 = brw_wm_prog_data_reg_blocks(wm_prog_data, wm, 0);
+      wm.GRFRegisterCount1 = brw_wm_prog_data_reg_blocks(wm_prog_data, wm, 1);
+      wm.GRFRegisterCount2 = brw_wm_prog_data_reg_blocks(wm_prog_data, wm, 2);
 
       wm.DispatchGRFStartRegisterForConstantSetupData0 =
          wm_prog_data->base.dispatch_grf_start_reg;
 
       /* Dispatch GRF Start should be the same for all shaders on gen5 */
-      if (wm_prog_data->dispatch_8 && wm_prog_data->dispatch_16) {
+      if (brw_wm_state_has_ksp(wm, 1)) {
          assert(wm_prog_data->base.dispatch_grf_start_reg ==
-                wm_prog_data->dispatch_grf_start_reg_2);
+                brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 1));
+      }
+      if (brw_wm_state_has_ksp(wm, 2)) {
+         assert(wm_prog_data->base.dispatch_grf_start_reg ==
+                brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 2));
       }
 #elif GEN_GEN == 6
       /* On gen5, we have multiple shader kernels and we no longer specify a
        * register count for each one.
        */
-      wm.KernelStartPointer0 = stage_state->prog_offset;
+      wm.KernelStartPointer0 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 0);
+      wm.KernelStartPointer1 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 1);
       wm.KernelStartPointer2 = stage_state->prog_offset +
-                               wm_prog_data->prog_offset_2;
+                               brw_wm_prog_data_prog_offset(wm_prog_data, wm, 2);
 
       wm.DispatchGRFStartRegisterForConstantSetupData0 =
-         wm_prog_data->base.dispatch_grf_start_reg;
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 0);
+      wm.DispatchGRFStartRegisterForConstantSetupData1 =
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 1);
       wm.DispatchGRFStartRegisterForConstantSetupData2 =
-         wm_prog_data->dispatch_grf_start_reg_2;
+         brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 2);
 #endif
 
 #if GEN_GEN <= 5
@@ -4015,14 +4029,20 @@ genX(upload_ps)(struct brw_context *brw)
 
       ps._8PixelDispatchEnable = prog_data->dispatch_8;
       ps._16PixelDispatchEnable = prog_data->dispatch_16;
-      ps.DispatchGRFStartRegisterForConstantSetupData0 =
-         prog_data->base.dispatch_grf_start_reg;
-      ps.DispatchGRFStartRegisterForConstantSetupData2 =
-         prog_data->dispatch_grf_start_reg_2;
 
-      ps.KernelStartPointer0 = stage_state->prog_offset;
+      ps.DispatchGRFStartRegisterForConstantSetupData0 =
+         brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 0);
+      ps.DispatchGRFStartRegisterForConstantSetupData1 =
+         brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 1);
+      ps.DispatchGRFStartRegisterForConstantSetupData2 =
+         brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 2);
+
+      ps.KernelStartPointer0 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(prog_data, ps, 0);
+      ps.KernelStartPointer1 = stage_state->prog_offset +
+                               brw_wm_prog_data_prog_offset(prog_data, ps, 1);
       ps.KernelStartPointer2 = stage_state->prog_offset +
-         prog_data->prog_offset_2;
+                               brw_wm_prog_data_prog_offset(prog_data, ps, 2);
 
       if (prog_data->base.total_scratch) {
          ps.ScratchSpaceBasePointer =
