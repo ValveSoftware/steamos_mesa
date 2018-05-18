@@ -2843,7 +2843,8 @@ generate_variant(struct llvmpipe_context *lp,
          !shader->info.base.writes_samplemask
       ? TRUE : FALSE;
 
-   if ((shader->info.base.num_tokens <= 1) &&
+   /* if num_instructions == 1, it's a nop shader with only an END instruction */
+   if ((shader->info.base.num_instructions <= 1) &&
        !key->depth.enabled && !key->stencil[0].enabled) {
       variant->ps_inv_multiplier = 0;
    } else {
@@ -3478,7 +3479,8 @@ llvmpipe_init_fs_funcs(struct llvmpipe_context *llvmpipe)
 boolean
 llvmpipe_rasterization_disabled(struct llvmpipe_context *lp)
 {
-   boolean null_fs = !lp->fs || lp->fs->info.base.num_tokens <= 1;
+   /* if num_instructions == 1, it's a nop shader with only an END instruction */
+   boolean null_fs = !lp->fs || lp->fs->info.base.num_instructions <= 1;
 
    return (null_fs &&
            !lp->depth_stencil->depth.enabled &&
