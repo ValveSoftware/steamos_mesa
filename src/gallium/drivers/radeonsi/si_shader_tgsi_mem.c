@@ -1865,7 +1865,8 @@ static void si_llvm_emit_fbfetch(const struct lp_build_tgsi_action *action,
 		fmask = ac_build_load_to_sgpr(&ctx->ac, ptr,
 			LLVMConstInt(ctx->i32, SI_PS_IMAGE_COLORBUF0_FMASK / 2, 0));
 
-		ac_apply_fmask_to_sample(&ctx->ac, fmask, args.coords, false);
+		ac_apply_fmask_to_sample(&ctx->ac, fmask, args.coords,
+					 ctx->shader->key.mono.u.ps.fbfetch_layered);
 	}
 
 	args.opcode = ac_image_load;
