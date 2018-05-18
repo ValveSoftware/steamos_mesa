@@ -683,11 +683,11 @@ struct brw_wm_prog_data {
 
    GLuint num_varying_inputs;
 
-   uint8_t reg_blocks_0;
-   uint8_t reg_blocks_2;
+   uint8_t reg_blocks_8;
+   uint8_t reg_blocks_16;
 
-   uint8_t dispatch_grf_start_reg_2;
-   uint32_t prog_offset_2;
+   uint8_t dispatch_grf_start_reg_16;
+   uint32_t prog_offset_16;
 
    struct {
       /** @{
@@ -784,51 +784,48 @@ brw_fs_simd_width_for_ksp(unsigned ksp_idx, bool simd8_enabled,
 
 static inline uint32_t
 _brw_wm_prog_data_prog_offset(const struct brw_wm_prog_data *prog_data,
-                              unsigned ksp_idx)
+                              unsigned simd_width)
 {
-   switch (ksp_idx) {
-   case 0: return 0;
-   case 1: return 0;
-   case 2: return prog_data->prog_offset_2;
-   default:
-      unreachable("Invalid KSP index");
+   switch (simd_width) {
+   case 8: return 0;
+   case 16: return prog_data->prog_offset_16;
+   default: return 0;
    }
 }
 
 #define brw_wm_prog_data_prog_offset(prog_data, wm_state, ksp_idx) \
-   _brw_wm_prog_data_prog_offset(prog_data, ksp_idx)
+   _brw_wm_prog_data_prog_offset(prog_data, \
+      brw_wm_state_simd_width_for_ksp(wm_state, ksp_idx))
 
 static inline uint8_t
 _brw_wm_prog_data_dispatch_grf_start_reg(const struct brw_wm_prog_data *prog_data,
-                                         unsigned ksp_idx)
+                                         unsigned simd_width)
 {
-   switch (ksp_idx) {
-   case 0: return prog_data->base.dispatch_grf_start_reg;
-   case 1: return 0;
-   case 2: return prog_data->dispatch_grf_start_reg_2;
-   default:
-      unreachable("Invalid KSP index");
+   switch (simd_width) {
+   case 8: return prog_data->base.dispatch_grf_start_reg;
+   case 16: return prog_data->dispatch_grf_start_reg_16;
+   default: return 0;
    }
 }
 
 #define brw_wm_prog_data_dispatch_grf_start_reg(prog_data, wm_state, ksp_idx) \
-   _brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ksp_idx)
+   _brw_wm_prog_data_dispatch_grf_start_reg(prog_data, \
+      brw_wm_state_simd_width_for_ksp(wm_state, ksp_idx))
 
 static inline uint8_t
 _brw_wm_prog_data_reg_blocks(const struct brw_wm_prog_data *prog_data,
-                             unsigned ksp_idx)
+                             unsigned simd_width)
 {
-   switch (ksp_idx) {
-   case 0: return prog_data->reg_blocks_0;
-   case 1: return 0;
-   case 2: return prog_data->reg_blocks_2;
-   default:
-      unreachable("Invalid KSP index");
+   switch (simd_width) {
+   case 8: return prog_data->reg_blocks_8;
+   case 16: return prog_data->reg_blocks_16;
+   default: return 0;
    }
 }
 
 #define brw_wm_prog_data_reg_blocks(prog_data, wm_state, ksp_idx) \
-   _brw_wm_prog_data_reg_blocks(prog_data, ksp_idx)
+   _brw_wm_prog_data_reg_blocks(prog_data, \
+      brw_wm_state_simd_width_for_ksp(wm_state, ksp_idx))
 
 struct brw_push_const_block {
    unsigned dwords;     /* Dword count, not reg aligned */

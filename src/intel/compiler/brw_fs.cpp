@@ -7099,8 +7099,6 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       brw_compute_barycentric_interp_modes(compiler->devinfo, shader);
 
    cfg_t *simd8_cfg = NULL, *simd16_cfg = NULL;
-   uint8_t simd8_grf_start = 0, simd16_grf_start = 0;
-   unsigned simd8_grf_used = 0, simd16_grf_used = 0;
 
    fs_visitor v8(compiler, log_data, mem_ctx, key,
                  &prog_data->base, prog, shader, 8,
@@ -7112,8 +7110,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       return NULL;
    } else if (likely(!(INTEL_DEBUG & DEBUG_NO8))) {
       simd8_cfg = v8.cfg;
-      simd8_grf_start = v8.payload.num_regs;
-      simd8_grf_used = v8.grf_used;
+      prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
+      prog_data->reg_blocks_8 = brw_register_blocks(v8.grf_used);
    }
 
    if (v8.max_dispatch_width >= 16 &&
@@ -7129,8 +7127,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                                    v16.fail_msg);
       } else {
          simd16_cfg = v16.cfg;
-         simd16_grf_start = v16.payload.num_regs;
-         simd16_grf_used = v16.grf_used;
+         prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
+         prog_data->reg_blocks_16 = brw_register_blocks(v16.grf_used);
       }
    }
 
@@ -7145,6 +7143,16 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
     */
    if (compiler->devinfo->gen < 5 && simd16_cfg)
       simd8_cfg = NULL;
+
+   if (compiler->devinfo->gen <= 5 && !simd8_cfg) {
+      /* Iron lake and earlier only have one Dispatch GRF start field.  Make
+       * the data available in the base prog data struct for convenience.
+       */
+      if (simd16_cfg) {
+         prog_data->base.dispatch_grf_start_reg =
+            prog_data->dispatch_grf_start_reg_16;
+      }
+   }
 
    if (prog_data->persample_dispatch) {
       /* Starting with SandyBridge (where we first get MSAA), the different
@@ -7184,20 +7192,11 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    if (simd8_cfg) {
       prog_data->dispatch_8 = true;
       g.generate_code(simd8_cfg, 8);
-      prog_data->base.dispatch_grf_start_reg = simd8_grf_start;
-      prog_data->reg_blocks_0 = brw_register_blocks(simd8_grf_used);
+   }
 
-      if (simd16_cfg) {
-         prog_data->dispatch_16 = true;
-         prog_data->prog_offset_2 = g.generate_code(simd16_cfg, 16);
-         prog_data->dispatch_grf_start_reg_2 = simd16_grf_start;
-         prog_data->reg_blocks_2 = brw_register_blocks(simd16_grf_used);
-      }
-   } else if (simd16_cfg) {
+   if (simd16_cfg) {
       prog_data->dispatch_16 = true;
-      g.generate_code(simd16_cfg, 16);
-      prog_data->base.dispatch_grf_start_reg = simd16_grf_start;
-      prog_data->reg_blocks_0 = brw_register_blocks(simd16_grf_used);
+      prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
    }
 
    return g.get_assembly();
