@@ -567,6 +567,12 @@ set_loc_shader(struct radv_shader_context *ctx, int idx, uint8_t *sgpr_idx,
 }
 
 static void
+set_loc_shader_ptr(struct radv_shader_context *ctx, int idx, uint8_t *sgpr_idx)
+{
+	set_loc_shader(ctx, idx, sgpr_idx, 2);
+}
+
+static void
 set_loc_desc(struct radv_shader_context *ctx, int idx,  uint8_t *sgpr_idx,
 	     uint32_t indirect_offset)
 {
@@ -797,8 +803,8 @@ set_global_input_locs(struct radv_shader_context *ctx, gl_shader_stage stage,
 				ctx->descriptor_sets[i] = NULL;
 		}
 	} else {
-		set_loc_shader(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS,
-			       user_sgpr_idx, 2);
+		set_loc_shader_ptr(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS,
+			           user_sgpr_idx);
 
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if ((ctx->shader_info->info.desc_set_used_mask & (1 << i)) &&
@@ -816,7 +822,7 @@ set_global_input_locs(struct radv_shader_context *ctx, gl_shader_stage stage,
 	}
 
 	if (ctx->shader_info->info.loads_push_constants) {
-		set_loc_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
+		set_loc_shader_ptr(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx);
 	}
 }
 
@@ -830,8 +836,8 @@ set_vs_specific_input_locs(struct radv_shader_context *ctx,
 	    (stage == MESA_SHADER_VERTEX ||
 	     (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
 		if (ctx->shader_info->info.vs.has_vertex_buffers) {
-			set_loc_shader(ctx, AC_UD_VS_VERTEX_BUFFERS,
-				       user_sgpr_idx, 2);
+			set_loc_shader_ptr(ctx, AC_UD_VS_VERTEX_BUFFERS,
+					   user_sgpr_idx);
 		}
 
 		unsigned vs_num = 2;
@@ -1129,8 +1135,8 @@ static void create_function(struct radv_shader_context *ctx,
 	user_sgpr_idx = 0;
 
 	if (ctx->options->supports_spill || user_sgpr_info.need_ring_offsets) {
-		set_loc_shader(ctx, AC_UD_SCRATCH_RING_OFFSETS,
-			       &user_sgpr_idx, 2);
+		set_loc_shader_ptr(ctx, AC_UD_SCRATCH_RING_OFFSETS,
+				   &user_sgpr_idx);
 		if (ctx->options->supports_spill) {
 			ctx->ring_offsets = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
 							       LLVMPointerType(ctx->ac.i8, AC_CONST_ADDR_SPACE),
