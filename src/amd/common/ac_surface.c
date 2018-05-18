@@ -301,10 +301,10 @@ static int gfx6_compute_level(ADDR_HANDLE addrlib,
 	 */
 	if (config->info.levels == 1 &&
 	    AddrSurfInfoIn->tileMode == ADDR_TM_LINEAR_ALIGNED &&
-	    AddrSurfInfoIn->bpp) {
+	    AddrSurfInfoIn->bpp &&
+	    util_is_power_of_two_or_zero(AddrSurfInfoIn->bpp)) {
 		unsigned alignment = 256 / (AddrSurfInfoIn->bpp / 8);
 
-		assert(util_is_power_of_two_or_zero(AddrSurfInfoIn->bpp));
 		AddrSurfInfoIn->width = align(AddrSurfInfoIn->width, alignment);
 	}
 
