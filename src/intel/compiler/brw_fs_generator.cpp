@@ -267,7 +267,8 @@ fs_generator::fire_fb_write(fs_inst *inst,
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-      brw_MOV(p, offset(payload, 1), brw_vec8_grf(1, 0));
+      brw_MOV(p, offset(retype(payload, BRW_REGISTER_TYPE_UD), 1),
+              offset(retype(implied_header, BRW_REGISTER_TYPE_UD), 1));
       brw_pop_insn_state(p);
    }
 
@@ -291,7 +292,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
 
    brw_fb_WRITE(p,
                 payload,
-                implied_header,
+                retype(implied_header, BRW_REGISTER_TYPE_UW),
                 msg_control,
                 surf_index,
                 nr,
@@ -308,11 +309,13 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 {
    struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
-   struct brw_reg implied_header;
 
    if (devinfo->gen < 8 && !devinfo->is_haswell) {
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
    }
+
+   const struct brw_reg implied_header =
+      devinfo->gen < 6 ? payload : brw_null_reg();
 
    if (inst->base_mrf >= 0)
       payload = brw_message_reg(inst->base_mrf);
@@ -375,15 +378,9 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
                    vec1(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
                    brw_imm_ud(0x1 << 14));
          }
-
-	 implied_header = brw_null_reg();
-      } else {
-	 implied_header = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UW);
       }
 
       brw_pop_insn_state(p);
-   } else {
-      implied_header = brw_null_reg();
    }
 
    if (!runtime_check_aads_emit) {
