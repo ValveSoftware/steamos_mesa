@@ -901,7 +901,7 @@ driGLFormatToImageFormat(mesa_format format)
    case MESA_FORMAT_B8G8R8A8_SRGB:
       return __DRI_IMAGE_FORMAT_SARGB8;
    default:
-      return 0;
+      return __DRI_IMAGE_FORMAT_NONE;
    }
 }
 

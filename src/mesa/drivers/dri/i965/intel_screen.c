@@ -591,7 +591,7 @@ intel_create_image_from_texture(__DRIcontext *context, int target,
    image->dri_format = driGLFormatToImageFormat(image->format);
    image->has_depthstencil = iobj->mt->stencil_mt? true : false;
    image->planar_format = iobj->planar_format;
-   if (image->dri_format == MESA_FORMAT_NONE) {
+   if (image->dri_format == __DRI_IMAGE_FORMAT_NONE) {
       *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
       free(image);
       return NULL;
