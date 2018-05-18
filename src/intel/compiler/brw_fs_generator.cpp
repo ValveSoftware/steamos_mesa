@@ -2112,9 +2112,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
                       BRW_MATH_PRECISION_FULL);
 	 }
 	 break;
-      case FS_OPCODE_CINTERP:
-	 brw_MOV(p, dst, src[0]);
-	 break;
       case FS_OPCODE_LINTERP:
 	 multiple_instructions_emitted = generate_linterp(inst, dst, src);
 	 break;

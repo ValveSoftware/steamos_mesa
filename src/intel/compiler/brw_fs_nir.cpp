@@ -3392,8 +3392,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       }
 
       for (unsigned int i = 0; i < num_components; i++) {
-         bld.emit(FS_OPCODE_CINTERP, offset(retype(dest, type), bld, i),
-                  retype(component(interp_reg(base, comp + i), 3), type));
+         bld.MOV(offset(retype(dest, type), bld, i),
+                 retype(component(interp_reg(base, comp + i), 3), type));
       }
 
       if (nir_dest_bit_size(instr->dest) == 64) {
