@@ -765,6 +765,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
       if (prog_data) {
          ps._8PixelDispatchEnable = prog_data->dispatch_8;
          ps._16PixelDispatchEnable = prog_data->dispatch_16;
+         ps._32PixelDispatchEnable = prog_data->dispatch_32;
 
          ps.DispatchGRFStartRegisterForConstantSetupData0 =
             brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 0);
@@ -874,6 +875,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
       if (prog_data) {
          ps._8PixelDispatchEnable = prog_data->dispatch_8;
          ps._16PixelDispatchEnable = prog_data->dispatch_16;
+         ps._32PixelDispatchEnable = prog_data->dispatch_32;
 
          ps.DispatchGRFStartRegisterForConstantSetupData0 =
             brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 0);
@@ -941,6 +943,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 
          wm._8PixelDispatchEnable = prog_data->dispatch_8;
          wm._16PixelDispatchEnable = prog_data->dispatch_16;
+         wm._32PixelDispatchEnable = prog_data->dispatch_32;
 
          wm.DispatchGRFStartRegisterForConstantSetupData0 =
             brw_wm_prog_data_dispatch_grf_start_reg(prog_data, wm, 0);

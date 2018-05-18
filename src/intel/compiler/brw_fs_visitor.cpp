@@ -127,6 +127,7 @@ fs_visitor::emit_dummy_fs()
    stage_prog_data->curb_read_length = 0;
    stage_prog_data->dispatch_grf_start_reg = 2;
    wm_prog_data->dispatch_grf_start_reg_16 = 2;
+   wm_prog_data->dispatch_grf_start_reg_32 = 2;
    grf_used = 1; /* Gen4-5 don't allow zero GRF blocks */
 
    calculate_cfg();

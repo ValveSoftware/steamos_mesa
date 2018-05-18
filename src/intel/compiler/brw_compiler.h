@@ -685,9 +685,12 @@ struct brw_wm_prog_data {
 
    uint8_t reg_blocks_8;
    uint8_t reg_blocks_16;
+   uint8_t reg_blocks_32;
 
    uint8_t dispatch_grf_start_reg_16;
+   uint8_t dispatch_grf_start_reg_32;
    uint32_t prog_offset_16;
+   uint32_t prog_offset_32;
 
    struct {
       /** @{
@@ -705,6 +708,7 @@ struct brw_wm_prog_data {
    bool inner_coverage;
    bool dispatch_8;
    bool dispatch_16;
+   bool dispatch_32;
    bool dual_src_blend;
    bool persample_dispatch;
    bool uses_pos_offset;
@@ -789,6 +793,7 @@ _brw_wm_prog_data_prog_offset(const struct brw_wm_prog_data *prog_data,
    switch (simd_width) {
    case 8: return 0;
    case 16: return prog_data->prog_offset_16;
+   case 32: return prog_data->prog_offset_32;
    default: return 0;
    }
 }
@@ -804,6 +809,7 @@ _brw_wm_prog_data_dispatch_grf_start_reg(const struct brw_wm_prog_data *prog_dat
    switch (simd_width) {
    case 8: return prog_data->base.dispatch_grf_start_reg;
    case 16: return prog_data->dispatch_grf_start_reg_16;
+   case 32: return prog_data->dispatch_grf_start_reg_32;
    default: return 0;
    }
 }
@@ -819,6 +825,7 @@ _brw_wm_prog_data_reg_blocks(const struct brw_wm_prog_data *prog_data,
    switch (simd_width) {
    case 8: return prog_data->reg_blocks_8;
    case 16: return prog_data->reg_blocks_16;
+   case 32: return prog_data->reg_blocks_32;
    default: return 0;
    }
 }

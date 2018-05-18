@@ -132,6 +132,7 @@ blorp_emit_wm_state(struct blorp_batch *batch,
 
          wm._8PixelDispatchEnable = prog_data->dispatch_8;
          wm._16PixelDispatchEnable = prog_data->dispatch_16;
+         wm._32PixelDispatchEnable = prog_data->dispatch_32;
 
 #if GEN_GEN == 4
          wm.KernelStartPointer0 =

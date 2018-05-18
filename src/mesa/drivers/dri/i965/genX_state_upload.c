@@ -1895,6 +1895,7 @@ genX(upload_wm)(struct brw_context *brw)
 #if GEN_GEN <= 6
       wm._8PixelDispatchEnable = wm_prog_data->dispatch_8;
       wm._16PixelDispatchEnable = wm_prog_data->dispatch_16;
+      wm._32PixelDispatchEnable = wm_prog_data->dispatch_32;
 #endif
 
 #if GEN_GEN == 4
@@ -4029,6 +4030,7 @@ genX(upload_ps)(struct brw_context *brw)
 
       ps._8PixelDispatchEnable = prog_data->dispatch_8;
       ps._16PixelDispatchEnable = prog_data->dispatch_16;
+      ps._32PixelDispatchEnable = prog_data->dispatch_32;
 
       ps.DispatchGRFStartRegisterForConstantSetupData0 =
          brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 0);
