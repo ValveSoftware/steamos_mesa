@@ -4032,6 +4032,22 @@ genX(upload_ps)(struct brw_context *brw)
       ps._16PixelDispatchEnable = prog_data->dispatch_16;
       ps._32PixelDispatchEnable = prog_data->dispatch_32;
 
+      /* From the Sky Lake PRM 3DSTATE_PS::32 Pixel Dispatch Enable:
+       *
+       *    "When NUM_MULTISAMPLES = 16 or FORCE_SAMPLE_COUNT = 16, SIMD32
+       *    Dispatch must not be enabled for PER_PIXEL dispatch mode."
+       *
+       * Since 16x MSAA is first introduced on SKL, we don't need to apply
+       * the workaround on any older hardware.
+       *
+       * BRW_NEW_NUM_SAMPLES
+       */
+      if (GEN_GEN >= 9 && !prog_data->persample_dispatch &&
+          brw->num_samples == 16) {
+         assert(ps._8PixelDispatchEnable || ps._16PixelDispatchEnable);
+         ps._32PixelDispatchEnable = false;
+      }
+
       ps.DispatchGRFStartRegisterForConstantSetupData0 =
          brw_wm_prog_data_dispatch_grf_start_reg(prog_data, ps, 0);
       ps.DispatchGRFStartRegisterForConstantSetupData1 =
@@ -4057,6 +4073,7 @@ genX(upload_ps)(struct brw_context *brw)
 static const struct brw_tracked_state genX(ps_state) = {
    .dirty = {
       .mesa  = _NEW_MULTISAMPLE |
+               (GEN_GEN >= 9 ? BRW_NEW_NUM_SAMPLES : 0) |
                (GEN_GEN < 8 ? _NEW_BUFFERS |
                               _NEW_COLOR
                             : 0),
