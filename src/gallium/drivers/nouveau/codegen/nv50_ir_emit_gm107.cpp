@@ -3618,6 +3618,7 @@ private:
 
    bool insertBarriers(BasicBlock *);
 
+   bool doesInsnWriteTo(const Instruction *insn, const Value *val) const;
    Instruction *findFirstUse(const Instruction *) const;
    Instruction *findFirstDef(const Instruction *) const;
 
@@ -3948,8 +3949,48 @@ SchedDataCalculatorGM107::needWrDepBar(const Instruction *insn) const
    return false;
 }
 
-// Find the next instruction inside the same basic block which uses the output
-// of the given instruction in order to avoid RaW hazards.
+// Helper function for findFirstUse() and findFirstDef()
+bool
+SchedDataCalculatorGM107::doesInsnWriteTo(const Instruction *insn,
+                                          const Value *val) const
+{
+   if (val->reg.file != FILE_GPR &&
+       val->reg.file != FILE_PREDICATE &&
+       val->reg.file != FILE_FLAGS)
+      return false;
+
+   for (int d = 0; insn->defExists(d); ++d) {
+      const Value* def = insn->getDef(d);
+      int minGPR = def->reg.data.id;
+      int maxGPR = minGPR + def->reg.size / 4 - 1;
+
+      if (def->reg.file != val->reg.file)
+         continue;
+
+      if (def->reg.file == FILE_GPR) {
+         if (val->reg.data.id + val->reg.size / 4 - 1 < minGPR ||
+             val->reg.data.id > maxGPR)
+            continue;
+         return true;
+      } else
+      if (def->reg.file == FILE_PREDICATE) {
+         if (val->reg.data.id != minGPR)
+            continue;
+         return true;
+      } else
+      if (def->reg.file == FILE_FLAGS) {
+         if (val->reg.data.id != minGPR)
+            continue;
+         return true;
+      }
+   }
+
+   return false;
+}
+
+// Find the next instruction inside the same basic block which uses (reads or
+// writes from) the output of the given instruction in order to avoid RaW and
+// WaW hazards.
 Instruction *
 SchedDataCalculatorGM107::findFirstUse(const Instruction *bari) const
 {
@@ -3961,34 +4002,13 @@ SchedDataCalculatorGM107::findFirstUse(const Instruction *bari) const
    for (insn = bari->next; insn != NULL; insn = next) {
       next = insn->next;
 
-      for (int s = 0; insn->srcExists(s); ++s) {
-         const Value *src = insn->src(s).rep();
-         for (int d = 0; bari->defExists(d); ++d) {
-            const ValueDef &def = bari->def(d);
-            int minGPR = def.rep()->reg.data.id;
-            int maxGPR = minGPR + def.rep()->reg.size / 4 - 1;
+      for (int s = 0; insn->srcExists(s); ++s)
+         if (doesInsnWriteTo(bari, insn->getSrc(s)))
+            return insn;
 
-            if (def.getFile() == FILE_GPR) {
-               if (insn->src(s).getFile() != FILE_GPR ||
-                   src->reg.data.id + src->reg.size / 4 - 1 < minGPR ||
-                   src->reg.data.id > maxGPR)
-                  continue;
-               return insn;
-            } else
-            if (def.getFile() == FILE_PREDICATE) {
-               if (insn->src(s).getFile() != FILE_PREDICATE ||
-                   src->reg.data.id != minGPR)
-                  continue;
-               return insn;
-            }
-            if (def.getFile() == FILE_FLAGS) {
-               if (insn->src(s).getFile() != FILE_FLAGS ||
-                   src->reg.data.id != minGPR)
-                  continue;
-               return insn;
-            }
-         }
-      }
+      for (int d = 0; insn->defExists(d); ++d)
+         if (doesInsnWriteTo(bari, insn->getDef(d)))
+            return insn;
    }
    return NULL;
 }
@@ -3999,34 +4019,16 @@ Instruction *
 SchedDataCalculatorGM107::findFirstDef(const Instruction *bari) const
 {
    Instruction *insn, *next;
-   int minGPR, maxGPR;
+
+   if (!bari->srcExists(0))
+      return NULL;
 
    for (insn = bari->next; insn != NULL; insn = next) {
       next = insn->next;
 
-      for (int d = 0; insn->defExists(d); ++d) {
-         const Value *def = insn->def(d).rep();
-         if (insn->def(d).getFile() != FILE_GPR &&
-             insn->def(d).getFile() != FILE_FLAGS)
-            continue;
-
-         minGPR = def->reg.data.id;
-         maxGPR = minGPR + def->reg.size / 4 - 1;
-
-         for (int s = 0; bari->srcExists(s); ++s) {
-            const Value *src = bari->src(s).rep();
-            if (bari->src(s).getFile() == FILE_FLAGS &&
-                insn->def(d).getFile() == FILE_FLAGS &&
-                src->reg.data.id == minGPR)
-               return insn;
-            if (bari->src(s).getFile() != FILE_GPR ||
-                insn->def(d).getFile() != FILE_GPR ||
-                src->reg.data.id + src->reg.size / 4 - 1 < minGPR ||
-                src->reg.data.id > maxGPR)
-               continue;
+      for (int s = 0; bari->srcExists(s); ++s)
+         if (doesInsnWriteTo(insn, bari->getSrc(s)))
             return insn;
-         }
-      }
    }
    return NULL;
 }
@@ -4084,7 +4086,8 @@ SchedDataCalculatorGM107::insertBarriers(BasicBlock *bb)
       if (need_wr_bar) {
          // When the instruction requires to emit a write dependency barrier
          // (all which write something at a variable latency), find the next
-         // instruction which reads the outputs.
+         // instruction which reads the outputs (or writes to them, potentially
+         // completing before this insn.
          usei = findFirstUse(insn);
 
          // Allocate and emit a new barrier.
