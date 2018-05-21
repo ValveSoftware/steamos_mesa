@@ -694,8 +694,10 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 
 	uint32_t available_sgprs = ctx->options->chip_class >= GFX9 ? 32 : 16;
 	uint32_t remaining_sgprs = available_sgprs - user_sgpr_count;
+	uint32_t num_desc_set =
+		util_bitcount(ctx->shader_info->info.desc_set_used_mask);
 
-	if (remaining_sgprs / 2 < util_bitcount(ctx->shader_info->info.desc_set_used_mask)) {
+	if (remaining_sgprs / (HAVE_32BIT_POINTERS ? 1 : 2) < num_desc_set) {
 		user_sgpr_info->indirect_all_descriptor_sets = true;
 	}
 }
