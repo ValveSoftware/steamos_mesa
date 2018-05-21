@@ -868,7 +868,7 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 		fin.numSlices = AddrSurfInfoIn.numSlices;
 		fin.numSamples = AddrSurfInfoIn.numSamples;
 		fin.numFrags = AddrSurfInfoIn.numFrags;
-		fin.tileIndex = AddrSurfInfoOut.tileIndex;
+		fin.tileIndex = -1;
 		fout.pTileInfo = &fmask_tile_info;
 
 		r = AddrComputeFmaskInfo(addrlib, &fin, &fout);
