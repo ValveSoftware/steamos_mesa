@@ -588,7 +588,6 @@ set_loc_desc(struct radv_shader_context *ctx, int idx,  uint8_t *sgpr_idx,
 
 struct user_sgpr_info {
 	bool need_ring_offsets;
-	uint8_t sgpr_count;
 	bool indirect_all_descriptor_sets;
 };
 
@@ -635,6 +634,8 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 				bool needs_view_index,
 				struct user_sgpr_info *user_sgpr_info)
 {
+	uint8_t user_sgpr_count = 0;
+
 	memset(user_sgpr_info, 0, sizeof(struct user_sgpr_info));
 
 	/* until we sort out scratch/global buffers always assign ring offsets for gs/vs/es */
@@ -651,25 +652,25 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 
 	/* 2 user sgprs will nearly always be allocated for scratch/rings */
 	if (ctx->options->supports_spill || user_sgpr_info->need_ring_offsets) {
-		user_sgpr_info->sgpr_count += 2;
+		user_sgpr_count += 2;
 	}
 
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		if (ctx->shader_info->info.cs.uses_grid_size)
-			user_sgpr_info->sgpr_count += 3;
+			user_sgpr_count += 3;
 		break;
 	case MESA_SHADER_FRAGMENT:
-		user_sgpr_info->sgpr_count += ctx->shader_info->info.ps.needs_sample_positions;
+		user_sgpr_count += ctx->shader_info->info.ps.needs_sample_positions;
 		break;
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader)
-			user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
+			user_sgpr_count += count_vs_user_sgprs(ctx);
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		if (has_previous_stage) {
 			if (previous_stage == MESA_SHADER_VERTEX)
-				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
+				user_sgpr_count += count_vs_user_sgprs(ctx);
 		}
 		break;
 	case MESA_SHADER_TESS_EVAL:
@@ -677,7 +678,7 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 	case MESA_SHADER_GEOMETRY:
 		if (has_previous_stage) {
 			if (previous_stage == MESA_SHADER_VERTEX) {
-				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
+				user_sgpr_count += count_vs_user_sgprs(ctx);
 			}
 		}
 		break;
@@ -686,19 +687,16 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 	}
 
 	if (needs_view_index)
-		user_sgpr_info->sgpr_count++;
+		user_sgpr_count++;
 
 	if (ctx->shader_info->info.loads_push_constants)
-		user_sgpr_info->sgpr_count += HAVE_32BIT_POINTERS ? 1 : 2;
+		user_sgpr_count += HAVE_32BIT_POINTERS ? 1 : 2;
 
 	uint32_t available_sgprs = ctx->options->chip_class >= GFX9 ? 32 : 16;
-	uint32_t remaining_sgprs = available_sgprs - user_sgpr_info->sgpr_count;
+	uint32_t remaining_sgprs = available_sgprs - user_sgpr_count;
 
 	if (remaining_sgprs / 2 < util_bitcount(ctx->shader_info->info.desc_set_used_mask)) {
-		user_sgpr_info->sgpr_count += HAVE_32BIT_POINTERS ? 1 : 2;
 		user_sgpr_info->indirect_all_descriptor_sets = true;
-	} else {
-		user_sgpr_info->sgpr_count += util_bitcount(ctx->shader_info->info.desc_set_used_mask) * 2;
 	}
 }
 
