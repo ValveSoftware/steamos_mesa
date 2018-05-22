@@ -247,6 +247,17 @@ namespace clover {
 		::llvm::WriteBitcodeToFile(&mod, os);
 #endif
 	}
+
+	template<typename TM, typename PM, typename OS, typename FT>
+	bool add_passes_to_emit_file(TM &tm, PM &pm, OS &os, FT &ft)
+	{
+		compat::raw_ostream_to_emit_file fos(os);
+#if HAVE_LLVM >= 0x0700
+		return tm.addPassesToEmitFile(pm, fos, nullptr, ft);
+#else
+		return tm.addPassesToEmitFile(pm, fos, ft);
+#endif
+	}
       }
    }
 }
