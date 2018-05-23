@@ -277,7 +277,10 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	nir_lower_tex(nir, &tex_options);
 
 	nir_lower_vars_to_ssa(nir);
+
+	nir_split_var_copies(nir);
 	nir_lower_var_copies(nir);
+
 	nir_lower_global_vars_to_local(nir);
 	nir_remove_dead_variables(nir, nir_var_local);
 	nir_lower_subgroups(nir, &(struct nir_lower_subgroups_options) {
