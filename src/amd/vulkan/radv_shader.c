@@ -278,6 +278,16 @@ radv_shader_compile_to_nir(struct radv_device *device,
 
 	nir_lower_vars_to_ssa(nir);
 
+	if (nir->info.stage == MESA_SHADER_VERTEX ||
+	    nir->info.stage == MESA_SHADER_GEOMETRY) {
+		NIR_PASS_V(nir, nir_lower_io_to_temporaries,
+			   nir_shader_get_entrypoint(nir), true, true);
+	} else if (nir->info.stage == MESA_SHADER_TESS_EVAL||
+		   nir->info.stage == MESA_SHADER_FRAGMENT) {
+		NIR_PASS_V(nir, nir_lower_io_to_temporaries,
+			   nir_shader_get_entrypoint(nir), true, false);
+	}
+
 	nir_split_var_copies(nir);
 	nir_lower_var_copies(nir);
 
