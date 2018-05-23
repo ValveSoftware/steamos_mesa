@@ -1020,8 +1020,10 @@ void st_init_extensions(struct pipe_screen *screen,
 
    /* Below are the cases which cannot be moved into tables easily. */
 
+   /* The compatibility profile also requires GLSLVersionCompat >= 400. */
    if (screen->get_shader_param(screen, PIPE_SHADER_TESS_CTRL,
-                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
+                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0 &&
+       (api != API_OPENGL_COMPAT || consts->GLSLVersionCompat >= 400)) {
       extensions->ARB_tessellation_shader = GL_TRUE;
    }
 
