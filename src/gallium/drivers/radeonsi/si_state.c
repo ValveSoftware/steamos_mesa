@@ -2132,6 +2132,7 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 				      enum pipe_format format,
 				      enum pipe_texture_target target,
 				      unsigned sample_count,
+				      unsigned storage_sample_count,
 				      unsigned usage)
 {
 	struct si_screen *sscreen = (struct si_screen *)screen;
@@ -2147,6 +2148,9 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 			return false;
 
 		if (usage & PIPE_BIND_SHADER_IMAGE)
+			return false;
+
+		if (sample_count != storage_sample_count)
 			return false;
 
 		switch (sample_count) {

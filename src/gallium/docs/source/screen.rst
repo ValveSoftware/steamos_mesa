@@ -746,6 +746,9 @@ Determine if a resource in the given format can be used in a specific manner.
 **sample_count** the number of samples. 0 and 1 mean no multisampling,
 the maximum allowed legal value is 32.
 
+**storage_sample_count** the number of storage samples. This must be <=
+sample_count. See the documentation of ``pipe_resource::nr_storage_samples``.
+
 **bindings** is a bitmask of :ref:`PIPE_BIND` flags.
 
 Returns TRUE if all usages can be satisfied.

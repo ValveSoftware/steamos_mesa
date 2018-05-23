@@ -475,11 +475,15 @@ virgl_is_format_supported( struct pipe_screen *screen,
                                  enum pipe_format format,
                                  enum pipe_texture_target target,
                                  unsigned sample_count,
+                                 unsigned storage_sample_count,
                                  unsigned bind)
 {
    struct virgl_screen *vscreen = virgl_screen(screen);
    const struct util_format_description *format_desc;
    int i;
+
+   if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+      return false;
 
    assert(target == PIPE_BUFFER ||
           target == PIPE_TEXTURE_1D ||

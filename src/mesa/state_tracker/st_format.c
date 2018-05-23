@@ -65,7 +65,7 @@ st_mesa_format_to_pipe_format(const struct st_context *st,
    struct pipe_screen *screen = st->pipe->screen;
    bool has_bgra_srgb = screen->is_format_supported(screen,
 						    PIPE_FORMAT_B8G8R8A8_SRGB,
-						    PIPE_TEXTURE_2D, 0,
+						    PIPE_TEXTURE_2D, 0, 0,
 						    PIPE_BIND_SAMPLER_VIEW);
 
    switch (mesaFormat) {
@@ -2059,7 +2059,7 @@ find_supported_format(struct pipe_screen *screen,
    uint i;
    for (i = 0; formats[i]; i++) {
       if (screen->is_format_supported(screen, formats[i], target,
-                                      sample_count, bindings)) {
+                                      sample_count, sample_count, bindings)) {
          if (!allow_dxt && util_format_is_s3tc(formats[i])) {
             /* we can't return a dxt format, continue searching */
             continue;
@@ -2192,8 +2192,8 @@ st_choose_format(struct st_context *st, GLenum internalFormat,
    /* search for exact matches */
    pf = find_exact_format(internalFormat, format, type);
    if (pf != PIPE_FORMAT_NONE &&
-       screen->is_format_supported(screen, pf,
-                                   target, sample_count, bindings)) {
+       screen->is_format_supported(screen, pf, target, sample_count,
+                                   sample_count, bindings)) {
       goto success;
    }
 
@@ -2290,8 +2290,8 @@ st_choose_matching_format(struct st_context *st, unsigned bind,
             st_mesa_format_to_pipe_format(st, mesa_format);
 
          if (format &&
-             screen->is_format_supported(screen, format, PIPE_TEXTURE_2D, 0,
-                                         bind)) {
+             screen->is_format_supported(screen, format, PIPE_TEXTURE_2D,
+                                         0, 0, bind)) {
             return format;
          }
          /* It's unlikely to find 2 matching Mesa formats. */

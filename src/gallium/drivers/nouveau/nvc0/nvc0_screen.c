@@ -42,6 +42,7 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
                                 enum pipe_format format,
                                 enum pipe_texture_target target,
                                 unsigned sample_count,
+                                unsigned storage_sample_count,
                                 unsigned bindings)
 {
    const struct util_format_description *desc = util_format_description(format);
@@ -49,6 +50,9 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
    if (sample_count > 8)
       return false;
    if (!(0x117 & (1 << sample_count))) /* 0, 1, 2, 4 or 8 */
+      return false;
+
+   if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
       return false;
 
    /* Short-circuit the rest of the logic -- this is used by the state tracker

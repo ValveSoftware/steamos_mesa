@@ -415,12 +415,16 @@ nv30_screen_is_format_supported(struct pipe_screen *pscreen,
                                 enum pipe_format format,
                                 enum pipe_texture_target target,
                                 unsigned sample_count,
+                                unsigned storage_sample_count,
                                 unsigned bindings)
 {
    if (sample_count > nv30_screen(pscreen)->max_sample_count)
       return false;
 
    if (!(0x00000017 & (1 << sample_count)))
+      return false;
+
+   if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
       return false;
 
    /* shared is always supported */

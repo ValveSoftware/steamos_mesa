@@ -132,12 +132,14 @@ tegra_screen_is_format_supported(struct pipe_screen *pscreen,
                                  enum pipe_format format,
                                  enum pipe_texture_target target,
                                  unsigned sample_count,
+                                 unsigned storage_sample_count,
                                  unsigned usage)
 {
    struct tegra_screen *screen = to_tegra_screen(pscreen);
 
    return screen->gpu->is_format_supported(screen->gpu, format, target,
-                                           sample_count, usage);
+                                           sample_count, storage_sample_count,
+                                           usage);
 }
 
 static boolean

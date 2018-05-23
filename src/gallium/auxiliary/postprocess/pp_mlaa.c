@@ -243,7 +243,7 @@ pp_jimenezmlaa_init_run(struct pp_queue_t *ppq, unsigned int n,
    res.depth0 = res.array_size = res.nr_samples = res.nr_storage_samples = 1;
 
    if (!ppq->p->screen->is_format_supported(ppq->p->screen, res.format,
-                                            res.target, 1, res.bind))
+                                            res.target, 1, 1, res.bind))
       pp_debug("Areamap format not supported\n");
 
    ppq->areamaptex = ppq->p->screen->resource_create(ppq->p->screen, &res);

@@ -616,8 +616,10 @@ st_validate_attachment(struct gl_context *ctx,
    }
 
    valid = screen->is_format_supported(screen, format,
-                                      PIPE_TEXTURE_2D,
-                                      stObj->pt->nr_samples, bindings);
+                                       PIPE_TEXTURE_2D,
+                                       stObj->pt->nr_samples,
+                                       stObj->pt->nr_storage_samples,
+                                       bindings);
    if (!valid) {
       st_fbo_invalid("Invalid format");
    }

@@ -706,6 +706,7 @@ boolean evergreen_is_format_supported(struct pipe_screen *screen,
 				      enum pipe_format format,
 				      enum pipe_texture_target target,
 				      unsigned sample_count,
+				      unsigned storage_sample_count,
 				      unsigned usage);
 void evergreen_init_color_surface(struct r600_context *rctx,
 				  struct r600_surface *surf);
@@ -762,6 +763,7 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 				 enum pipe_format format,
 				 enum pipe_texture_target target,
 				 unsigned sample_count,
+				 unsigned storage_sample_count,
 				 unsigned usage);
 void r600_update_db_shader_control(struct r600_context * rctx);
 void r600_setup_scratch_buffers(struct r600_context *rctx);

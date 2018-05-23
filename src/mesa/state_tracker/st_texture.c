@@ -79,7 +79,7 @@ st_texture_create(struct st_context *st,
        (int) target, util_format_name(format), last_level);
 
    assert(format);
-   assert(screen->is_format_supported(screen, format, target, 0,
+   assert(screen->is_format_supported(screen, format, target, 0, 0,
                                       PIPE_BIND_SAMPLER_VIEW));
 
    memset(&pt, 0, sizeof(pt));

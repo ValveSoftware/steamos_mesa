@@ -38,6 +38,7 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 		enum pipe_format format,
 		enum pipe_texture_target target,
 		unsigned sample_count,
+		unsigned storage_sample_count,
 		unsigned usage)
 {
 	unsigned retval = 0;
@@ -48,6 +49,9 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 				util_format_name(format), target, sample_count, usage);
 		return FALSE;
 	}
+
+	if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+		return false;
 
 	/* TODO figure out how to render to other formats.. */
 	if ((usage & PIPE_BIND_RENDER_TARGET) &&

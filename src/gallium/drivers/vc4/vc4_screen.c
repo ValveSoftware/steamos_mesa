@@ -480,9 +480,13 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
                                enum pipe_format format,
                                enum pipe_texture_target target,
                                unsigned sample_count,
+                               unsigned storage_sample_count,
                                unsigned usage)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
+
+        if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+                return false;
 
         if (sample_count > 1 && sample_count != VC4_MAX_SAMPLES)
                 return FALSE;

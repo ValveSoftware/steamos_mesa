@@ -382,13 +382,13 @@ default_bindings(struct st_context *st, enum pipe_format format)
    else
       bindings = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
 
-   if (screen->is_format_supported(screen, format, target, 0, bindings))
+   if (screen->is_format_supported(screen, format, target, 0, 0, bindings))
       return bindings;
    else {
       /* Try non-sRGB. */
       format = util_format_linear(format);
 
-      if (screen->is_format_supported(screen, format, target, 0, bindings))
+      if (screen->is_format_supported(screen, format, target, 0, 0, bindings))
          return bindings;
       else
          return PIPE_BIND_SAMPLER_VIEW;
@@ -1343,13 +1343,13 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
 
       if (dst_format != orig_dst_format &&
           !screen->is_format_supported(screen, dst_format, PIPE_TEXTURE_2D, 0,
-                                       PIPE_BIND_RENDER_TARGET)) {
+                                       0, PIPE_BIND_RENDER_TARGET)) {
          return false;
       }
    }
 
    if (!src_format ||
-       !screen->is_format_supported(screen, src_format, PIPE_BUFFER, 0,
+       !screen->is_format_supported(screen, src_format, PIPE_BUFFER, 0, 0,
                                     PIPE_BIND_SAMPLER_VIEW)) {
       return false;
    }
@@ -1494,7 +1494,8 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
 
    if (!dst_format ||
        !screen->is_format_supported(screen, dst_format, dst->target,
-                                    dst->nr_samples, bind)) {
+                                    dst->nr_samples, dst->nr_storage_samples,
+                                    bind)) {
       goto fallback;
    }
 
@@ -1738,13 +1739,14 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
       goto fallback;
    }
 
-   if (!screen->is_format_supported(screen, copy_format, PIPE_BUFFER, 0,
+   if (!screen->is_format_supported(screen, copy_format, PIPE_BUFFER, 0, 0,
                                     PIPE_BIND_SAMPLER_VIEW)) {
       goto fallback;
    }
 
    if (!screen->is_format_supported(screen, copy_format, dst->target,
-                                    dst->nr_samples, PIPE_BIND_RENDER_TARGET)) {
+                                    dst->nr_samples, dst->nr_storage_samples,
+                                    PIPE_BIND_RENDER_TARGET)) {
       goto fallback;
    }
 
@@ -1939,7 +1941,7 @@ st_GetTexSubImage(struct gl_context * ctx,
 
    if (!src_format ||
        !screen->is_format_supported(screen, src_format, src->target,
-                                    src->nr_samples,
+                                    src->nr_samples, src->nr_storage_samples,
                                     PIPE_BIND_SAMPLER_VIEW)) {
       goto fallback;
    }
@@ -2013,25 +2015,25 @@ st_GetTexSubImage(struct gl_context * ctx,
          break;
       case PIPE_FORMAT_ETC2_R11_UNORM:
          if (!screen->is_format_supported(screen, PIPE_FORMAT_R16_UNORM,
-                                          pipe_target, 0, bind))
+                                          pipe_target, 0, 0, bind))
             goto fallback;
          dst_glformat = GL_R16;
          break;
       case PIPE_FORMAT_ETC2_R11_SNORM:
          if (!screen->is_format_supported(screen, PIPE_FORMAT_R16_SNORM,
-                                          pipe_target, 0, bind))
+                                          pipe_target, 0, 0, bind))
             goto fallback;
          dst_glformat = GL_R16_SNORM;
          break;
       case PIPE_FORMAT_ETC2_RG11_UNORM:
          if (!screen->is_format_supported(screen, PIPE_FORMAT_R16G16_UNORM,
-                                          pipe_target, 0, bind))
+                                          pipe_target, 0, 0, bind))
             goto fallback;
          dst_glformat = GL_RG16;
          break;
       case PIPE_FORMAT_ETC2_RG11_SNORM:
          if (!screen->is_format_supported(screen, PIPE_FORMAT_R16G16_SNORM,
-                                          pipe_target, 0, bind))
+                                          pipe_target, 0, 0, bind))
             goto fallback;
          dst_glformat = GL_RG16_SNORM;
          break;
@@ -2437,7 +2439,8 @@ st_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
 
    if (!dst_format ||
        !screen->is_format_supported(screen, dst_format, stImage->pt->target,
-                                    stImage->pt->nr_samples, bind)) {
+                                    stImage->pt->nr_samples,
+                                    stImage->pt->nr_storage_samples, bind)) {
       goto fallback;
    }
 
@@ -2775,7 +2778,7 @@ st_texture_create_from_memory(struct st_context *st,
        (int) target, util_format_name(format), last_level);
 
    assert(format);
-   assert(screen->is_format_supported(screen, format, target, 0,
+   assert(screen->is_format_supported(screen, format, target, 0, 0,
                                       PIPE_BIND_SAMPLER_VIEW));
 
    memset(&pt, 0, sizeof(pt));
@@ -2848,7 +2851,7 @@ st_texture_storage(struct gl_context *ctx,
 
       for (; num_samples <= ctx->Const.MaxSamples; num_samples++) {
          if (screen->is_format_supported(screen, fmt, ptarget,
-                                         num_samples,
+                                         num_samples, num_samples,
                                          PIPE_BIND_SAMPLER_VIEW)) {
             /* Update the sample count in gl_texture_image as well. */
             texImage->NumSamples = num_samples;

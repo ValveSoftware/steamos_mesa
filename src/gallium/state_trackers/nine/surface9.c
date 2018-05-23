@@ -243,7 +243,7 @@ NineSurface9_CreatePipeSurfaces( struct NineSurface9 *This )
     srgb_format = util_format_srgb(resource->format);
     if (srgb_format == PIPE_FORMAT_NONE ||
         !screen->is_format_supported(screen, srgb_format,
-                                     resource->target, 0, resource->bind))
+                                     resource->target, 0, 0, resource->bind))
         srgb_format = resource->format;
 
     memset(&templ, 0, sizeof(templ));

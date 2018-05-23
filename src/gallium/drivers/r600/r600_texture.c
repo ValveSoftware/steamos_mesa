@@ -1636,7 +1636,7 @@ static void r600_clear_texture(struct pipe_context *pipe,
 			desc->unpack_rgba_float(color.f, 0, data, 0, 1, 1);
 
 		if (screen->is_format_supported(screen, tex->format,
-						tex->target, 0,
+						tex->target, 0, 0,
 						PIPE_BIND_RENDER_TARGET)) {
 			pipe->clear_render_target(pipe, sf, &color,
 						  box->x, box->y,

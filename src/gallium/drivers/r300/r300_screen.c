@@ -591,6 +591,7 @@ static boolean r300_is_format_supported(struct pipe_screen* screen,
                                         enum pipe_format format,
                                         enum pipe_texture_target target,
                                         unsigned sample_count,
+                                        unsigned storage_sample_count,
                                         unsigned usage)
 {
     uint32_t retval = 0;
@@ -615,6 +616,9 @@ static boolean r300_is_format_supported(struct pipe_screen* screen,
                             format == PIPE_FORMAT_R16G16B16A16_FLOAT ||
                             format == PIPE_FORMAT_R16G16B16X16_FLOAT;
     const struct util_format_description *desc;
+
+    if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+        return false;
 
     /* Check multisampling support. */
     switch (sample_count) {

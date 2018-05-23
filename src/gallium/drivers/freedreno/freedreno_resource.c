@@ -148,6 +148,7 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	 */
 	if (!pctx->screen->is_format_supported(pctx->screen,
 			prsc->format, prsc->target, prsc->nr_samples,
+			prsc->nr_storage_samples,
 			PIPE_BIND_RENDER_TARGET))
 		fallback = true;
 

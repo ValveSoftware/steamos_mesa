@@ -1580,6 +1580,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
     user_assert(screen->is_format_supported(screen, src_res->format,
                                             src_res->target,
                                             src_res->nr_samples,
+                                            src_res->nr_storage_samples,
                                             PIPE_BIND_SAMPLER_VIEW),
                 D3DERR_INVALIDCALL);
 
@@ -1705,6 +1706,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
         user_assert(screen->is_format_supported(screen, dst_res->format,
                                                 dst_res->target,
                                                 dst_res->nr_samples,
+                                                dst_res->nr_storage_samples,
                                                 zs ? PIPE_BIND_DEPTH_STENCIL :
                                                 PIPE_BIND_RENDER_TARGET),
                     D3DERR_INVALIDCALL);

@@ -85,6 +85,7 @@ swr_is_format_supported(struct pipe_screen *_screen,
                         enum pipe_format format,
                         enum pipe_texture_target target,
                         unsigned sample_count,
+                        unsigned storage_sample_count,
                         unsigned bind)
 {
    struct swr_screen *screen = swr_screen(_screen);
@@ -99,6 +100,9 @@ swr_is_format_supported(struct pipe_screen *_screen,
           || target == PIPE_TEXTURE_3D
           || target == PIPE_TEXTURE_CUBE
           || target == PIPE_TEXTURE_CUBE_ARRAY);
+
+   if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+      return false;
 
    format_desc = util_format_description(format);
    if (!format_desc)

@@ -455,6 +455,7 @@ llvmpipe_is_format_supported( struct pipe_screen *_screen,
                               enum pipe_format format,
                               enum pipe_texture_target target,
                               unsigned sample_count,
+                              unsigned storage_sample_count,
                               unsigned bind)
 {
    struct llvmpipe_screen *screen = llvmpipe_screen(_screen);
@@ -477,6 +478,9 @@ llvmpipe_is_format_supported( struct pipe_screen *_screen,
 
    if (sample_count > 1)
       return FALSE;
+
+   if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+      return false;
 
    if (bind & PIPE_BIND_RENDER_TARGET) {
       if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB) {

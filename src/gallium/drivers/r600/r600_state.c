@@ -162,6 +162,7 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 				 enum pipe_format format,
 				 enum pipe_texture_target target,
 				 unsigned sample_count,
+				 unsigned storage_sample_count,
 				 unsigned usage)
 {
 	struct r600_screen *rscreen = (struct r600_screen*)screen;
@@ -171,6 +172,9 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 		R600_ERR("r600: unsupported texture type %d\n", target);
 		return FALSE;
 	}
+
+	if (MAX2(1, sample_count) != MAX2(1, storage_sample_count))
+		return false;
 
 	if (sample_count > 1) {
 		if (!rscreen->has_msaa)

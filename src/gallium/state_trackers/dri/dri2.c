@@ -1489,7 +1489,7 @@ dri2_query_dma_buf_formats(__DRIscreen *_screen, int max, int *formats,
                                        fourcc_to_pipe_format(
                                           fourcc_formats[i]),
                                        screen->target,
-                                       0, bind)) {
+                                       0, 0, bind)) {
          if (j < max)
             formats[j] = fourcc_formats[i];
          j++;
@@ -1510,7 +1510,8 @@ dri2_query_dma_buf_modifiers(__DRIscreen *_screen, int fourcc, int max,
    const unsigned usage = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
 
    if (pscreen->query_dmabuf_modifiers != NULL &&
-       pscreen->is_format_supported(pscreen, format, screen->target, 0, usage)) {
+       pscreen->is_format_supported(pscreen, format, screen->target, 0, 0,
+                                    usage)) {
       pscreen->query_dmabuf_modifiers(pscreen, format, max, modifiers,
                                       external_only, count);
       return true;
