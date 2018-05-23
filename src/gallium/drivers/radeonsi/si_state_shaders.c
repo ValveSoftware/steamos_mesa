@@ -1226,9 +1226,10 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 	uint64_t outputs_written = vs->outputs_written_before_ps;
 	uint64_t inputs_read = 0;
 
-	/* ignore POSITION, PSIZE */
+	/* Ignore outputs that are not passed from VS to PS. */
 	outputs_written &= ~((1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_POSITION, 0, true)) |
-			     (1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_PSIZE, 0, true)));
+			     (1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_PSIZE, 0, true)) |
+			     (1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_CLIPVERTEX, 0, true)));
 
 	if (!ps_disabled) {
 		inputs_read = ps->inputs_read;
