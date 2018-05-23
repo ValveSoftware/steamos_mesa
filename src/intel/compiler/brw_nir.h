@@ -109,7 +109,7 @@ void brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue);
 void brw_nir_lower_fs_inputs(nir_shader *nir,
                              const struct gen_device_info *devinfo,
                              const struct brw_wm_prog_key *key);
-void brw_nir_lower_vue_outputs(nir_shader *nir, bool is_scalar);
+void brw_nir_lower_vue_outputs(nir_shader *nir);
 void brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue,
                                GLenum tes_primitive_mode);
 void brw_nir_lower_fs_outputs(nir_shader *nir);
