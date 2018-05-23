@@ -519,10 +519,6 @@ need_to_retile_as_linear(struct brw_context *brw, unsigned row_pitch,
    if (tiling == ISL_TILING_LINEAR)
       return false;
 
-    /* If the width is much smaller than a tile, don't bother tiling. */
-   if (row_pitch < 64)
-      return true;
-
    if (ALIGN(row_pitch, 512) >= 32768) {
       perf_debug("row pitch %u too large to blit, falling back to untiled",
                  row_pitch);
