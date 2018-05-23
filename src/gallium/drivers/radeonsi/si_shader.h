@@ -152,7 +152,7 @@ struct si_context;
 /* Shader IO unique indices are supported for TGSI_SEMANTIC_GENERIC with an
  * index smaller than this.
  */
-#define SI_MAX_IO_GENERIC       46
+#define SI_MAX_IO_GENERIC       44
 
 /* SGPR user data indices */
 enum {
@@ -393,6 +393,7 @@ struct si_shader_selector {
 	/* CS parameters */
 	unsigned local_size;
 
+	uint64_t	outputs_written_before_ps; /* "get_unique_index" bits */
 	uint64_t	outputs_written;	/* "get_unique_index" bits */
 	uint32_t	patch_outputs_written;	/* "get_unique_index_patch" bits */
 
@@ -668,7 +669,8 @@ int si_shader_create(struct si_screen *sscreen, struct si_compiler *compiler,
 		     struct pipe_debug_callback *debug);
 void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index_patch(unsigned semantic_name, unsigned index);
-unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
+unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index,
+				       unsigned is_varying);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,

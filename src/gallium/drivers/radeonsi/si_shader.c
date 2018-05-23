@@ -191,7 +191,8 @@ unsigned si_shader_io_get_unique_index_patch(unsigned semantic_name, unsigned in
  * less than 64, so that a 64-bit bitmask of used inputs or outputs can be
  * calculated.
  */
-unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
+unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index,
+				       unsigned is_varying)
 {
 	switch (semantic_name) {
 	case TGSI_SEMANTIC_POSITION:
@@ -220,14 +221,20 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		return SI_MAX_IO_GENERIC + 6;
 	case TGSI_SEMANTIC_PRIMID:
 		return SI_MAX_IO_GENERIC + 7;
-	case TGSI_SEMANTIC_COLOR: /* these alias */
-	case TGSI_SEMANTIC_BCOLOR:
+	case TGSI_SEMANTIC_COLOR:
 		assert(index < 2);
 		return SI_MAX_IO_GENERIC + 8 + index;
+	case TGSI_SEMANTIC_BCOLOR:
+		assert(index < 2);
+		/* If it's a varying, COLOR and BCOLOR alias. */
+		if (is_varying)
+			return SI_MAX_IO_GENERIC + 8 + index;
+		else
+			return SI_MAX_IO_GENERIC + 10 + index;
 	case TGSI_SEMANTIC_TEXCOORD:
 		assert(index < 8);
-		assert(SI_MAX_IO_GENERIC + 10 + index < 64);
-		return SI_MAX_IO_GENERIC + 10 + index;
+		STATIC_ASSERT(SI_MAX_IO_GENERIC + 12 + 8 <= 64);
+		return SI_MAX_IO_GENERIC + 12 + index;
 	default:
 		assert(!"invalid semantic name");
 		return 0;
@@ -860,7 +867,7 @@ static LLVMValueRef get_dw_address_from_generic_indices(struct si_shader_context
 		si_shader_io_get_unique_index_patch(name[input_index],
 						    index[input_index]) :
 		si_shader_io_get_unique_index(name[input_index],
-					      index[input_index]);
+					      index[input_index], false);
 
 	/* Add the base address of the element. */
 	return LLVMBuildAdd(ctx->ac.builder, base_addr,
@@ -1015,7 +1022,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_generic_indices(
 
 	param_index_base = is_patch ?
 		si_shader_io_get_unique_index_patch(name[param_base], index[param_base]) :
-		si_shader_io_get_unique_index(name[param_base], index[param_base]);
+		si_shader_io_get_unique_index(name[param_base], index[param_base], false);
 
 	if (param_index) {
 		param_index = LLVMBuildAdd(ctx->ac.builder, param_index,
@@ -1622,7 +1629,7 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 	unsigned param;
 	LLVMValueRef value;
 
-	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
+	param = si_shader_io_get_unique_index(semantic_name, semantic_index, false);
 
 	/* GFX9 has the ESGS ring in LDS. */
 	if (ctx->screen->info.chip_class >= GFX9) {
@@ -2916,7 +2923,8 @@ static void si_build_param_exports(struct si_shader_context *ctx,
 		if ((semantic_name != TGSI_SEMANTIC_GENERIC ||
 		     semantic_index < SI_MAX_IO_GENERIC) &&
 		    shader->key.opt.kill_outputs &
-		    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
+		    (1ull << si_shader_io_get_unique_index(semantic_name,
+							   semantic_index, true)))
 			continue;
 
 		si_export_param(ctx, param_count, outputs[i].values);
@@ -3546,7 +3554,7 @@ static void si_llvm_emit_ls_epilogue(struct ac_shader_abi *abi,
 		    name == TGSI_SEMANTIC_VIEWPORT_INDEX)
 			continue;
 
-		int param = si_shader_io_get_unique_index(name, index);
+		int param = si_shader_io_get_unique_index(name, index, false);
 		LLVMValueRef dw_addr = LLVMBuildAdd(ctx->ac.builder, base_dw_addr,
 					LLVMConstInt(ctx->i32, param * 4, 0), "");
 
@@ -3595,7 +3603,7 @@ static void si_llvm_emit_es_epilogue(struct ac_shader_abi *abi,
 			continue;
 
 		param = si_shader_io_get_unique_index(info->output_semantic_name[i],
-						      info->output_semantic_index[i]);
+						      info->output_semantic_index[i], false);
 
 		for (chan = 0; chan < 4; chan++) {
 			if (!(info->output_usagemask[i] & (1 << chan)))

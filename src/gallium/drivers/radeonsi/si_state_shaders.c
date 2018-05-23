@@ -1223,12 +1223,12 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 	}
 
 	/* Find out which VS outputs aren't used by the PS. */
-	uint64_t outputs_written = vs->outputs_written;
+	uint64_t outputs_written = vs->outputs_written_before_ps;
 	uint64_t inputs_read = 0;
 
 	/* ignore POSITION, PSIZE */
-	outputs_written &= ~((1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_POSITION, 0)) |
-			     (1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_PSIZE, 0)));
+	outputs_written &= ~((1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_POSITION, 0, true)) |
+			     (1ull << si_shader_io_get_unique_index(TGSI_SEMANTIC_PSIZE, 0, true)));
 
 	if (!ps_disabled) {
 		inputs_read = ps->inputs_read;
@@ -1927,8 +1927,8 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 						break;
 					/* fall through */
 				default:
-					id = si_shader_io_get_unique_index(name, index);
-					sel->outputs_written &= ~(1ull << id);
+					id = si_shader_io_get_unique_index(name, index, true);
+					sel->outputs_written_before_ps &= ~(1ull << id);
 					break;
 				case TGSI_SEMANTIC_POSITION: /* ignore these */
 				case TGSI_SEMANTIC_PSIZE:
@@ -2101,7 +2101,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				/* fall through */
 			default:
 				sel->outputs_written |=
-					1ull << si_shader_io_get_unique_index(name, index);
+					1ull << si_shader_io_get_unique_index(name, index, false);
+				sel->outputs_written_before_ps |=
+					1ull << si_shader_io_get_unique_index(name, index, true);
 				break;
 			case TGSI_SEMANTIC_CLIPVERTEX: /* ignore these */
 			case TGSI_SEMANTIC_EDGEFLAG:
@@ -2115,6 +2117,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		 */
 		if (sctx->chip_class >= GFX9)
 			sel->esgs_itemsize += 4;
+
+		assert(((sel->esgs_itemsize / 4) & C_028AAC_ITEMSIZE) == 0);
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
@@ -2130,7 +2134,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				/* fall through */
 			default:
 				sel->inputs_read |=
-					1ull << si_shader_io_get_unique_index(name, index);
+					1ull << si_shader_io_get_unique_index(name, index, true);
 				break;
 			case TGSI_SEMANTIC_PCOORD: /* ignore this */
 				break;
