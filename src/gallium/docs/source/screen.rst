@@ -411,6 +411,17 @@ The integer capabilities:
 * ``PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES``: Limit on combined shader
   output resources (images + buffers + fragment outputs). If 0 the state
   tracker works it out.
+* ``PIPE_CAP_FRAMEBUFFER_MSAA_CONSTRAINTS``: This determines limitations
+  on the number of samples that framebuffer attachments can have.
+  Possible values:
+    0: color.nr_samples == zs.nr_samples == color.nr_storage_samples
+       (standard MSAA quality)
+    1: color.nr_samples >= zs.nr_samples == color.nr_storage_samples
+       (enhanced MSAA quality)
+    2: color.nr_samples >= zs.nr_samples >= color.nr_storage_samples
+       (full flexibility in tuning MSAA quality and performance)
+  All color attachments must have the same number of samples and the same
+  number of storage samples.
 * ``PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET``:
   Whether pipe_vertex_buffer::buffer_offset is treated as signed. The u_vbuf
   module needs this for optimal performance in workstation applications.

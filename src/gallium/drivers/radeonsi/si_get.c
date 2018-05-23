@@ -312,6 +312,8 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
 	case PIPE_CAP_MAX_RENDER_TARGETS:
 		return 8;
+	case PIPE_CAP_FRAMEBUFFER_MSAA_CONSTRAINTS:
+		return sscreen->info.has_eqaa_surface_allocator ? 2 : 0;
 
 	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
 	case PIPE_CAP_MIN_TEXEL_OFFSET:
