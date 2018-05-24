@@ -263,23 +263,28 @@ fs_visitor::emit_interpolation_setup_gen6()
    abld.emit(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
    struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(prog_data);
-   uint32_t centroid_modes = wm_prog_data->barycentric_interp_modes &
-      (1 << BRW_BARYCENTRIC_PERSPECTIVE_CENTROID |
-       1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
 
    for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
       this->delta_xy[i] = fetch_payload_reg(
          bld, payload.barycentric_coord_reg[i], BRW_REGISTER_TYPE_F, 2);
+   }
 
-      if (devinfo->needs_unlit_centroid_workaround &&
-          (centroid_modes & (1 << i))) {
+   uint32_t centroid_modes = wm_prog_data->barycentric_interp_modes &
+      (1 << BRW_BARYCENTRIC_PERSPECTIVE_CENTROID |
+       1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
+
+   if (devinfo->needs_unlit_centroid_workaround && centroid_modes) {
+      /* Get the pixel/sample mask into f0 so that we know which
+       * pixels are lit.  Then, for each channel that is unlit,
+       * replace the centroid data with non-centroid data.
+       */
+      bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+
+      for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
+         if (!(centroid_modes & (1 << i)))
+            continue;
+
          const fs_reg &pixel_delta_xy = delta_xy[i - 1];
-
-         /* Get the pixel/sample mask into f0 so that we know which
-          * pixels are lit.  Then, for each channel that is unlit,
-          * replace the centroid data with non-centroid data.
-          */
-         bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
 
          for (unsigned q = 0; q < dispatch_width / 8; q++) {
             for (unsigned c = 0; c < 2; c++) {

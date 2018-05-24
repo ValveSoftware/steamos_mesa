@@ -6211,44 +6211,6 @@ fs_visitor::calculate_register_pressure()
    }
 }
 
-/**
- * Look for repeated FS_OPCODE_MOV_DISPATCH_TO_FLAGS and drop the later ones.
- *
- * The needs_unlit_centroid_workaround ends up producing one of these per
- * channel of centroid input, so it's good to clean them up.
- *
- * An assumption here is that nothing ever modifies the dispatched pixels
- * value that FS_OPCODE_MOV_DISPATCH_TO_FLAGS reads from, but the hardware
- * dictates that anyway.
- */
-bool
-fs_visitor::opt_drop_redundant_mov_to_flags()
-{
-   bool flag_mov_found[4] = {false};
-   bool progress = false;
-
-   /* Instructions removed by this pass can only be added if this were true */
-   if (!devinfo->needs_unlit_centroid_workaround)
-      return false;
-
-   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
-      if (inst->is_control_flow()) {
-         memset(flag_mov_found, 0, sizeof(flag_mov_found));
-      } else if (inst->opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS) {
-         if (!flag_mov_found[inst->flag_subreg]) {
-            flag_mov_found[inst->flag_subreg] = true;
-         } else {
-            inst->remove(block);
-            progress = true;
-         }
-      } else if (inst->flags_written()) {
-         flag_mov_found[inst->flag_subreg] = false;
-      }
-   }
-
-   return progress;
-}
-
 void
 fs_visitor::optimize()
 {
@@ -6306,7 +6268,6 @@ fs_visitor::optimize()
    int iteration = 0;
    int pass_num = 0;
 
-   OPT(opt_drop_redundant_mov_to_flags);
    OPT(remove_extra_rounding_modes);
 
    do {
