@@ -95,6 +95,7 @@ st_texture_create(struct st_context *st,
    /* only set this for OpenGL textures, not renderbuffers */
    pt.flags = PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY;
    pt.nr_samples = nr_samples;
+   pt.nr_storage_samples = nr_samples;
 
    newtex = screen->resource_create(screen, &pt);
 

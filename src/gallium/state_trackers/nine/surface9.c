@@ -104,6 +104,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     This->base.info.last_level = 0;
     This->base.info.array_size = 1;
     This->base.info.nr_samples = multisample_type;
+    This->base.info.nr_storage_samples = multisample_type;
     This->base.info.usage = PIPE_USAGE_DEFAULT;
     This->base.info.bind = PIPE_BIND_SAMPLER_VIEW; /* StretchRect */
 
@@ -803,6 +804,7 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
     This->desc.Width = This->base.info.width0 = resource->width0;
     This->desc.Height = This->base.info.height0 = resource->height0;
     This->base.info.nr_samples = resource->nr_samples;
+    This->base.info.nr_storage_samples = resource->nr_storage_samples;
 
     This->stride = nine_format_get_stride(This->base.info.format,
                                           This->desc.Width);

@@ -2791,6 +2791,7 @@ st_texture_create_from_memory(struct st_context *st,
    /* only set this for OpenGL textures, not renderbuffers */
    pt.flags = PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY;
    pt.nr_samples = nr_samples;
+   pt.nr_storage_samples = nr_samples;
 
    newtex = screen->resource_from_memobj(screen, &pt, memObj->memory, offset);
 
@@ -2956,6 +2957,7 @@ st_TestProxyTexImage(struct gl_context *ctx, GLenum target,
       pt.target = gl_target_to_pipe(target);
       pt.format = st_mesa_format_to_pipe_format(st, format);
       pt.nr_samples = numSamples;
+      pt.nr_storage_samples = numSamples;
 
       st_gl_texture_dims_to_pipe_dims(target,
                                       width, height, depth,

@@ -3008,7 +3008,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
         templ.bind = PIPE_BIND_STREAM_OUTPUT;
         templ.usage = PIPE_USAGE_STREAM;
         templ.height0 = templ.depth0 = templ.array_size = 1;
-        templ.last_level = templ.nr_samples = 0;
+        templ.last_level = templ.nr_samples = templ.nr_storage_samples = 0;
 
         resource = screen_sw->resource_create(screen_sw, &templ);
         if (!resource)

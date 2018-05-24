@@ -789,8 +789,27 @@ For cube maps this must be 6, for other textures 1.
 
 **last_level** the last mip map level present.
 
-**nr_samples** the nr of msaa samples. 0 (or 1) specifies a resource
-which isn't multisampled.
+**nr_samples**: Number of samples determining quality, driving the rasterizer,
+shading, and framebuffer. It is the number of samples seen by the whole
+graphics pipeline. 0 and 1 specify a resource which isn't multisampled.
+
+**nr_storage_samples**: Only color buffers can set this lower than nr_samples.
+Multiple samples within a pixel can have the same color. ``nr_storage_samples``
+determines how many slots for different colors there are per pixel.
+If there are not enough slots to store all sample colors, some samples will
+have an undefined color (called "undefined samples").
+
+The resolve blit behavior is driver-specific, but can be one of these two:
+1. Only defined samples will be averaged. Undefined samples will be ignored.
+2. Undefined samples will be approximated by looking at surrounding defined
+   samples (even in different pixels).
+
+Blits and MSAA texturing: If the sample being fetched is undefined, one of
+the defined samples is returned instead.
+
+Sample shading (``set_min_samples``) will operate at a sample frequency that
+is at most ``nr_storage_samples``. Greater ``min_samples`` values will be
+replaced by ``nr_storage_samples``.
 
 **usage** one of the :ref:`PIPE_USAGE` flags.
 

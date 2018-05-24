@@ -55,6 +55,7 @@ util_create_texture2d(struct pipe_screen *screen, unsigned width,
    templ.depth0 = 1;
    templ.array_size = 1;
    templ.nr_samples = num_samples;
+   templ.nr_storage_samples = num_samples;
    templ.format = format;
    templ.usage = PIPE_USAGE_DEFAULT;
    templ.bind = PIPE_BIND_SAMPLER_VIEW |
