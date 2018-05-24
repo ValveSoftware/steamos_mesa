@@ -2982,6 +2982,8 @@ static void ac_llvm_finalize_module(struct radv_shader_context *ctx)
 	LLVMAddLICMPass(passmgr);
 	LLVMAddAggressiveDCEPass(passmgr);
 	LLVMAddCFGSimplificationPass(passmgr);
+	/* This is recommended by the instruction combining pass. */
+	LLVMAddEarlyCSEMemSSAPass(passmgr);
 	LLVMAddInstructionCombiningPass(passmgr);
 
 	/* Run the pass */
