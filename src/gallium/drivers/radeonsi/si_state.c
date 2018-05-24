@@ -2143,6 +2143,9 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		return false;
 	}
 
+	if (MAX2(1, sample_count) < MAX2(1, storage_sample_count))
+		return false;
+
 	if (sample_count > 1) {
 		if (!screen->get_param(screen, PIPE_CAP_TEXTURE_MULTISAMPLE))
 			return false;
@@ -2150,25 +2153,26 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		if (usage & PIPE_BIND_SHADER_IMAGE)
 			return false;
 
-		if (sample_count != storage_sample_count)
+		/* Only power-of-two sample counts are supported. */
+		if (!util_is_power_of_two_or_zero(sample_count) ||
+		    !util_is_power_of_two_or_zero(storage_sample_count))
 			return false;
 
-		switch (sample_count) {
-		case 2:
-		case 4:
-		case 8:
-			break;
-		case 16:
-			/* Allow resource_copy_region with nr_samples == 16. */
-			if (sscreen->eqaa_force_coverage_samples == 16 &&
-			    !util_format_is_depth_or_stencil(format))
-				return true;
-			if (format == PIPE_FORMAT_NONE)
-				return true;
-			else
+		/* MSAA support without framebuffer attachments. */
+		if (format == PIPE_FORMAT_NONE && sample_count <= 16)
+			return true;
+
+		if (!sscreen->info.has_eqaa_surface_allocator ||
+		    util_format_is_depth_or_stencil(format)) {
+			/* Color without EQAA or depth/stencil. */
+			if (sample_count > 8 ||
+			    sample_count != storage_sample_count)
 				return false;
-		default:
-			return false;
+		} else {
+			/* Color with EQAA. */
+			if (sample_count > 16 ||
+			    storage_sample_count > 8)
+				return false;
 		}
 	}
 
