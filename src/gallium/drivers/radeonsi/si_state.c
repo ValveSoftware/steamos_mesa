@@ -2431,7 +2431,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	if (tex->buffer.b.b.nr_samples > 1) {
 		unsigned log_samples = util_logbase2(tex->buffer.b.b.nr_samples);
-		unsigned log_fragments = util_logbase2(tex->num_color_samples);
+		unsigned log_fragments = util_logbase2(tex->buffer.b.b.nr_storage_samples);
 
 		color_attrib |= S_028C74_NUM_SAMPLES(log_samples) |
 				S_028C74_NUM_FRAGMENTS(log_fragments);
@@ -2458,7 +2458,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		if (!sctx->screen->info.has_dedicated_vram)
 			min_compressed_block_size = V_028C78_MIN_BLOCK_SIZE_64B;
 
-		if (tex->num_color_samples > 1) {
+		if (tex->buffer.b.b.nr_storage_samples > 1) {
 			if (tex->surface.bpe == 1)
 				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
 			else if (tex->surface.bpe == 2)
@@ -2869,10 +2869,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		 * (e.g. destination of MSAA resolve)
 		 */
 		if (tex->buffer.b.b.nr_samples >= 2 &&
-		    tex->num_color_samples < tex->buffer.b.b.nr_samples) {
+		    tex->buffer.b.b.nr_storage_samples < tex->buffer.b.b.nr_samples) {
 			sctx->framebuffer.nr_color_samples =
 				MIN2(sctx->framebuffer.nr_color_samples,
-				     tex->num_color_samples);
+				     tex->buffer.b.b.nr_storage_samples);
+			sctx->framebuffer.nr_color_samples =
+				MAX2(1, sctx->framebuffer.nr_color_samples);
 		}
 
 		if (tex->surface.is_linear)
@@ -3633,7 +3635,8 @@ si_make_texture_descriptor(struct si_screen *screen,
 	desc = util_format_description(pipe_format);
 
 	num_samples = desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS ?
-			MAX2(1, res->nr_samples) : tex->num_color_samples;
+			MAX2(1, res->nr_samples) :
+			MAX2(1, res->nr_storage_samples);
 
 	if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS) {
 		const unsigned char swizzle_xxxx[4] = {0, 0, 0, 0};
@@ -3831,10 +3834,10 @@ si_make_texture_descriptor(struct si_screen *screen,
 
 		va = tex->buffer.gpu_address + tex->fmask_offset;
 
-#define FMASK(s,f) (((unsigned)(s) * 16) + (f))
+#define FMASK(s,f) (((unsigned)(MAX2(1, s)) * 16) + (MAX2(1, f)))
 		if (screen->info.chip_class >= GFX9) {
 			data_format = V_008F14_IMG_DATA_FORMAT_FMASK;
-			switch (FMASK(res->nr_samples, tex->num_color_samples)) {
+			switch (FMASK(res->nr_samples, res->nr_storage_samples)) {
 			case FMASK(2,1):
 				num_format = V_008F14_IMG_FMASK_8_2_1;
 				break;
@@ -3878,7 +3881,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 				unreachable("invalid nr_samples");
 			}
 		} else {
-			switch (FMASK(res->nr_samples, tex->num_color_samples)) {
+			switch (FMASK(res->nr_samples, res->nr_storage_samples)) {
 			case FMASK(2,1):
 				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F1;
 				break;

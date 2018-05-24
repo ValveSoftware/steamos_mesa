@@ -220,7 +220,6 @@ static unsigned si_texture_get_offset(struct si_screen *sscreen,
 static int si_init_surface(struct si_screen *sscreen,
 			   struct radeon_surf *surface,
 			   const struct pipe_resource *ptex,
-			   unsigned num_color_samples,
 			   enum radeon_surf_mode array_mode,
 			   unsigned pitch_in_bytes_override,
 			   unsigned offset,
@@ -280,13 +279,13 @@ static int si_init_surface(struct si_screen *sscreen,
 
 	/* VI: DCC clear for 4x and 8x MSAA array textures unimplemented. */
 	if (sscreen->info.chip_class == VI &&
-	    num_color_samples >= 4 &&
+	    ptex->nr_storage_samples >= 4 &&
 	    ptex->array_size > 1)
 		flags |= RADEON_SURF_DISABLE_DCC;
 
 	/* GFX9: DCC clear for 4x and 8x MSAA textures unimplemented. */
 	if (sscreen->info.chip_class >= GFX9 &&
-	    num_color_samples >= 4)
+	    ptex->nr_storage_samples >= 4)
 		flags |= RADEON_SURF_DISABLE_DCC;
 
 	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {
@@ -307,8 +306,8 @@ static int si_init_surface(struct si_screen *sscreen,
 	if (!(ptex->flags & SI_RESOURCE_FLAG_FORCE_TILING))
 		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
-	r = sscreen->ws->surface_init(sscreen->ws, ptex, num_color_samples,
-				      flags, bpe, array_mode, surface);
+	r = sscreen->ws->surface_init(sscreen->ws, ptex, flags, bpe,
+				      array_mode, surface);
 	if (r) {
 		return r;
 	}
@@ -1114,7 +1113,6 @@ void si_print_texture_info(struct si_screen *sscreen,
 static struct si_texture *
 si_texture_create_object(struct pipe_screen *screen,
 			 const struct pipe_resource *base,
-			 unsigned num_color_samples,
 			 struct pb_buffer *buf,
 			 struct radeon_surf *surface)
 {
@@ -1138,7 +1136,6 @@ si_texture_create_object(struct pipe_screen *screen,
 
 	tex->surface = *surface;
 	tex->size = tex->surface.surf_size;
-	tex->num_color_samples = num_color_samples;
 
 	tex->tc_compatible_htile = tex->surface.htile_size != 0 &&
 				   (tex->surface.flags &
@@ -1358,17 +1355,6 @@ si_choose_tiling(struct si_screen *sscreen,
 	return RADEON_SURF_MODE_2D;
 }
 
-static unsigned si_get_num_color_samples(struct si_screen *sscreen,
-					 const struct pipe_resource *templ,
-					 bool imported)
-{
-	if (!imported && templ->nr_samples >= 2 &&
-	    sscreen->eqaa_force_color_samples)
-		return sscreen->eqaa_force_color_samples;
-
-	return CLAMP(templ->nr_samples, 1, 8);
-}
-
 struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ)
 {
@@ -1382,10 +1368,13 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 		 */
 		if (is_zs && sscreen->eqaa_force_z_samples) {
 			((struct pipe_resource*)templ)->nr_samples =
+			((struct pipe_resource*)templ)->nr_storage_samples =
 				sscreen->eqaa_force_z_samples;
 		} else if (!is_zs && sscreen->eqaa_force_color_samples) {
 			((struct pipe_resource*)templ)->nr_samples =
 				sscreen->eqaa_force_coverage_samples;
+			((struct pipe_resource*)templ)->nr_storage_samples =
+				sscreen->eqaa_force_color_samples;
 		}
 	}
 
@@ -1405,10 +1394,9 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 		!is_flushed_depth &&
 		templ->nr_samples <= 1 && /* TC-compat HTILE is less efficient with MSAA */
 		is_zs;
-	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, false);
 	int r;
 
-	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
+	r = si_init_surface(sscreen, &surface, templ,
 			    si_choose_tiling(sscreen, templ, tc_compatible_htile),
 			    0, 0, false, false, is_flushed_depth,
 			    tc_compatible_htile);
@@ -1417,8 +1405,7 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 	}
 
 	return (struct pipe_resource *)
-	       si_texture_create_object(screen, templ, num_color_samples,
-					NULL, &surface);
+	       si_texture_create_object(screen, templ, NULL, &surface);
 }
 
 static struct pipe_resource *si_texture_from_winsys_buffer(struct si_screen *sscreen,
@@ -1467,16 +1454,13 @@ static struct pipe_resource *si_texture_from_winsys_buffer(struct si_screen *ssc
 		is_scanout = false;
 	}
 
-	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, true);
-
-	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
+	r = si_init_surface(sscreen, &surface, templ,
 			    array_mode, stride, offset, true, is_scanout,
 			    false, false);
 	if (r)
 		return NULL;
 
-	tex = si_texture_create_object(&sscreen->b, templ, num_color_samples,
-				       buf, &surface);
+	tex = si_texture_create_object(&sscreen->b, templ, buf, &surface);
 	if (!tex)
 		return NULL;
 
