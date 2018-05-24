@@ -2508,6 +2508,17 @@ brw_calculate_guardband_size(uint32_t fb_width, uint32_t fb_height,
     */
    const float gb_size = GEN_GEN >= 7 ? 16384.0f : 8192.0f;
 
+   /* Workaround: prevent gpu hangs on SandyBridge
+    * by disabling guardband clipping for odd dimensions.
+    */
+   if (GEN_GEN == 6 && (fb_width & 1 || fb_height & 1)) {
+      *xmin = -1.0f;
+      *xmax =  1.0f;
+      *ymin = -1.0f;
+      *ymax =  1.0f;
+      return;
+   }
+
    if (m00 != 0 && m11 != 0) {
       /* First, we compute the screen-space render area */
       const float ss_ra_xmin = MIN3(        0, m30 + m00, m30 - m00);
