@@ -540,12 +540,15 @@ radv_dump_graphics_state(struct radv_pipeline *graphics_pipeline,
 {
 	VkShaderStageFlagBits active_stages;
 
-	if (!graphics_pipeline)
-		return;
+	if (graphics_pipeline) {
+		active_stages = graphics_pipeline->active_stages;
+		radv_dump_pipeline_state(graphics_pipeline, active_stages, f);
+	}
 
-	active_stages = graphics_pipeline->active_stages;
-
-	radv_dump_pipeline_state(graphics_pipeline, active_stages, f);
+	if (compute_pipeline) {
+		active_stages = VK_SHADER_STAGE_COMPUTE_BIT;
+		radv_dump_pipeline_state(compute_pipeline, active_stages, f);
+	}
 }
 
 static void
