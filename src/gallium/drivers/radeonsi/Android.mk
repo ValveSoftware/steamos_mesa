@@ -46,6 +46,8 @@ LOCAL_MODULE := libmesa_pipe_radeonsi
 
 intermediates := $(call local-generated-sources-dir)
 
+# We need to get NIR's generated headers.
+LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
 LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/radeonsi/,$(GENERATED_SOURCES))
 
 GEN_DRIINFO_INPUTS := \
