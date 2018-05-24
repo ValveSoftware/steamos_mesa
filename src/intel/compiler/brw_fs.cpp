@@ -962,7 +962,6 @@ fs_inst::flags_written() const
                             opcode != BRW_OPCODE_CSEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE)) ||
-       opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS ||
        opcode == SHADER_OPCODE_FIND_LIVE_CHANNEL ||
        opcode == FS_OPCODE_FB_WRITE) {
       return flag_mask(this);
@@ -6752,8 +6751,11 @@ fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
        * Initialize it with the dispatched pixels.
        */
       if (wm_prog_data->uses_kill) {
-         fs_inst *discard_init = bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
-         discard_init->flag_subreg = 1;
+         const fs_reg dispatch_mask =
+            devinfo->gen >= 6 ? brw_vec1_grf(1, 7) : brw_vec1_grf(0, 0);
+         bld.exec_all().group(1, 0)
+            .MOV(retype(brw_flag_reg(0, 1), BRW_REGISTER_TYPE_UW),
+                 retype(dispatch_mask, BRW_REGISTER_TYPE_UW));
       }
 
       /* Generate FS IR for main().  (the visitor only descends into

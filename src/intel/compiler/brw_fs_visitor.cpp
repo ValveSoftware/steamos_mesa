@@ -278,7 +278,9 @@ fs_visitor::emit_interpolation_setup_gen6()
        * pixels are lit.  Then, for each channel that is unlit,
        * replace the centroid data with non-centroid data.
        */
-      bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+      bld.exec_all().group(1, 0)
+         .MOV(retype(brw_flag_reg(0, 0), BRW_REGISTER_TYPE_UW),
+              retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UW));
 
       for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
          if (!(centroid_modes & (1 << i)))

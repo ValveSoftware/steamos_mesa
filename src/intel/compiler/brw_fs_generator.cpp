@@ -1598,30 +1598,6 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
    }
 }
 
-/**
- * Cause the current pixel/sample mask (from R1.7 bits 15:0) to be transferred
- * into the flags register (f0.0).
- *
- * Used only on Gen6 and above.
- */
-void
-fs_generator::generate_mov_dispatch_to_flags(fs_inst *inst)
-{
-   struct brw_reg flags = brw_flag_subreg(inst->flag_subreg);
-   struct brw_reg dispatch_mask;
-
-   if (devinfo->gen >= 6)
-      dispatch_mask = retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UW);
-   else
-      dispatch_mask = retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UW);
-
-   brw_push_insn_state(p);
-   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_set_default_exec_size(p, BRW_EXECUTE_1);
-   brw_MOV(p, flags, dispatch_mask);
-   brw_pop_insn_state(p);
-}
-
 void
 fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
                                                 struct brw_reg dst,
@@ -2213,10 +2189,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case FS_OPCODE_FB_READ:
          generate_fb_read(inst, dst, src[0]);
-         break;
-
-      case FS_OPCODE_MOV_DISPATCH_TO_FLAGS:
-         generate_mov_dispatch_to_flags(inst);
          break;
 
       case FS_OPCODE_DISCARD_JUMP:
