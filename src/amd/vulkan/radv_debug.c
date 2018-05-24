@@ -369,11 +369,9 @@ static void si_add_split_disasm(const char *disasm,
 }
 
 static void
-radv_dump_annotated_shader(struct radv_pipeline *pipeline,
-			   struct radv_shader_variant *shader,
-			   gl_shader_stage stage,
-			   struct ac_wave_info *waves, unsigned num_waves,
-			   FILE *f)
+radv_dump_annotated_shader(struct radv_shader_variant *shader,
+			   gl_shader_stage stage, struct ac_wave_info *waves,
+			   unsigned num_waves, FILE *f)
 {
 	uint64_t start_addr, end_addr;
 	unsigned i;
@@ -459,12 +457,12 @@ radv_dump_annotated_shaders(struct radv_pipeline *pipeline,
 	while (mask) {
 		int stage = u_bit_scan(&mask);
 
-		radv_dump_annotated_shader(pipeline, pipeline->shaders[stage],
+		radv_dump_annotated_shader(pipeline->shaders[stage],
 					   stage, waves, num_waves, f);
 	}
 
-	radv_dump_annotated_shader(pipeline, compute_shader,
-				   MESA_SHADER_COMPUTE, waves, num_waves, f);
+	radv_dump_annotated_shader(compute_shader, MESA_SHADER_COMPUTE, waves,
+				   num_waves, f);
 
 	/* Print waves executing shaders that are not currently bound. */
 	unsigned i;
