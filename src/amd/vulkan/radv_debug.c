@@ -526,6 +526,15 @@ radv_dump_shaders(struct radv_pipeline *pipeline,
 }
 
 static void
+radv_dump_pipeline_state(struct radv_pipeline *pipeline,
+			 VkShaderStageFlagBits active_stages, FILE *f)
+{
+	radv_dump_shaders(pipeline, active_stages, f);
+	radv_dump_annotated_shaders(pipeline, active_stages, f);
+	radv_dump_descriptors(pipeline, f);
+}
+
+static void
 radv_dump_graphics_state(struct radv_pipeline *graphics_pipeline,
 			 struct radv_pipeline *compute_pipeline, FILE *f)
 {
@@ -536,9 +545,7 @@ radv_dump_graphics_state(struct radv_pipeline *graphics_pipeline,
 
 	active_stages = graphics_pipeline->active_stages;
 
-	radv_dump_shaders(graphics_pipeline, active_stages, f);
-	radv_dump_annotated_shaders(graphics_pipeline, active_stages, f);
-	radv_dump_descriptors(graphics_pipeline, f);
+	radv_dump_pipeline_state(graphics_pipeline, active_stages, f);
 }
 
 static void
@@ -549,9 +556,7 @@ radv_dump_compute_state(struct radv_pipeline *compute_pipeline, FILE *f)
 	if (!compute_pipeline)
 		return;
 
-	radv_dump_shaders(compute_pipeline, active_stages, f);
-	radv_dump_annotated_shaders(compute_pipeline, active_stages, f);
-	radv_dump_descriptors(compute_pipeline, f);
+	radv_dump_pipeline_state(compute_pipeline, active_stages, f);
 }
 
 static struct radv_pipeline *
