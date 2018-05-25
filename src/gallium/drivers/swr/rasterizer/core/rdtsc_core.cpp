@@ -89,6 +89,7 @@ BUCKET_DESC gCoreBuckets[] = {
     { "BEStoreTiles", "", true, 0xff00cccc },
     { "BEEndTile", "", false, 0xffffffff },
 };
+static_assert(NumBuckets == (sizeof(gCoreBuckets) / sizeof(gCoreBuckets[0])), "RDTSC Bucket enum and description table size mismatched.");
 
 /// @todo bucketmanager and mapping should probably be a part of the SWR context
 std::vector<uint32_t> gBucketMap;
