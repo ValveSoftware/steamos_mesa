@@ -124,6 +124,34 @@ namespace SwrJit
         bool SetTexelMaskEvaluate(Instruction* inst);
         bool IsTexelMaskEvaluate(Instruction* inst);
         Type* GetVectorType(Type* pType);
+        void SetMetadata(StringRef s, uint32_t val)
+        {
+            llvm::NamedMDNode *metaData = mpJitMgr->mpCurrentModule->getOrInsertNamedMetadata(s);
+            Constant* cval = mpIRBuilder->getInt32(val);
+            llvm::MDNode *mdNode = llvm::MDNode::get(mpJitMgr->mpCurrentModule->getContext(), llvm::ConstantAsMetadata::get(cval));
+            if (metaData->getNumOperands())
+            {
+                metaData->setOperand(0, mdNode);
+            }
+            else
+            {
+                metaData->addOperand(mdNode);
+            }
+        }
+        uint32_t GetMetadata(StringRef s)
+        {
+            NamedMDNode* metaData = mpJitMgr->mpCurrentModule->getNamedMetadata(s);
+            if (metaData)
+            {
+                MDNode* mdNode = metaData->getOperand(0);
+                Metadata* val = mdNode->getOperand(0);
+                return mdconst::dyn_extract<ConstantInt>(val)->getZExtValue();
+            }
+            else
+            {
+                return 0;
+            }
+        }
 
 #include "gen_builder.hpp"
 #include "gen_builder_meta.hpp"
