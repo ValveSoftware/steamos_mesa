@@ -617,17 +617,28 @@ namespace SwrJit
 
         Value* pIsUndef = ICMP_EQ(pIndex, C(32));
 
-        // Split current block
-        BasicBlock* pPostLoop = pCurBB->splitBasicBlock(cast<Instruction>(pIsUndef)->getNextNode());
+        // Split current block or create new one if building inline
+        BasicBlock* pPostLoop;
+        if (pCurBB->getTerminator())
+        {
+            pPostLoop = pCurBB->splitBasicBlock(cast<Instruction>(pIsUndef)->getNextNode());
 
-        // Remove unconditional jump created by splitBasicBlock
-        pCurBB->getTerminator()->eraseFromParent();
+            // Remove unconditional jump created by splitBasicBlock
+            pCurBB->getTerminator()->eraseFromParent();
 
-        // Add terminator to end of original block
-        IRB()->SetInsertPoint(pCurBB);
+            // Add terminator to end of original block
+            IRB()->SetInsertPoint(pCurBB);
 
-        // Add conditional branch
-        COND_BR(pIsUndef, pPostLoop, pLoop);
+            // Add conditional branch
+            COND_BR(pIsUndef, pPostLoop, pLoop);
+        }
+        else
+        {
+            pPostLoop = BasicBlock::Create(mpJitMgr->mContext, "PostScatter_Loop", pFunc);
+
+            // Add conditional branch
+            COND_BR(pIsUndef, pPostLoop, pLoop);
+        }
 
         // Add loop basic block contents
         IRB()->SetInsertPoint(pLoop);
@@ -642,7 +653,7 @@ namespace SwrJit
         Value* pOffsetElem = LOADV(pOffsetsArrayPtr, { pIndexPhi });
 
         // GEP to this offset in dst
-        Value* pCurDst = GEP(pDst, pOffsetElem);
+        Value* pCurDst = GEP(pDst, pOffsetElem, mInt8PtrTy);
         pCurDst = POINTER_CAST(pCurDst, PointerType::get(pSrcTy, 0));
         STORE(pSrcElem, pCurDst);
 
