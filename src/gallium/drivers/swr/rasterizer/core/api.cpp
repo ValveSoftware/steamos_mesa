@@ -1728,10 +1728,6 @@ void InitBackendFuncTables();
 /// @brief Initialize swr backend and memory internal tables
 void SwrInit()
 {
-    InitSimLoadTilesTable();
-    InitSimStoreTilesTable();
-    InitSimClearTilesTable();
-
     InitClearTilesTable();
     InitBackendFuncTables();
     InitRasterizerFunctions();

@@ -29,9 +29,10 @@
 
 #include "common/formats.h"
 #include "common/intrin.h"
-using gfxptr_t = unsigned long long;
 #include <functional>
 #include <algorithm>
+
+using gfxptr_t = unsigned long long;
 
 //////////////////////////////////////////////////////////////////////////
 /// PRIMITIVE_TOPOLOGY.

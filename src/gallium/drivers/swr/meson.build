@@ -151,6 +151,8 @@ files_swr_arch = files(
   'rasterizer/memory/StoreTile_TileY.cpp',
   'rasterizer/memory/TilingFunctions.h',
   'rasterizer/memory/tilingtraits.h',
+  'rasterizer/memory/InitMemory.h',
+  'rasterizer/memory/InitMemory.cpp',
 )
 
 swr_context_files = files('swr_context.h')
