@@ -136,21 +136,21 @@ namespace SwrJit
 
     struct LowerX86 : public FunctionPass
     {
-        LowerX86(JitManager* pJitMgr = nullptr, Builder* b = nullptr)
-            : FunctionPass(ID), mpJitMgr(pJitMgr), B(b)
+        LowerX86(Builder* b = nullptr)
+            : FunctionPass(ID), B(b)
         {
             initializeLowerX86Pass(*PassRegistry::getPassRegistry());
 
             // Determine target arch
-            if (mpJitMgr->mArch.AVX512F())
+            if (JM()->mArch.AVX512F())
             {
                 mTarget = AVX512;
             }
-            else if (mpJitMgr->mArch.AVX2())
+            else if (JM()->mArch.AVX2())
             {
                 mTarget = AVX2;
             }
-            else if (mpJitMgr->mArch.AVX())
+            else if (JM()->mArch.AVX())
             {
                 mTarget = AVX;
 
@@ -356,9 +356,8 @@ namespace SwrJit
         {
         }
 
-        JitManager* JM() { return mpJitMgr; }
+        JitManager* JM() { return B->JM(); }
 
-        JitManager* mpJitMgr;
         Builder* B;
 
         TargetArch mTarget;
@@ -368,9 +367,9 @@ namespace SwrJit
 
     char LowerX86::ID = 0;   // LLVM uses address of ID as the actual ID.
 
-    FunctionPass* createLowerX86Pass(JitManager* pJitMgr, Builder* b)
+    FunctionPass* createLowerX86Pass(Builder* b)
     {
-        return new LowerX86(pJitMgr, b);
+        return new LowerX86(b);
     }
 
     Instruction* NO_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)

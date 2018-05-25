@@ -819,7 +819,7 @@ struct BlendJit : public Builder
         passes.add(createSCCPPass());
         passes.add(createAggressiveDCEPass());
 
-        passes.add(createLowerX86Pass(JM(), this));
+        passes.add(createLowerX86Pass(this));
 
         passes.run(*blendFunc);
 

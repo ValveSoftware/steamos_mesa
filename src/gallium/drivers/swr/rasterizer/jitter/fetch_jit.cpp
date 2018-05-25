@@ -269,7 +269,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     optPasses.run(*fetch);
 
-    optPasses.add(createLowerX86Pass(JM(), this));
+    optPasses.add(createLowerX86Pass(this));
     optPasses.run(*fetch);
 
     JitManager::DumpToFile(fetch, "opt");

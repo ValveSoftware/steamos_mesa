@@ -33,5 +33,5 @@ namespace SwrJit
 {
     using namespace llvm;
 
-    FunctionPass* createLowerX86Pass(JitManager* pJitMgr, Builder* b);
+    FunctionPass* createLowerX86Pass(Builder* b);
 }
