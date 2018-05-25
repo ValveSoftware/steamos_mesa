@@ -1132,9 +1132,11 @@ bool radv_get_memory_fd(struct radv_device *device,
 
 static inline void
 radv_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
-			      unsigned sh_offset, bool use_32bit_pointers)
+			      unsigned sh_offset, unsigned pointer_count,
+			      bool use_32bit_pointers)
 {
-	radeon_set_sh_reg_seq(cs, sh_offset, use_32bit_pointers ? 1 : 2);
+	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, pointer_count * (use_32bit_pointers ? 1 : 2), 0));
+	radeon_emit(cs, (sh_offset - SI_SH_REG_OFFSET) >> 2);
 }
 
 static inline void
@@ -1159,7 +1161,7 @@ radv_emit_shader_pointer(struct radv_device *device,
 {
 	bool use_32bit_pointers = HAVE_32BIT_POINTERS && !global;
 
-	radv_emit_shader_pointer_head(cs, sh_offset, use_32bit_pointers);
+	radv_emit_shader_pointer_head(cs, sh_offset, 1, use_32bit_pointers);
 	radv_emit_shader_pointer_body(device, cs, va, use_32bit_pointers);
 }
 
