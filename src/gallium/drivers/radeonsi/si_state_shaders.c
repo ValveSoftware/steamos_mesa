@@ -2106,7 +2106,6 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				sel->outputs_written_before_ps |=
 					1ull << si_shader_io_get_unique_index(name, index, true);
 				break;
-			case TGSI_SEMANTIC_CLIPVERTEX: /* ignore these */
 			case TGSI_SEMANTIC_EDGEFLAG:
 				break;
 			}
