@@ -755,36 +755,51 @@ bool PaTriList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
 bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-#if KNOB_ARCH == KNOB_ARCH_AVX
-    simd16scalar perm0 = _simd16_setzero_ps();
-    simd16scalar perm1 = _simd16_setzero_ps();
-    simd16scalar perm2 = _simd16_setzero_ps();
-#elif KNOB_ARCH >= KNOB_ARCH_AVX2
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
     const simd16scalari perm0 = _simd16_set_epi32(13, 10, 7, 4, 1, 14, 11,  8, 5, 2, 15, 12,  9, 6, 3, 0);
     const simd16scalari perm1 = _simd16_set_epi32(14, 11, 8, 5, 2, 15, 12,  9, 6, 3,  0, 13, 10, 7, 4, 1);
     const simd16scalari perm2 = _simd16_set_epi32(15, 12, 9, 6, 3,  0, 13, 10, 7, 4,  1, 14, 11, 8, 5, 2);
+#else   // KNOB_ARCH == KNOB_ARCH_AVX
+    simd16scalar perm0 = _simd16_setzero_ps();
+    simd16scalar perm1 = _simd16_setzero_ps();
+    simd16scalar perm2 = _simd16_setzero_ps();
 #endif
 
     const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
     const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, 2, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-    simd16vector &v2 = verts[2];
+    const simd16mask mask0 = 0x4924;
+    const simd16mask mask1 = 0x2492;
+    const simd16mask mask2 = 0x9249;
 
     //  v0 -> a0 a3 a6 a9 aC aF b2 b5 b8 bB bE c1 c4 c7 cA cD
     //  v1 -> a1 a4 a7 aA aD b0 b3 b6 b9 bC bF c2 c5 c8 cB cE
     //  v2 -> a2 a5 a8 aB aE b1 b4 b7 bA bD c0 c3 c6 c9 cC cF
 
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
     // for simd16 x, y, z, and w
     for (int i = 0; i < 4; i += 1)
     {
-        simd16scalar temp0 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x4924), c[i], 0x2492);
-        simd16scalar temp1 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x9249), c[i], 0x4924);
-        simd16scalar temp2 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x2492), c[i], 0x9249);
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
+        simd16scalar tempc = _simd16_loadu_ps(reinterpret_cast<const float *>(&c[i]));
 
-#if KNOB_ARCH == KNOB_ARCH_AVX
+        simd16scalar temp0 = _simd16_blend_ps(_simd16_blend_ps(tempa, tempb, mask0), tempc, mask1);
+        simd16scalar temp1 = _simd16_blend_ps(_simd16_blend_ps(tempa, tempb, mask2), tempc, mask0);
+        simd16scalar temp2 = _simd16_blend_ps(_simd16_blend_ps(tempa, tempb, mask1), tempc, mask2);
+
+#if KNOB_ARCH >= KNOB_ARCH_AVX2
+        v0[i] = _simd16_permute_ps(temp0, perm0);
+        v1[i] = _simd16_permute_ps(temp1, perm1);
+        v2[i] = _simd16_permute_ps(temp2, perm2);
+#else   // #if KNOB_ARCH == KNOB_ARCH_AVX
+        
+        // the general permutes (above) are prohibitively slow to emulate on AVX (its scalar code)
+
         temp0 = _simd16_permute_ps_i(temp0, 0x6C);          // (0, 3, 2, 1) => 00 11 01 10 => 0x6C
         perm0 = _simd16_permute2f128_ps(temp0, temp0, 0xB1);// (1, 0, 3, 2) => 01 00 11 10 => 0xB1
         temp0 = _simd16_blend_ps(temp0, perm0, 0x4444);     // 0010 0010 0010 0010
@@ -802,10 +817,6 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         temp2 = _simd16_blend_ps(temp2, perm2, 0x2222);     // 0100 0100 0100 0100
         perm2 = _simd16_permute2f128_ps(temp2, temp2, 0x4E);// (2, 3, 0, 1) => 10 11 00 01 => 0x4E
         v2[i] = _simd16_blend_ps(temp2, perm2, 0x1C1C);     // 0011 1000 0011 1000
-#elif KNOB_ARCH >= KNOB_ARCH_AVX2
-        v0[i] = _simd16_permute_ps(temp0, perm0);
-        v1[i] = _simd16_permute_ps(temp1, perm1);
-        v2[i] = _simd16_permute_ps(temp2, perm2);
 #endif
     }
 
@@ -1056,26 +1067,31 @@ bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-    simd16vector &v2 = verts[2];
+    const simd16mask mask0 = 0xF000;
 
     //  v0 -> a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
     //  v1 -> a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
     //  v2 -> a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
 
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
     // for simd16 x, y, z, and w
     for (int i = 0; i < 4; i += 1)
     {
-        simd16scalar perm0 = _simd16_permute2f128_ps(a[i], a[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF a0 a1 a2 a3
-        simd16scalar perm1 = _simd16_permute2f128_ps(b[i], b[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
 
-        simd16scalar blend = _simd16_blend_ps(perm0, perm1, 0xF000);                                // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1 b2 b3
-        simd16scalar shuff = _simd16_shuffle_ps(a[i], blend, _MM_SHUFFLE(1, 0, 3, 2));              // a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1
+        simd16scalar perm0 = _simd16_permute2f128_ps(tempa, tempa, 0x39);// (0 3 2 1) = 00 11 10 01 // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF a0 a1 a2 a3
+        simd16scalar perm1 = _simd16_permute2f128_ps(tempb, tempb, 0x39);// (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
 
-        v0[i] = a[i];                                                                               // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
-        v1[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(3, 1, 3, 1));                           // a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
-        v2[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(2, 2, 2, 2));                           // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
+        simd16scalar blend = _simd16_blend_ps(perm0, perm1, mask0);                                 // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1 b2 b3
+        simd16scalar shuff = _simd16_shuffle_ps(tempa, blend, _MM_SHUFFLE(1, 0, 3, 2));             // a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1
+
+        v0[i] = tempa;                                                                              // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+        v1[i] = _simd16_shuffle_ps(tempa, shuff, _MM_SHUFFLE(3, 1, 3, 1));                          // a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
+        v2[i] = _simd16_shuffle_ps(tempa, shuff, _MM_SHUFFLE(2, 2, 2, 2));                          // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
     }
 
     SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStrip1, PaTriStripSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
@@ -1322,28 +1338,42 @@ bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-    simd16vector &v2 = verts[2];
+    const simd16mask mask0 = 0xF000;
 
     //  v0 -> a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0
     //  v1 -> b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
     //  v2 -> b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
 
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
     // for simd16 x, y, z, and w
     for (uint32_t i = 0; i < 4; i += 1)
     {
-        simd16scalar shuff = _simd16_shuffle_ps(a[i], a[i], _MM_SHUFFLE(0, 0, 0, 0));               // a0 a0 a0 a0 a4 a4 a4 a4 a0 a0 a0 a0 a4 a4 a4 a4
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
+        simd16scalar tempc = _simd16_loadu_ps(reinterpret_cast<const float *>(&c[i]));
+
+        simd16scalar shuff = _simd16_shuffle_ps(tempa, tempa, _MM_SHUFFLE(0, 0, 0, 0));             // a0 a0 a0 a0 a4 a4 a4 a4 a0 a0 a0 a0 a4 a4 a4 a4
 
         v0[i] = _simd16_permute2f128_ps(shuff, shuff, 0x00);                                        // a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0
 
-        simd16scalar temp0 = _simd16_permute2f128_ps(b[i], b[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
-        simd16scalar temp1 = _simd16_permute2f128_ps(c[i], c[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // c4 c5 c6 c7 c8 c9 cA cB cC cD cE cF c0 c1 c2 c3
+        simd16scalar temp0 = _simd16_permute2f128_ps(tempb, tempb, 0x39);// (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
+        simd16scalar temp1 = _simd16_permute2f128_ps(tempc, tempc, 0x39);// (0 3 2 1) = 00 11 10 01 // c4 c5 c6 c7 c8 c9 cA cB cC cD cE cF c0 c1 c2 c3
 
-        simd16scalar blend = _simd16_blend_ps(temp0, temp1, 0xF000);                                // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1 c2 c3
+        simd16scalar blend = _simd16_blend_ps(temp0, temp1, mask0);                                 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1 c2 c3
+#if 0
 
-        v2[i] = _simd16_shuffle_ps(b[i], blend, _MM_SHUFFLE(1, 0, 3, 2));                           // b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
-        v1[i] = _simd16_shuffle_ps(b[i], v2[i], _MM_SHUFFLE(2, 1, 2, 1));                           // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+        v2[i] = _simd16_shuffle_ps(tempb, blend, _MM_SHUFFLE(1, 0, 3, 2));                          // b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+        v1[i] = _simd16_shuffle_ps(tempb, v2[i], _MM_SHUFFLE(2, 1, 2, 1));                          // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+#else
+
+        simd16scalar temp2 = _simd16_shuffle_ps(tempb, blend, _MM_SHUFFLE(1, 0, 3, 2));             // b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+
+        v1[i] = _simd16_shuffle_ps(tempb, temp2, _MM_SHUFFLE(2, 1, 2, 1));                          // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+        v2[i] = temp2;                                                                              // b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+#endif
     }
 
     SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFan1, PaTriFanSingle0, 0, PA_STATE_OPT::SIMD_WIDTH);
@@ -1493,19 +1523,22 @@ bool PaQuadList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
     const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-    simd16vector &v2 = verts[2];
-
     //  v0 -> a0 a0 a4 a4 a8 a8 aC aC b0 b0 b0 b0 b0 b0 bC bC
     //  v1 -> a1 a2 a5 a6 a9 aA aD aE b1 b2 b5 b6 b9 bA bD bE
     //  v2 -> a2 a3 a6 a7 aA aB aE aF b2 b3 b6 b7 bA bB bE bF
 
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
     // for simd16 x, y, z, and w
     for (uint32_t i = 0; i < 4; i += 1)
     {
-        simd16scalar temp0 = _simd16_permute2f128_ps(a[i], b[i], 0x88); // (2 0 2 0) = 10 00 10 00  // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b8 b9 bA bB
-        simd16scalar temp1 = _simd16_permute2f128_ps(a[i], b[i], 0xDD); // (3 1 3 1) = 11 01 11 01  // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
+
+        simd16scalar temp0 = _simd16_permute2f128_ps(tempa, tempb, 0x88);// (2 0 2 0) = 10 00 10 00 // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b8 b9 bA bB
+        simd16scalar temp1 = _simd16_permute2f128_ps(tempa, tempb, 0xDD);// (3 1 3 1) = 11 01 11 01 // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
 
         v0[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(0, 0, 0, 0));                          // a0 a0 a4 a4 a8 a8 aC aC b0 b0 b4 b4 b8 b8 bC bC
         v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(2, 1, 2, 1));                          // a1 a2 a5 a6 a9 aA aD aE b1 b2 b6 b6 b9 bA bD bE
@@ -1860,17 +1893,20 @@ bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
     const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-
     // v0 -> a0 a2 a4 a6 a8 aA aC aE b0 b2 b4 b6 b8 bA bC bE
     // v1 -> a1 a3 a5 a7 a9 aB aD aF b1 b3 b4 b7 b9 bB bD bF
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
 
     // for simd16 x, y, z, and w
     for (int i = 0; i < 4; i += 1)
     {
-        simd16scalar temp0 = _simd16_permute2f128_ps(a[i], b[i], 0x88); // (2 0 2 0) 10 00 10 00    // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b9 b9 bA bB
-        simd16scalar temp1 = _simd16_permute2f128_ps(a[i], b[i], 0xDD); // (3 1 3 1) 11 01 11 01    // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
+
+        simd16scalar temp0 = _simd16_permute2f128_ps(tempa, tempb, 0x88);// (2 0 2 0) 10 00 10 00   // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b9 b9 bA bB
+        simd16scalar temp1 = _simd16_permute2f128_ps(tempa, tempb, 0xDD);// (3 1 3 1) 11 01 11 01   // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
 
         v0[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(2, 0, 2, 0));                          // a0 a2 a4 a6 a8 aA aC aE b0 b2 b4 b6 b8 bA bC bE
         v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 1, 3, 1));                          // a1 a3 a5 a7 a9 aB aD aF b1 b3 b5 b7 b9 bB bD bF
@@ -2080,18 +2116,23 @@ bool PaLineStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
     const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
+    const simd16mask mask0 = 0x0001;
 
     // v0 -> a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
     // v1 -> a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
 
     v0 = a;                                                                                         // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
 
     // for simd16 x, y, z, and w
     for (int i = 0; i < 4; i += 1)
     {
-        simd16scalar temp = _simd16_blend_ps(a[i], b[i], 0x0001);                                   // b0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+        simd16scalar tempa = _simd16_loadu_ps(reinterpret_cast<const float *>(&a[i]));
+        simd16scalar tempb = _simd16_loadu_ps(reinterpret_cast<const float *>(&b[i]));
+
+        simd16scalar temp = _simd16_blend_ps(tempa, tempb, mask0);                                  // b0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
 
         v1[i] = _simd16_permute_ps(temp, perm);                                                     // a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
     }
