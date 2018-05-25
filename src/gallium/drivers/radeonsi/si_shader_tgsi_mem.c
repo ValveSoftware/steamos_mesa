@@ -1827,7 +1827,7 @@ static void si_llvm_emit_fbfetch(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct ac_image_args args = {};
-	LLVMValueRef ptr, image, fmask, addr_vec;
+	LLVMValueRef ptr, image, fmask;
 
 	/* Ignore src0, because KHR_blend_func_extended disallows multiple render
 	 * targets.
