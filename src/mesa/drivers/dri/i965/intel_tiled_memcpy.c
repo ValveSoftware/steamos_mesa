@@ -223,17 +223,17 @@ _memcpy_streaming_load(void *dest, const void *src, size_t count)
 {
    if (count == 16) {
       __m128i val = _mm_stream_load_si128((__m128i *)src);
-      _mm_store_si128((__m128i *)dest, val);
+      _mm_storeu_si128((__m128i *)dest, val);
       return dest;
    } else if (count == 64) {
       __m128i val0 = _mm_stream_load_si128(((__m128i *)src) + 0);
       __m128i val1 = _mm_stream_load_si128(((__m128i *)src) + 1);
       __m128i val2 = _mm_stream_load_si128(((__m128i *)src) + 2);
       __m128i val3 = _mm_stream_load_si128(((__m128i *)src) + 3);
-      _mm_store_si128(((__m128i *)dest) + 0, val0);
-      _mm_store_si128(((__m128i *)dest) + 1, val1);
-      _mm_store_si128(((__m128i *)dest) + 2, val2);
-      _mm_store_si128(((__m128i *)dest) + 3, val3);
+      _mm_storeu_si128(((__m128i *)dest) + 0, val0);
+      _mm_storeu_si128(((__m128i *)dest) + 1, val1);
+      _mm_storeu_si128(((__m128i *)dest) + 2, val2);
+      _mm_storeu_si128(((__m128i *)dest) + 3, val3);
       return dest;
    } else {
       assert(count < 64); /* and (count < 16) for ytiled */
