@@ -121,8 +121,8 @@ namespace SwrJit
         void SetTargetWidth(uint32_t width);
         void SetTempAlloca(Value* inst);
         bool IsTempAlloca(Value* inst);
-        bool SetTexelMaskEvaluate(Instruction* inst);
-        bool IsTexelMaskEvaluate(Instruction* inst);
+        bool SetNamedMetaDataOnCallInstr(Instruction* inst, StringRef mdName);
+        bool HasNamedMetaDataOnCallInstr(Instruction* inst, StringRef mdName);
         Type* GetVectorType(Type* pType);
         void SetMetadata(StringRef s, uint32_t val)
         {
