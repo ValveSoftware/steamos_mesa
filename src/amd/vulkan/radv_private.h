@@ -1131,13 +1131,17 @@ bool radv_get_memory_fd(struct radv_device *device,
 			int *pFD);
 
 static inline void
-radv_emit_shader_pointer(struct radv_device *device,
-			 struct radeon_winsys_cs *cs,
-			 uint32_t sh_offset, uint64_t va, bool global)
+radv_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
+			      unsigned sh_offset, bool use_32bit_pointers)
 {
-	bool use_32bit_pointers = HAVE_32BIT_POINTERS && !global;
-
 	radeon_set_sh_reg_seq(cs, sh_offset, use_32bit_pointers ? 1 : 2);
+}
+
+static inline void
+radv_emit_shader_pointer_body(struct radv_device *device,
+			      struct radeon_winsys_cs *cs,
+			      uint64_t va, bool use_32bit_pointers)
+{
 	radeon_emit(cs, va);
 
 	if (use_32bit_pointers) {
@@ -1146,6 +1150,17 @@ radv_emit_shader_pointer(struct radv_device *device,
 	} else {
 		radeon_emit(cs, va >> 32);
 	}
+}
+
+static inline void
+radv_emit_shader_pointer(struct radv_device *device,
+			 struct radeon_winsys_cs *cs,
+			 uint32_t sh_offset, uint64_t va, bool global)
+{
+	bool use_32bit_pointers = HAVE_32BIT_POINTERS && !global;
+
+	radv_emit_shader_pointer_head(cs, sh_offset, use_32bit_pointers);
+	radv_emit_shader_pointer_body(device, cs, va, use_32bit_pointers);
 }
 
 static inline struct radv_descriptor_state *
