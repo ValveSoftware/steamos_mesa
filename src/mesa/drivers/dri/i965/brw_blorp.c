@@ -152,6 +152,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
          .mocs = brw_get_bo_mocs(devinfo, mt->bo),
       },
       .aux_usage = aux_usage,
+      .tile_x_sa = mt->level[*level].level_x,
+      .tile_y_sa = mt->level[*level].level_y,
    };
 
    if (mt->format == MESA_FORMAT_S_UINT8 && is_render_target &&
