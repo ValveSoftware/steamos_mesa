@@ -5727,10 +5727,19 @@ static int tgsi_divmod(struct r600_shader_ctx *ctx, int mod, int signed_op)
 	struct r600_bytecode_alu alu;
 	int i, r, j;
 	unsigned write_mask = inst->Dst[0].Register.WriteMask;
+	int lasti = tgsi_last_instruction(write_mask);
 	int tmp0 = ctx->temp_reg;
 	int tmp1 = r600_get_temp(ctx);
 	int tmp2 = r600_get_temp(ctx);
 	int tmp3 = r600_get_temp(ctx);
+	int tmp4 = 0;
+
+	/* Use additional temp if dst register and src register are the same */
+	if (inst->Src[0].Register.Index == inst->Dst[0].Register.Index ||
+	    inst->Src[1].Register.Index == inst->Dst[0].Register.Index) {
+		tmp4 = r600_get_temp(ctx);
+	}
+
 	/* Unsigned path:
 	 *
 	 * we need to represent src1 as src2*q + r, where q - quotient, r - remainder
@@ -6345,7 +6354,13 @@ static int tgsi_divmod(struct r600_shader_ctx *ctx, int mod, int signed_op)
 			alu.dst.chan = 2;
 			alu.dst.write = 1;
 		} else {
-			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+			if (tmp4 > 0) {
+				alu.dst.sel = tmp4;
+				alu.dst.chan = i;
+				alu.dst.write = 1;
+			} else {
+				tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+			}
 		}
 
 		alu.src[0].sel = tmp1;
@@ -6387,7 +6402,13 @@ static int tgsi_divmod(struct r600_shader_ctx *ctx, int mod, int signed_op)
 				alu.op = ALU_OP3_CNDGE_INT;
 				alu.is_op3 = 1;
 
-				tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+				if (tmp4 > 0) {
+					alu.dst.sel = tmp4;
+					alu.dst.chan = i;
+					alu.dst.write = 1;
+				} else {
+					tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+				}
 
 				r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
 				alu.src[1].sel = tmp0;
@@ -6423,7 +6444,13 @@ static int tgsi_divmod(struct r600_shader_ctx *ctx, int mod, int signed_op)
 				alu.op = ALU_OP3_CNDGE_INT;
 				alu.is_op3 = 1;
 
-				tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+				if (tmp4 > 0) {
+					alu.dst.sel = tmp4;
+					alu.dst.chan = i;
+					alu.dst.write = 1;
+				} else {
+					tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+				}
 
 				alu.src[0].sel = tmp2;
 				alu.src[0].chan = 2;
@@ -6438,6 +6465,25 @@ static int tgsi_divmod(struct r600_shader_ctx *ctx, int mod, int signed_op)
 			}
 		}
 	}
+
+	if (tmp4 > 0) {
+		for (i = 0; i <= lasti; ++i) {
+			if (!(write_mask & (1<<i)))
+				continue;
+
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP1_MOV;
+			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+			alu.src[0].sel = tmp4;
+			alu.src[0].chan = i;
+
+			if (i == lasti)
+				alu.last = 1;
+			if ((r = r600_bytecode_add_alu(ctx->bc, &alu)))
+				return r;
+		}
+	}
+
 	return 0;
 }
 
