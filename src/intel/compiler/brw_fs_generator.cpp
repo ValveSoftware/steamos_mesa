@@ -761,16 +761,61 @@ fs_generator::generate_linterp(fs_inst *inst,
 
       return true;
    } else if (devinfo->has_pln) {
-      /* From the Sandy Bridge PRM Vol. 4, Pt. 2, Section 8.3.53, "Plane":
-       *
-       *    "[DevSNB]:<src1> must be even register aligned.
-       *
-       * This restriction is lifted on Ivy Bridge.
-       */
-      assert(devinfo->gen >= 7 || (delta_x.nr & 1) == 0);
-      brw_PLN(p, dst, interp, delta_x);
+      if (devinfo->gen <= 6 && (delta_x.nr & 1) != 0) {
+         /* From the Sandy Bridge PRM Vol. 4, Pt. 2, Section 8.3.53, "Plane":
+          *
+          *    "[DevSNB]:<src1> must be even register aligned.
+          *
+          * This restriction is lifted on Ivy Bridge.
+          *
+          * This means that we need to split PLN into LINE+MAC on-the-fly.
+          * Unfortunately, the inputs are laid out for PLN and not LINE+MAC so
+          * we have to split into SIMD8 pieces.  For gen4 (!has_pln), the
+          * coordinate registers are laid out differently so we leave it as a
+          * SIMD16 instruction.
+          */
+         assert(inst->exec_size == 8 || inst->exec_size == 16);
+         assert(inst->group % 16 == 0);
 
-      return false;
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_8);
+
+         /* Thanks to two accumulators, we can emit all the LINEs and then all
+          * the MACs.  This improves parallelism a bit.
+          */
+         for (unsigned g = 0; g < inst->exec_size / 8; g++) {
+            brw_inst *line = brw_LINE(p, brw_null_reg(), interp,
+                                      offset(delta_x, g * 2));
+            brw_inst_set_group(devinfo, line, inst->group + g * 8);
+
+            /* LINE writes the accumulator automatically on gen4-5.  On Sandy
+             * Bridge and later, we have to explicitly enable it.
+             */
+            if (devinfo->gen >= 6)
+               brw_inst_set_acc_wr_control(p->devinfo, line, true);
+
+            /* brw_set_default_saturate() is called before emitting
+             * instructions, so the saturate bit is set in each instruction,
+             * so we need to unset it on the LINE instructions.
+             */
+            brw_inst_set_saturate(p->devinfo, line, false);
+         }
+
+         for (unsigned g = 0; g < inst->exec_size / 8; g++) {
+            brw_inst *mac = brw_MAC(p, offset(dst, g), suboffset(interp, 1),
+                                    offset(delta_x, g * 2 + 1));
+            brw_inst_set_group(devinfo, mac, inst->group + g * 8);
+            brw_inst_set_cond_modifier(p->devinfo, mac, inst->conditional_mod);
+         }
+
+         brw_pop_insn_state(p);
+
+         return true;
+      } else {
+         brw_PLN(p, dst, interp, delta_x);
+
+         return false;
+      }
    } else {
       i[0] = brw_LINE(p, brw_null_reg(), interp, delta_x);
       i[1] = brw_MAC(p, dst, suboffset(interp, 1), delta_y);
