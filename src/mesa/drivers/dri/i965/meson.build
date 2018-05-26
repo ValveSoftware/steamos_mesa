@@ -129,13 +129,10 @@ files_i965 = files(
   'intel_tex_image.c',
   'intel_tex_obj.h',
   'intel_tex_validate.c',
-  'intel_upload.c',
-  'libdrm_macros.h',
-)
-
-files_intel_tiled_memcpy = files(
   'intel_tiled_memcpy.c',
   'intel_tiled_memcpy.h',
+  'intel_upload.c',
+  'libdrm_macros.h',
 )
 
 i965_gen_libs = []
@@ -179,15 +176,6 @@ i965_oa_sources = custom_target(
   ],
 )
 
-intel_tiled_memcpy = static_library(
-  'intel_tiled_memcpy',
-  [files_intel_tiled_memcpy],
-  include_directories : [
-    inc_common, inc_intel, inc_dri_common, inc_drm_uapi,
-  ],
-  c_args : [c_vis_args, no_override_init_args, '-msse2', sse41_args],
-)
-
 libi965 = static_library(
   'i965',
   [files_i965, i965_oa_sources, ir_expression_operation_h,
@@ -199,7 +187,7 @@ libi965 = static_library(
   cpp_args : [cpp_vis_args, '-msse2'],
   link_with : [
     i965_gen_libs, libintel_common, libintel_dev, libisl, libintel_compiler,
-    libblorp, intel_tiled_memcpy,
+    libblorp,
   ],
   dependencies : [dep_libdrm, dep_valgrind, idep_nir_headers],
 )

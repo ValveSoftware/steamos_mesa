@@ -110,12 +110,10 @@ i965_FILES = \
 	intel_tex_image.c \
 	intel_tex_obj.h \
 	intel_tex_validate.c \
+	intel_tiled_memcpy.c \
+	intel_tiled_memcpy.h \
 	intel_upload.c \
 	libdrm_macros.h
-
-intel_tiled_memcpy_FILES = \
-	intel_tiled_memcpy.c \
-	intel_tiled_memcpy.h
 
 i965_gen4_FILES = \
 	genX_blorp_exec.c \
