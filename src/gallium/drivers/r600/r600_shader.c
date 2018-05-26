@@ -6679,11 +6679,15 @@ static int tgsi_issg(struct r600_shader_ctx *ctx)
 static int tgsi_ssg(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	unsigned write_mask = inst->Dst[0].Register.WriteMask;
+	int last_inst = tgsi_last_instruction(write_mask);
 	struct r600_bytecode_alu alu;
 	int i, r;
 
 	/* tmp = (src > 0 ? 1 : src) */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i <= last_inst; i++) {
+		if (!(write_mask & (1 << i)))
+			continue;
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP3_CNDGT;
 		alu.is_op3 = 1;
@@ -6695,7 +6699,7 @@ static int tgsi_ssg(struct r600_shader_ctx *ctx)
 		alu.src[1].sel = V_SQ_ALU_SRC_1;
 		r600_bytecode_src(&alu.src[2], &ctx->src[0], i);
 
-		if (i == 3)
+		if (i == last_inst)
 			alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
 		if (r)
@@ -6703,7 +6707,9 @@ static int tgsi_ssg(struct r600_shader_ctx *ctx)
 	}
 
 	/* dst = (-tmp > 0 ? -1 : tmp) */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i <= last_inst; i++) {
+		if (!(write_mask & (1 << i)))
+			continue;
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP3_CNDGT;
 		alu.is_op3 = 1;
@@ -6719,7 +6725,7 @@ static int tgsi_ssg(struct r600_shader_ctx *ctx)
 		alu.src[2].sel = ctx->temp_reg;
 		alu.src[2].chan = i;
 
-		if (i == 3)
+		if (i == last_inst)
 			alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
 		if (r)
