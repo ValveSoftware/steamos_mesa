@@ -3398,6 +3398,55 @@ void radv_CmdDrawIndexedIndirectCountAMD(
 	radv_draw(cmd_buffer, &info);
 }
 
+void radv_CmdDrawIndirectCountKHR(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    _buffer,
+	VkDeviceSize                                offset,
+	VkBuffer                                    _countBuffer,
+	VkDeviceSize                                countBufferOffset,
+	uint32_t                                    maxDrawCount,
+	uint32_t                                    stride)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	RADV_FROM_HANDLE(radv_buffer, count_buffer, _countBuffer);
+	struct radv_draw_info info = {};
+
+	info.count = maxDrawCount;
+	info.indirect = buffer;
+	info.indirect_offset = offset;
+	info.count_buffer = count_buffer;
+	info.count_buffer_offset = countBufferOffset;
+	info.stride = stride;
+
+	radv_draw(cmd_buffer, &info);
+}
+
+void radv_CmdDrawIndexedIndirectCountKHR(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    _buffer,
+	VkDeviceSize                                offset,
+	VkBuffer                                    _countBuffer,
+	VkDeviceSize                                countBufferOffset,
+	uint32_t                                    maxDrawCount,
+	uint32_t                                    stride)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	RADV_FROM_HANDLE(radv_buffer, count_buffer, _countBuffer);
+	struct radv_draw_info info = {};
+
+	info.indexed = true;
+	info.count = maxDrawCount;
+	info.indirect = buffer;
+	info.indirect_offset = offset;
+	info.count_buffer = count_buffer;
+	info.count_buffer_offset = countBufferOffset;
+	info.stride = stride;
+
+	radv_draw(cmd_buffer, &info);
+}
+
 struct radv_dispatch_info {
 	/**
 	 * Determine the layout of the grid (in block units) to be used.
