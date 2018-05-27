@@ -869,14 +869,6 @@ radv_emit_scissor(struct radv_cmd_buffer *cmd_buffer)
 {
 	uint32_t count = cmd_buffer->state.dynamic.scissor.count;
 
-	/* Vega10/Raven scissor bug workaround. This must be done before VPORT
-	 * scissor registers are changed. There is also a more efficient but
-	 * more involved alternative workaround.
-	 */
-	if (cmd_buffer->device->physical_device->has_scissor_bug) {
-		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
-		si_emit_cache_flush(cmd_buffer);
-	}
 	si_write_scissors(cmd_buffer->cs, 0, count,
 			  cmd_buffer->state.dynamic.scissor.scissors,
 			  cmd_buffer->state.dynamic.viewport.viewports,
@@ -1403,7 +1395,8 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 	if (states & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
 		radv_emit_viewport(cmd_buffer);
 
-	if (states & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
+	if (states & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT) &&
+	    !cmd_buffer->device->physical_device->has_scissor_bug)
 		radv_emit_scissor(cmd_buffer);
 
 	if (states & RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)
@@ -2522,18 +2515,6 @@ void radv_CmdSetViewport(
 	assert(firstViewport < MAX_VIEWPORTS);
 	assert(total_count >= 1 && total_count <= MAX_VIEWPORTS);
 
-	if (cmd_buffer->device->physical_device->has_scissor_bug) {
-		/* Try to skip unnecessary PS partial flushes when the viewports
-		 * don't change.
-		 */
-		if (!(state->dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT |
-				      RADV_CMD_DIRTY_DYNAMIC_SCISSOR)) &&
-		    !memcmp(state->dynamic.viewport.viewports + firstViewport,
-			    pViewports, viewportCount * sizeof(*pViewports))) {
-			return;
-		}
-	}
-
 	memcpy(state->dynamic.viewport.viewports + firstViewport, pViewports,
 	       viewportCount * sizeof(*pViewports));
 
@@ -2552,18 +2533,6 @@ void radv_CmdSetScissor(
 
 	assert(firstScissor < MAX_SCISSORS);
 	assert(total_count >= 1 && total_count <= MAX_SCISSORS);
-
-	if (cmd_buffer->device->physical_device->has_scissor_bug) {
-		/* Try to skip unnecessary PS partial flushes when the scissors
-		 * don't change.
-		 */
-		if (!(state->dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT |
-				      RADV_CMD_DIRTY_DYNAMIC_SCISSOR)) &&
-		    !memcmp(state->dynamic.scissor.scissors + firstScissor,
-			    pScissors, scissorCount * sizeof(*pScissors))) {
-			return;
-		}
-	}
 
 	memcpy(state->dynamic.scissor.scissors + firstScissor, pScissors,
 	       scissorCount * sizeof(*pScissors));
@@ -3144,10 +3113,52 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
+/*
+ * Vega and raven have a bug which triggers if there are multiple context
+ * register contexts active at the same time with different scissor values.
+ *
+ * There are two possible workarounds:
+ * 1) Wait for PS_PARTIAL_FLUSH every time the scissor is changed. That way
+ *    there is only ever 1 active set of scissor values at the same time.
+ *
+ * 2) Whenever the hardware switches contexts we have to set the scissor
+ *    registers again even if it is a noop. That way the new context gets
+ *    the correct scissor values.
+ *
+ * This implements option 2. radv_need_late_scissor_emission needs to
+ * return true on affected HW if radv_emit_all_graphics_states sets
+ * any context registers.
+ */
+static bool radv_need_late_scissor_emission(struct radv_cmd_buffer *cmd_buffer,
+                                            bool indexed_draw)
+{
+	struct radv_cmd_state *state = &cmd_buffer->state;
+
+	if (!cmd_buffer->device->physical_device->has_scissor_bug)
+		return false;
+
+	/* Assume all state changes except  these two can imply context rolls. */
+	if (cmd_buffer->state.dirty & ~(RADV_CMD_DIRTY_INDEX_BUFFER |
+	                                RADV_CMD_DIRTY_VERTEX_BUFFER |
+	                                RADV_CMD_DIRTY_PIPELINE))
+		return true;
+
+	if (cmd_buffer->state.emitted_pipeline != cmd_buffer->state.pipeline)
+		return true;
+
+	if (indexed_draw && state->pipeline->graphics.prim_restart_enable &&
+	    (state->index_type ? 0xffffffffu : 0xffffu) != state->last_primitive_reset_index)
+		return true;
+
+	return false;
+}
+
 static void
 radv_emit_all_graphics_states(struct radv_cmd_buffer *cmd_buffer,
 			      const struct radv_draw_info *info)
 {
+	bool late_scissor_emission = radv_need_late_scissor_emission(cmd_buffer, info->indexed);
+
 	if ((cmd_buffer->state.dirty & RADV_CMD_DIRTY_FRAMEBUFFER) ||
 	    cmd_buffer->state.emitted_pipeline != cmd_buffer->state.pipeline)
 		radv_emit_rbplus_state(cmd_buffer);
@@ -3177,6 +3188,9 @@ radv_emit_all_graphics_states(struct radv_cmd_buffer *cmd_buffer,
 	radv_emit_draw_registers(cmd_buffer, info->indexed,
 				 info->instance_count > 1, info->indirect,
 				 info->indirect ? 0 : info->count);
+
+	if (late_scissor_emission)
+		radv_emit_scissor(cmd_buffer);
 }
 
 static void
