@@ -208,6 +208,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v1.bset.derivative_control;
    case PIPE_CAP_POLYGON_OFFSET_CLAMP:
       return vscreen->caps.caps.v1.bset.polygon_offset_clamp;
+   case PIPE_CAP_QUERY_SO_OVERFLOW:
+      return vscreen->caps.caps.v1.bset.transform_feedback_overflow_query;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -271,7 +273,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_POST_DEPTH_COVERAGE:
    case PIPE_CAP_BINDLESS_TEXTURE:
    case PIPE_CAP_NIR_SAMPLERS_AS_DEREF:
-   case PIPE_CAP_QUERY_SO_OVERFLOW:
    case PIPE_CAP_MEMOBJ:
    case PIPE_CAP_LOAD_CONSTBUF:
    case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
