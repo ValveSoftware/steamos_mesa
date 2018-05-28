@@ -237,6 +237,11 @@ struct virgl_caps_bool_set1 {
         unsigned has_indirect_draw:1;
         unsigned has_sample_shading:1;
         unsigned has_cull:1;
+        unsigned conditional_render_inverted:1;
+        unsigned derivative_control:1;
+        unsigned polygon_offset_clamp:1;
+        unsigned transform_feedback_overflow_query:1;
+        /* DO NOT ADD ANYMORE MEMBERS - need to add another 32-bit to v2 caps */
 };
 
 /* endless expansion capabilites - current gallium has 252 formats */
