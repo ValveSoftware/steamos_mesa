@@ -901,7 +901,7 @@ void anv_GetPhysicalDeviceProperties(
       .maxGeometryOutputComponents              = 128,
       .maxGeometryOutputVertices                = 256,
       .maxGeometryTotalOutputComponents         = 1024,
-      .maxFragmentInputComponents               = 128,
+      .maxFragmentInputComponents               = 112, /* 128 components - (POS, PSIZ, CLIP_DIST0, CLIP_DIST1) */
       .maxFragmentOutputAttachments             = 8,
       .maxFragmentDualSrcAttachments            = 1,
       .maxFragmentCombinedOutputResources       = 8,
