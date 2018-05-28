@@ -987,7 +987,8 @@ backend_instruction::writes_accumulator_implicitly(const struct gen_device_info 
    return writes_accumulator ||
           (devinfo->gen < 6 &&
            ((opcode >= BRW_OPCODE_ADD && opcode < BRW_OPCODE_NOP) ||
-            (opcode >= FS_OPCODE_DDX_COARSE && opcode <= FS_OPCODE_LINTERP)));
+            (opcode >= FS_OPCODE_DDX_COARSE && opcode <= FS_OPCODE_LINTERP))) ||
+          (opcode == FS_OPCODE_LINTERP && !devinfo->has_pln);
 }
 
 bool
