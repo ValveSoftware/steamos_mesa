@@ -701,9 +701,16 @@ brw_inst_set_state(const struct gen_device_info *devinfo,
    brw_inst_set_pred_control(devinfo, insn, state->predicate);
    brw_inst_set_pred_inv(devinfo, insn, state->pred_inv);
 
-   brw_inst_set_flag_subreg_nr(devinfo, insn, state->flag_subreg % 2);
-   if (devinfo->gen >= 7)
-      brw_inst_set_flag_reg_nr(devinfo, insn, state->flag_subreg / 2);
+   if (is_3src(devinfo, brw_inst_opcode(devinfo, insn)) &&
+       state->access_mode == BRW_ALIGN_16) {
+      brw_inst_set_3src_a16_flag_subreg_nr(devinfo, insn, state->flag_subreg % 2);
+      if (devinfo->gen >= 7)
+         brw_inst_set_3src_a16_flag_reg_nr(devinfo, insn, state->flag_subreg / 2);
+   } else {
+      brw_inst_set_flag_subreg_nr(devinfo, insn, state->flag_subreg % 2);
+      if (devinfo->gen >= 7)
+         brw_inst_set_flag_reg_nr(devinfo, insn, state->flag_subreg / 2);
+   }
 
    if (devinfo->gen >= 6)
       brw_inst_set_acc_wr_control(devinfo, insn, state->acc_wr_control);
