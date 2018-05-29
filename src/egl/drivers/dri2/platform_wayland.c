@@ -45,11 +45,10 @@
 #include "util/u_vector.h"
 #include "eglglobals.h"
 
+#include <wayland-egl-backend.h>
 #include <wayland-client.h>
 #include "wayland-drm-client-protocol.h"
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
-
-#include "wayland/wayland-egl/wayland-egl-backend.h"
 
 #ifndef DRM_FORMAT_MOD_INVALID
 #define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
@@ -298,7 +297,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                       dri2_surf->wl_queue);
 
    dri2_surf->wl_win = window;
-   dri2_surf->wl_win->private = dri2_surf;
+   dri2_surf->wl_win->driver_private = dri2_surf;
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
    if (dri2_dpy->flush)
       dri2_surf->wl_win->resize_callback = resize_callback;
@@ -384,7 +383,7 @@ dri2_wl_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
       wl_callback_destroy(dri2_surf->throttle_callback);
 
    if (dri2_surf->wl_win) {
-      dri2_surf->wl_win->private = NULL;
+      dri2_surf->wl_win->driver_private = NULL;
       dri2_surf->wl_win->resize_callback = NULL;
       dri2_surf->wl_win->destroy_window_callback = NULL;
    }
