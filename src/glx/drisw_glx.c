@@ -339,7 +339,7 @@ swrastGetImageShm(__DRIdrawable * read,
    XShmGetImage(dpy, readable, ximage, x, y, ~0L);
 }
 
-static __DRIswrastLoaderExtension swrastLoaderExtension = {
+static const __DRIswrastLoaderExtension swrastLoaderExtension_shm = {
    .base = {__DRI_SWRAST_LOADER, 4 },
 
    .getDrawableInfo     = swrastGetDrawableInfo,
@@ -351,7 +351,22 @@ static __DRIswrastLoaderExtension swrastLoaderExtension = {
    .getImageShm         = swrastGetImageShm,
 };
 
-static const __DRIextension *loader_extensions[] = {
+static const __DRIextension *loader_extensions_shm[] = {
+   &swrastLoaderExtension_shm.base,
+   NULL
+};
+
+static const __DRIswrastLoaderExtension swrastLoaderExtension = {
+   .base = {__DRI_SWRAST_LOADER, 3 },
+
+   .getDrawableInfo     = swrastGetDrawableInfo,
+   .putImage            = swrastPutImage,
+   .getImage            = swrastGetImage,
+   .putImage2           = swrastPutImage2,
+   .getImage2           = swrastGetImage2,
+};
+
+static const __DRIextension *loader_extensions_noshm[] = {
    &swrastLoaderExtension.base,
    NULL
 };
@@ -811,6 +826,7 @@ driswCreateScreen(int screen, struct glx_display *priv)
    struct drisw_screen *psc;
    struct glx_config *configs = NULL, *visuals = NULL;
    int i;
+   const __DRIextension **loader_extensions_local;
 
    psc = calloc(1, sizeof *psc);
    if (psc == NULL)
@@ -829,10 +845,10 @@ driswCreateScreen(int screen, struct glx_display *priv)
    if (extensions == NULL)
       goto handle_error;
 
-   if (!check_xshm(psc->base.dpy)) {
-      swrastLoaderExtension.putImageShm = NULL;
-      swrastLoaderExtension.getImageShm = NULL;
-   }
+   if (!check_xshm(psc->base.dpy))
+      loader_extensions_local = loader_extensions_noshm;
+   else
+      loader_extensions_local = loader_extensions_shm;
 
    for (i = 0; extensions[i]; i++) {
       if (strcmp(extensions[i]->name, __DRI_CORE) == 0)
@@ -850,12 +866,12 @@ driswCreateScreen(int screen, struct glx_display *priv)
 
    if (psc->swrast->base.version >= 4) {
       psc->driScreen =
-         psc->swrast->createNewScreen2(screen, loader_extensions,
+         psc->swrast->createNewScreen2(screen, loader_extensions_local,
                                        extensions,
                                        &driver_configs, psc);
    } else {
       psc->driScreen =
-         psc->swrast->createNewScreen(screen, loader_extensions,
+         psc->swrast->createNewScreen(screen, loader_extensions_local,
                                       &driver_configs, psc);
    }
    if (psc->driScreen == NULL) {
