@@ -403,7 +403,7 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
                 whandle->modifier = DRM_FORMAT_MOD_LINEAR;
 
         switch (whandle->type) {
-        case DRM_API_HANDLE_TYPE_SHARED:
+        case WINSYS_HANDLE_TYPE_SHARED:
                 if (screen->ro) {
                         /* This could probably be supported, assuming that a
                          * control node was used for pl111.
@@ -413,12 +413,12 @@ vc4_resource_get_handle(struct pipe_screen *pscreen,
                 }
 
                 return vc4_bo_flink(rsc->bo, &whandle->handle);
-        case DRM_API_HANDLE_TYPE_KMS:
+        case WINSYS_HANDLE_TYPE_KMS:
                 if (screen->ro && renderonly_get_handle(rsc->scanout, whandle))
                         return TRUE;
                 whandle->handle = rsc->bo->handle;
                 return TRUE;
-        case DRM_API_HANDLE_TYPE_FD:
+        case WINSYS_HANDLE_TYPE_FD:
                 /* FDs are cross-device, so we can export directly from vc4.
                  */
                 whandle->handle = vc4_bo_get_dmabuf(rsc->bo);
@@ -708,11 +708,11 @@ vc4_resource_from_handle(struct pipe_screen *pscreen,
                 return NULL;
 
         switch (whandle->type) {
-        case DRM_API_HANDLE_TYPE_SHARED:
+        case WINSYS_HANDLE_TYPE_SHARED:
                 rsc->bo = vc4_bo_open_name(screen,
                                            whandle->handle, whandle->stride);
                 break;
-        case DRM_API_HANDLE_TYPE_FD:
+        case WINSYS_HANDLE_TYPE_FD:
                 rsc->bo = vc4_bo_open_dmabuf(screen,
                                              whandle->handle, whandle->stride);
                 break;

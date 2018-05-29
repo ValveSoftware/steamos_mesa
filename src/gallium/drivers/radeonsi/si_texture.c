@@ -713,7 +713,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 		    rtex->surface.tile_swizzle ||
 		    (rtex->buffer.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
 		     sscreen->info.has_local_buffers &&
-		     whandle->type != DRM_API_HANDLE_TYPE_KMS)) {
+		     whandle->type != WINSYS_HANDLE_TYPE_KMS)) {
 			assert(!res->b.is_shared);
 			si_reallocate_texture_inplace(sctx, rtex,
 							PIPE_BIND_SHARED, false);

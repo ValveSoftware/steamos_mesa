@@ -228,7 +228,7 @@ static int tegra_screen_import_resource(struct tegra_screen *screen,
 
    memset(&handle, 0, sizeof(handle));
    handle.modifier = DRM_FORMAT_MOD_INVALID;
-   handle.type = DRM_API_HANDLE_TYPE_FD;
+   handle.type = WINSYS_HANDLE_TYPE_FD;
 
    status = screen->gpu->resource_get_handle(screen->gpu, NULL, resource->gpu,
                                              &handle, usage);
@@ -386,7 +386,7 @@ tegra_screen_resource_get_handle(struct pipe_screen *pscreen,
     * to pass buffers into Tegra DRM for display. In all other cases, return
     * the Nouveau handle, assuming they will be used for sharing in DRI2/3.
     */
-   if (handle->type == DRM_API_HANDLE_TYPE_KMS &&
+   if (handle->type == WINSYS_HANDLE_TYPE_KMS &&
        presource->bind & PIPE_BIND_SCANOUT) {
       handle->modifier = resource->modifier;
       handle->handle = resource->handle;

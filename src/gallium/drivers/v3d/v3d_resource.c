@@ -324,12 +324,12 @@ v3d_resource_get_handle(struct pipe_screen *pscreen,
         bo->private = false;
 
         switch (whandle->type) {
-        case DRM_API_HANDLE_TYPE_SHARED:
+        case WINSYS_HANDLE_TYPE_SHARED:
                 return v3d_bo_flink(bo, &whandle->handle);
-        case DRM_API_HANDLE_TYPE_KMS:
+        case WINSYS_HANDLE_TYPE_KMS:
                 whandle->handle = bo->handle;
                 return TRUE;
-        case DRM_API_HANDLE_TYPE_FD:
+        case WINSYS_HANDLE_TYPE_FD:
                 whandle->handle = v3d_bo_get_dmabuf(bo);
                 return whandle->handle != -1;
         }
@@ -715,11 +715,11 @@ v3d_resource_from_handle(struct pipe_screen *pscreen,
         }
 
         switch (whandle->type) {
-        case DRM_API_HANDLE_TYPE_SHARED:
+        case WINSYS_HANDLE_TYPE_SHARED:
                 rsc->bo = v3d_bo_open_name(screen,
                                            whandle->handle, whandle->stride);
                 break;
-        case DRM_API_HANDLE_TYPE_FD:
+        case WINSYS_HANDLE_TYPE_FD:
                 rsc->bo = v3d_bo_open_dmabuf(screen,
                                              whandle->handle, whandle->stride);
                 break;

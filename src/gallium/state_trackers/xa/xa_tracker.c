@@ -311,12 +311,12 @@ handle_type(enum xa_handle_type type)
 {
     switch (type) {
     case xa_handle_type_kms:
-	return DRM_API_HANDLE_TYPE_KMS;
+	return WINSYS_HANDLE_TYPE_KMS;
     case xa_handle_type_fd:
-        return DRM_API_HANDLE_TYPE_FD;
+        return WINSYS_HANDLE_TYPE_FD;
     case xa_handle_type_shared:
     default:
-	return DRM_API_HANDLE_TYPE_SHARED;
+	return WINSYS_HANDLE_TYPE_SHARED;
     }
 }
 
@@ -404,7 +404,7 @@ xa_surface_from_handle(struct xa_tracker *xa,
 		  uint32_t handle, uint32_t stride)
 {
     return xa_surface_from_handle2(xa, width, height, depth, stype, xa_format,
-                                   DRM_API_HANDLE_TYPE_SHARED, flags, handle,
+                                   WINSYS_HANDLE_TYPE_SHARED, flags, handle,
                                    stride);
 }
 

@@ -385,11 +385,11 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
    struct kms_sw_plane *kms_sw_pl;
 
 
-   assert(whandle->type == DRM_API_HANDLE_TYPE_KMS ||
-          whandle->type == DRM_API_HANDLE_TYPE_FD);
+   assert(whandle->type == WINSYS_HANDLE_TYPE_KMS ||
+          whandle->type == WINSYS_HANDLE_TYPE_FD);
 
    switch(whandle->type) {
-   case DRM_API_HANDLE_TYPE_FD:
+   case WINSYS_HANDLE_TYPE_FD:
       kms_sw_pl = kms_sw_displaytarget_add_from_prime(kms_sw, whandle->handle,
                                                       templ->format,
                                                       templ->width0,
@@ -399,7 +399,7 @@ kms_sw_displaytarget_from_handle(struct sw_winsys *ws,
       if (kms_sw_pl)
          *stride = kms_sw_pl->stride;
       return sw_displaytarget(kms_sw_pl);
-   case DRM_API_HANDLE_TYPE_KMS:
+   case WINSYS_HANDLE_TYPE_KMS:
       kms_sw_dt = kms_sw_displaytarget_find_and_ref(kms_sw, whandle->handle);
       if (kms_sw_dt) {
          struct kms_sw_plane *plane;
@@ -430,12 +430,12 @@ kms_sw_displaytarget_get_handle(struct sw_winsys *winsys,
    struct kms_sw_displaytarget *kms_sw_dt = plane->dt;
 
    switch(whandle->type) {
-   case DRM_API_HANDLE_TYPE_KMS:
+   case WINSYS_HANDLE_TYPE_KMS:
       whandle->handle = kms_sw_dt->handle;
       whandle->stride = plane->stride;
       whandle->offset = plane->offset;
       return TRUE;
-   case DRM_API_HANDLE_TYPE_FD:
+   case WINSYS_HANDLE_TYPE_FD:
       if (!drmPrimeHandleToFD(kms_sw->fd, kms_sw_dt->handle,
                              DRM_CLOEXEC, (int*)&whandle->handle)) {
          whandle->stride = plane->stride;

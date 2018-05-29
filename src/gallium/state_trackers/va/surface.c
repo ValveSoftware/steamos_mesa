@@ -568,7 +568,7 @@ surface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    res_templ.usage = PIPE_USAGE_DEFAULT;
 
    memset(&whandle, 0, sizeof(struct winsys_handle));
-   whandle.type = DRM_API_HANDLE_TYPE_FD;
+   whandle.type = WINSYS_HANDLE_TYPE_FD;
    whandle.handle = memory_attribute->buffers[index];
 
    // Create a resource for each plane.
@@ -1050,7 +1050,7 @@ vlVaExportSurfaceHandle(VADriverContextP ctx,
       }
 
       memset(&whandle, 0, sizeof(whandle));
-      whandle.type = DRM_API_HANDLE_TYPE_FD;
+      whandle.type = WINSYS_HANDLE_TYPE_FD;
 
       if (!screen->resource_get_handle(screen, drv->pipe, resource,
                                        &whandle, usage)) {

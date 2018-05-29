@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-#define DRM_API_HANDLE_TYPE_SHARED 0
-#define DRM_API_HANDLE_TYPE_KMS    1
-#define DRM_API_HANDLE_TYPE_FD     2
+#define WINSYS_HANDLE_TYPE_SHARED 0
+#define WINSYS_HANDLE_TYPE_KMS    1
+#define WINSYS_HANDLE_TYPE_FD     2
 
 /**
  * For use with pipe_screen::{texture_from_handle|texture_get_handle}.

@@ -855,9 +855,9 @@ etna_screen_bo_from_handle(struct pipe_screen *pscreen,
    struct etna_screen *screen = etna_screen(pscreen);
    struct etna_bo *bo;
 
-   if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
+   if (whandle->type == WINSYS_HANDLE_TYPE_SHARED) {
       bo = etna_bo_from_name(screen->dev, whandle->handle);
-   } else if (whandle->type == DRM_API_HANDLE_TYPE_FD) {
+   } else if (whandle->type == WINSYS_HANDLE_TYPE_FD) {
       bo = etna_bo_from_dmabuf(screen->dev, whandle->handle);
    } else {
       DBG("Attempt to import unsupported handle type %d", whandle->type);
