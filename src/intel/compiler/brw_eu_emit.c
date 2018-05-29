@@ -621,6 +621,94 @@ gen7_set_dp_scratch_message(struct brw_codegen *p,
    brw_inst_set_scratch_addr_offset(devinfo, inst, addr_offset);
 }
 
+struct brw_insn_state {
+   /* One of BRW_EXECUTE_* */
+   unsigned exec_size:3;
+
+   /* Group in units of channels */
+   unsigned group:5;
+
+   /* Compression control on gen4-5 */
+   bool compressed:1;
+
+   /* One of BRW_MASK_* */
+   unsigned mask_control:1;
+
+   bool saturate:1;
+
+   /* One of BRW_ALIGN_* */
+   unsigned access_mode:1;
+
+   /* One of BRW_PREDICATE_* */
+   enum brw_predicate predicate:4;
+
+   bool pred_inv:1;
+
+   /* Flag subreg.  Bottom bit is subreg, top bit is reg */
+   unsigned flag_subreg:2;
+
+   bool acc_wr_control:1;
+};
+
+static struct brw_insn_state
+brw_inst_get_state(const struct gen_device_info *devinfo,
+                   const brw_inst *insn)
+{
+   struct brw_insn_state state = { };
+
+   state.exec_size = brw_inst_exec_size(devinfo, insn);
+   if (devinfo->gen >= 6) {
+      state.group = brw_inst_qtr_control(devinfo, insn) * 8;
+      if (devinfo->gen >= 7)
+         state.group += brw_inst_nib_control(devinfo, insn) * 4;
+   } else {
+      unsigned qtr_control = brw_inst_qtr_control(devinfo, insn);
+      if (qtr_control == BRW_COMPRESSION_COMPRESSED) {
+         state.group = 0;
+         state.compressed = true;
+      } else {
+         state.group = qtr_control * 8;
+         state.compressed = false;
+      }
+   }
+   state.access_mode = brw_inst_access_mode(devinfo, insn);
+   state.mask_control = brw_inst_mask_control(devinfo, insn);
+   state.saturate = brw_inst_saturate(devinfo, insn);
+   state.predicate = brw_inst_pred_control(devinfo, insn);
+   state.pred_inv = brw_inst_pred_inv(devinfo, insn);
+
+   state.flag_subreg = brw_inst_flag_subreg_nr(devinfo, insn);
+   if (devinfo->gen >= 7)
+      state.flag_subreg += brw_inst_flag_reg_nr(devinfo, insn) * 2;
+
+   if (devinfo->gen >= 6)
+      state.acc_wr_control = brw_inst_acc_wr_control(devinfo, insn);
+
+   return state;
+}
+
+static void
+brw_inst_set_state(const struct gen_device_info *devinfo,
+                   brw_inst *insn,
+                   const struct brw_insn_state *state)
+{
+   brw_inst_set_exec_size(devinfo, insn, state->exec_size);
+   brw_inst_set_group(devinfo, insn, state->group);
+   brw_inst_set_compression(devinfo, insn, state->compressed);
+   brw_inst_set_access_mode(devinfo, insn, state->access_mode);
+   brw_inst_set_mask_control(devinfo, insn, state->mask_control);
+   brw_inst_set_saturate(devinfo, insn, state->saturate);
+   brw_inst_set_pred_control(devinfo, insn, state->predicate);
+   brw_inst_set_pred_inv(devinfo, insn, state->pred_inv);
+
+   brw_inst_set_flag_subreg_nr(devinfo, insn, state->flag_subreg % 2);
+   if (devinfo->gen >= 7)
+      brw_inst_set_flag_reg_nr(devinfo, insn, state->flag_subreg / 2);
+
+   if (devinfo->gen >= 6)
+      brw_inst_set_acc_wr_control(devinfo, insn, state->acc_wr_control);
+}
+
 #define next_insn brw_next_insn
 brw_inst *
 brw_next_insn(struct brw_codegen *p, unsigned opcode)
@@ -635,9 +723,14 @@ brw_next_insn(struct brw_codegen *p, unsigned opcode)
 
    p->next_insn_offset += 16;
    insn = &p->store[p->nr_insn++];
-   memcpy(insn, p->current, sizeof(*insn));
 
+   memset(insn, 0, sizeof(*insn));
    brw_inst_set_opcode(devinfo, insn, opcode);
+
+   /* Apply the default instruction state */
+   struct brw_insn_state current = brw_inst_get_state(devinfo, p->current);
+   brw_inst_set_state(devinfo, insn, &current);
+
    return insn;
 }
 
