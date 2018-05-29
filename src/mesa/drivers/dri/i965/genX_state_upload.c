@@ -504,7 +504,7 @@ static void
 vf_invalidate_for_vb_48bit_transitions(struct brw_context *brw)
 {
 #if GEN_GEN >= 8
-   bool need_invalidate = true;
+   bool need_invalidate = false;
    unsigned i;
 
    for (i = 0; i < brw->vb.nr_buffers; i++) {
