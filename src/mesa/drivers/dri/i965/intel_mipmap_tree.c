@@ -2462,11 +2462,13 @@ intel_miptree_finish_write(struct brw_context *brw,
                            uint32_t start_layer, uint32_t num_layers,
                            enum isl_aux_usage aux_usage)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    num_layers = miptree_layer_range_length(mt, level, start_layer, num_layers);
 
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_NONE:
-      /* Nothing to do */
+      if (mt->format == MESA_FORMAT_S_UINT8 && devinfo->gen <= 7)
+         mt->r8stencil_needs_update = true;
       break;
 
    case ISL_AUX_USAGE_MCS:

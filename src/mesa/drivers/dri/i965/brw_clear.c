@@ -261,14 +261,6 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       }
    }
 
-   if (mask & BUFFER_BIT_STENCIL) {
-      struct intel_renderbuffer *stencil_irb =
-         intel_get_renderbuffer(fb, BUFFER_STENCIL);
-      struct intel_mipmap_tree *mt = stencil_irb->mt;
-      if (mt && mt->stencil_mt)
-         mt->stencil_mt->r8stencil_needs_update = true;
-   }
-
    if (mask & BUFFER_BITS_COLOR) {
       brw_blorp_clear_color(brw, fb, mask, partial_clear,
                             ctx->Color.sRGBEnabled);

@@ -325,9 +325,6 @@ intel_upload_tex(struct gl_context * ctx,
 
    bool tex_busy = mt && brw_bo_busy(mt->bo);
 
-   if (mt && mt->format == MESA_FORMAT_S_UINT8)
-      mt->r8stencil_needs_update = true;
-
    if (_mesa_is_bufferobj(packing->BufferObj) || tex_busy ||
        mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       ok = intel_texsubimage_blorp(brw, dims, texImage,
