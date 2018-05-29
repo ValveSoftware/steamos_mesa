@@ -22,7 +22,7 @@ env:
     - LIBXSHMFENCE_VERSION=libxshmfence-1.2
     - LIBVDPAU_VERSION=libvdpau-1.1
     - LIBVA_VERSION=libva-1.7.0
-    - LIBWAYLAND_VERSION=wayland-1.11.1
+    - LIBWAYLAND_VERSION=wayland-1.15.0
     - WAYLAND_PROTOCOLS_VERSION=wayland-protocols-1.8
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig:$HOME/prefix/share/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
