@@ -2051,6 +2051,9 @@ VkResult anv_AllocateMemory(
       bo_flags |= EXEC_OBJECT_ASYNC;
    }
 
+   if (pdevice->use_softpin)
+      bo_flags |= EXEC_OBJECT_PINNED;
+
    const VkImportMemoryFdInfoKHR *fd_info =
       vk_find_struct_const(pAllocateInfo->pNext, IMPORT_MEMORY_FD_INFO_KHR);
 
