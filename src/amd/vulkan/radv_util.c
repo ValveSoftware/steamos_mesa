@@ -54,6 +54,26 @@ radv_loge_v(const char *format, va_list va)
 	fprintf(stderr, "\n");
 }
 
+/** Log an error message.  */
+void radv_printflike(1, 2)
+	radv_logi(const char *format, ...)
+{
+	va_list va;
+
+	va_start(va, format);
+	radv_logi_v(format, va);
+	va_end(va);
+}
+
+/** \see radv_logi() */
+void
+radv_logi_v(const char *format, va_list va)
+{
+	fprintf(stderr, "radv: info: ");
+	vfprintf(stderr, format, va);
+	fprintf(stderr, "\n");
+}
+
 void radv_printflike(3, 4)
 	__radv_finishme(const char *file, int line, const char *format, ...)
 {

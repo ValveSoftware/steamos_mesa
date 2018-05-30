@@ -227,12 +227,20 @@ radv_physical_device_init(struct radv_physical_device *device,
 	int fd;
 
 	fd = open(path, O_RDWR | O_CLOEXEC);
-	if (fd < 0)
+	if (fd < 0) {
+		if (instance->debug_flags & RADV_DEBUG_STARTUP)
+			radv_logi("Could not open device '%s'", path);
+
 		return vk_error(instance, VK_ERROR_INCOMPATIBLE_DRIVER);
+	}
 
 	version = drmGetVersion(fd);
 	if (!version) {
 		close(fd);
+
+		if (instance->debug_flags & RADV_DEBUG_STARTUP)
+			radv_logi("Could not get the kernel driver version for device '%s'", path);
+
 		return vk_errorf(instance, VK_ERROR_INCOMPATIBLE_DRIVER,
 				 "failed to get version %s: %m", path);
 	}
@@ -240,9 +248,16 @@ radv_physical_device_init(struct radv_physical_device *device,
 	if (strcmp(version->name, "amdgpu")) {
 		drmFreeVersion(version);
 		close(fd);
+
+		if (instance->debug_flags & RADV_DEBUG_STARTUP)
+			radv_logi("Device '%s' is not using the amdgpu kernel driver.", path);
+
 		return VK_ERROR_INCOMPATIBLE_DRIVER;
 	}
 	drmFreeVersion(version);
+
+	if (instance->debug_flags & RADV_DEBUG_STARTUP)
+			radv_logi("Found compatible device '%s'.", path);
 
 	device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	device->instance = instance;
@@ -252,7 +267,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 	device->ws = radv_amdgpu_winsys_create(fd, instance->debug_flags,
 					       instance->perftest_flags);
 	if (!device->ws) {
-		result = VK_ERROR_INCOMPATIBLE_DRIVER;
+		result = vk_error(instance, VK_ERROR_INCOMPATIBLE_DRIVER);
 		goto fail;
 	}
 
@@ -323,6 +338,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 	result = radv_init_wsi(device);
 	if (result != VK_SUCCESS) {
 		device->ws->destroy(device->ws);
+		vk_error(instance, result);
 		goto fail;
 	}
 
@@ -393,6 +409,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"nooutoforder", RADV_DEBUG_NO_OUT_OF_ORDER},
 	{"info", RADV_DEBUG_INFO},
 	{"errors", RADV_DEBUG_ERRORS},
+	{"startup", RADV_DEBUG_STARTUP},
 	{NULL, 0}
 };
 
@@ -488,6 +505,10 @@ VkResult radv_CreateInstance(
 	instance->perftest_flags = parse_debug_string(getenv("RADV_PERFTEST"),
 						   radv_perftest_options);
 
+
+	if (instance->debug_flags & RADV_DEBUG_STARTUP)
+		radv_logi("Created an instance");
+
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
 		const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
 		int index = radv_get_instance_extension_index(ext_name);
@@ -550,6 +571,10 @@ radv_enumerate_devices(struct radv_instance *instance)
 	instance->physicalDeviceCount = 0;
 
 	max_devices = drmGetDevices2(0, devices, ARRAY_SIZE(devices));
+
+	if (instance->debug_flags & RADV_DEBUG_STARTUP)
+		radv_logi("Found %d drm nodes", max_devices);
+
 	if (max_devices < 1)
 		return vk_error(instance, VK_ERROR_INCOMPATIBLE_DRIVER);
 
