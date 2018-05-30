@@ -2033,6 +2033,24 @@ VkResult anv_AllocateMemory(
    mem->map = NULL;
    mem->map_size = 0;
 
+   uint64_t bo_flags = 0;
+
+   assert(mem->type->heapIndex < pdevice->memory.heap_count);
+   if (pdevice->memory.heaps[mem->type->heapIndex].supports_48bit_addresses)
+      bo_flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+   const struct wsi_memory_allocate_info *wsi_info =
+      vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
+   if (wsi_info && wsi_info->implicit_sync) {
+      /* We need to set the WRITE flag on window system buffers so that GEM
+       * will know we're writing to them and synchronize uses on other rings
+       * (eg if the display server uses the blitter ring).
+       */
+      bo_flags |= EXEC_OBJECT_WRITE;
+   } else if (pdevice->has_exec_async) {
+      bo_flags |= EXEC_OBJECT_ASYNC;
+   }
+
    const VkImportMemoryFdInfoKHR *fd_info =
       vk_find_struct_const(pAllocateInfo->pNext, IMPORT_MEMORY_FD_INFO_KHR);
 
@@ -2047,7 +2065,7 @@ VkResult anv_AllocateMemory(
                VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
 
       result = anv_bo_cache_import(device, &device->bo_cache,
-                                   fd_info->fd, &mem->bo);
+                                   fd_info->fd, bo_flags, &mem->bo);
       if (result != VK_SUCCESS)
          goto fail;
 
@@ -2085,7 +2103,7 @@ VkResult anv_AllocateMemory(
       close(fd_info->fd);
    } else {
       result = anv_bo_cache_alloc(device, &device->bo_cache,
-                                  pAllocateInfo->allocationSize,
+                                  pAllocateInfo->allocationSize, bo_flags,
                                   &mem->bo);
       if (result != VK_SUCCESS)
          goto fail;
@@ -2112,22 +2130,6 @@ VkResult anv_AllocateMemory(
             }
          }
       }
-   }
-
-   assert(mem->type->heapIndex < pdevice->memory.heap_count);
-   if (pdevice->memory.heaps[mem->type->heapIndex].supports_48bit_addresses)
-      mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
-
-   const struct wsi_memory_allocate_info *wsi_info =
-      vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
-   if (wsi_info && wsi_info->implicit_sync) {
-      /* We need to set the WRITE flag on window system buffers so that GEM
-       * will know we're writing to them and synchronize uses on other rings
-       * (eg if the display server uses the blitter ring).
-       */
-      mem->bo->flags |= EXEC_OBJECT_WRITE;
-   } else if (pdevice->has_exec_async) {
-      mem->bo->flags |= EXEC_OBJECT_ASYNC;
    }
 
    *pMem = anv_device_memory_to_handle(mem);

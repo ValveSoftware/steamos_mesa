@@ -1237,11 +1237,19 @@ anv_bo_cache_lookup(struct anv_bo_cache *cache, uint32_t gem_handle)
    return bo ? &bo->bo : NULL;
 }
 
+#define ANV_BO_CACHE_SUPPORTED_FLAGS \
+   (EXEC_OBJECT_WRITE | \
+    EXEC_OBJECT_ASYNC | \
+    EXEC_OBJECT_SUPPORTS_48B_ADDRESS)
+
 VkResult
 anv_bo_cache_alloc(struct anv_device *device,
                    struct anv_bo_cache *cache,
-                   uint64_t size, struct anv_bo **bo_out)
+                   uint64_t size, uint64_t bo_flags,
+                   struct anv_bo **bo_out)
 {
+   assert(bo_flags == (bo_flags & ANV_BO_CACHE_SUPPORTED_FLAGS));
+
    struct anv_cached_bo *bo =
       vk_alloc(&device->alloc, sizeof(struct anv_cached_bo), 8,
                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1258,6 +1266,8 @@ anv_bo_cache_alloc(struct anv_device *device,
       vk_free(&device->alloc, bo);
       return result;
    }
+
+   bo->bo.flags = bo_flags;
 
    assert(bo->bo.gem_handle);
 
@@ -1276,8 +1286,11 @@ anv_bo_cache_alloc(struct anv_device *device,
 VkResult
 anv_bo_cache_import(struct anv_device *device,
                     struct anv_bo_cache *cache,
-                    int fd, struct anv_bo **bo_out)
+                    int fd, uint64_t bo_flags,
+                    struct anv_bo **bo_out)
 {
+   assert(bo_flags == (bo_flags & ANV_BO_CACHE_SUPPORTED_FLAGS));
+
    pthread_mutex_lock(&cache->mutex);
 
    uint32_t gem_handle = anv_gem_fd_to_handle(device, fd);
@@ -1288,6 +1301,18 @@ anv_bo_cache_import(struct anv_device *device,
 
    struct anv_cached_bo *bo = anv_bo_cache_lookup_locked(cache, gem_handle);
    if (bo) {
+      /* We have to be careful how we combine flags so that it makes sense.
+       * Really, though, if we get to this case and it actually matters, the
+       * client has imported a BO twice in different ways and they get what
+       * they have coming.
+       */
+      uint64_t new_flags = 0;
+      new_flags |= (bo->bo.flags | bo_flags) & EXEC_OBJECT_WRITE;
+      new_flags |= (bo->bo.flags & bo_flags) & EXEC_OBJECT_ASYNC;
+      new_flags |= (bo->bo.flags & bo_flags) & EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+      bo->bo.flags = new_flags;
+
       __sync_fetch_and_add(&bo->refcount, 1);
    } else {
       off_t size = lseek(fd, 0, SEEK_END);
@@ -1308,6 +1333,7 @@ anv_bo_cache_import(struct anv_device *device,
       bo->refcount = 1;
 
       anv_bo_init(&bo->bo, gem_handle, size);
+      bo->bo.flags = bo_flags;
 
       _mesa_hash_table_insert(cache->bo_map, (void *)(uintptr_t)gem_handle, bo);
    }
