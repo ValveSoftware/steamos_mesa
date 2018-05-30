@@ -29,6 +29,7 @@
 #include <assert.h>
 
 #include "radv_private.h"
+#include "radv_debug.h"
 #include "vk_enum_to_str.h"
 
 #include "util/u_math.h"
@@ -67,12 +68,18 @@ void radv_printflike(3, 4)
 }
 
 VkResult
-__vk_errorf(VkResult error, const char *file, int line, const char *format, ...)
+__vk_errorf(struct radv_instance *instance, VkResult error, const char *file,
+	    int line, const char *format, ...)
 {
 	va_list ap;
 	char buffer[256];
 
 	const char *error_str = vk_Result_to_str(error);
+
+#ifndef DEBUG
+	if (instance && !(instance->debug_flags & RADV_DEBUG_ERRORS))
+		return error;
+#endif
 
 	if (format) {
 		va_start(ap, format);
