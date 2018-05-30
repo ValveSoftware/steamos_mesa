@@ -121,15 +121,6 @@ set_blitter_tiling(struct brw_context *brw,
          SET_BLITTER_TILING(brw, false, false);                         \
       ADVANCE_BATCH()
 
-static int
-blt_pitch(struct intel_mipmap_tree *mt)
-{
-   int pitch = mt->surf.row_pitch;
-   if (mt->surf.tiling != ISL_TILING_LINEAR)
-      pitch /= 4;
-   return pitch;
-}
-
 bool
 intel_miptree_blit_compatible_formats(mesa_format src, mesa_format dst)
 {
@@ -403,7 +394,8 @@ emit_miptree_blit(struct brw_context *brw,
     * for linear surfaces and DWords for tiled surfaces.  So the maximum
     * pitch is 32k linear and 128k tiled.
     */
-   if (blt_pitch(src_mt) >= 32768 || blt_pitch(dst_mt) >= 32768) {
+   if (intel_miptree_blt_pitch(src_mt) >= 32768 ||
+       intel_miptree_blt_pitch(dst_mt) >= 32768) {
       perf_debug("Falling back due to >= 32k/128k pitch\n");
       return false;
    }
