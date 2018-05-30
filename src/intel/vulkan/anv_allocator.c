@@ -1240,7 +1240,8 @@ anv_bo_cache_lookup(struct anv_bo_cache *cache, uint32_t gem_handle)
 #define ANV_BO_CACHE_SUPPORTED_FLAGS \
    (EXEC_OBJECT_WRITE | \
     EXEC_OBJECT_ASYNC | \
-    EXEC_OBJECT_SUPPORTS_48B_ADDRESS)
+    EXEC_OBJECT_SUPPORTS_48B_ADDRESS | \
+    EXEC_OBJECT_PINNED)
 
 VkResult
 anv_bo_cache_alloc(struct anv_device *device,
@@ -1268,6 +1269,14 @@ anv_bo_cache_alloc(struct anv_device *device,
    }
 
    bo->bo.flags = bo_flags;
+
+   if (!anv_vma_alloc(device, &bo->bo)) {
+      anv_gem_close(device, bo->bo.gem_handle);
+      vk_free(&device->alloc, bo);
+      return vk_errorf(device->instance, NULL,
+                       VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                       "failed to allocate virtual address for BO");
+   }
 
    assert(bo->bo.gem_handle);
 
@@ -1310,6 +1319,35 @@ anv_bo_cache_import(struct anv_device *device,
       new_flags |= (bo->bo.flags | bo_flags) & EXEC_OBJECT_WRITE;
       new_flags |= (bo->bo.flags & bo_flags) & EXEC_OBJECT_ASYNC;
       new_flags |= (bo->bo.flags & bo_flags) & EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+      new_flags |= (bo->bo.flags | bo_flags) & EXEC_OBJECT_PINNED;
+
+      /* It's theoretically possible for a BO to get imported such that it's
+       * both pinned and not pinned.  The only way this can happen is if it
+       * gets imported as both a semaphore and a memory object and that would
+       * be an application error.  Just fail out in that case.
+       */
+      if ((bo->bo.flags & EXEC_OBJECT_PINNED) !=
+          (bo_flags & EXEC_OBJECT_PINNED)) {
+         pthread_mutex_unlock(&cache->mutex);
+         return vk_errorf(device->instance, NULL,
+                          VK_ERROR_INVALID_EXTERNAL_HANDLE,
+                          "The same BO was imported two different ways");
+      }
+
+      /* It's also theoretically possible that someone could export a BO from
+       * one heap and import it into another or to import the same BO into two
+       * different heaps.  If this happens, we could potentially end up both
+       * allowing and disallowing 48-bit addresses.  There's not much we can
+       * do about it if we're pinning so we just throw an error and hope no
+       * app is actually that stupid.
+       */
+      if ((new_flags & EXEC_OBJECT_PINNED) &&
+          (bo->bo.flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS) !=
+          (bo_flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS)) {
+         return vk_errorf(device->instance, NULL,
+                          VK_ERROR_INVALID_EXTERNAL_HANDLE,
+                          "The same BO was imported on two different heaps");
+      }
 
       bo->bo.flags = new_flags;
 
@@ -1334,6 +1372,15 @@ anv_bo_cache_import(struct anv_device *device,
 
       anv_bo_init(&bo->bo, gem_handle, size);
       bo->bo.flags = bo_flags;
+
+      if (!anv_vma_alloc(device, &bo->bo)) {
+         anv_gem_close(device, bo->bo.gem_handle);
+         pthread_mutex_unlock(&cache->mutex);
+         vk_free(&device->alloc, bo);
+         return vk_errorf(device->instance, NULL,
+                          VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "failed to allocate virtual address for BO");
+      }
 
       _mesa_hash_table_insert(cache->bo_map, (void *)(uintptr_t)gem_handle, bo);
    }
@@ -1415,6 +1462,8 @@ anv_bo_cache_release(struct anv_device *device,
 
    if (bo->bo.map)
       anv_gem_munmap(bo->bo.map, bo->bo.size);
+
+   anv_vma_free(device, &bo->bo);
 
    anv_gem_close(device, bo->bo.gem_handle);
 
