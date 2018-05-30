@@ -2349,7 +2349,8 @@ static VkResult radv_alloc_sem_counts(struct radv_winsys_sem_counts *counts,
 	return VK_SUCCESS;
 }
 
-void radv_free_sem_info(struct radv_winsys_sem_info *sem_info)
+static void
+radv_free_sem_info(struct radv_winsys_sem_info *sem_info)
 {
 	free(sem_info->wait.syncobj);
 	free(sem_info->wait.sem);
@@ -2372,12 +2373,13 @@ static void radv_free_temp_syncobjs(struct radv_device *device,
 	}
 }
 
-VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
-			     int num_wait_sems,
-			     const VkSemaphore *wait_sems,
-			     int num_signal_sems,
-			     const VkSemaphore *signal_sems,
-			     VkFence fence)
+static VkResult
+radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
+		    int num_wait_sems,
+		    const VkSemaphore *wait_sems,
+		    int num_signal_sems,
+		    const VkSemaphore *signal_sems,
+		    VkFence fence)
 {
 	VkResult ret;
 	memset(sem_info, 0, sizeof(*sem_info));

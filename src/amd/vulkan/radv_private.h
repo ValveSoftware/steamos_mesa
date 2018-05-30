@@ -1744,14 +1744,6 @@ struct radv_semaphore {
 	uint32_t temp_syncobj;
 };
 
-VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
-			     int num_wait_sems,
-			     const VkSemaphore *wait_sems,
-			     int num_signal_sems,
-			     const VkSemaphore *signal_sems,
-			     VkFence fence);
-void radv_free_sem_info(struct radv_winsys_sem_info *sem_info);
-
 void radv_set_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 			     VkPipelineBindPoint bind_point,
 			     struct radv_descriptor_set *set,
