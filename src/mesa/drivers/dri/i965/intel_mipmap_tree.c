@@ -510,7 +510,7 @@ free_aux_state_map(enum isl_aux_state **state)
 }
 
 static bool
-need_to_retile_as_linear(struct brw_context *brw, unsigned row_pitch,
+need_to_retile_as_linear(struct brw_context *brw, unsigned blt_pitch,
                          enum isl_tiling tiling, unsigned samples)
 {
    if (samples > 1)
@@ -519,9 +519,9 @@ need_to_retile_as_linear(struct brw_context *brw, unsigned row_pitch,
    if (tiling == ISL_TILING_LINEAR)
       return false;
 
-   if (ALIGN(row_pitch, 512) >= 32768) {
-      perf_debug("row pitch %u too large to blit, falling back to untiled",
-                 row_pitch);
+   if (blt_pitch >= 32768) {
+      perf_debug("blt pitch %u too large to blit, falling back to untiled",
+                 blt_pitch);
       return true;
    }
 
@@ -601,7 +601,7 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    bool is_depth_stencil =
       mt->surf.usage & (ISL_SURF_USAGE_STENCIL_BIT | ISL_SURF_USAGE_DEPTH_BIT);
    if (!is_depth_stencil) {
-      if (need_to_retile_as_linear(brw, mt->surf.row_pitch,
+      if (need_to_retile_as_linear(brw, intel_miptree_blt_pitch(mt),
                                    mt->surf.tiling, mt->surf.samples)) {
          init_info.tiling_flags = 1u << ISL_TILING_LINEAR;
          if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
@@ -3579,7 +3579,7 @@ can_blit_slice(struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int slice)
 {
    /* See intel_miptree_blit() for details on the 32k pitch limit. */
-   if (mt->surf.row_pitch >= 32768)
+   if (intel_miptree_blt_pitch(mt) >= 32768)
       return false;
 
    return true;
