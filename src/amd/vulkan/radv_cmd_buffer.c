@@ -624,12 +624,14 @@ radv_emit_descriptor_pointers(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_userdata_info *loc = &locs->descriptor_sets[start];
 		unsigned sh_offset = sh_base + loc->sgpr_idx * 4;
 
-		radv_emit_shader_pointer_head(cs, sh_offset, count, true);
+		radv_emit_shader_pointer_head(cs, sh_offset, count,
+					      HAVE_32BIT_POINTERS);
 		for (int i = 0; i < count; i++) {
 			struct radv_descriptor_set *set =
 				descriptors_state->sets[start + i];
 
-			radv_emit_shader_pointer_body(device, cs, set->va, true);
+			radv_emit_shader_pointer_body(device, cs, set->va,
+						      HAVE_32BIT_POINTERS);
 		}
 	}
 }
