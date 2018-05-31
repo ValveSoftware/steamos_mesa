@@ -416,6 +416,30 @@ anv_batch_bo_grow(struct anv_cmd_buffer *cmd_buffer, struct anv_batch_bo *bbo,
 }
 
 static void
+anv_batch_bo_link(struct anv_cmd_buffer *cmd_buffer,
+                  struct anv_batch_bo *prev_bbo,
+                  struct anv_batch_bo *next_bbo,
+                  uint32_t next_bbo_offset)
+{
+   MAYBE_UNUSED const uint32_t bb_start_offset =
+      prev_bbo->length - GEN8_MI_BATCH_BUFFER_START_length * 4;
+   MAYBE_UNUSED const uint32_t *bb_start = prev_bbo->bo.map + bb_start_offset;
+
+   /* Make sure we're looking at a MI_BATCH_BUFFER_START */
+   assert(((*bb_start >> 29) & 0x07) == 0);
+   assert(((*bb_start >> 23) & 0x3f) == 49);
+
+   uint32_t reloc_idx = prev_bbo->relocs.num_relocs - 1;
+   assert(prev_bbo->relocs.relocs[reloc_idx].offset == bb_start_offset + 4);
+
+   prev_bbo->relocs.reloc_bos[reloc_idx] = &next_bbo->bo;
+   prev_bbo->relocs.relocs[reloc_idx].delta = next_bbo_offset;
+
+   /* Use a bogus presumed offset to force a relocation */
+   prev_bbo->relocs.relocs[reloc_idx].presumed_offset = -1;
+}
+
+static void
 anv_batch_bo_destroy(struct anv_batch_bo *bbo,
                      struct anv_cmd_buffer *cmd_buffer)
 {
@@ -441,16 +465,8 @@ anv_batch_bo_list_clone(const struct list_head *list,
          break;
       list_addtail(&new_bbo->link, new_list);
 
-      if (prev_bbo) {
-         /* As we clone this list of batch_bo's, they chain one to the
-          * other using MI_BATCH_BUFFER_START commands.  We need to fix up
-          * those relocations as we go.  Fortunately, this is pretty easy
-          * as it will always be the last relocation in the list.
-          */
-         uint32_t last_idx = prev_bbo->relocs.num_relocs - 1;
-         assert(prev_bbo->relocs.reloc_bos[last_idx] == &bbo->bo);
-         prev_bbo->relocs.reloc_bos[last_idx] = &new_bbo->bo;
-      }
+      if (prev_bbo)
+         anv_batch_bo_link(cmd_buffer, prev_bbo, new_bbo, 0);
 
       prev_bbo = new_bbo;
    }
@@ -864,13 +880,13 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
                    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_CHAIN;
 
-         /* When we chain, we need to add an MI_BATCH_BUFFER_START command
-          * with its relocation.  In order to handle this we'll increment here
-          * so we can unconditionally decrement right before adding the
-          * MI_BATCH_BUFFER_START command.
+         /* In order to chain, we need this command buffer to contain an
+          * MI_BATCH_BUFFER_START which will jump back to the calling batch.
+          * It doesn't matter where it points now so long as has a valid
+          * relocation.  We'll adjust it later as part of the chaining
+          * process.
           */
-         batch_bo->relocs.num_relocs++;
-         cmd_buffer->batch.next += GEN8_MI_BATCH_BUFFER_START_length * 4;
+         emit_batch_buffer_start(cmd_buffer, &batch_bo->bo, 0);
       } else {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
       }
@@ -921,33 +937,13 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       struct anv_batch_bo *this_bbo = anv_cmd_buffer_current_batch_bo(primary);
       assert(primary->batch.start == this_bbo->bo.map);
       uint32_t offset = primary->batch.next - primary->batch.start;
-      const uint32_t inst_size = GEN8_MI_BATCH_BUFFER_START_length * 4;
 
-      /* Roll back the previous MI_BATCH_BUFFER_START and its relocation so we
-       * can emit a new command and relocation for the current splice.  In
-       * order to handle the initial-use case, we incremented next and
-       * num_relocs in end_batch_buffer() so we can alyways just subtract
-       * here.
+      /* Make the tail of the secondary point back to right after the
+       * MI_BATCH_BUFFER_START in the primary batch.
        */
-      last_bbo->relocs.num_relocs--;
-      secondary->batch.next -= inst_size;
-      emit_batch_buffer_start(secondary, &this_bbo->bo, offset);
+      anv_batch_bo_link(primary, last_bbo, this_bbo, offset);
+
       anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
-
-      /* After patching up the secondary buffer, we need to clflush the
-       * modified instruction in case we're on a !llc platform. We use a
-       * little loop to handle the case where the instruction crosses a cache
-       * line boundary.
-       */
-      if (!primary->device->info.has_llc) {
-         void *inst = secondary->batch.next - inst_size;
-         void *p = (void *) (((uintptr_t) inst) & ~CACHELINE_MASK);
-         __builtin_ia32_mfence();
-         while (p < secondary->batch.next) {
-            __builtin_ia32_clflush(p);
-            p += CACHELINE_SIZE;
-         }
-      }
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
