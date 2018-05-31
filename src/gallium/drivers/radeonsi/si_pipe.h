@@ -1505,6 +1505,23 @@ static inline unsigned si_get_total_colormask(struct si_context *sctx)
 	return colormask;
 }
 
+#define UTIL_ALL_PRIM_LINE_MODES ((1 << PIPE_PRIM_LINES) | \
+				  (1 << PIPE_PRIM_LINE_LOOP) | \
+				  (1 << PIPE_PRIM_LINE_STRIP) | \
+				  (1 << PIPE_PRIM_LINES_ADJACENCY) | \
+				  (1 << PIPE_PRIM_LINE_STRIP_ADJACENCY))
+
+static inline bool util_prim_is_lines(unsigned prim)
+{
+	return ((1 << prim) & UTIL_ALL_PRIM_LINE_MODES) != 0;
+}
+
+static inline bool util_prim_is_points_or_lines(unsigned prim)
+{
+	return ((1 << prim) & (UTIL_ALL_PRIM_LINE_MODES |
+			       (1 << PIPE_PRIM_POINTS))) != 0;
+}
+
 /**
  * Return true if there is enough memory in VRAM and GTT for the buffers
  * added so far.

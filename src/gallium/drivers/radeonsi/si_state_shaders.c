@@ -1419,10 +1419,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		}
 
 		if (rs) {
-			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
-					sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
-				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
-			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
+			bool is_poly = !util_prim_is_points_or_lines(sctx->current_rast_prim);
+			bool is_line = util_prim_is_lines(sctx->current_rast_prim);
 
 			key->part.ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
 			key->part.ps.prolog.flatshade_colors = rs->flatshade && sel->info.colors_read;

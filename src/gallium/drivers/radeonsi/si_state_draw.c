@@ -521,11 +521,7 @@ static bool si_emit_rasterizer_prim_state(struct si_context *sctx)
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 	/* Skip this if not rendering lines. */
-	if (rast_prim != PIPE_PRIM_LINES &&
-	    rast_prim != PIPE_PRIM_LINE_LOOP &&
-	    rast_prim != PIPE_PRIM_LINE_STRIP &&
-	    rast_prim != PIPE_PRIM_LINES_ADJACENCY &&
-	    rast_prim != PIPE_PRIM_LINE_STRIP_ADJACENCY)
+	if (!util_prim_is_lines(rast_prim))
 		return false;
 
 	if (rast_prim == sctx->last_rast_prim &&
@@ -1275,9 +1271,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		rast_prim = info->mode;
 
 	if (rast_prim != sctx->current_rast_prim) {
-		bool old_is_poly = sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES;
-		bool new_is_poly = rast_prim >= PIPE_PRIM_TRIANGLES;
-		if (old_is_poly != new_is_poly)
+		if (util_prim_is_points_or_lines(sctx->current_rast_prim) !=
+		    util_prim_is_points_or_lines(rast_prim))
 			si_mark_atom_dirty(sctx, &sctx->atoms.s.guardband);
 
 		sctx->current_rast_prim = rast_prim;

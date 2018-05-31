@@ -193,7 +193,7 @@ static void si_emit_guardband(struct si_context *ctx)
 	discard_x = 1.0;
 	discard_y = 1.0;
 
-	if (unlikely(ctx->current_rast_prim < PIPE_PRIM_TRIANGLES) &&
+	if (unlikely(util_prim_is_points_or_lines(ctx->current_rast_prim)) &&
 	    ctx->queued.named.rasterizer) {
 		/* When rendering wide points or lines, we need to be more
 		 * conservative about when to discard them entirely. */
