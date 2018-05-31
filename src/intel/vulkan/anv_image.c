@@ -1067,20 +1067,10 @@ anv_image_fill_surface_state(struct anv_device *device,
    if (!clear_color)
       clear_color = &default_clear_color;
 
-   const uint64_t address = image->planes[plane].bo_offset + surface->offset;
-   const uint64_t aux_address = aux_usage == ISL_AUX_USAGE_NONE ?
-      0 : (image->planes[plane].bo_offset + aux_surface->offset);
-
-   struct anv_address clear_address = { .bo = NULL };
-   state_inout->clear_address = 0;
-
-   if (device->info.gen >= 10 && aux_usage != ISL_AUX_USAGE_NONE) {
-      if (aux_usage == ISL_AUX_USAGE_HIZ) {
-         clear_address = (struct anv_address) { .bo = &device->hiz_clear_bo };
-      } else {
-         clear_address = anv_image_get_clear_color_addr(device, image, aspect);
-      }
-   }
+   const struct anv_address address = {
+      .bo = image->planes[plane].bo,
+      .offset = image->planes[plane].bo_offset + surface->offset,
+   };
 
    if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
        !(flags & ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY) &&
@@ -1092,14 +1082,14 @@ anv_image_fill_surface_state(struct anv_device *device,
        */
       assert(aux_usage == ISL_AUX_USAGE_NONE);
       isl_buffer_fill_state(&device->isl_dev, state_inout->state.map,
-                            .address = address,
+                            .address = anv_address_physical(address),
                             .size = surface->isl.size,
                             .format = ISL_FORMAT_RAW,
                             .stride = 1,
                             .mocs = device->default_mocs);
       state_inout->address = address,
-      state_inout->aux_address = 0;
-      state_inout->clear_address = 0;
+      state_inout->aux_address = ANV_NULL_ADDRESS;
+      state_inout->clear_address = ANV_NULL_ADDRESS;
    } else {
       if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
           !(flags & ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY)) {
@@ -1165,20 +1155,43 @@ anv_image_fill_surface_state(struct anv_device *device,
          }
       }
 
+      state_inout->address = anv_address_add(address, offset_B);
+
+      struct anv_address aux_address = ANV_NULL_ADDRESS;
+      if (aux_usage != ISL_AUX_USAGE_NONE) {
+         aux_address = (struct anv_address) {
+            .bo = image->planes[plane].bo,
+            .offset = image->planes[plane].bo_offset + aux_surface->offset,
+         };
+      }
+      state_inout->aux_address = aux_address;
+
+      struct anv_address clear_address = ANV_NULL_ADDRESS;
+      if (device->info.gen >= 10 && aux_usage != ISL_AUX_USAGE_NONE) {
+         if (aux_usage == ISL_AUX_USAGE_HIZ) {
+            clear_address = (struct anv_address) {
+               .bo = &device->hiz_clear_bo,
+               .offset = 0,
+            };
+         } else {
+            clear_address = anv_image_get_clear_color_addr(device, image, aspect);
+         }
+      }
+      state_inout->clear_address = clear_address;
+
       isl_surf_fill_state(&device->isl_dev, state_inout->state.map,
                           .surf = isl_surf,
                           .view = &view,
-                          .address = address + offset_B,
+                          .address = anv_address_physical(state_inout->address),
                           .clear_color = *clear_color,
                           .aux_surf = &aux_surface->isl,
                           .aux_usage = aux_usage,
-                          .aux_address = aux_address,
-                          .clear_address = clear_address.offset,
-                          .use_clear_address = clear_address.bo != NULL,
+                          .aux_address = anv_address_physical(aux_address),
+                          .clear_address = anv_address_physical(clear_address),
+                          .use_clear_address = !anv_address_is_null(clear_address),
                           .mocs = device->default_mocs,
                           .x_offset_sa = tile_x_sa,
                           .y_offset_sa = tile_y_sa);
-      state_inout->address = address + offset_B;
 
       /* With the exception of gen8, the bottom 12 bits of the MCS base address
        * are used to store other information.  This should be ok, however,
@@ -1186,15 +1199,14 @@ anv_image_fill_surface_state(struct anv_device *device,
        */
       uint32_t *aux_addr_dw = state_inout->state.map +
          device->isl_dev.ss.aux_addr_offset;
-      assert((aux_address & 0xfff) == 0);
-      assert(aux_address == (*aux_addr_dw & 0xfffff000));
-      state_inout->aux_address = *aux_addr_dw;
+      assert((aux_address.offset & 0xfff) == 0);
+      state_inout->aux_address.offset |= *aux_addr_dw & 0xfff;
 
       if (device->info.gen >= 10 && clear_address.bo) {
          uint32_t *clear_addr_dw = state_inout->state.map +
                                    device->isl_dev.ss.clear_color_state_offset;
          assert((clear_address.offset & 0x3f) == 0);
-         state_inout->clear_address = *clear_addr_dw;
+         state_inout->clear_address.offset |= *clear_addr_dw & 0x3f;
       }
    }
 

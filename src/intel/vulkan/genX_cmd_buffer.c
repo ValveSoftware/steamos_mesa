@@ -180,34 +180,31 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 
 static void
 add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
-                      const struct anv_image_view *image_view,
-                      const uint32_t plane,
                       struct anv_surface_state state)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
-   const struct anv_image *image = image_view->image;
-   uint32_t image_plane = image_view->planes[plane].image_plane;
 
+   assert(!anv_address_is_null(state.address));
    add_surface_state_reloc(cmd_buffer, state.state,
-                           image->planes[image_plane].bo, state.address);
+                           state.address.bo, state.address.offset);
 
-   if (state.aux_address) {
+   if (!anv_address_is_null(state.aux_address)) {
       VkResult result =
          anv_reloc_list_add(&cmd_buffer->surface_relocs,
                             &cmd_buffer->pool->alloc,
                             state.state.offset + isl_dev->ss.aux_addr_offset,
-                            image->planes[image_plane].bo, state.aux_address);
+                            state.aux_address.bo, state.aux_address.offset);
       if (result != VK_SUCCESS)
          anv_batch_set_error(&cmd_buffer->batch, result);
    }
 
-   if (state.clear_address) {
+   if (!anv_address_is_null(state.clear_address)) {
       VkResult result =
          anv_reloc_list_add(&cmd_buffer->surface_relocs,
                             &cmd_buffer->pool->alloc,
                             state.state.offset +
                             isl_dev->ss.clear_color_state_offset,
-                            image->planes[image_plane].bo, state.clear_address);
+                            state.clear_address.bo, state.clear_address.offset);
       if (result != VK_SUCCESS)
          anv_batch_set_error(&cmd_buffer->batch, result);
    }
@@ -1271,8 +1268,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &state->attachments[i].color,
                                          NULL);
 
-            add_image_view_relocs(cmd_buffer, iview, 0,
-                                  state->attachments[i].color);
+            add_image_view_relocs(cmd_buffer, state->attachments[i].color);
          } else {
             depth_stencil_attachment_compute_aux_usage(cmd_buffer->device,
                                                        state, i,
@@ -1291,8 +1287,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &state->attachments[i].input,
                                          NULL);
 
-            add_image_view_relocs(cmd_buffer, iview, 0,
-                                  state->attachments[i].input);
+            add_image_view_relocs(cmd_buffer, state->attachments[i].input);
          }
       }
    }
@@ -2050,8 +2045,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             desc->image_view->planes[binding->plane].optimal_sampler_surface_state;
          surface_state = sstate.state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view,
-                               binding->plane, sstate);
+         add_image_view_relocs(cmd_buffer, sstate);
          break;
       }
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
@@ -2066,8 +2060,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                desc->image_view->planes[binding->plane].optimal_sampler_surface_state;
             surface_state = sstate.state;
             assert(surface_state.alloc_size);
-            add_image_view_relocs(cmd_buffer, desc->image_view,
-                                  binding->plane, sstate);
+            add_image_view_relocs(cmd_buffer, sstate);
          } else {
             /* For color input attachments, we create the surface state at
              * vkBeginRenderPass time so that we can include aux and clear
@@ -2086,8 +2079,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             : desc->image_view->planes[binding->plane].storage_surface_state;
          surface_state = sstate.state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view,
-                               binding->plane, sstate);
+         add_image_view_relocs(cmd_buffer, sstate);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];

@@ -1778,20 +1778,20 @@ struct anv_surface_state {
     *
     * This address is relative to the start of the BO.
     */
-   uint64_t address;
+   struct anv_address address;
    /* Address of the aux surface, if any
     *
-    * This field is 0 if and only if no aux surface exists.
+    * This field is ANV_NULL_ADDRESS if and only if no aux surface exists.
     *
-    * This address is relative to the start of the BO.  With the exception of
-    * gen8, the bottom 12 bits of this address include extra aux information.
+    * With the exception of gen8, the bottom 12 bits of this address' offset
+    * include extra aux information.
     */
-   uint64_t aux_address;
+   struct anv_address aux_address;
    /* Address of the clear color, if any
     *
     * This address is relative to the start of the BO.
     */
-   uint64_t clear_address;
+   struct anv_address clear_address;
 };
 
 /**
