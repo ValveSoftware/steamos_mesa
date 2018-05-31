@@ -1120,6 +1120,30 @@ struct anv_address {
    uint32_t offset;
 };
 
+#define ANV_NULL_ADDRESS ((struct anv_address) { NULL, 0 })
+
+static inline bool
+anv_address_is_null(struct anv_address addr)
+{
+   return addr.bo == NULL && addr.offset == 0;
+}
+
+static inline uint64_t
+anv_address_physical(struct anv_address addr)
+{
+   if (addr.bo && (addr.bo->flags & EXEC_OBJECT_PINNED))
+      return gen_canonical_address(addr.bo->offset + addr.offset);
+   else
+      return gen_canonical_address(addr.offset);
+}
+
+static inline struct anv_address
+anv_address_add(struct anv_address addr, uint64_t offset)
+{
+   addr.offset += offset;
+   return addr;
+}
+
 static inline uint64_t
 _anv_combine_address(struct anv_batch *batch, void *location,
                      const struct anv_address address, uint32_t delta)
