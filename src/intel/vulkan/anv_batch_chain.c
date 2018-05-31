@@ -429,14 +429,23 @@ anv_batch_bo_link(struct anv_cmd_buffer *cmd_buffer,
    assert(((*bb_start >> 29) & 0x07) == 0);
    assert(((*bb_start >> 23) & 0x3f) == 49);
 
-   uint32_t reloc_idx = prev_bbo->relocs.num_relocs - 1;
-   assert(prev_bbo->relocs.relocs[reloc_idx].offset == bb_start_offset + 4);
+   if (cmd_buffer->device->instance->physicalDevice.use_softpin) {
+      assert(prev_bbo->bo.flags & EXEC_OBJECT_PINNED);
+      assert(next_bbo->bo.flags & EXEC_OBJECT_PINNED);
 
-   prev_bbo->relocs.reloc_bos[reloc_idx] = &next_bbo->bo;
-   prev_bbo->relocs.relocs[reloc_idx].delta = next_bbo_offset;
+      write_reloc(cmd_buffer->device,
+                  prev_bbo->bo.map + bb_start_offset + 4,
+                  next_bbo->bo.offset + next_bbo_offset, true);
+   } else {
+      uint32_t reloc_idx = prev_bbo->relocs.num_relocs - 1;
+      assert(prev_bbo->relocs.relocs[reloc_idx].offset == bb_start_offset + 4);
 
-   /* Use a bogus presumed offset to force a relocation */
-   prev_bbo->relocs.relocs[reloc_idx].presumed_offset = -1;
+      prev_bbo->relocs.reloc_bos[reloc_idx] = &next_bbo->bo;
+      prev_bbo->relocs.relocs[reloc_idx].delta = next_bbo_offset;
+
+      /* Use a bogus presumed offset to force a relocation */
+      prev_bbo->relocs.relocs[reloc_idx].presumed_offset = -1;
+   }
 }
 
 static void

@@ -81,7 +81,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    exec2_objects[0].relocs_ptr = 0;
    exec2_objects[0].alignment = 0;
    exec2_objects[0].offset = bo.offset;
-   exec2_objects[0].flags = 0;
+   exec2_objects[0].flags = bo.flags;
    exec2_objects[0].rsvd1 = 0;
    exec2_objects[0].rsvd2 = 0;
 
