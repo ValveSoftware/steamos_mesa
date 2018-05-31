@@ -40,4 +40,16 @@ gen_canonical_address(uint64_t v)
    return (int64_t)(v << shift) >> shift;
 }
 
+/**
+ * This returns a 48-bit address with the high 16 bits zeroed.
+ *
+ * It's the opposite of gen_canonicalize_address.
+ */
+static inline uint64_t
+gen_48b_address(uint64_t v)
+{
+   const int shift = 63 - 47;
+   return (uint64_t)(v << shift) >> shift;
+}
+
 #endif /* GEN_GEM_H */
