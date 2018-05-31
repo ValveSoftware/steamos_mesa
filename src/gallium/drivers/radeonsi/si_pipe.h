@@ -916,6 +916,7 @@ struct si_context {
 	int			last_tes_sh_base;
 	bool			last_tess_uses_primid;
 	unsigned		last_num_patches;
+	int			last_ls_hs_config;
 
 	/* Debug state. */
 	bool			is_debug;

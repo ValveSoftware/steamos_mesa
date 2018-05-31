@@ -280,12 +280,16 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		       S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
 		       S_028B58_HS_NUM_OUTPUT_CP(num_tcs_output_cp);
 
-	if (sctx->chip_class >= CIK)
-		radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2,
-					   ls_hs_config);
-	else
-		radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG,
-				       ls_hs_config);
+	if (sctx->last_ls_hs_config != ls_hs_config) {
+		if (sctx->chip_class >= CIK) {
+			radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2,
+						   ls_hs_config);
+		} else {
+			radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG,
+					       ls_hs_config);
+		}
+		sctx->last_ls_hs_config = ls_hs_config;
+	}
 }
 
 static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)
