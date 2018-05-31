@@ -1658,6 +1658,12 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_binding_table_pool;
 
+   if (physical_device->use_softpin)
+      device->workaround_bo.flags |= EXEC_OBJECT_PINNED;
+
+   if (!anv_vma_alloc(device, &device->workaround_bo))
+      goto fail_workaround_bo;
+
    anv_device_init_trivial_batch(device);
 
    if (device->info.gen >= 10)
@@ -1756,6 +1762,7 @@ void anv_DestroyDevice(
    anv_scratch_pool_finish(device, &device->scratch_pool);
 
    anv_gem_munmap(device->workaround_bo.map, device->workaround_bo.size);
+   anv_vma_free(device, &device->workaround_bo);
    anv_gem_close(device, device->workaround_bo.gem_handle);
 
    anv_vma_free(device, &device->trivial_batch_bo);

@@ -1077,8 +1077,10 @@ anv_scratch_pool_finish(struct anv_device *device, struct anv_scratch_pool *pool
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
       for (unsigned i = 0; i < 16; i++) {
          struct anv_scratch_bo *bo = &pool->bos[i][s];
-         if (bo->exists > 0)
+         if (bo->exists > 0) {
+            anv_vma_free(device, &bo->bo);
             anv_gem_close(device, bo->bo.gem_handle);
+         }
       }
    }
 }
@@ -1175,6 +1177,11 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
 
    if (device->instance->physicalDevice.has_exec_async)
       bo->bo.flags |= EXEC_OBJECT_ASYNC;
+
+   if (device->instance->physicalDevice.use_softpin)
+      bo->bo.flags |= EXEC_OBJECT_PINNED;
+
+   anv_vma_alloc(device, &bo->bo);
 
    /* Set the exists last because it may be read by other threads */
    __sync_synchronize();

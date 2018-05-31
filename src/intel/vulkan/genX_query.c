@@ -94,8 +94,13 @@ VkResult genX(CreateQueryPool)(
    if (pdevice->supports_48bit_addresses)
       pool->bo.flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
+   if (pdevice->use_softpin)
+      pool->bo.flags |= EXEC_OBJECT_PINNED;
+
    if (pdevice->has_exec_async)
       pool->bo.flags |= EXEC_OBJECT_ASYNC;
+
+   anv_vma_alloc(device, &pool->bo);
 
    /* For query pools, we set the caching mode to I915_CACHING_CACHED.  On LLC
     * platforms, this does nothing.  On non-LLC platforms, this means snooping
@@ -129,6 +134,7 @@ void genX(DestroyQueryPool)(
       return;
 
    anv_gem_munmap(pool->bo.map, pool->bo.size);
+   anv_vma_free(device, &pool->bo);
    anv_gem_close(device, pool->bo.gem_handle);
    vk_free2(&device->alloc, pAllocator, pool);
 }
