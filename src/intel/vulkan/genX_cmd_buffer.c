@@ -2599,7 +2599,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
 static void
 emit_vertex_bo(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_bo *bo, uint32_t offset,
+               struct anv_address addr,
                uint32_t size, uint32_t index)
 {
    uint32_t *p = anv_batch_emitn(&cmd_buffer->batch, 5,
@@ -2612,21 +2612,21 @@ emit_vertex_bo(struct anv_cmd_buffer *cmd_buffer,
          .BufferPitch = 0,
 #if (GEN_GEN >= 8)
          .MemoryObjectControlState = GENX(MOCS),
-         .BufferStartingAddress = { bo, offset },
+         .BufferStartingAddress = addr,
          .BufferSize = size
 #else
          .VertexBufferMemoryObjectControlState = GENX(MOCS),
-         .BufferStartingAddress = { bo, offset },
-         .EndAddress = { bo, offset + size },
+         .BufferStartingAddress = addr,
+         .EndAddress = anv_address_add(addr, size),
 #endif
       });
 }
 
 static void
 emit_base_vertex_instance_bo(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_bo *bo, uint32_t offset)
+                             struct anv_address addr)
 {
-   emit_vertex_bo(cmd_buffer, bo, offset, 8, ANV_SVGS_VB_INDEX);
+   emit_vertex_bo(cmd_buffer, addr, 8, ANV_SVGS_VB_INDEX);
 }
 
 static void
@@ -2641,8 +2641,12 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
 
    anv_state_flush(cmd_buffer->device, id_state);
 
-   emit_base_vertex_instance_bo(cmd_buffer,
-      &cmd_buffer->device->dynamic_state_pool.block_pool.bo, id_state.offset);
+   struct anv_address addr = {
+      .bo = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
+      .offset = id_state.offset,
+   };
+
+   emit_base_vertex_instance_bo(cmd_buffer, addr);
 }
 
 static void
@@ -2655,9 +2659,12 @@ emit_draw_index(struct anv_cmd_buffer *cmd_buffer, uint32_t draw_index)
 
    anv_state_flush(cmd_buffer->device, state);
 
-   emit_vertex_bo(cmd_buffer,
-                  &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
-                  state.offset, 4, ANV_DRAWID_VB_INDEX);
+   struct anv_address addr = {
+      .bo = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
+      .offset = state.offset,
+   };
+
+   emit_vertex_bo(cmd_buffer, addr, 4, ANV_DRAWID_VB_INDEX);
 }
 
 void genX(CmdDraw)(
@@ -2799,37 +2806,35 @@ emit_mul_gpr0(struct anv_batch *batch, uint32_t N)
 
 static void
 load_indirect_parameters(struct anv_cmd_buffer *cmd_buffer,
-                         struct anv_buffer *buffer, uint64_t offset,
+                         struct anv_address addr,
                          bool indexed)
 {
    struct anv_batch *batch = &cmd_buffer->batch;
-   struct anv_bo *bo = buffer->bo;
-   uint32_t bo_offset = buffer->offset + offset;
 
-   emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
+   emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, addr.bo, addr.offset);
 
    unsigned view_count = anv_subpass_view_count(cmd_buffer->state.subpass);
    if (view_count > 1) {
 #if GEN_IS_HASWELL || GEN_GEN >= 8
-      emit_lrm(batch, CS_GPR(0), bo, bo_offset + 4);
+      emit_lrm(batch, CS_GPR(0), addr.bo, addr.offset + 4);
       emit_mul_gpr0(batch, view_count);
       emit_lrr(batch, GEN7_3DPRIM_INSTANCE_COUNT, CS_GPR(0));
 #else
       anv_finishme("Multiview + indirect draw requires MI_MATH; "
                    "MI_MATH is not supported on Ivy Bridge");
-      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, addr.bo, addr.offset + 4);
 #endif
    } else {
-      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, addr.bo, addr.offset + 4);
    }
 
-   emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
+   emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, addr.bo, addr.offset + 8);
 
    if (indexed) {
-      emit_lrm(batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
-      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
+      emit_lrm(batch, GEN7_3DPRIM_BASE_VERTEX, addr.bo, addr.offset + 12);
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, addr.bo, addr.offset + 16);
    } else {
-      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, addr.bo, addr.offset + 12);
       emit_lri(batch, GEN7_3DPRIM_BASE_VERTEX, 0);
    }
 }
@@ -2852,16 +2857,18 @@ void genX(CmdDrawIndirect)(
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    for (uint32_t i = 0; i < drawCount; i++) {
-      struct anv_bo *bo = buffer->bo;
-      uint32_t bo_offset = buffer->offset + offset;
+      struct anv_address draw = {
+         .bo = buffer->bo,
+         .offset = buffer->offset + offset,
+      };
 
       if (vs_prog_data->uses_firstvertex ||
           vs_prog_data->uses_baseinstance)
-         emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
+         emit_base_vertex_instance_bo(cmd_buffer, anv_address_add(draw, 8));
       if (vs_prog_data->uses_drawid)
          emit_draw_index(cmd_buffer, i);
 
-      load_indirect_parameters(cmd_buffer, buffer, offset, false);
+      load_indirect_parameters(cmd_buffer, draw, false);
 
       anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
          prim.IndirectParameterEnable  = true;
@@ -2891,17 +2898,19 @@ void genX(CmdDrawIndexedIndirect)(
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    for (uint32_t i = 0; i < drawCount; i++) {
-      struct anv_bo *bo = buffer->bo;
-      uint32_t bo_offset = buffer->offset + offset;
+      struct anv_address draw = {
+         .bo = buffer->bo,
+         .offset = buffer->offset + offset,
+      };
 
       /* TODO: We need to stomp base vertex to 0 somehow */
       if (vs_prog_data->uses_firstvertex ||
           vs_prog_data->uses_baseinstance)
-         emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
+         emit_base_vertex_instance_bo(cmd_buffer, anv_address_add(draw, 12));
       if (vs_prog_data->uses_drawid)
          emit_draw_index(cmd_buffer, i);
 
-      load_indirect_parameters(cmd_buffer, buffer, offset, true);
+      load_indirect_parameters(cmd_buffer, draw, true);
 
       anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
          prim.IndirectParameterEnable  = true;
@@ -3144,8 +3153,10 @@ void genX(CmdDispatchIndirect)(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute.base.pipeline;
    const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
-   struct anv_bo *bo = buffer->bo;
-   uint32_t bo_offset = buffer->offset + offset;
+   struct anv_address addr = {
+      .bo = buffer->bo,
+      .offset = buffer->offset + offset,
+   };
    struct anv_batch *batch = &cmd_buffer->batch;
 
    anv_cmd_buffer_push_base_group_id(cmd_buffer, 0, 0, 0);
@@ -3159,18 +3170,14 @@ void genX(CmdDispatchIndirect)(
       return;
 #endif
 
-   if (prog_data->uses_num_work_groups) {
-      cmd_buffer->state.compute.num_workgroups = (struct anv_address) {
-         .bo = bo,
-         .offset = bo_offset,
-      };
-   }
+   if (prog_data->uses_num_work_groups)
+      cmd_buffer->state.compute.num_workgroups = addr;
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
 
-   emit_lrm(batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
-   emit_lrm(batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
-   emit_lrm(batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
+   emit_lrm(batch, GPGPU_DISPATCHDIMX, addr.bo, addr.offset);
+   emit_lrm(batch, GPGPU_DISPATCHDIMY, addr.bo, addr.offset + 4);
+   emit_lrm(batch, GPGPU_DISPATCHDIMZ, addr.bo, addr.offset + 8);
 
 #if GEN_GEN <= 7
    /* Clear upper 32-bits of SRC0 and all 64-bits of SRC1 */
@@ -3179,7 +3186,7 @@ void genX(CmdDispatchIndirect)(
    emit_lri(batch, MI_PREDICATE_SRC1 + 4, 0);
 
    /* Load compute_dispatch_indirect_x_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 0);
+   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 0);
 
    /* predicate = (compute_dispatch_indirect_x_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
@@ -3189,7 +3196,7 @@ void genX(CmdDispatchIndirect)(
    }
 
    /* Load compute_dispatch_indirect_y_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 4);
+   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 4);
 
    /* predicate |= (compute_dispatch_indirect_y_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
@@ -3199,7 +3206,7 @@ void genX(CmdDispatchIndirect)(
    }
 
    /* Load compute_dispatch_indirect_z_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 8);
+   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 8);
 
    /* predicate |= (compute_dispatch_indirect_z_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
