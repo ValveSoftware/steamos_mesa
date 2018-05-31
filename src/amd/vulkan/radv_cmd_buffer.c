@@ -1585,6 +1585,7 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 					 ? cmd_buffer->state.compute_pipeline
 					 : cmd_buffer->state.pipeline;
 	struct radv_pipeline_layout *layout = pipeline->layout;
+	struct radv_shader_variant *shader, *prev_shader;
 	unsigned offset;
 	void *ptr;
 	uint64_t va;
@@ -1609,10 +1610,16 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 	                                                   cmd_buffer->cs, MESA_SHADER_STAGES * 4);
 
+	prev_shader = NULL;
 	radv_foreach_stage(stage, stages) {
-		if (pipeline->shaders[stage]) {
+		shader = radv_get_shader(pipeline, stage);
+
+		/* Avoid redundantly emitting the address for merged stages. */
+		if (shader && shader != prev_shader) {
 			radv_emit_userdata_address(cmd_buffer, pipeline, stage,
 						   AC_UD_PUSH_CONSTANTS, va);
+
+			prev_shader = shader;
 		}
 	}
 
