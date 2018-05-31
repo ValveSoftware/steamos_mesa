@@ -893,7 +893,6 @@ struct si_context {
 	int			last_sh_base_reg;
 	int			last_primitive_restart_en;
 	int			last_restart_index;
-	int			last_gs_out_prim;
 	int			last_prim;
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
