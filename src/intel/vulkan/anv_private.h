@@ -1144,6 +1144,22 @@ anv_address_add(struct anv_address addr, uint64_t offset)
    return addr;
 }
 
+static inline void
+write_reloc(const struct anv_device *device, void *p, uint64_t v, bool flush)
+{
+   unsigned reloc_size = 0;
+   if (device->info.gen >= 8) {
+      reloc_size = sizeof(uint64_t);
+      *(uint64_t *)p = gen_canonical_address(v);
+   } else {
+      reloc_size = sizeof(uint32_t);
+      *(uint32_t *)p = v;
+   }
+
+   if (flush && !device->info.has_llc)
+      gen_flush_range(p, reloc_size);
+}
+
 static inline uint64_t
 _anv_combine_address(struct anv_batch *batch, void *location,
                      const struct anv_address address, uint32_t delta)

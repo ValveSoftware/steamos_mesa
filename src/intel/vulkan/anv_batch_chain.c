@@ -1106,22 +1106,6 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static void
-write_reloc(const struct anv_device *device, void *p, uint64_t v, bool flush)
-{
-   unsigned reloc_size = 0;
-   if (device->info.gen >= 8) {
-      reloc_size = sizeof(uint64_t);
-      *(uint64_t *)p = gen_canonical_address(v);
-   } else {
-      reloc_size = sizeof(uint32_t);
-      *(uint32_t *)p = v;
-   }
-
-   if (flush && !device->info.has_llc)
-      gen_flush_range(p, reloc_size);
-}
-
-static void
 adjust_relocations_from_state_pool(struct anv_state_pool *pool,
                                    struct anv_reloc_list *relocs,
                                    uint32_t last_pool_center_bo_offset)

@@ -62,6 +62,12 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
                          ss_offset, address.buffer, address.offset + delta);
    if (result != VK_SUCCESS)
       anv_batch_set_error(&cmd_buffer->batch, result);
+
+   void *dest = cmd_buffer->device->surface_state_pool.block_pool.map +
+      ss_offset;
+   uint64_t val = ((struct anv_bo*)address.buffer)->offset + address.offset +
+      delta;
+   write_reloc(cmd_buffer->device, dest, val, false);
 }
 
 #if GEN_GEN >= 7 && GEN_GEN < 10
