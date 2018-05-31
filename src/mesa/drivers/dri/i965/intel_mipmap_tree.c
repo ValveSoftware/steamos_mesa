@@ -1013,7 +1013,7 @@ struct intel_mipmap_tree *
 intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    __DRIimage *image, GLenum target,
                                    mesa_format format,
-                                   bool is_winsys_image)
+                                   bool allow_internal_aux)
 {
    uint32_t bo_tiling, bo_swizzle;
    brw_bo_get_tiling(image->bo, &bo_tiling, &bo_swizzle);
@@ -1056,7 +1056,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
     * other hand, have no resolve point so we can't have aux without a
     * modifier.
     */
-   if (!is_winsys_image)
+   if (!allow_internal_aux)
       mt_create_flags |= MIPTREE_CREATE_NO_AUX;
 
    /* If we have a modifier which specifies aux, don't create one yet */
@@ -1105,7 +1105,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
        * as part of the flush operation.
        */
       mt->supports_fast_clear =
-         is_winsys_image || mod_info->supports_clear_color;
+         allow_internal_aux || mod_info->supports_clear_color;
 
       /* We don't know the actual state of the surface when we get it but we
        * can make a pretty good guess based on the modifier.  What we do know
