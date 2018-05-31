@@ -2630,8 +2630,7 @@ struct anv_image {
       /**
        * BO associated with this plane, set when bound.
        */
-      struct anv_bo *bo;
-      VkDeviceSize bo_offset;
+      struct anv_address address;
 
       /**
        * When destroying the image, also free the bo.
@@ -2691,11 +2690,8 @@ anv_image_get_clear_color_addr(const struct anv_device *device,
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-   return (struct anv_address) {
-      .bo = image->planes[plane].bo,
-      .offset = image->planes[plane].bo_offset +
-                image->planes[plane].fast_clear_state_offset,
-   };
+   return anv_address_add(image->planes[plane].address,
+                          image->planes[plane].fast_clear_state_offset);
 }
 
 static inline struct anv_address

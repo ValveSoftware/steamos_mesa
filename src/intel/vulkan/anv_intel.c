@@ -93,8 +93,10 @@ VkResult anv_CreateDmaBufImageINTEL(
    if (device->instance->physicalDevice.supports_48bit_addresses)
       mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
-   image->planes[0].bo = mem->bo;
-   image->planes[0].bo_offset = 0;
+   image->planes[0].address = (struct anv_address) {
+      .bo = mem->bo,
+      .offset = 0,
+   };
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);

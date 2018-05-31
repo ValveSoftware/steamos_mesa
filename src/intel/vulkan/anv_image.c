@@ -658,8 +658,9 @@ anv_DestroyImage(VkDevice _device, VkImage _image,
 
    for (uint32_t p = 0; p < image->n_planes; ++p) {
       if (image->planes[p].bo_is_owned) {
-         assert(image->planes[p].bo != NULL);
-         anv_bo_cache_release(device, &device->bo_cache, image->planes[p].bo);
+         assert(image->planes[p].address.bo != NULL);
+         anv_bo_cache_release(device, &device->bo_cache,
+                              image->planes[p].address.bo);
       }
    }
 
@@ -675,13 +676,14 @@ static void anv_image_bind_memory_plane(struct anv_device *device,
    assert(!image->planes[plane].bo_is_owned);
 
    if (!memory) {
-      image->planes[plane].bo = NULL;
-      image->planes[plane].bo_offset = 0;
+      image->planes[plane].address = ANV_NULL_ADDRESS;
       return;
    }
 
-   image->planes[plane].bo = memory->bo;
-   image->planes[plane].bo_offset = memory_offset;
+   image->planes[plane].address = (struct anv_address) {
+      .bo = memory->bo,
+      .offset = memory_offset,
+   };
 }
 
 VkResult anv_BindImageMemory(
@@ -1067,10 +1069,8 @@ anv_image_fill_surface_state(struct anv_device *device,
    if (!clear_color)
       clear_color = &default_clear_color;
 
-   const struct anv_address address = {
-      .bo = image->planes[plane].bo,
-      .offset = image->planes[plane].bo_offset + surface->offset,
-   };
+   const struct anv_address address =
+      anv_address_add(image->planes[plane].address, surface->offset);
 
    if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
        !(flags & ANV_IMAGE_VIEW_STATE_STORAGE_WRITE_ONLY) &&
@@ -1159,10 +1159,8 @@ anv_image_fill_surface_state(struct anv_device *device,
 
       struct anv_address aux_address = ANV_NULL_ADDRESS;
       if (aux_usage != ISL_AUX_USAGE_NONE) {
-         aux_address = (struct anv_address) {
-            .bo = image->planes[plane].bo,
-            .offset = image->planes[plane].bo_offset + aux_surface->offset,
-         };
+         aux_address = anv_address_add(image->planes[plane].address,
+                                       aux_surface->offset);
       }
       state_inout->aux_address = aux_address;
 

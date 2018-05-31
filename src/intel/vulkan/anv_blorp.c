@@ -207,8 +207,8 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
    *blorp_surf = (struct blorp_surf) {
       .surf = &surface->isl,
       .addr = {
-         .buffer = image->planes[plane].bo,
-         .offset = image->planes[plane].bo_offset + surface->offset,
+         .buffer = image->planes[plane].address.bo,
+         .offset = image->planes[plane].address.offset + surface->offset,
          .mocs = device->default_mocs,
       },
    };
@@ -217,8 +217,8 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
       const struct anv_surface *aux_surface = &image->planes[plane].aux_surface;
       blorp_surf->aux_surf = &aux_surface->isl,
       blorp_surf->aux_addr = (struct blorp_address) {
-         .buffer = image->planes[plane].bo,
-         .offset = image->planes[plane].bo_offset + aux_surface->offset,
+         .buffer = image->planes[plane].address.bo,
+         .offset = image->planes[plane].address.offset + aux_surface->offset,
          .mocs = device->default_mocs,
       };
       blorp_surf->aux_usage = aux_usage;
@@ -1411,8 +1411,8 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
    struct blorp_surf shadow_surf = {
       .surf = &image->planes[0].shadow_surface.isl,
       .addr = {
-         .buffer = image->planes[0].bo,
-         .offset = image->planes[0].bo_offset +
+         .buffer = image->planes[0].address.bo,
+         .offset = image->planes[0].address.offset +
                    image->planes[0].shadow_surface.offset,
          .mocs = cmd_buffer->device->default_mocs,
       },
