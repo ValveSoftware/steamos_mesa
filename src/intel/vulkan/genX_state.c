@@ -121,18 +121,6 @@ genX(init_device_state)(struct anv_device *device)
    }
 #endif
 
-#if GEN_GEN == 10 || GEN_GEN == 11
-   uint32_t cache_mode_ss;
-   anv_pack_struct(&cache_mode_ss, GENX(CACHE_MODE_SS),
-                   .FloatBlendOptimizationEnable = true,
-                   .FloatBlendOptimizationEnableMask = true);
-
-   anv_batch_emit(&batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
-      lri.RegisterOffset = GENX(CACHE_MODE_SS_num);
-      lri.DataDWord      = cache_mode_ss;
-   }
-#endif
-
    anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS), aa);
 
    anv_batch_emit(&batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
