@@ -843,20 +843,18 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
          anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP, noop);
 
       cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
-   }
-
-   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
-
-   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
+   } else {
+      assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);
       /* If this is a secondary command buffer, we need to determine the
        * mode in which it will be executed with vkExecuteCommands.  We
        * determine this statically here so that this stays in sync with the
        * actual ExecuteCommands implementation.
        */
+      const uint32_t length = cmd_buffer->batch.next - cmd_buffer->batch.start;
       if (!cmd_buffer->device->can_chain_batches) {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_GROW_AND_EMIT;
       } else if ((cmd_buffer->batch_bos.next == cmd_buffer->batch_bos.prev) &&
-          (batch_bo->length < ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
+                 (length < ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
          /* If the secondary has exactly one batch buffer in its list *and*
           * that batch buffer is less than half of the maximum size, we're
           * probably better of simply copying it into our batch.
@@ -877,6 +875,8 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
       }
    }
+
+   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
 }
 
 static VkResult
