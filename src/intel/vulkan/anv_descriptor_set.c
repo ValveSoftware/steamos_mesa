@@ -746,10 +746,7 @@ anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
 
       bview->format = anv_isl_format_for_descriptor_type(type);
       bview->range = anv_buffer_get_range(buffer, offset, range);
-      bview->address = (struct anv_address) {
-         .bo = buffer->bo,
-         .offset = buffer->offset + offset,
-      };
+      bview->address = anv_address_add(buffer->address, offset);
 
       /* If we're writing descriptors through a push command, we need to
        * allocate the surface state from the command buffer. Otherwise it will

@@ -1558,8 +1558,7 @@ struct anv_buffer {
    VkBufferUsageFlags                           usage;
 
    /* Set when bound */
-   struct anv_bo *                              bo;
-   VkDeviceSize                                 offset;
+   struct anv_address                           address;
 };
 
 static inline uint64_t

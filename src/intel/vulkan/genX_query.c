@@ -686,19 +686,14 @@ gpu_write_query_result(struct anv_batch *batch,
 
    anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
       srm.RegisterAddress  = reg;
-      srm.MemoryAddress    = (struct anv_address) {
-         .bo = dst_buffer->bo,
-         .offset = dst_buffer->offset + dst_offset,
-      };
+      srm.MemoryAddress    = anv_address_add(dst_buffer->address, dst_offset);
    }
 
    if (flags & VK_QUERY_RESULT_64_BIT) {
       anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
          srm.RegisterAddress  = reg + 4;
-         srm.MemoryAddress    = (struct anv_address) {
-            .bo = dst_buffer->bo,
-            .offset = dst_buffer->offset + dst_offset + 4,
-         };
+         srm.MemoryAddress    = anv_address_add(dst_buffer->address,
+                                                dst_offset + 4);
       }
    }
 }

@@ -154,8 +154,8 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
    *blorp_surf = (struct blorp_surf) {
       .surf = isl_surf,
       .addr = {
-         .buffer = buffer->bo,
-         .offset = buffer->offset + offset,
+         .buffer = buffer->address.bo,
+         .offset = buffer->address.offset + offset,
          .mocs = device->default_mocs,
       },
    };
@@ -662,13 +662,13 @@ void anv_CmdCopyBuffer(
 
    for (unsigned r = 0; r < regionCount; r++) {
       struct blorp_address src = {
-         .buffer = src_buffer->bo,
-         .offset = src_buffer->offset + pRegions[r].srcOffset,
+         .buffer = src_buffer->address.bo,
+         .offset = src_buffer->address.offset + pRegions[r].srcOffset,
          .mocs = cmd_buffer->device->default_mocs,
       };
       struct blorp_address dst = {
-         .buffer = dst_buffer->bo,
-         .offset = dst_buffer->offset + pRegions[r].dstOffset,
+         .buffer = dst_buffer->address.bo,
+         .offset = dst_buffer->address.offset + pRegions[r].dstOffset,
          .mocs = cmd_buffer->device->default_mocs,
       };
 
@@ -720,8 +720,8 @@ void anv_CmdUpdateBuffer(
          .mocs = cmd_buffer->device->default_mocs,
       };
       struct blorp_address dst = {
-         .buffer = dst_buffer->bo,
-         .offset = dst_buffer->offset + dstOffset,
+         .buffer = dst_buffer->address.bo,
+         .offset = dst_buffer->address.offset + dstOffset,
          .mocs = cmd_buffer->device->default_mocs,
       };
 

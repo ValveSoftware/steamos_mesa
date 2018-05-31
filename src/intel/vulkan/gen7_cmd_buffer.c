@@ -247,10 +247,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
          ib.IndexFormat                = cmd_buffer->state.gfx.gen7.index_type;
          ib.MemoryObjectControlState   = GENX(MOCS);
 
-         ib.BufferStartingAddress =
-            (struct anv_address) { buffer->bo, buffer->offset + offset };
-         ib.BufferEndingAddress =
-            (struct anv_address) { buffer->bo, buffer->offset + buffer->size };
+         ib.BufferStartingAddress      = anv_address_add(buffer->address,
+                                                         offset);
+         ib.BufferEndingAddress        = anv_address_add(buffer->address,
+                                                         buffer->size);
       }
    }
 

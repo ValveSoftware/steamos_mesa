@@ -2516,11 +2516,12 @@ anv_bind_buffer_memory(const VkBindBufferMemoryInfo *pBindInfo)
 
    if (mem) {
       assert((buffer->usage & mem->type->valid_buffer_usage) == buffer->usage);
-      buffer->bo = mem->bo;
-      buffer->offset = pBindInfo->memoryOffset;
+      buffer->address = (struct anv_address) {
+         .bo = mem->bo,
+         .offset = pBindInfo->memoryOffset,
+      };
    } else {
-      buffer->bo = NULL;
-      buffer->offset = 0;
+      buffer->address = ANV_NULL_ADDRESS;
    }
 }
 
@@ -2686,8 +2687,7 @@ VkResult anv_CreateBuffer(
 
    buffer->size = pCreateInfo->size;
    buffer->usage = pCreateInfo->usage;
-   buffer->bo = NULL;
-   buffer->offset = 0;
+   buffer->address = ANV_NULL_ADDRESS;
 
    *pBuffer = anv_buffer_to_handle(buffer);
 

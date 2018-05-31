@@ -2112,10 +2112,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          /* Clamp the range to the buffer size */
          uint32_t range = MIN2(desc->range, desc->buffer->size - offset);
 
-         struct anv_address address = {
-            .bo = desc->buffer->bo,
-            .offset = desc->buffer->offset + offset,
-         };
+         struct anv_address address =
+            anv_address_add(desc->buffer->address, offset);
 
          surface_state =
             anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
@@ -2409,11 +2407,8 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
 
                   read_len = MIN2(range->length,
                      DIV_ROUND_UP(buf_range, 32) - range->start);
-                  read_addr = (struct anv_address) {
-                     .bo = desc->buffer->bo,
-                     .offset = desc->buffer->offset + buf_offset +
-                               range->start * 32,
-                  };
+                  read_addr = anv_address_add(desc->buffer->address,
+                                              buf_offset + range->start * 32);
                }
 
                if (read_len > 0) {
@@ -2501,12 +2496,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
             .AddressModifyEnable = true,
             .BufferPitch = pipeline->binding_stride[vb],
-            .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
+            .BufferStartingAddress = anv_address_add(buffer->address, offset),
 
 #if GEN_GEN >= 8
             .BufferSize = buffer->size - offset
 #else
-            .EndAddress = { buffer->bo, buffer->offset + buffer->size - 1},
+            .EndAddress = anv_address_add(buffer->address, buffer->size - 1),
 #endif
          };
 
@@ -2857,10 +2852,7 @@ void genX(CmdDrawIndirect)(
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    for (uint32_t i = 0; i < drawCount; i++) {
-      struct anv_address draw = {
-         .bo = buffer->bo,
-         .offset = buffer->offset + offset,
-      };
+      struct anv_address draw = anv_address_add(buffer->address, offset);
 
       if (vs_prog_data->uses_firstvertex ||
           vs_prog_data->uses_baseinstance)
@@ -2898,10 +2890,7 @@ void genX(CmdDrawIndexedIndirect)(
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    for (uint32_t i = 0; i < drawCount; i++) {
-      struct anv_address draw = {
-         .bo = buffer->bo,
-         .offset = buffer->offset + offset,
-      };
+      struct anv_address draw = anv_address_add(buffer->address, offset);
 
       /* TODO: We need to stomp base vertex to 0 somehow */
       if (vs_prog_data->uses_firstvertex ||
@@ -3153,10 +3142,7 @@ void genX(CmdDispatchIndirect)(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute.base.pipeline;
    const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
-   struct anv_address addr = {
-      .bo = buffer->bo,
-      .offset = buffer->offset + offset,
-   };
+   struct anv_address addr = anv_address_add(buffer->address, offset);
    struct anv_batch *batch = &cmd_buffer->batch;
 
    anv_cmd_buffer_push_base_group_id(cmd_buffer, 0, 0, 0);

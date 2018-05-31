@@ -1471,10 +1471,7 @@ anv_CreateBufferView(VkDevice _device,
                                               pCreateInfo->range);
    view->range = align_down_npot_u32(view->range, format_bs);
 
-   view->address = (struct anv_address) {
-      .bo = buffer->bo,
-      .offset = buffer->offset + pCreateInfo->offset,
-   };
+   view->address = anv_address_add(buffer->address, pCreateInfo->offset);
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
       view->surface_state = alloc_surface_state(device);
