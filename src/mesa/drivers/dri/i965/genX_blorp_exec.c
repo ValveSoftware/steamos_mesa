@@ -189,6 +189,35 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
    return data;
 }
 
+/**
+ * See vf_invalidate_for_vb_48b_transitions in genX_state_upload.c.
+ */
+static void
+blorp_vf_invalidate_for_vb_48b_transitions(struct blorp_batch *batch,
+                                           const struct blorp_address *addrs,
+                                           unsigned num_vbs)
+{
+#if GEN_GEN >= 8
+   struct brw_context *brw = batch->driver_batch;
+   bool need_invalidate = false;
+
+   for (unsigned i = 0; i < num_vbs; i++) {
+      struct brw_bo *bo = addrs[i].buffer;
+      uint16_t high_bits =
+         bo && (bo->kflags & EXEC_OBJECT_PINNED) ? bo->gtt_offset >> 32u : 0;
+
+      if (high_bits != brw->vb.last_bo_high_bits[i]) {
+         need_invalidate = true;
+         brw->vb.last_bo_high_bits[i] = high_bits;
+      }
+   }
+
+   if (need_invalidate) {
+      brw_emit_pipe_control_flush(brw, PIPE_CONTROL_VF_CACHE_INVALIDATE);
+   }
+#endif
+}
+
 #if GEN_GEN >= 8
 static struct blorp_address
 blorp_get_workaround_page(struct blorp_batch *batch)

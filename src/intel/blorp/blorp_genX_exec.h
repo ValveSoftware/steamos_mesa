@@ -59,6 +59,10 @@ blorp_alloc_dynamic_state(struct blorp_batch *batch,
 static void *
 blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
                           struct blorp_address *addr);
+static void
+blorp_vf_invalidate_for_vb_48b_transitions(struct blorp_batch *batch,
+                                           const struct blorp_address *addrs,
+                                           unsigned num_vbs);
 
 #if GEN_GEN >= 8
 static struct blorp_address
@@ -334,18 +338,21 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    uint32_t num_vbs = 2;
    memset(vb, 0, sizeof(vb));
 
-   struct blorp_address addr;
+   struct blorp_address addrs[2] = {};
    uint32_t size;
-   blorp_emit_vertex_data(batch, params, &addr, &size);
-   blorp_fill_vertex_buffer_state(batch, vb, 0, addr, size, 3 * sizeof(float));
+   blorp_emit_vertex_data(batch, params, &addrs[0], &size);
+   blorp_fill_vertex_buffer_state(batch, vb, 0, addrs[0], size,
+                                  3 * sizeof(float));
 
-   blorp_emit_input_varying_data(batch, params, &addr, &size);
-   blorp_fill_vertex_buffer_state(batch, vb, 1, addr, size, 0);
+   blorp_emit_input_varying_data(batch, params, &addrs[1], &size);
+   blorp_fill_vertex_buffer_state(batch, vb, 1, addrs[1], size, 0);
 
    const unsigned num_dwords = 1 + num_vbs * GENX(VERTEX_BUFFER_STATE_length);
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
    if (!dw)
       return;
+
+   blorp_vf_invalidate_for_vb_48b_transitions(batch, addrs, num_vbs);
 
    for (unsigned i = 0; i < num_vbs; i++) {
       GENX(VERTEX_BUFFER_STATE_pack)(batch, dw, &vb[i]);
