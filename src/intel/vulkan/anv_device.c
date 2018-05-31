@@ -2711,10 +2711,11 @@ void anv_DestroyBuffer(
 void
 anv_fill_buffer_surface_state(struct anv_device *device, struct anv_state state,
                               enum isl_format format,
-                              uint32_t offset, uint32_t range, uint32_t stride)
+                              struct anv_address address,
+                              uint32_t range, uint32_t stride)
 {
    isl_buffer_fill_state(&device->isl_dev, state.map,
-                         .address = offset,
+                         .address = anv_address_physical(address),
                          .mocs = device->default_mocs,
                          .size = range,
                          .format = format,

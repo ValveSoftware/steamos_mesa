@@ -1978,7 +1978,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       const enum isl_format format =
          anv_isl_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
       anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
-                                    format, bo_offset, 12, 1);
+                                    format,
+                                    cmd_buffer->state.compute.num_workgroups,
+                                    12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
@@ -2095,8 +2097,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          surface_state = desc->buffer_view->surface_state;
          assert(surface_state.alloc_size);
          add_surface_state_reloc(cmd_buffer, surface_state,
-                                 desc->buffer_view->bo,
-                                 desc->buffer_view->offset);
+                                 desc->buffer_view->address.bo,
+                                 desc->buffer_view->address.offset);
          break;
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -2110,16 +2112,20 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          /* Clamp the range to the buffer size */
          uint32_t range = MIN2(desc->range, desc->buffer->size - offset);
 
+         struct anv_address address = {
+            .bo = desc->buffer->bo,
+            .offset = desc->buffer->offset + offset,
+         };
+
          surface_state =
             anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
          enum isl_format format =
             anv_isl_format_for_descriptor_type(desc->type);
 
          anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
-                                       format, offset, range, 1);
+                                       format, address, range, 1);
          add_surface_state_reloc(cmd_buffer, surface_state,
-                                 desc->buffer->bo,
-                                 desc->buffer->offset + offset);
+                                 address.bo, address.offset);
          break;
       }
 
@@ -2129,8 +2135,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             : desc->buffer_view->storage_surface_state;
          assert(surface_state.alloc_size);
          add_surface_state_reloc(cmd_buffer, surface_state,
-                                 desc->buffer_view->bo,
-                                 desc->buffer_view->offset);
+                                 desc->buffer_view->address.bo,
+                                 desc->buffer_view->address.offset);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
@@ -2389,11 +2395,8 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
                if (desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
                   read_len = MIN2(range->length,
                      DIV_ROUND_UP(desc->buffer_view->range, 32) - range->start);
-                  read_addr = (struct anv_address) {
-                     .bo = desc->buffer_view->bo,
-                     .offset = desc->buffer_view->offset +
-                               range->start * 32,
-                  };
+                  read_addr = anv_address_add(desc->buffer_view->address,
+                                              range->start * 32);
                } else {
                   assert(desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 

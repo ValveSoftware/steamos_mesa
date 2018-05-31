@@ -1388,9 +1388,9 @@ struct anv_descriptor_set {
 
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */
-   struct anv_bo *bo;
-   uint32_t offset; /**< Offset into bo. */
    uint64_t range; /**< VkBufferViewCreateInfo::range */
+
+   struct anv_address address;
 
    struct anv_state surface_state;
    struct anv_state storage_surface_state;
@@ -2993,8 +2993,8 @@ anv_sanitize_image_offset(const VkImageType imageType,
 void anv_fill_buffer_surface_state(struct anv_device *device,
                                    struct anv_state state,
                                    enum isl_format format,
-                                   uint32_t offset, uint32_t range,
-                                   uint32_t stride);
+                                   struct anv_address address,
+                                   uint32_t range, uint32_t stride);
 
 static inline void
 anv_clear_color_from_att_state(union isl_color_value *clear_color,

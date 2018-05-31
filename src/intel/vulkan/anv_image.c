@@ -1467,18 +1467,21 @@ anv_CreateBufferView(VkDevice _device,
                                      VK_IMAGE_ASPECT_COLOR_BIT,
                                      VK_IMAGE_TILING_LINEAR);
    const uint32_t format_bs = isl_format_get_layout(view->format)->bpb / 8;
-   view->bo = buffer->bo;
-   view->offset = buffer->offset + pCreateInfo->offset;
    view->range = anv_buffer_get_range(buffer, pCreateInfo->offset,
                                               pCreateInfo->range);
    view->range = align_down_npot_u32(view->range, format_bs);
+
+   view->address = (struct anv_address) {
+      .bo = buffer->bo,
+      .offset = buffer->offset + pCreateInfo->offset,
+   };
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
       view->surface_state = alloc_surface_state(device);
 
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
-                                    view->offset, view->range, format_bs);
+                                    view->address, view->range, format_bs);
    } else {
       view->surface_state = (struct anv_state){ 0 };
    }
@@ -1495,14 +1498,14 @@ anv_CreateBufferView(VkDevice _device,
 
       anv_fill_buffer_surface_state(device, view->storage_surface_state,
                                     storage_format,
-                                    view->offset, view->range,
+                                    view->address, view->range,
                                     (storage_format == ISL_FORMAT_RAW ? 1 :
                                      isl_format_get_layout(storage_format)->bpb / 8));
 
       /* Write-only accesses should use the original format. */
       anv_fill_buffer_surface_state(device, view->writeonly_storage_surface_state,
                                     view->format,
-                                    view->offset, view->range,
+                                    view->address, view->range,
                                     isl_format_get_layout(view->format)->bpb / 8);
 
       isl_buffer_fill_image_param(&device->isl_dev,
