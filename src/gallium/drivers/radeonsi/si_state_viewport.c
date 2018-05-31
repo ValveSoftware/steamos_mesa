@@ -193,8 +193,7 @@ static void si_emit_guardband(struct si_context *ctx)
 	discard_x = 1.0;
 	discard_y = 1.0;
 
-	if (unlikely(util_prim_is_points_or_lines(ctx->current_rast_prim)) &&
-	    ctx->queued.named.rasterizer) {
+	if (unlikely(util_prim_is_points_or_lines(ctx->current_rast_prim))) {
 		/* When rendering wide points or lines, we need to be more
 		 * conservative about when to discard them entirely. */
 		const struct si_state_rasterizer *rs = ctx->queued.named.rasterizer;
@@ -229,10 +228,7 @@ static void si_emit_scissors(struct si_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	struct pipe_scissor_state *states = ctx->scissors.states;
 	unsigned mask = ctx->scissors.dirty_mask;
-	bool scissor_enabled = false;
-
-	if (ctx->queued.named.rasterizer)
-		scissor_enabled = ctx->queued.named.rasterizer->scissor_enable;
+	bool scissor_enabled = ctx->queued.named.rasterizer->scissor_enable;
 
 	/* The simple case: Only 1 viewport is active. */
 	if (!ctx->vs_writes_viewport_index) {
@@ -348,12 +344,9 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	struct pipe_viewport_state *states = ctx->viewports.states;
 	unsigned mask = ctx->viewports.depth_range_dirty_mask;
-	bool clip_halfz = false;
+	bool clip_halfz = ctx->queued.named.rasterizer->clip_halfz;
 	bool window_space = ctx->vs_disables_clipping_viewport;
 	float zmin, zmax;
-
-	if (ctx->queued.named.rasterizer)
-		clip_halfz = ctx->queued.named.rasterizer->clip_halfz;
 
 	/* The simple case: Only 1 viewport is active. */
 	if (!ctx->vs_writes_viewport_index) {

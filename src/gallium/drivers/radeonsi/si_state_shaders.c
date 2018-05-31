@@ -1418,65 +1418,63 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->part.ps.epilog.color_is_int10 &= sel->info.colors_written;
 		}
 
-		if (rs) {
-			bool is_poly = !util_prim_is_points_or_lines(sctx->current_rast_prim);
-			bool is_line = util_prim_is_lines(sctx->current_rast_prim);
+		bool is_poly = !util_prim_is_points_or_lines(sctx->current_rast_prim);
+		bool is_line = util_prim_is_lines(sctx->current_rast_prim);
 
-			key->part.ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
-			key->part.ps.prolog.flatshade_colors = rs->flatshade && sel->info.colors_read;
+		key->part.ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
+		key->part.ps.prolog.flatshade_colors = rs->flatshade && sel->info.colors_read;
 
-			if (sctx->queued.named.blend) {
-				key->part.ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
-							      rs->multisample_enable;
-			}
+		if (sctx->queued.named.blend) {
+			key->part.ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
+							   rs->multisample_enable;
+		}
 
-			key->part.ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
-			key->part.ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
-							      (is_line && rs->line_smooth)) &&
-							     sctx->framebuffer.nr_samples <= 1;
-			key->part.ps.epilog.clamp_color = rs->clamp_fragment_color;
+		key->part.ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
+		key->part.ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
+							   (is_line && rs->line_smooth)) &&
+							  sctx->framebuffer.nr_samples <= 1;
+		key->part.ps.epilog.clamp_color = rs->clamp_fragment_color;
 
-			if (sctx->ps_iter_samples > 1 &&
-			    sel->info.reads_samplemask) {
-				key->part.ps.prolog.samplemask_log_ps_iter =
-					util_logbase2(sctx->ps_iter_samples);
-			}
+		if (sctx->ps_iter_samples > 1 &&
+		    sel->info.reads_samplemask) {
+			key->part.ps.prolog.samplemask_log_ps_iter =
+				util_logbase2(sctx->ps_iter_samples);
+		}
 
-			if (rs->force_persample_interp &&
-			    rs->multisample_enable &&
-			    sctx->framebuffer.nr_samples > 1 &&
-			    sctx->ps_iter_samples > 1) {
-				key->part.ps.prolog.force_persp_sample_interp =
-					sel->info.uses_persp_center ||
-					sel->info.uses_persp_centroid;
+		if (rs->force_persample_interp &&
+		    rs->multisample_enable &&
+		    sctx->framebuffer.nr_samples > 1 &&
+		    sctx->ps_iter_samples > 1) {
+			key->part.ps.prolog.force_persp_sample_interp =
+				sel->info.uses_persp_center ||
+				sel->info.uses_persp_centroid;
 
-				key->part.ps.prolog.force_linear_sample_interp =
-					sel->info.uses_linear_center ||
-					sel->info.uses_linear_centroid;
-			} else if (rs->multisample_enable &&
-				   sctx->framebuffer.nr_samples > 1) {
-				key->part.ps.prolog.bc_optimize_for_persp =
-					sel->info.uses_persp_center &&
-					sel->info.uses_persp_centroid;
-				key->part.ps.prolog.bc_optimize_for_linear =
-					sel->info.uses_linear_center &&
-					sel->info.uses_linear_centroid;
-			} else {
-				/* Make sure SPI doesn't compute more than 1 pair
-				 * of (i,j), which is the optimization here. */
-				key->part.ps.prolog.force_persp_center_interp =
-					sel->info.uses_persp_center +
-					sel->info.uses_persp_centroid +
-					sel->info.uses_persp_sample > 1;
+			key->part.ps.prolog.force_linear_sample_interp =
+				sel->info.uses_linear_center ||
+				sel->info.uses_linear_centroid;
+		} else if (rs->multisample_enable &&
+			   sctx->framebuffer.nr_samples > 1) {
+			key->part.ps.prolog.bc_optimize_for_persp =
+				sel->info.uses_persp_center &&
+				sel->info.uses_persp_centroid;
+			key->part.ps.prolog.bc_optimize_for_linear =
+				sel->info.uses_linear_center &&
+				sel->info.uses_linear_centroid;
+		} else {
+			/* Make sure SPI doesn't compute more than 1 pair
+			 * of (i,j), which is the optimization here. */
+			key->part.ps.prolog.force_persp_center_interp =
+				sel->info.uses_persp_center +
+				sel->info.uses_persp_centroid +
+				sel->info.uses_persp_sample > 1;
 
-				key->part.ps.prolog.force_linear_center_interp =
-					sel->info.uses_linear_center +
-					sel->info.uses_linear_centroid +
-					sel->info.uses_linear_sample > 1;
+			key->part.ps.prolog.force_linear_center_interp =
+				sel->info.uses_linear_center +
+				sel->info.uses_linear_centroid +
+				sel->info.uses_linear_sample > 1;
 
-				if (sel->info.opcode_count[TGSI_OPCODE_INTERP_SAMPLE])
-					key->mono.u.ps.interpolate_at_sample_force_center = 1;
-			}
+			if (sel->info.opcode_count[TGSI_OPCODE_INTERP_SAMPLE])
+				key->mono.u.ps.interpolate_at_sample_force_center = 1;
 		}
 
 		key->part.ps.epilog.alpha_func = si_get_alpha_test_func(sctx);

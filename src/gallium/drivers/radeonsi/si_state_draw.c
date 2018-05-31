@@ -1229,15 +1229,10 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			return;
 	}
 
-	if (unlikely(!sctx->vs_shader.cso)) {
-		assert(0);
-		return;
-	}
-	if (unlikely(!sctx->ps_shader.cso && (!rs || !rs->rasterizer_discard))) {
-		assert(0);
-		return;
-	}
-	if (unlikely(!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES))) {
+	if (unlikely(!sctx->vs_shader.cso ||
+		     !rs ||
+		     (!sctx->ps_shader.cso && !rs->rasterizer_discard) ||
+		     (!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES)))) {
 		assert(0);
 		return;
 	}
