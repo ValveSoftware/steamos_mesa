@@ -165,28 +165,27 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
-                        struct anv_state state,
-                        struct anv_bo *bo, uint32_t offset)
+add_surface_reloc(struct anv_cmd_buffer *cmd_buffer,
+                  struct anv_state state, struct anv_address addr)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
 
    VkResult result =
       anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                         state.offset + isl_dev->ss.addr_offset, bo, offset);
+                         state.offset + isl_dev->ss.addr_offset,
+                         addr.bo, addr.offset);
    if (result != VK_SUCCESS)
       anv_batch_set_error(&cmd_buffer->batch, result);
 }
 
 static void
-add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
-                      struct anv_surface_state state)
+add_surface_state_relocs(struct anv_cmd_buffer *cmd_buffer,
+                         struct anv_surface_state state)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
 
    assert(!anv_address_is_null(state.address));
-   add_surface_state_reloc(cmd_buffer, state.state,
-                           state.address.bo, state.address.offset);
+   add_surface_reloc(cmd_buffer, state.state, state.address);
 
    if (!anv_address_is_null(state.aux_address)) {
       VkResult result =
@@ -1268,7 +1267,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &state->attachments[i].color,
                                          NULL);
 
-            add_image_view_relocs(cmd_buffer, state->attachments[i].color);
+            add_surface_state_relocs(cmd_buffer, state->attachments[i].color);
          } else {
             depth_stencil_attachment_compute_aux_usage(cmd_buffer->device,
                                                        state, i,
@@ -1287,7 +1286,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                          &state->attachments[i].input,
                                          NULL);
 
-            add_image_view_relocs(cmd_buffer, state->attachments[i].input);
+            add_surface_state_relocs(cmd_buffer, state->attachments[i].input);
          }
       }
    }
@@ -1968,9 +1967,6 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
    if (stage == MESA_SHADER_COMPUTE &&
        get_cs_prog_data(pipeline)->uses_num_work_groups) {
-      struct anv_bo *bo = cmd_buffer->state.compute.num_workgroups.bo;
-      uint32_t bo_offset = cmd_buffer->state.compute.num_workgroups.offset;
-
       struct anv_state surface_state;
       surface_state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer);
@@ -1983,7 +1979,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                     12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
+      add_surface_reloc(cmd_buffer, surface_state,
+                        cmd_buffer->state.compute.num_workgroups);
    }
 
    if (map->surface_count == 0)
@@ -2047,7 +2044,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             desc->image_view->planes[binding->plane].optimal_sampler_surface_state;
          surface_state = sstate.state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, sstate);
+         add_surface_state_relocs(cmd_buffer, sstate);
          break;
       }
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
@@ -2062,7 +2059,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                desc->image_view->planes[binding->plane].optimal_sampler_surface_state;
             surface_state = sstate.state;
             assert(surface_state.alloc_size);
-            add_image_view_relocs(cmd_buffer, sstate);
+            add_surface_state_relocs(cmd_buffer, sstate);
          } else {
             /* For color input attachments, we create the surface state at
              * vkBeginRenderPass time so that we can include aux and clear
@@ -2081,7 +2078,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             : desc->image_view->planes[binding->plane].storage_surface_state;
          surface_state = sstate.state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, sstate);
+         add_surface_state_relocs(cmd_buffer, sstate);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
@@ -2096,9 +2093,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
          surface_state = desc->buffer_view->surface_state;
          assert(surface_state.alloc_size);
-         add_surface_state_reloc(cmd_buffer, surface_state,
-                                 desc->buffer_view->address.bo,
-                                 desc->buffer_view->address.offset);
+         add_surface_reloc(cmd_buffer, surface_state,
+                           desc->buffer_view->address);
          break;
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -2122,8 +2118,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
          anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
                                        format, address, range, 1);
-         add_surface_state_reloc(cmd_buffer, surface_state,
-                                 address.bo, address.offset);
+         add_surface_reloc(cmd_buffer, surface_state, address);
          break;
       }
 
@@ -2132,9 +2127,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             ? desc->buffer_view->writeonly_storage_surface_state
             : desc->buffer_view->storage_surface_state;
          assert(surface_state.alloc_size);
-         add_surface_state_reloc(cmd_buffer, surface_state,
-                                 desc->buffer_view->address.bo,
-                                 desc->buffer_view->address.offset);
+         add_surface_reloc(cmd_buffer, surface_state,
+                           desc->buffer_view->address);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
