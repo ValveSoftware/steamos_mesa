@@ -136,13 +136,27 @@ static void si_emit_one_scissor(struct si_context *ctx,
 /* the range is [-MAX, MAX] */
 #define SI_MAX_VIEWPORT_RANGE 32768
 
-static void si_emit_guardband(struct si_context *ctx,
-			      struct si_signed_scissor *vp_as_scissor)
+static void si_emit_guardband(struct si_context *ctx)
 {
+	const struct si_signed_scissor *vp_as_scissor;
+	struct si_signed_scissor max_vp_scissor;
 	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	struct pipe_viewport_state vp;
 	float left, top, right, bottom, max_range, guardband_x, guardband_y;
 	float discard_x, discard_y;
+
+	if (ctx->vs_writes_viewport_index) {
+		/* Shaders can draw to any viewport. Make a union of all
+		 * viewports. */
+		max_vp_scissor = ctx->viewports.as_scissor[0];
+		for (unsigned i = 1; i < SI_MAX_VIEWPORTS; i++) {
+			si_scissor_make_union(&max_vp_scissor,
+					      &ctx->viewports.as_scissor[i]);
+		}
+		vp_as_scissor = &max_vp_scissor;
+	} else {
+		vp_as_scissor = &ctx->viewports.as_scissor[0];
+	}
 
 	/* Reconstruct the viewport transformation from the scissor. */
 	vp.translate[0] = (vp_as_scissor->minx + vp_as_scissor->maxx) / 2.0;
@@ -216,8 +230,6 @@ static void si_emit_scissors(struct si_context *ctx)
 	struct pipe_scissor_state *states = ctx->scissors.states;
 	unsigned mask = ctx->scissors.dirty_mask;
 	bool scissor_enabled = false;
-	struct si_signed_scissor max_vp_scissor;
-	int i;
 
 	if (ctx->queued.named.rasterizer)
 		scissor_enabled = ctx->queued.named.rasterizer->scissor_enable;
@@ -231,16 +243,9 @@ static void si_emit_scissors(struct si_context *ctx)
 
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
 		si_emit_one_scissor(ctx, cs, vp, scissor_enabled ? &states[0] : NULL);
-		si_emit_guardband(ctx, vp);
 		ctx->scissors.dirty_mask &= ~1; /* clear one bit */
 		return;
 	}
-
-	/* Shaders can draw to any viewport. Make a union of all viewports. */
-	max_vp_scissor = ctx->viewports.as_scissor[0];
-	for (i = 1; i < SI_MAX_VIEWPORTS; i++)
-		si_scissor_make_union(&max_vp_scissor,
-				      &ctx->viewports.as_scissor[i]);
 
 	while (mask) {
 		int start, count, i;
@@ -254,7 +259,6 @@ static void si_emit_scissors(struct si_context *ctx)
 					    scissor_enabled ? &states[i] : NULL);
 		}
 	}
-	si_emit_guardband(ctx, &max_vp_scissor);
 	ctx->scissors.dirty_mask = 0;
 }
 
@@ -280,6 +284,7 @@ static void si_set_viewport_states(struct pipe_context *pctx,
 	ctx->viewports.depth_range_dirty_mask |= mask;
 	ctx->scissors.dirty_mask |= mask;
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.viewports);
+	si_mark_atom_dirty(ctx, &ctx->atoms.s.guardband);
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.scissors);
 }
 
@@ -419,7 +424,13 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 	}
 
 	/* Viewport index handling. */
+	if (ctx->vs_writes_viewport_index == info->writes_viewport_index)
+		return;
+
+	/* This changes how the guardband is computed. */
 	ctx->vs_writes_viewport_index = info->writes_viewport_index;
+	si_mark_atom_dirty(ctx, &ctx->atoms.s.guardband);
+
 	if (!ctx->vs_writes_viewport_index)
 		return;
 
@@ -433,6 +444,7 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 
 void si_init_viewport_functions(struct si_context *ctx)
 {
+	ctx->atoms.s.guardband.emit = si_emit_guardband;
 	ctx->atoms.s.scissors.emit = si_emit_scissors;
 	ctx->atoms.s.viewports.emit = si_emit_viewport_states;
 

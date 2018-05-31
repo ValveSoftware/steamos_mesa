@@ -1007,12 +1007,15 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_poly_offset_state(sctx);
 
 	if (!old_rs ||
-	    (old_rs->scissor_enable != rs->scissor_enable ||
-	     old_rs->line_width != rs->line_width ||
-	     old_rs->max_point_size != rs->max_point_size)) {
+	    old_rs->scissor_enable != rs->scissor_enable) {
 		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 		si_mark_atom_dirty(sctx, &sctx->atoms.s.scissors);
 	}
+
+	if (!old_rs ||
+	    old_rs->line_width != rs->line_width ||
+	    old_rs->max_point_size != rs->max_point_size)
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.guardband);
 
 	if (!old_rs ||
 	    old_rs->clip_halfz != rs->clip_halfz) {

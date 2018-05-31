@@ -1277,10 +1277,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (rast_prim != sctx->current_rast_prim) {
 		bool old_is_poly = sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES;
 		bool new_is_poly = rast_prim >= PIPE_PRIM_TRIANGLES;
-		if (old_is_poly != new_is_poly) {
-			sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-			si_mark_atom_dirty(sctx, &sctx->atoms.s.scissors);
-		}
+		if (old_is_poly != new_is_poly)
+			si_mark_atom_dirty(sctx, &sctx->atoms.s.guardband);
 
 		sctx->current_rast_prim = rast_prim;
 		sctx->do_update_shaders = true;

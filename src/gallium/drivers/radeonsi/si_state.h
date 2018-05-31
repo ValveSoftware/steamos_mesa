@@ -207,6 +207,7 @@ union si_state_atoms {
 		struct si_atom clip_regs;
 		struct si_atom clip_state;
 		struct si_atom shader_pointers;
+		struct si_atom guardband;
 		struct si_atom scissors;
 		struct si_atom viewports;
 		struct si_atom stencil_ref;
@@ -234,6 +235,7 @@ static inline unsigned si_atoms_that_roll_context(void)
 		SI_ATOM_BIT(blend_color) |
 		SI_ATOM_BIT(clip_regs) |
 		SI_ATOM_BIT(clip_state) |
+		SI_ATOM_BIT(guardband) |
 		SI_ATOM_BIT(scissors) |
 		SI_ATOM_BIT(viewports) |
 		SI_ATOM_BIT(stencil_ref) |
