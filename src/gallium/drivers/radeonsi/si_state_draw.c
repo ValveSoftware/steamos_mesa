@@ -66,7 +66,7 @@ static unsigned si_conv_pipe_prim(unsigned mode)
  * The information about LDS and other non-compile-time parameters is then
  * written to userdata SGPRs.
  */
-static void si_emit_derived_tess_state(struct si_context *sctx,
+static bool si_emit_derived_tess_state(struct si_context *sctx,
 				       const struct pipe_draw_info *info,
 				       unsigned *num_patches)
 {
@@ -110,7 +110,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	    (!has_primid_instancing_bug ||
 	     (sctx->last_tess_uses_primid == tess_uses_primid))) {
 		*num_patches = sctx->last_num_patches;
-		return;
+		return false;
 	}
 
 	sctx->last_ls = ls_current;
@@ -289,7 +289,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 					       ls_hs_config);
 		}
 		sctx->last_ls_hs_config = ls_hs_config;
+		return true; /* true if the context rolls */
 	}
+	return false;
 }
 
 static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)
@@ -512,11 +514,11 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 }
 
 /* rast_prim is the primitive type after GS. */
-static void si_emit_rasterizer_prim_state(struct si_context *sctx)
+static bool si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	enum pipe_prim_type rast_prim = sctx->current_rast_prim;
-	struct si_state_rasterizer *rs = sctx->emitted.named.rasterizer;
+	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 	/* Skip this if not rendering lines. */
 	if (rast_prim != PIPE_PRIM_LINES &&
@@ -524,11 +526,11 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 	    rast_prim != PIPE_PRIM_LINE_STRIP &&
 	    rast_prim != PIPE_PRIM_LINES_ADJACENCY &&
 	    rast_prim != PIPE_PRIM_LINE_STRIP_ADJACENCY)
-		return;
+		return false;
 
 	if (rast_prim == sctx->last_rast_prim &&
 	    rs->pa_sc_line_stipple == sctx->last_sc_line_stipple)
-		return;
+		return false;
 
 	/* For lines, reset the stipple pattern at each primitive. Otherwise,
 	 * reset the stipple pattern at each packet (line strips, line loops).
@@ -539,6 +541,7 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 
 	sctx->last_rast_prim = rast_prim;
 	sctx->last_sc_line_stipple = rs->pa_sc_line_stipple;
+	return true; /* true if the context rolls */
 }
 
 static void si_emit_vs_state(struct si_context *sctx,
@@ -563,6 +566,14 @@ static void si_emit_vs_state(struct si_context *sctx,
 
 		sctx->last_vs_state = sctx->current_vs_state;
 	}
+}
+
+static inline bool si_prim_restart_index_changed(struct si_context *sctx,
+						 const struct pipe_draw_info *info)
+{
+	return info->primitive_restart &&
+	       (info->restart_index != sctx->last_restart_index ||
+		sctx->last_restart_index == SI_RESTART_INDEX_UNKNOWN);
 }
 
 static void si_emit_draw_registers(struct si_context *sctx,
@@ -607,9 +618,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 		sctx->last_primitive_restart_en = info->primitive_restart;
 
 	}
-	if (info->primitive_restart &&
-	    (info->restart_index != sctx->last_restart_index ||
-	     sctx->last_restart_index == SI_RESTART_INDEX_UNKNOWN)) {
+	if (si_prim_restart_index_changed(sctx, info)) {
 		radeon_set_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
 				       info->restart_index);
 		sctx->last_restart_index = info->restart_index;
@@ -1152,6 +1161,28 @@ static void si_get_draw_start_count(struct si_context *sctx,
 static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_info *info,
 			       unsigned skip_atom_mask)
 {
+	unsigned num_patches = 0;
+	bool context_roll = false; /* set correctly for GFX9 only */
+
+	context_roll |= si_emit_rasterizer_prim_state(sctx);
+	if (sctx->tes_shader.cso)
+		context_roll |= si_emit_derived_tess_state(sctx, info, &num_patches);
+	if (info->count_from_stream_output)
+		context_roll = true;
+
+	/* Vega10/Raven scissor bug workaround. When any context register is
+	 * written (i.e. the GPU rolls the context), PA_SC_VPORT_SCISSOR
+	 * registers must be written too.
+	 */
+	if ((sctx->family == CHIP_VEGA10 || sctx->family == CHIP_RAVEN) &&
+	    (context_roll ||
+	     sctx->dirty_atoms & si_atoms_that_roll_context() ||
+	     sctx->dirty_states & si_states_that_roll_context() ||
+	     si_prim_restart_index_changed(sctx, info))) {
+		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+		si_mark_atom_dirty(sctx, &sctx->atoms.s.scissors);
+	}
+
 	/* Emit state atoms. */
 	unsigned mask = sctx->dirty_atoms & ~skip_atom_mask;
 	while (mask)
@@ -1174,11 +1205,6 @@ static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_i
 	sctx->dirty_states = 0;
 
 	/* Emit draw states. */
-	unsigned num_patches = 0;
-
-	si_emit_rasterizer_prim_state(sctx);
-	if (sctx->tes_shader.cso)
-		si_emit_derived_tess_state(sctx, info, &num_patches);
 	si_emit_vs_state(sctx, info);
 	si_emit_draw_registers(sctx, info, num_patches);
 }
@@ -1383,16 +1409,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 */
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
-
-	/* Vega10/Raven scissor bug workaround. This must be done before VPORT
-	 * scissor registers are changed. There is also a more efficient but
-	 * more involved alternative workaround.
-	 */
-	if ((sctx->family == CHIP_VEGA10 || sctx->family == CHIP_RAVEN) &&
-	    si_is_atom_dirty(sctx, &sctx->atoms.s.scissors)) {
-		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
-		si_emit_cache_flush(sctx);
-	}
 
 	/* Use optimal packet order based on whether we need to sync the pipeline. */
 	if (unlikely(sctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |

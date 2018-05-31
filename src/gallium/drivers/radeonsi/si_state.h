@@ -172,7 +172,23 @@ union si_state {
 	struct si_pm4_state	*array[0];
 };
 
+#define SI_STATE_IDX(name) \
+	(offsetof(union si_state, named.name) / sizeof(struct si_pm4_state *))
+#define SI_STATE_BIT(name) (1 << SI_STATE_IDX(name))
 #define SI_NUM_STATES (sizeof(union si_state) / sizeof(struct si_pm4_state *))
+
+static inline unsigned si_states_that_roll_context(void)
+{
+	return (SI_STATE_BIT(blend) |
+		SI_STATE_BIT(rasterizer) |
+		SI_STATE_BIT(dsa) |
+		SI_STATE_BIT(poly_offset) |
+		SI_STATE_BIT(es) |
+		SI_STATE_BIT(gs) |
+		SI_STATE_BIT(vgt_shader_config) |
+		SI_STATE_BIT(vs) |
+		SI_STATE_BIT(ps));
+}
 
 union si_state_atoms {
 	struct {
@@ -200,7 +216,30 @@ union si_state_atoms {
 	struct si_atom array[0];
 };
 
+#define SI_ATOM_BIT(name) (1 << (offsetof(union si_state_atoms, s.name) / \
+			         sizeof(struct si_atom)))
 #define SI_NUM_ATOMS (sizeof(union si_state_atoms)/sizeof(struct si_atom*))
+
+static inline unsigned si_atoms_that_roll_context(void)
+{
+	return (SI_ATOM_BIT(streamout_begin) |
+		SI_ATOM_BIT(streamout_enable) |
+		SI_ATOM_BIT(framebuffer) |
+		SI_ATOM_BIT(msaa_sample_locs) |
+		SI_ATOM_BIT(db_render_state) |
+		SI_ATOM_BIT(dpbb_state) |
+		SI_ATOM_BIT(msaa_config) |
+		SI_ATOM_BIT(sample_mask) |
+		SI_ATOM_BIT(cb_render_state) |
+		SI_ATOM_BIT(blend_color) |
+		SI_ATOM_BIT(clip_regs) |
+		SI_ATOM_BIT(clip_state) |
+		SI_ATOM_BIT(scissors) |
+		SI_ATOM_BIT(viewports) |
+		SI_ATOM_BIT(stencil_ref) |
+		SI_ATOM_BIT(spi_map) |
+		SI_ATOM_BIT(scratch_state));
+}
 
 struct si_shader_data {
 	uint32_t		sh_base[SI_NUM_SHADERS];
@@ -343,9 +382,6 @@ struct si_buffer_resources {
 	unsigned			enabled_mask;
 };
 
-#define si_pm4_block_idx(member) \
-	(offsetof(union si_state, named.member) / sizeof(struct si_pm4_state *))
-
 #define si_pm4_state_changed(sctx, member) \
 	((sctx)->queued.named.member != (sctx)->emitted.named.member)
 
@@ -355,7 +391,7 @@ struct si_buffer_resources {
 #define si_pm4_bind_state(sctx, member, value) \
 	do { \
 		(sctx)->queued.named.member = (value); \
-		(sctx)->dirty_states |= 1 << si_pm4_block_idx(member); \
+		(sctx)->dirty_states |= SI_STATE_BIT(member); \
 	} while(0)
 
 #define si_pm4_delete_state(sctx, member, value) \
@@ -364,7 +400,7 @@ struct si_buffer_resources {
 			(sctx)->queued.named.member = NULL; \
 		} \
 		si_pm4_free_state(sctx, (struct si_pm4_state *)(value), \
-				  si_pm4_block_idx(member)); \
+				  SI_STATE_IDX(member)); \
 	} while(0)
 
 /* si_descriptors.c */
