@@ -1688,9 +1688,18 @@ intel_update_image_buffer(struct brw_context *intel,
    if (last_mt && last_mt->bo == buffer->bo)
       return;
 
+   /* Only allow internal compression if samples == 0.  For multisampled
+    * window system buffers, the only thing the single-sampled buffer is used
+    * for is as a resolve target.  If we do any compression beyond what is
+    * supported by the window system, we will just have to resolve so it's
+    * probably better to just not bother.
+    */
+   const bool allow_internal_aux = (num_samples == 0);
+
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_dri_image(intel, buffer, GL_TEXTURE_2D,
-                                         intel_rb_format(rb), true);
+                                         intel_rb_format(rb),
+                                         allow_internal_aux);
    if (!mt)
       return;
 
