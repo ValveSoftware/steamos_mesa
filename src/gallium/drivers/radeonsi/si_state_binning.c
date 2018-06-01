@@ -66,7 +66,7 @@ static struct uvec2 si_find_bin_size(struct si_screen *sscreen,
 static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 					  unsigned cb_target_enabled_4bit)
 {
-	unsigned nr_samples = sctx->framebuffer.nr_samples;
+	unsigned num_fragments = sctx->framebuffer.nr_color_samples;
 	unsigned sum = 0;
 
 	/* Compute the sum of all Bpp. */
@@ -80,9 +80,9 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 	}
 
 	/* Multiply the sum by some function of the number of samples. */
-	if (nr_samples >= 2) {
+	if (num_fragments >= 2) {
 		if (si_get_ps_iter_samples(sctx) >= 2)
-			sum *= nr_samples;
+			sum *= num_fragments;
 		else
 			sum *= 2;
 	}
@@ -205,7 +205,7 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 	unsigned stencil_coeff = rtex->surface.has_stencil &&
 				 dsa->stencil_enabled ? 1 : 0;
 	unsigned sum = 4 * (depth_coeff + stencil_coeff) *
-		       sctx->framebuffer.nr_samples;
+		       rtex->buffer.b.b.nr_samples;
 
 	static const si_bin_size_subtable table[] = {
 		{
@@ -393,8 +393,13 @@ void si_emit_dpbb_state(struct si_context *sctx)
 	/* Enable DFSM if it's preferred. */
 	unsigned punchout_mode = V_028060_FORCE_OFF;
 	bool disable_start_of_prim = true;
+	bool zs_eqaa_dfsm_bug = sctx->chip_class == GFX9 &&
+				sctx->framebuffer.state.zsbuf &&
+				sctx->framebuffer.nr_samples !=
+				MAX2(1, sctx->framebuffer.state.zsbuf->texture->nr_samples);
 
 	if (sscreen->dfsm_allowed &&
+	    !zs_eqaa_dfsm_bug &&
 	    cb_target_enabled_4bit &&
 	    !G_02880C_KILL_ENABLE(db_shader_control) &&
 	    /* These two also imply that DFSM is disabled when PS writes to memory. */
