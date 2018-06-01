@@ -504,6 +504,7 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
 	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
 	unsigned col_format = 0;
+	unsigned num_targets;
 
 	for (unsigned i = 0; i < (blend->single_cb_enable ? 1 : subpass->color_count); ++i) {
 		unsigned cf;
@@ -528,6 +529,15 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 	if (blend->mrt0_is_dual_src)
 		col_format |= (col_format & 0xf) << 4;
 	blend->spi_shader_col_format = col_format;
+
+	/* If the i-th target format is set, all previous target formats must
+	 * be non-zero to avoid hangs.
+	 */
+	num_targets = (util_last_bit(blend->spi_shader_col_format) + 3) / 4;
+	for (unsigned i = 0; i < num_targets; i++) {
+		if (!(blend->spi_shader_col_format & (0xf << (i * 4))))
+			blend->spi_shader_col_format |= V_028714_SPI_SHADER_32_R << (i * 4);
+	}
 }
 
 static bool
