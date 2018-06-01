@@ -1091,52 +1091,58 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       obj->rsvd2 = 0;
    }
 
-   if (relocs != NULL && obj->relocation_count == 0) {
-      /* This is the first time we've ever seen a list of relocations for
-       * this BO.  Go ahead and set the relocations and then walk the list
-       * of relocations and add them all.
-       */
-      obj->relocation_count = relocs->num_relocs;
-      obj->relocs_ptr = (uintptr_t) relocs->relocs;
+   if (relocs != NULL) {
+      assert(obj->relocation_count == 0);
 
-      for (size_t i = 0; i < relocs->num_relocs; i++) {
-         VkResult result;
+      if (relocs->num_relocs > 0) {
+         /* This is the first time we've ever seen a list of relocations for
+          * this BO.  Go ahead and set the relocations and then walk the list
+          * of relocations and add them all.
+          */
+         obj->relocation_count = relocs->num_relocs;
+         obj->relocs_ptr = (uintptr_t) relocs->relocs;
 
-         /* A quick sanity check on relocations */
-         assert(relocs->relocs[i].offset < bo->size);
-         result = anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL,
-                                     extra_flags, alloc);
+         for (size_t i = 0; i < relocs->num_relocs; i++) {
+            VkResult result;
+
+            /* A quick sanity check on relocations */
+            assert(relocs->relocs[i].offset < bo->size);
+            result = anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL,
+                                        extra_flags, alloc);
+
+            if (result != VK_SUCCESS)
+               return result;
+         }
+      }
+
+      if (relocs->deps && relocs->deps->entries > 0) {
+         const uint32_t entries = relocs->deps->entries;
+         struct anv_bo **bos =
+            vk_alloc(alloc, entries * sizeof(*bos),
+                     8, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+         if (bos == NULL)
+            return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+         struct set_entry *entry;
+         struct anv_bo **bo = bos;
+         set_foreach(relocs->deps, entry) {
+            *bo++ = (void *)entry->key;
+         }
+
+         qsort(bos, entries, sizeof(struct anv_bo*), _compare_bo_handles);
+
+         VkResult result = VK_SUCCESS;
+         for (bo = bos; bo < bos + entries; bo++) {
+            result = anv_execbuf_add_bo(exec, *bo, NULL, extra_flags, alloc);
+            if (result != VK_SUCCESS)
+               break;
+         }
+
+         vk_free(alloc, bos);
 
          if (result != VK_SUCCESS)
             return result;
       }
-
-      const uint32_t entries = relocs->deps->entries;
-      struct anv_bo **bos =
-         vk_alloc(alloc, entries * sizeof(*bos),
-                  8, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
-      if (bos == NULL)
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-      struct set_entry *entry;
-      struct anv_bo **bo = bos;
-      set_foreach(relocs->deps, entry) {
-         *bo++ = (void *)entry->key;
-      }
-
-      qsort(bos, entries, sizeof(struct anv_bo*), _compare_bo_handles);
-
-      VkResult result = VK_SUCCESS;
-      for (bo = bos; bo < bos + entries; bo++) {
-         result = anv_execbuf_add_bo(exec, *bo, NULL, extra_flags, alloc);
-         if (result != VK_SUCCESS)
-            break;
-      }
-
-      vk_free(alloc, bos);
-
-      if (result != VK_SUCCESS)
-         return result;
    }
 
    return VK_SUCCESS;
