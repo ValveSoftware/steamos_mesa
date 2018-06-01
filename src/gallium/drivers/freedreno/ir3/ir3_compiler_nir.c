@@ -71,6 +71,9 @@ struct ir3_context {
 	/* For vertex shaders, keep track of the system values sources */
 	struct ir3_instruction *vertex_id, *basevertex, *instance_id;
 
+	/* For fragment shaders: */
+	struct ir3_instruction *samp_id, *samp_mask_in;
+
 	/* Compute shader inputs: */
 	struct ir3_instruction *local_invocation_id, *work_group_id;
 
@@ -2207,6 +2210,23 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		}
 		dst[0] = ctx->instance_id;
 		break;
+	case nir_intrinsic_load_sample_id:
+		if (!ctx->samp_id) {
+			ctx->samp_id = create_input(b, 0);
+			ctx->samp_id->regs[0]->flags |= IR3_REG_HALF;
+			add_sysval_input(ctx, SYSTEM_VALUE_SAMPLE_ID,
+					ctx->samp_id);
+		}
+		dst[0] = ir3_COV(b, ctx->samp_id, TYPE_U16, TYPE_U32);
+		break;
+	case nir_intrinsic_load_sample_mask_in:
+		if (!ctx->samp_mask_in) {
+			ctx->samp_mask_in = create_input(b, 0);
+			add_sysval_input(ctx, SYSTEM_VALUE_SAMPLE_MASK_IN,
+					ctx->samp_mask_in);
+		}
+		dst[0] = ctx->samp_mask_in;
+		break;
 	case nir_intrinsic_load_user_clip_plane:
 		idx = nir_intrinsic_ucp_id(intr);
 		for (int i = 0; i < intr->num_components; i++) {
@@ -3149,6 +3169,7 @@ max_drvloc(struct exec_list *vars)
 }
 
 static const unsigned max_sysvals[SHADER_MAX] = {
+	[SHADER_FRAGMENT] = 8,
 	[SHADER_VERTEX]  = 16,
 	[SHADER_COMPUTE] = 16, // TODO how many do we actually need?
 };
