@@ -424,6 +424,9 @@ system_value("instance_id", 1)
 system_value("base_instance", 1)
 system_value("draw_id", 1)
 system_value("sample_id", 1)
+# sample_id_no_per_sample is like sample_id but does not imply per-
+# sample shading.  See the lower_helper_invocation option.
+system_value("sample_id_no_per_sample", 1)
 system_value("sample_pos", 2)
 system_value("sample_mask_in", 1)
 system_value("primitive_id", 1)

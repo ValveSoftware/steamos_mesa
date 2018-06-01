@@ -2006,6 +2006,20 @@ typedef struct nir_shader_compiler_options {
     */
    bool lower_base_vertex;
 
+   /**
+    * If enabled, gl_HelperInvocation will be lowered as:
+    *
+    *   !((1 << sample_id) & sample_mask_in))
+    *
+    * This depends on some possibly hw implementation details, which may
+    * not be true for all hw.  In particular that the FS is only executed
+    * for covered samples or for helper invocations.  So, do not blindly
+    * enable this option.
+    *
+    * Note: See also issue #22 in ARB_shader_image_load_store
+    */
+   bool lower_helper_invocation;
+
    bool lower_cs_local_index_from_id;
 
    bool lower_device_index_to_zero;

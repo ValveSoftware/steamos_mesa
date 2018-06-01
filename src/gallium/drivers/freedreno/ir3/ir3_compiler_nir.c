@@ -2445,6 +2445,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		dst[0] = ctx->instance_id;
 		break;
 	case nir_intrinsic_load_sample_id:
+	case nir_intrinsic_load_sample_id_no_per_sample:
 		if (!ctx->samp_id) {
 			ctx->samp_id = create_input(b, 0);
 			ctx->samp_id->regs[0]->flags |= IR3_REG_HALF;
