@@ -320,7 +320,7 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	struct stage s[MAX_STAGES];
 	uint32_t pos_regid, psize_regid, color_regid[8];
-	uint32_t face_regid, coord_regid, zwcoord_regid;
+	uint32_t face_regid, coord_regid, zwcoord_regid, samp_id_regid, samp_mask_regid;
 	uint32_t vcoord_regid, vertex_regid, instance_regid;
 	enum a3xx_threadsize fssz;
 	uint8_t psize_loc = ~0;
@@ -350,6 +350,8 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		color_regid[7] = ir3_find_output_regid(s[FS].v, FRAG_RESULT_DATA7);
 	}
 
+	samp_id_regid = ir3_find_sysval_regid(s[FS].v, SYSTEM_VALUE_SAMPLE_ID);
+	samp_mask_regid = ir3_find_sysval_regid(s[FS].v, SYSTEM_VALUE_SAMPLE_MASK_IN);
 	/* TODO get these dynamically: */
 	face_regid = s[FS].v->frag_face ? regid(0,0) : regid(63,0);
 	coord_regid = s[FS].v->frag_coord ? regid(0,0) : regid(63,0);
@@ -548,7 +550,9 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			0x00000880);               /* XXX HLSQ_CONTROL_0 */
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_1_REG_PRIMALLOCTHRESHOLD(63));
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_2_REG_FACEREGID(face_regid) |
-			0xfcfcfc00);               /* XXX */
+			A5XX_HLSQ_CONTROL_2_REG_SAMPLEID(samp_id_regid) |
+			A5XX_HLSQ_CONTROL_2_REG_SAMPLEMASK(samp_mask_regid) |
+			0xfc000000);               /* XXX */
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_3_REG_FRAGCOORDXYREGID(vcoord_regid) |
 			0xfcfcfc00);               /* XXX */
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_4_REG_XYCOORDREGID(coord_regid) |
@@ -591,7 +595,12 @@ fd5_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					A5XX_RB_RENDER_CONTROL0_WCOORD |
 					A5XX_RB_RENDER_CONTROL0_UNK3) |
 			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL0_UNK3));
-	OUT_RING(ring, COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS));
+	OUT_RING(ring,
+			COND(samp_mask_regid != regid(63, 0),
+				A5XX_RB_RENDER_CONTROL1_SAMPLEMASK) |
+			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS) |
+			COND(samp_id_regid != regid(63, 0),
+				A5XX_RB_RENDER_CONTROL1_SAMPLEID));
 
 	OUT_PKT4(ring, REG_A5XX_SP_FS_OUTPUT_REG(0), 8);
 	for (i = 0; i < 8; i++) {
