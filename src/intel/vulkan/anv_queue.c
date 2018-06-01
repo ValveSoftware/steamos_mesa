@@ -49,8 +49,11 @@ anv_device_execbuf(struct anv_device *device,
 
    struct drm_i915_gem_exec_object2 *objects =
       (void *)(uintptr_t)execbuf->buffers_ptr;
-   for (uint32_t k = 0; k < execbuf->buffer_count; k++)
+   for (uint32_t k = 0; k < execbuf->buffer_count; k++) {
+      if (execbuf_bos[k]->flags & EXEC_OBJECT_PINNED)
+         assert(execbuf_bos[k]->offset == objects[k].offset);
       execbuf_bos[k]->offset = objects[k].offset;
+   }
 
    return VK_SUCCESS;
 }
