@@ -996,6 +996,8 @@ struct anv_execbuf {
    /* Allocated length of the 'objects' and 'bos' arrays */
    uint32_t                                  array_length;
 
+   bool                                      has_relocs;
+
    uint32_t                                  fence_count;
    uint32_t                                  fence_array_length;
    struct drm_i915_gem_exec_fence *          fences;
@@ -1099,6 +1101,7 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
           * this BO.  Go ahead and set the relocations and then walk the list
           * of relocations and add them all.
           */
+         exec->has_relocs = true;
          obj->relocation_count = relocs->num_relocs;
          obj->relocs_ptr = (uintptr_t) relocs->relocs;
 
@@ -1300,6 +1303,9 @@ static bool
 relocate_cmd_buffer(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_execbuf *exec)
 {
+   if (!exec->has_relocs)
+      return true;
+
    static int userspace_relocs = -1;
    if (userspace_relocs < 0)
       userspace_relocs = env_var_as_boolean("ANV_USERSPACE_RELOCS", true);
@@ -1403,14 +1409,20 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
       first_batch_bo->bo.index = last_idx;
    }
 
+   /* If we are pinning our BOs, we shouldn't have to relocate anything */
+   if (cmd_buffer->device->instance->physicalDevice.use_softpin)
+      assert(!execbuf->has_relocs);
+
    /* Now we go through and fixup all of the relocation lists to point to
     * the correct indices in the object array.  We have to do this after we
     * reorder the list above as some of the indices may have changed.
     */
-   u_vector_foreach(bbo, &cmd_buffer->seen_bbos)
-      anv_cmd_buffer_process_relocs(cmd_buffer, &(*bbo)->relocs);
+   if (execbuf->has_relocs) {
+      u_vector_foreach(bbo, &cmd_buffer->seen_bbos)
+         anv_cmd_buffer_process_relocs(cmd_buffer, &(*bbo)->relocs);
 
-   anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
+      anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
+   }
 
    if (!cmd_buffer->device->info.has_llc) {
       __builtin_ia32_mfence();
