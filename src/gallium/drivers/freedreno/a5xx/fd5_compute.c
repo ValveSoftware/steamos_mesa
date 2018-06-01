@@ -206,12 +206,12 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 		A5XX_HLSQ_CS_NDRANGE_0_LOCALSIZEX(local_size[0] - 1) |
 		A5XX_HLSQ_CS_NDRANGE_0_LOCALSIZEY(local_size[1] - 1) |
 		A5XX_HLSQ_CS_NDRANGE_0_LOCALSIZEZ(local_size[2] - 1));
-	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_1_SIZE_X(local_size[0] * num_groups[0]));
-	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_2 */
-	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_3_SIZE_Y(local_size[1] * num_groups[1]));
-	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_4 */
-	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_5_SIZE_Z(local_size[2] * num_groups[2]));
-	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_6 */
+	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_1_GLOBALSIZE_X(local_size[0] * num_groups[0]));
+	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_2_GLOBALOFF_X */
+	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_3_GLOBALSIZE_Y(local_size[1] * num_groups[1]));
+	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_4_GLOBALOFF_Y */
+	OUT_RING(ring, A5XX_HLSQ_CS_NDRANGE_5_GLOBALSIZE_Z(local_size[2] * num_groups[2]));
+	OUT_RING(ring, 0);            /* HLSQ_CS_NDRANGE_6_GLOBALOFF_Z */
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CS_KERNEL_GROUP_X, 3);
 	OUT_RING(ring, 1);            /* HLSQ_CS_KERNEL_GROUP_X */
