@@ -339,18 +339,14 @@ void si_emit_dpbb_state(struct si_context *sctx)
 			   G_02880C_COVERAGE_TO_MASK_ENABLE(db_shader_control) ||
 			   blend->alpha_to_coverage;
 
-	/* This is ported from Vulkan, but it doesn't make much sense to me.
-	 * Maybe it's for RE-Z? But Vulkan doesn't use RE-Z. TODO: Clarify this.
-	 */
-	bool ps_can_reject_z_trivially =
+	bool db_can_reject_z_trivially =
 		!G_02880C_Z_EXPORT_ENABLE(db_shader_control) ||
-		G_02880C_CONSERVATIVE_Z_EXPORT(db_shader_control);
+		G_02880C_CONSERVATIVE_Z_EXPORT(db_shader_control) ||
+		G_02880C_DEPTH_BEFORE_SHADER(db_shader_control);
 
-	/* Disable binning if PS can kill trivially with DB writes.
-	 * Ported from Vulkan. (heuristic?)
-	 */
+	/* Disable DPBB when it's believed to be inefficient. */
 	if (ps_can_kill &&
-	    ps_can_reject_z_trivially &&
+	    db_can_reject_z_trivially &&
 	    sctx->framebuffer.state.zsbuf &&
 	    dsa->db_can_write) {
 		si_emit_dpbb_disable(sctx);
