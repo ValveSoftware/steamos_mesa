@@ -316,7 +316,8 @@ static void si_emit_dpbb_disable(struct si_context *sctx)
 		S_028C44_DISABLE_START_OF_PRIM(1));
 	radeon_opt_set_context_reg(sctx, R_028060_DB_DFSM_CONTROL,
 				   SI_TRACKED_DB_DFSM_CONTROL,
-				   S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
+				   S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF) |
+				   S_028060_POPS_DRAIN_PS_ON_OVERLAP(1));
 }
 
 void si_emit_dpbb_state(struct si_context *sctx)
@@ -436,5 +437,6 @@ void si_emit_dpbb_state(struct si_context *sctx)
 		S_028C44_OPTIMAL_BIN_SELECTION(1));
 	radeon_opt_set_context_reg(sctx, R_028060_DB_DFSM_CONTROL,
 				   SI_TRACKED_DB_DFSM_CONTROL,
-				   S_028060_PUNCHOUT_MODE(punchout_mode));
+				   S_028060_PUNCHOUT_MODE(punchout_mode) |
+				   S_028060_POPS_DRAIN_PS_ON_OVERLAP(1));
 }
