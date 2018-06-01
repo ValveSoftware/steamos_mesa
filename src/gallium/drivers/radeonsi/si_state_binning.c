@@ -54,7 +54,7 @@ static struct uvec2 si_find_bin_size(struct si_screen *sscreen,
 	const struct si_bin_size_map *subtable =
 		&table[log_num_rb_per_se][log_num_se][0];
 
-	for (i = 0; subtable[i].start != UINT_MAX; i++) {
+	for (i = 0; subtable[i].bin_size_x != 0; i++) {
 		if (sum >= subtable[i].start && sum < subtable[i + 1].start)
 			break;
 	}
@@ -97,7 +97,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        2,   32,  128 },
 				{        3,   16,  128 },
 				{       17,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Two shader engines */
@@ -106,7 +105,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        3,   32,  128 },
 				{        5,   16,  128 },
 				{       17,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Four shader engines */
@@ -114,7 +112,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        3,   64,  128 },
 				{        5,   16,  128 },
 				{       17,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 		{
@@ -126,7 +123,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        3,   32,  128 },
 				{        9,   16,  128 },
 				{       33,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Two shader engines */
@@ -135,7 +131,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        5,   32,  128 },
 				{        9,   16,  128 },
 				{       33,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Four shader engines */
@@ -145,7 +140,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        5,   64,  128 },
 				{        9,   16,  128 },
 				{       33,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 		{
@@ -158,7 +152,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        5,   32,  128 },
 				{        9,   16,  128 },
 				{       17,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Two shader engines */
@@ -169,7 +162,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        9,   32,  128 },
 				{       17,   16,  128 },
 				{       33,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				/* Four shader engines */
@@ -180,7 +172,6 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 				{        9,   32,  256 },
 				{       17,   32,  128 },
 				{       33,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 	};
@@ -218,7 +209,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{        7,   32,  128 },
 				{       13,   16,  128 },
 				{       49,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Two shader engines
@@ -229,7 +219,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       13,   32,  128 },
 				{       25,   16,  128 },
 				{       49,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Four shader engines
@@ -240,7 +229,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       13,   64,  128 },
 				{       25,   16,  128 },
 				{       49,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 		{
@@ -254,7 +242,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       13,   32,  128 },
 				{       25,   16,  128 },
 				{       97,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Two shader engines
@@ -266,7 +253,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       25,   32,  128 },
 				{       49,   16,  128 },
 				{       97,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Four shader engines
@@ -278,7 +264,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       25,   64,  128 },
 				{       49,   16,  128 },
 				{       97,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 		{
@@ -293,7 +278,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       25,   32,  128 },
 				{       49,   16,  128 },
 				{      193,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Two shader engines
@@ -306,7 +290,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       49,   32,  128 },
 				{       97,   16,  128 },
 				{      193,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 			{
 				// Four shader engines
@@ -318,7 +301,6 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 				{       49,   32,  256 },
 				{       97,   16,  128 },
 				{      193,    0,    0 },
-				{ UINT_MAX,    0,    0 },
 			},
 		},
 	};
