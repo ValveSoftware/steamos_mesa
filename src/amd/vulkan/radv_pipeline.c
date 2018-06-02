@@ -1594,6 +1594,8 @@ radv_get_shader(struct radv_pipeline *pipeline,
 		if (pipeline->shaders[MESA_SHADER_GEOMETRY])
 			return pipeline->shaders[MESA_SHADER_GEOMETRY];
 	} else if (stage == MESA_SHADER_TESS_EVAL) {
+		if (!radv_pipeline_has_tess(pipeline))
+			return NULL;
 		if (pipeline->shaders[MESA_SHADER_TESS_EVAL])
 			return pipeline->shaders[MESA_SHADER_TESS_EVAL];
 		if (pipeline->shaders[MESA_SHADER_GEOMETRY])
