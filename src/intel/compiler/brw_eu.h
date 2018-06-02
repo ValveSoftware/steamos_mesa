@@ -394,13 +394,9 @@ void brw_urb_WRITE(struct brw_codegen *p,
 /**
  * Send message to shared unit \p sfid with a possibly indirect descriptor \p
  * desc.  If \p desc is not an immediate it will be transparently loaded to an
- * address register using an OR instruction.  The returned instruction can be
- * passed as argument to the usual brw_set_*_message() functions in order to
- * specify any additional descriptor bits -- If \p desc is an immediate this
- * will be the SEND instruction itself, otherwise it will be the OR
- * instruction.
+ * address register using an OR instruction.
  */
-struct brw_inst *
+void
 brw_send_indirect_message(struct brw_codegen *p,
                           unsigned sfid,
                           struct brw_reg dst,
