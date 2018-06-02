@@ -1849,26 +1849,46 @@ get_image_slot(struct ir3_context *ctx, const nir_variable *var)
 	return max_samplers - var->data.driver_location - 1;
 }
 
+/* see tex_info() for equiv logic for texture instructions.. it would be
+ * nice if this could be better unified..
+ */
 static unsigned
-get_image_coords(const nir_variable *var)
+get_image_coords(const nir_variable *var, unsigned *flagsp)
 {
-	switch (glsl_get_sampler_dim(glsl_without_array(var->type))) {
+	const struct glsl_type *type = glsl_without_array(var->type);
+	unsigned coords, flags = 0;
+
+	switch (glsl_get_sampler_dim(type)) {
 	case GLSL_SAMPLER_DIM_1D:
 	case GLSL_SAMPLER_DIM_BUF:
-		return 1;
+		coords = 1;
 		break;
 	case GLSL_SAMPLER_DIM_2D:
 	case GLSL_SAMPLER_DIM_RECT:
 	case GLSL_SAMPLER_DIM_EXTERNAL:
 	case GLSL_SAMPLER_DIM_MS:
-		return 2;
+		coords = 2;
+		break;
 	case GLSL_SAMPLER_DIM_3D:
 	case GLSL_SAMPLER_DIM_CUBE:
-		return 3;
+		flags |= IR3_INSTR_3D;
+		coords = 3;
+		break;
 	default:
 		unreachable("bad sampler dim");
 		return 0;
 	}
+
+	if (glsl_sampler_type_is_array(type)) {
+		/* note: unlike tex_info(), adjust # of coords to include array idx: */
+		coords++;
+		flags |= IR3_INSTR_A;
+	}
+
+	if (flagsp)
+		*flagsp = flags;
+
+	return coords;
 }
 
 static type_t
@@ -1893,7 +1913,7 @@ get_image_offset(struct ir3_context *ctx, const nir_variable *var,
 {
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction *offset;
-	unsigned ncoords = get_image_coords(var);
+	unsigned ncoords = get_image_coords(var, NULL);
 
 	/* to calculate the byte offset (yes, uggg) we need (up to) three
 	 * const values to know the bytes per pixel, and y and z stride:
@@ -1940,13 +1960,9 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	const nir_variable *var = intr->variables[0]->var;
 	struct ir3_instruction *sam;
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
-	unsigned ncoords = get_image_coords(var);
+	unsigned flags, ncoords = get_image_coords(var, &flags);
 	unsigned tex_idx = get_image_slot(ctx, var);
 	type_t type = get_image_type(var);
-	unsigned flags = 0;
-
-	if (ncoords == 3)
-		flags |= IR3_INSTR_3D;
 
 	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, create_collect(ctx, coords, ncoords), NULL);
@@ -1966,7 +1982,7 @@ emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	struct ir3_instruction *stib, *offset;
 	struct ir3_instruction * const *value = get_src(ctx, &intr->src[2]);
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
-	unsigned ncoords = get_image_coords(var);
+	unsigned ncoords = get_image_coords(var, NULL);
 	unsigned tex_idx = get_image_slot(ctx, var);
 
 	/* src0 is value
@@ -2001,19 +2017,38 @@ emit_intrinsic_image_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 {
 	struct ir3_block *b = ctx->block;
 	const nir_variable *var = intr->variables[0]->var;
-	unsigned ncoords = get_image_coords(var);
 	unsigned tex_idx = get_image_slot(ctx, var);
 	struct ir3_instruction *sam, *lod;
-	unsigned flags = 0;
-
-	if (ncoords == 3)
-		flags = IR3_INSTR_3D;
+	unsigned flags, ncoords = get_image_coords(var, &flags);
 
 	lod = create_immed(b, 0);
 	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, lod, NULL);
 
-	split_dest(b, dst, sam, 0, ncoords);
+	/* Array size actually ends up in .w rather than .z. This doesn't
+	 * matter for miplevel 0, but for higher mips the value in z is
+	 * minified whereas w stays. Also, the value in TEX_CONST_3_DEPTH is
+	 * returned, which means that we have to add 1 to it for arrays for
+	 * a3xx.
+	 *
+	 * Note use a temporary dst and then copy, since the size of the dst
+	 * array that is passed in is based on nir's understanding of the
+	 * result size, not the hardware's
+	 */
+	struct ir3_instruction *tmp[4];
+
+	split_dest(b, tmp, sam, 0, 4);
+
+	for (unsigned i = 0; i < ncoords; i++)
+		dst[i] = tmp[i];
+
+	if (flags & IR3_INSTR_A) {
+		if (ctx->levels_add_one) {
+			dst[ncoords-1] = ir3_ADD_U(b, tmp[3], 0, create_immed(b, 1), 0);
+		} else {
+			dst[ncoords-1] = ir3_MOV(b, tmp[3], TYPE_U32);
+		}
+	}
 }
 
 /* src[] = { coord, sample_index, value, compare }. const_index[] = {} */
@@ -2024,7 +2059,7 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	const nir_variable *var = intr->variables[0]->var;
 	struct ir3_instruction *atomic, *image, *src0, *src1, *src2;
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
-	unsigned ncoords = get_image_coords(var);
+	unsigned ncoords = get_image_coords(var, NULL);
 
 	image = create_immed(b, get_image_slot(ctx, var));
 
