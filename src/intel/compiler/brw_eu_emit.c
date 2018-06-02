@@ -3636,10 +3636,11 @@ void brw_shader_time_add(struct brw_codegen *p,
                          struct brw_reg payload,
                          uint32_t surf_index)
 {
-   const unsigned sfid = (p->devinfo->gen >= 8 || p->devinfo->is_haswell ?
+   const struct gen_device_info *devinfo = p->devinfo;
+   const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
                           HSW_SFID_DATAPORT_DATA_CACHE_1 :
                           GEN7_SFID_DATAPORT_DATA_CACHE);
-   assert(p->devinfo->gen >= 7);
+   assert(devinfo->gen >= 7);
 
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
@@ -3655,9 +3656,9 @@ void brw_shader_time_add(struct brw_codegen *p,
    brw_set_src0(p, send, brw_vec1_reg(payload.file,
                                       payload.nr, 0));
    brw_set_src1(p, send, brw_imm_ud(0));
-   brw_set_desc(p, send, brw_message_desc(p->devinfo, 2, 0, false));
-   brw_inst_set_sfid(p->devinfo, send, sfid);
-   brw_inst_set_binding_table_index(p->devinfo, send, surf_index);
+   brw_set_desc(p, send, brw_message_desc(devinfo, 2, 0, false));
+   brw_inst_set_sfid(devinfo, send, sfid);
+   brw_inst_set_binding_table_index(devinfo, send, surf_index);
    brw_set_dp_untyped_atomic_message(p, send, BRW_AOP_ADD, false);
 
    brw_pop_insn_state(p);
