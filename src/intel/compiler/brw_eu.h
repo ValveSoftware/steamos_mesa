@@ -245,17 +245,6 @@ ROUND(RNDE)
 
 /* Helpers for SEND instruction:
  */
-void brw_set_sampler_message(struct brw_codegen *p,
-                             brw_inst *insn,
-                             unsigned binding_table_index,
-                             unsigned sampler,
-                             unsigned msg_type,
-                             unsigned response_length,
-                             unsigned msg_length,
-                             unsigned header_present,
-                             unsigned simd_mode,
-                             unsigned return_format);
-
 void brw_set_dp_read_message(struct brw_codegen *p,
 			     brw_inst *insn,
 			     unsigned binding_table_index,
@@ -299,6 +288,32 @@ brw_message_desc(const struct gen_device_info *devinfo,
    }
 }
 
+/**
+ * Construct a message descriptor immediate with the specified sampler
+ * function controls.
+ */
+static inline uint32_t
+brw_sampler_desc(const struct gen_device_info *devinfo,
+                 unsigned binding_table_index,
+                 unsigned sampler,
+                 unsigned msg_type,
+                 unsigned simd_mode,
+                 unsigned return_format)
+{
+   const unsigned desc = (SET_BITS(binding_table_index, 7, 0) |
+                          SET_BITS(sampler, 11, 8));
+   if (devinfo->gen >= 7)
+      return (desc | SET_BITS(msg_type, 16, 12) |
+              SET_BITS(simd_mode, 18, 17));
+   else if (devinfo->gen >= 5)
+      return (desc | SET_BITS(msg_type, 15, 12) |
+              SET_BITS(simd_mode, 17, 16));
+   else if (devinfo->is_g4x)
+      return desc | SET_BITS(msg_type, 15, 12);
+   else
+      return (desc | SET_BITS(return_format, 13, 12) |
+              SET_BITS(msg_type, 15, 14));
+}
 
 void brw_urb_WRITE(struct brw_codegen *p,
 		   struct brw_reg dest,

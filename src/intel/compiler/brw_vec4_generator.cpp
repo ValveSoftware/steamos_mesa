@@ -324,17 +324,15 @@ generate_tex(struct brw_codegen *p,
          gen6_resolve_implied_move(p, &src, inst->base_mrf);
 
       /* dst = send(offset, a0.0 | <descriptor>) */
-      brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, src, addr, 0);
-      brw_set_sampler_message(p, insn,
-                              0 /* surface */,
-                              0 /* sampler */,
-                              msg_type,
-                              1 /* rlen */,
-                              inst->mlen /* mlen */,
-                              inst->header_size != 0 /* header */,
-                              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
-                              return_format);
+      brw_send_indirect_message(
+         p, BRW_SFID_SAMPLER, dst, src, addr,
+         brw_message_desc(devinfo, inst->mlen, 1, inst->header_size) |
+         brw_sampler_desc(devinfo,
+                          0 /* surface */,
+                          0 /* sampler */,
+                          msg_type,
+                          BRW_SAMPLER_SIMD_MODE_SIMD4X2,
+                          return_format));
 
       /* visitor knows more than we do about the surface limit required,
        * so has already done marking.
@@ -1355,22 +1353,21 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
                                  struct brw_reg surf_index,
                                  struct brw_reg offset)
 {
+   const struct gen_device_info *devinfo = p->devinfo;
    assert(surf_index.type == BRW_REGISTER_TYPE_UD);
 
    if (surf_index.file == BRW_IMMEDIATE_VALUE) {
 
       brw_inst *insn = brw_next_insn(p, BRW_OPCODE_SEND);
+      brw_inst_set_sfid(devinfo, insn, BRW_SFID_SAMPLER);
       brw_set_dest(p, insn, dst);
       brw_set_src0(p, insn, offset);
-      brw_set_sampler_message(p, insn,
-                              surf_index.ud,
-                              0, /* LD message ignores sampler unit */
-                              GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
-                              1, /* rlen */
-                              inst->mlen,
-                              inst->header_size != 0,
-                              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
-                              0);
+      brw_set_desc(p, insn,
+                   brw_message_desc(devinfo, inst->mlen, 1, inst->header_size) |
+                   brw_sampler_desc(devinfo, surf_index.ud,
+                                    0, /* LD message ignores sampler unit */
+                                    GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
+                                    BRW_SAMPLER_SIMD_MODE_SIMD4X2, 0));
 
       brw_mark_surface_used(&prog_data->base, surf_index.ud);
 
@@ -1384,7 +1381,7 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
-      brw_inst_set_exec_size(p->devinfo, insn_and, BRW_EXECUTE_1);
+      brw_inst_set_exec_size(devinfo, insn_and, BRW_EXECUTE_1);
       brw_set_dest(p, insn_and, addr);
       brw_set_src0(p, insn_and, vec1(retype(surf_index, BRW_REGISTER_TYPE_UD)));
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
@@ -1392,17 +1389,15 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
       brw_pop_insn_state(p);
 
       /* dst = send(offset, a0.0 | <descriptor>) */
-      brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, offset, addr, 0);
-      brw_set_sampler_message(p, insn,
-                              0 /* surface */,
-                              0 /* sampler */,
-                              GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
-                              1 /* rlen */,
-                              inst->mlen,
-                              inst->header_size != 0,
-                              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
-                              0);
+      brw_send_indirect_message(
+         p, BRW_SFID_SAMPLER, dst, offset, addr,
+         brw_message_desc(devinfo, inst->mlen, 1, inst->header_size) |
+         brw_sampler_desc(devinfo,
+                          0 /* surface */,
+                          0 /* sampler */,
+                          GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
+                          BRW_SAMPLER_SIMD_MODE_SIMD4X2,
+                          0));
    }
 }
 

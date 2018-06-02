@@ -552,36 +552,6 @@ brw_set_dp_read_message(struct brw_codegen *p,
       brw_inst_set_dp_read_target_cache(devinfo, insn, target_cache);
 }
 
-void
-brw_set_sampler_message(struct brw_codegen *p,
-                        brw_inst *inst,
-                        unsigned binding_table_index,
-                        unsigned sampler,
-                        unsigned msg_type,
-                        unsigned response_length,
-                        unsigned msg_length,
-                        unsigned header_present,
-                        unsigned simd_mode,
-                        unsigned return_format)
-{
-   const struct gen_device_info *devinfo = p->devinfo;
-
-   brw_set_desc(p, inst, brw_message_desc(
-                   devinfo, msg_length, response_length, header_present));
-
-   const unsigned opcode = brw_inst_opcode(devinfo, inst);
-   if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC)
-      brw_inst_set_sfid(devinfo, inst, BRW_SFID_SAMPLER);
-   brw_inst_set_binding_table_index(devinfo, inst, binding_table_index);
-   brw_inst_set_sampler(devinfo, inst, sampler);
-   brw_inst_set_sampler_msg_type(devinfo, inst, msg_type);
-   if (devinfo->gen >= 5) {
-      brw_inst_set_sampler_simd_mode(devinfo, inst, simd_mode);
-   } else if (devinfo->gen == 4 && !devinfo->is_g4x) {
-      brw_inst_set_sampler_return_format(devinfo, inst, return_format);
-   }
-}
-
 static void
 gen7_set_dp_scratch_message(struct brw_codegen *p,
                             brw_inst *inst,
@@ -2392,6 +2362,7 @@ void brw_SAMPLE(struct brw_codegen *p,
       gen6_resolve_implied_move(p, &src0, msg_reg_nr);
 
    insn = next_insn(p, BRW_OPCODE_SEND);
+   brw_inst_set_sfid(devinfo, insn, BRW_SFID_SAMPLER);
    brw_inst_set_pred_control(devinfo, insn, BRW_PREDICATE_NONE); /* XXX */
 
    /* From the 965 PRM (volume 4, part 1, section 14.2.41):
@@ -2413,15 +2384,11 @@ void brw_SAMPLE(struct brw_codegen *p,
 
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);
-   brw_set_sampler_message(p, insn,
-                           binding_table_index,
-                           sampler,
-                           msg_type,
-                           response_length,
-                           msg_length,
-                           header_present,
-                           simd_mode,
-                           return_format);
+   brw_set_desc(p, insn,
+                brw_message_desc(devinfo, msg_length, response_length,
+                                 header_present) |
+                brw_sampler_desc(devinfo, binding_table_index, sampler,
+                                 msg_type, simd_mode, return_format));
 }
 
 /* Adjust the message header's sampler state pointer to
