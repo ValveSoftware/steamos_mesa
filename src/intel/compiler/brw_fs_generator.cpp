@@ -1180,7 +1180,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, src, addr);
+         p, BRW_SFID_SAMPLER, dst, src, addr, 0);
       brw_set_sampler_message(p, insn,
                               0 /* surface */,
                               0 /* sampler */,
@@ -1449,7 +1449,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       brw_inst *insn = brw_send_indirect_message(
          p, GEN6_SFID_DATAPORT_CONSTANT_CACHE,
          retype(dst, BRW_REGISTER_TYPE_UD),
-         retype(payload, BRW_REGISTER_TYPE_UD), addr);
+         retype(payload, BRW_REGISTER_TYPE_UD), addr, 0);
       brw_set_dp_read_message(p, insn, 0 /* surface */,
                               BRW_DATAPORT_OWORD_BLOCK_DWORDS(inst->exec_size),
                               GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
@@ -1585,7 +1585,7 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
          p, BRW_SFID_SAMPLER, retype(dst, BRW_REGISTER_TYPE_UW),
-         offset, addr);
+         offset, addr, 0);
       brw_set_sampler_message(p, insn,
                               0 /* surface */,
                               0 /* sampler */,

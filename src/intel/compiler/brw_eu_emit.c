@@ -2527,7 +2527,8 @@ brw_send_indirect_message(struct brw_codegen *p,
                           unsigned sfid,
                           struct brw_reg dst,
                           struct brw_reg payload,
-                          struct brw_reg desc)
+                          struct brw_reg desc,
+                          unsigned desc_imm)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    struct brw_inst *send;
@@ -2546,7 +2547,7 @@ brw_send_indirect_message(struct brw_codegen *p,
    if (desc.file == BRW_IMMEDIATE_VALUE) {
       setup = p->nr_insn;
       send = next_insn(p, BRW_OPCODE_SEND);
-      brw_set_src1(p, send, desc);
+      brw_set_desc(p, send, desc.ud | desc_imm);
 
    } else {
       struct brw_reg addr = retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD);
@@ -2562,7 +2563,7 @@ brw_send_indirect_message(struct brw_codegen *p,
        * brw_set_*_message() helper functions.
        */
       setup = p->nr_insn;
-      brw_OR(p, addr, desc, brw_imm_ud(0));
+      brw_OR(p, addr, desc, brw_imm_ud(desc_imm));
 
       brw_pop_insn_state(p);
 
@@ -2615,7 +2616,7 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
       surface = addr;
    }
 
-   insn = brw_send_indirect_message(p, sfid, dst, payload, surface);
+   insn = brw_send_indirect_message(p, sfid, dst, payload, surface, 0);
    brw_inst_set_mlen(devinfo, insn, message_len);
    brw_inst_set_rlen(devinfo, insn, response_len);
    brw_inst_set_header_present(devinfo, insn, header_present);
@@ -3373,7 +3374,7 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
                                     GEN7_SFID_PIXEL_INTERPOLATOR,
                                     dest,
                                     mrf,
-                                    vec1(data));
+                                    vec1(data), 0);
    brw_inst_set_mlen(devinfo, insn, msg_length);
    brw_inst_set_rlen(devinfo, insn, response_length);
 

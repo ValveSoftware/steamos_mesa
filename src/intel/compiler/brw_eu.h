@@ -324,7 +324,8 @@ brw_send_indirect_message(struct brw_codegen *p,
                           unsigned sfid,
                           struct brw_reg dst,
                           struct brw_reg payload,
-                          struct brw_reg desc);
+                          struct brw_reg desc,
+                          unsigned desc_imm);
 
 void brw_ff_sync(struct brw_codegen *p,
 		   struct brw_reg dest,

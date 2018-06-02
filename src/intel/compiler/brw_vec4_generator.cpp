@@ -325,7 +325,7 @@ generate_tex(struct brw_codegen *p,
 
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, src, addr);
+         p, BRW_SFID_SAMPLER, dst, src, addr, 0);
       brw_set_sampler_message(p, insn,
                               0 /* surface */,
                               0 /* sampler */,
@@ -1393,7 +1393,7 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
 
       /* dst = send(offset, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, offset, addr);
+         p, BRW_SFID_SAMPLER, dst, offset, addr, 0);
       brw_set_sampler_message(p, insn,
                               0 /* surface */,
                               0 /* sampler */,
