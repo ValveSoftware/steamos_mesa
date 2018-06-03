@@ -287,8 +287,6 @@ radv_shader_compile_to_nir(struct radv_device *device,
 
 	nir_lower_vars_to_ssa(nir);
 
-	/* Temporarily disabled during deref changes */
-#if 0
 	if (nir->info.stage == MESA_SHADER_VERTEX ||
 	    nir->info.stage == MESA_SHADER_GEOMETRY) {
 		NIR_PASS_V(nir, nir_lower_io_to_temporaries,
@@ -298,7 +296,6 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		NIR_PASS_V(nir, nir_lower_io_to_temporaries,
 			   nir_shader_get_entrypoint(nir), true, false);
 	}
-#endif
 
 	nir_split_var_copies(nir);
 	nir_lower_var_copies(nir);
