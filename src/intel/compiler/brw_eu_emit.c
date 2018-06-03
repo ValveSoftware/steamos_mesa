@@ -2477,7 +2477,7 @@ brw_send_indirect_message(struct brw_codegen *p,
    return &p->store[setup];
 }
 
-static struct brw_inst *
+static void
 brw_send_indirect_surface_message(struct brw_codegen *p,
                                   unsigned sfid,
                                   struct brw_reg dst,
@@ -2485,8 +2485,6 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
                                   struct brw_reg surface,
                                   unsigned desc_imm)
 {
-   struct brw_inst *insn;
-
    if (surface.file != BRW_IMMEDIATE_VALUE) {
       struct brw_reg addr = retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD);
 
@@ -2499,19 +2497,17 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
       /* Mask out invalid bits from the surface index to avoid hangs e.g. when
        * some surface array is accessed out of bounds.
        */
-      insn = brw_AND(p, addr,
-                     suboffset(vec1(retype(surface, BRW_REGISTER_TYPE_UD)),
-                               BRW_GET_SWZ(surface.swizzle, 0)),
-                     brw_imm_ud(0xff));
+      brw_AND(p, addr,
+              suboffset(vec1(retype(surface, BRW_REGISTER_TYPE_UD)),
+                        BRW_GET_SWZ(surface.swizzle, 0)),
+              brw_imm_ud(0xff));
 
       brw_pop_insn_state(p);
 
       surface = addr;
    }
 
-   insn = brw_send_indirect_message(p, sfid, dst, payload, surface, desc_imm);
-
-   return insn;
+   brw_send_indirect_message(p, sfid, dst, payload, surface, desc_imm);
 }
 
 static bool
