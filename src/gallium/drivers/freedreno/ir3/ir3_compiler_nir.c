@@ -1842,11 +1842,27 @@ emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
  * logic if we supported images in anything other than FS..
  */
 static unsigned
-get_image_slot(struct ir3_context *ctx, const nir_variable *var)
+get_image_slot(struct ir3_context *ctx, const nir_deref_var *deref)
 {
+	const nir_variable *var = deref->var;
+	unsigned int loc = var->data.driver_location;
+
+	for (const nir_deref *tail = &deref->deref; tail->child; tail = tail->child) {
+		compile_assert(ctx, tail->child->deref_type == nir_deref_type_array);
+
+		const nir_deref_array *deref_array = nir_deref_as_array(tail->child);
+		compile_assert(ctx, deref_array->deref_array_type == nir_deref_array_type_direct);
+
+		const unsigned elem_sz = glsl_count_attribute_slots(deref_array->deref.type, false);
+		const unsigned size = glsl_get_length(tail->type);
+		const unsigned base = MIN2(deref_array->base_offset, size - 1);
+
+		loc += base * elem_sz;
+	}
+
 	/* TODO figure out real limit per generation, and don't hardcode: */
 	const unsigned max_samplers = 16;
-	return max_samplers - var->data.driver_location - 1;
+	return max_samplers - loc - 1;
 }
 
 /* see tex_info() for equiv logic for texture instructions.. it would be
@@ -1961,8 +1977,16 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	struct ir3_instruction *sam;
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
 	unsigned flags, ncoords = get_image_coords(var, &flags);
-	unsigned tex_idx = get_image_slot(ctx, var);
+	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
 	type_t type = get_image_type(var);
+
+	/* hmm, this seems a bit odd, but it is what blob does and (at least
+	 * a5xx) just faults on bogus addresses otherwise:
+	 */
+	if (flags & IR3_INSTR_3D) {
+		flags &= ~IR3_INSTR_3D;
+		flags |= IR3_INSTR_A;
+	}
 
 	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, create_collect(ctx, coords, ncoords), NULL);
@@ -1983,7 +2007,7 @@ emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	struct ir3_instruction * const *value = get_src(ctx, &intr->src[2]);
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
 	unsigned ncoords = get_image_coords(var, NULL);
-	unsigned tex_idx = get_image_slot(ctx, var);
+	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
 
 	/* src0 is value
 	 * src1 is coords
@@ -2017,7 +2041,7 @@ emit_intrinsic_image_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 {
 	struct ir3_block *b = ctx->block;
 	const nir_variable *var = intr->variables[0]->var;
-	unsigned tex_idx = get_image_slot(ctx, var);
+	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
 	struct ir3_instruction *sam, *lod;
 	unsigned flags, ncoords = get_image_coords(var, &flags);
 
@@ -2061,7 +2085,7 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
 	unsigned ncoords = get_image_coords(var, NULL);
 
-	image = create_immed(b, get_image_slot(ctx, var));
+	image = create_immed(b, get_image_slot(ctx, intr->variables[0]));
 
 	/* src0 is value (or uvec2(value, compare))
 	 * src1 is coords
