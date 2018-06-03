@@ -368,11 +368,12 @@ brw_set_desc_ex(struct brw_codegen *p, brw_inst *inst,
                 unsigned desc, unsigned ex_desc)
 {
    const struct gen_device_info *devinfo = p->devinfo;
+   assert(brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND ||
+          brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SENDC);
    brw_inst_set_src1_file_type(devinfo, inst,
                                BRW_IMMEDIATE_VALUE, BRW_REGISTER_TYPE_D);
    brw_inst_set_send_desc(devinfo, inst, desc);
-   if (devinfo->gen >= 9 && (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND ||
-                             brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SENDC))
+   if (devinfo->gen >= 9)
       brw_inst_set_send_ex_desc(devinfo, inst, ex_desc);
 }
 
