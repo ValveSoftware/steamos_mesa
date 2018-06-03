@@ -189,9 +189,9 @@ anv_image_from_gralloc(VkDevice device_h,
    }
 
    assert(image->n_planes == 1);
-   assert(image->planes[0].bo_offset == 0);
+   assert(image->planes[0].address.offset == 0);
 
-   image->planes[0].bo = bo;
+   image->planes[0].address.bo = bo;
    image->planes[0].bo_is_owned = true;
 
    /* We need to set the WRITE flag on window system buffers so that GEM will
