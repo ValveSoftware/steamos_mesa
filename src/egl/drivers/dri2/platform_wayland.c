@@ -258,6 +258,9 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       goto cleanup_surf;
    }
 
+   dri2_surf->base.Width = window->width;
+   dri2_surf->base.Height = window->height;
+
    visual_idx = dri2_wl_visual_idx_from_config(dri2_dpy, config);
    assert(visual_idx != -1);
 
