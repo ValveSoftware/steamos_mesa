@@ -1371,17 +1371,23 @@ endforeach
 
 inc_include = include_directories('include')
 
-gl_priv_reqs = [
-  'x11', 'xext', 'xdamage >= 1.1', 'xfixes', 'x11-xcb', 'xcb',
-  'xcb-glx >= 1.8.1']
+gl_priv_reqs = []
+
+if with_glx == 'xlib' or with_glx == 'gallium-xlib'
+  gl_priv_reqs += ['x11', 'xext', 'xcb']
+elif with_glx == 'dri'
+  gl_priv_reqs += [
+    'x11', 'xext', 'xdamage >= 1.1', 'xfixes', 'x11-xcb', 'xcb',
+    'xcb-glx >= 1.8.1']
+  if with_dri_platform == 'drm'
+    gl_priv_reqs += 'xcb-dri2 >= 1.8'
+  endif
+endif
 if dep_libdrm.found()
   gl_priv_reqs += 'libdrm >= 2.4.75'
 endif
 if dep_xxf86vm.found()
   gl_priv_reqs += 'xxf86vm'
-endif
-if with_dri_platform == 'drm'
-  gl_priv_reqs += 'xcb-dri2 >= 1.8'
 endif
 
 gl_priv_libs = []
