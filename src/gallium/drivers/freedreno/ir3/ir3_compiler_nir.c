@@ -2585,7 +2585,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	}
 
 	switch (tex->op) {
-	case nir_texop_tex:      opc = OPC_SAM;      break;
+	case nir_texop_tex:      opc = has_lod ? OPC_SAML : OPC_SAM; break;
 	case nir_texop_txb:      opc = OPC_SAMB;     break;
 	case nir_texop_txl:      opc = OPC_SAML;     break;
 	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
