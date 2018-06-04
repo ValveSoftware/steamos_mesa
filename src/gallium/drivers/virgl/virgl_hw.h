@@ -292,6 +292,7 @@ struct virgl_caps_v2 {
         int32_t max_texture_gather_offset;
         uint32_t texture_buffer_offset_alignment;
         uint32_t uniform_buffer_offset_alignment;
+        uint32_t shader_buffer_offset_alignment;
 };
 
 union virgl_caps {

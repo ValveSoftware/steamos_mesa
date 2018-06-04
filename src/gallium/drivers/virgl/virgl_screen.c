@@ -211,6 +211,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v1.bset.polygon_offset_clamp;
    case PIPE_CAP_QUERY_SO_OVERFLOW:
       return vscreen->caps.caps.v1.bset.transform_feedback_overflow_query;
+   case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+      return vscreen->caps.caps.v2.shader_buffer_offset_alignment;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -236,7 +238,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
    case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
    case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
-   case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
    case PIPE_CAP_INVALIDATE_BUFFER:
    case PIPE_CAP_GENERATE_MIPMAP:
    case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
