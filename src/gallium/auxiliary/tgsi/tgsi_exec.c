@@ -2045,8 +2045,7 @@ exec_kill_if(struct tgsi_exec_machine *mach,
  * Unconditional fragment kill/discard.
  */
 static void
-exec_kill(struct tgsi_exec_machine *mach,
-          const struct tgsi_full_instruction *inst)
+exec_kill(struct tgsi_exec_machine *mach)
 {
    uint kilmask; /* bit 0 = pixel 0, bit 1 = pixel 1, etc */
 
@@ -5146,7 +5145,7 @@ exec_instruction(
       break;
 
    case TGSI_OPCODE_KILL:
-      exec_kill (mach, inst);
+      exec_kill (mach);
       break;
 
    case TGSI_OPCODE_KILL_IF:
