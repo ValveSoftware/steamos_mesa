@@ -1570,6 +1570,11 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
    if (insn.dstCount()) {
       Instruction::DstRegister dst = insn.getDst(0);
 
+      if (insn.getOpcode() == TGSI_OPCODE_STORE &&
+          dst.getFile() != TGSI_FILE_MEMORY) {
+         info->io.globalAccess |= 0x2;
+      }
+
       if (dst.getFile() == TGSI_FILE_OUTPUT) {
          if (dst.isIndirect(0))
             for (unsigned i = 0; i < info->numOutputs; ++i)
@@ -1586,10 +1591,6 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
 
          if (isEdgeFlagPassthrough(insn))
             info->io.edgeFlagIn = insn.getSrc(0).getIndex(0);
-      } else
-      if (dst.getFile() != TGSI_FILE_MEMORY &&
-          insn.getOpcode() == TGSI_OPCODE_STORE) {
-         info->io.globalAccess |= 0x2;
       } else
       if (dst.getFile() == TGSI_FILE_TEMPORARY) {
          if (dst.isIndirect(0))
