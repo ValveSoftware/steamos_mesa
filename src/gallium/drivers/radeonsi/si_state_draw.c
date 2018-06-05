@@ -170,6 +170,14 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 	 */
 	*num_patches = MIN2(*num_patches, 40);
 
+	/* Make sure that vector lanes are reasonably occupied. It probably
+	 * doesn't matter much because this is LS-HS, and TES is likely to
+	 * occupy significantly more CUs.
+	 */
+	unsigned temp_verts_per_tg = *num_patches * max_verts_per_patch;
+	if (temp_verts_per_tg > 64 && temp_verts_per_tg % 64 < 48)
+		*num_patches = (temp_verts_per_tg & ~63) / max_verts_per_patch;
+
 	if (sctx->chip_class == SI) {
 		/* SI bug workaround, related to power management. Limit LS-HS
 		 * threadgroups to only one wave.
