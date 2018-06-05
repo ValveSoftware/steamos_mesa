@@ -289,7 +289,7 @@ void brw_set_default_acc_write_control(struct brw_codegen *p, unsigned value)
 void brw_push_insn_state( struct brw_codegen *p )
 {
    assert(p->current != &p->stack[BRW_EU_MAX_INSN_STACK-1]);
-   memcpy(p->current + 1, p->current, sizeof(brw_inst));
+   *(p->current + 1) = *p->current;
    p->current++;
 }
 
