@@ -591,7 +591,9 @@ script:
 
       export CFLAGS="$CFLAGS -isystem`pwd`";
 
-      ./autogen.sh --enable-debug
+      mkdir build &&
+      cd build &&
+      ../autogen.sh --enable-debug
         $LIBUNWIND_FLAGS
         $DRI_LOADERS
         --with-dri-drivers=$DRI_DRIVERS
