@@ -160,7 +160,7 @@ static boolean delete_depth_stencil_state(struct cso_context *ctx, void *state)
    return TRUE;
 }
 
-static boolean delete_sampler_state(struct cso_context *ctx, void *state)
+static boolean delete_sampler_state(UNUSED struct cso_context *ctx, void *state)
 {
    struct cso_sampler *cso = (struct cso_sampler *)state;
    if (cso->delete_state)
