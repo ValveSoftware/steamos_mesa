@@ -236,7 +236,7 @@ int main(int argc, char **argv)
       errx(1, "USAGE: %s seed iter_count\n", argv[0]);
    }
 
-   random_test r{seed};
+   random_test r{(uint_fast32_t)seed};
    r.test(count);
 
    printf("ok\n");
