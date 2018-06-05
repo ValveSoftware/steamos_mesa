@@ -24,7 +24,7 @@
 #ifndef MESA_GLSL_TO_TGSI_TEMPRENAME_H
 #define MESA_GLSL_TO_TGSI_TEMPRENAME_H
 
-#include "st_glsl_to_tgsi_private.h"
+#include "st_glsl_to_tgsi_array_merge.h"
 
 /** Storage to record the required live range of a temporary register
  * begin == end == -1 indicates that the register can be reused without
@@ -50,12 +50,19 @@ struct register_live_range {
  *   point to allocated memory that can hold ntemps register_live_range
  *   structures. On output the live ranges contains the live ranges for
  *   the registers with the exception of TEMP[0]
+ * @param[in] narrays number of array sreserved for this shader
+ * @param[in,out] arr_live_ranges memory location to store the estimated required
+ *   live ranges for each array. The parameter must point to allocated memory
+ *   that can hold narrays array_live_range structures. On output the live
+ *   ranges contains the live ranges for the registers with the exception of
+ *   ARRAY[0].
  * @returns: true if the lifetimes were estimated, false if not (i.e. if a
  * subroutine was called).
  */
 bool
 get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
-		  int ntemps, struct register_live_range *register_live_ranges);
+		  int ntemps, struct register_live_range *register_live_ranges,
+		  int narrays, array_live_range *array_live_ranges);
 
 /** Estimate the merge remapping of the registers.
  * @param[in] mem_ctx a memory context that can be used with the ralloc_*

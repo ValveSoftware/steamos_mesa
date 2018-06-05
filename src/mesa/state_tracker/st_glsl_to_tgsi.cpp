@@ -5593,17 +5593,32 @@ glsl_to_tgsi_visitor::split_arrays(void)
 void
 glsl_to_tgsi_visitor::merge_registers(void)
 {
+   struct array_live_range *arr_live_ranges = NULL;
+
    struct register_live_range *reg_live_ranges =
 	 rzalloc_array(mem_ctx, struct register_live_range, this->next_temp);
 
+   if (this->next_array > 0) {
+      arr_live_ranges = new array_live_range[this->next_array];
+      for (unsigned i = 0; i < this->next_array; ++i)
+	 arr_live_ranges[i] = array_live_range(i+1, this->array_sizes[i+1]);
+   }
+
+
    if (get_temp_registers_required_live_ranges(reg_live_ranges, &this->instructions,
-					     this->next_temp, reg_live_ranges)) {
+					       this->next_temp, reg_live_ranges,
+					       this->next_array, arr_live_ranges)) {
       struct rename_reg_pair *renames =
 	    rzalloc_array(reg_live_ranges, struct rename_reg_pair, this->next_temp);
       get_temp_registers_remapping(reg_live_ranges, this->next_temp,
 				   reg_live_ranges, renames);
       rename_temp_registers(renames);
-      ralloc_free(renames);
+
+      this->next_array =  merge_arrays(this->next_array, this->array_sizes,
+				       &this->instructions, arr_live_ranges);
+
+      if (arr_live_ranges)
+	 delete[] arr_live_ranges;
    }
    ralloc_free(reg_live_ranges);
 }

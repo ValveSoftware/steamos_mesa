@@ -146,6 +146,9 @@ public:
 			    const array_remapping& rhs);
 
 private:
+
+   void interleave(int trgt_access_mask, int src_access_mask);
+
    unsigned target_id;
    int8_t read_swizzle_map[4];
 };
