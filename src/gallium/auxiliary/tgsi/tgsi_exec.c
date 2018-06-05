@@ -1590,8 +1590,7 @@ static void
 fetch_source_d(const struct tgsi_exec_machine *mach,
                union tgsi_exec_channel *chan,
                const struct tgsi_full_src_register *reg,
-               const uint chan_index,
-               enum tgsi_exec_datatype src_datatype)
+	       const uint chan_index)
 {
    union tgsi_exec_channel index;
    union tgsi_exec_channel index2D;
@@ -1740,7 +1739,7 @@ fetch_source(const struct tgsi_exec_machine *mach,
              const uint chan_index,
              enum tgsi_exec_datatype src_datatype)
 {
-   fetch_source_d(mach, chan, reg, chan_index, src_datatype);
+   fetch_source_d(mach, chan, reg, chan_index);
 
    if (reg->Register.Absolute) {
       if (src_datatype == TGSI_EXEC_DATA_FLOAT) {
@@ -3549,8 +3548,8 @@ fetch_double_channel(struct tgsi_exec_machine *mach,
    union tgsi_exec_channel src[2];
    uint i;
 
-   fetch_source_d(mach, &src[0], reg, chan_0, TGSI_EXEC_DATA_UINT);
-   fetch_source_d(mach, &src[1], reg, chan_1, TGSI_EXEC_DATA_UINT);
+   fetch_source_d(mach, &src[0], reg, chan_0);
+   fetch_source_d(mach, &src[1], reg, chan_1);
 
    for (i = 0; i < TGSI_QUAD_SIZE; i++) {
       chan->u[i][0] = src[0].u[i];
