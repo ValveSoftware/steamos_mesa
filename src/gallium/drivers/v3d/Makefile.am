@@ -25,7 +25,9 @@ include $(top_srcdir)/src/gallium/Automake.inc
 AM_CFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_srcdir)/include/drm-uapi \
+	-I$(top_srcdir)/src/broadcom \
 	-I$(top_builddir)/src/broadcom \
+	-I$(top_builddir)/src \
 	$(LIBDRM_CFLAGS) \
 	$(V3D_SIMULATOR_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
