@@ -24,13 +24,14 @@
 #ifndef mesa_st_tests_h
 #define mesa_st_tests_h
 
-#include <state_tracker/st_glsl_to_tgsi_temprename.h>
-#include <gtest/gtest.h>
+#include "state_tracker/st_glsl_to_tgsi_temprename.h"
+#include "state_tracker/st_glsl_to_tgsi_array_merge.h"
+#include "gtest/gtest.h"
+
 #include <utility>
 
 #define MP(X, W) std::make_pair(X, W)
 #define MT(X,Y,Z) std::make_tuple(X,Y,Z)
-
 
 /* Use this to make the compiler pick the swizzle constructor below */
 struct SWZ {};
