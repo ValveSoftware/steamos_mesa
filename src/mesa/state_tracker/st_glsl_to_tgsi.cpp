@@ -66,6 +66,49 @@
 
 #define MAX_GLSL_TEXTURE_OFFSET 4
 
+#ifndef NDEBUG
+#include "util/u_atomic.h"
+#include "util/simple_mtx.h"
+#include <fstream>
+#include <ios>
+
+/* Prepare to make it possible to specify log file */
+static std::ofstream stats_log;
+
+/* Helper function to check whether we want to write some statistics
+ * of the shader conversion.
+ */
+
+static simple_mtx_t print_stats_mutex = _SIMPLE_MTX_INITIALIZER_NP;
+
+static inline bool print_stats_enabled ()
+{
+   static int stats_enabled = 0;
+
+   if (!stats_enabled) {
+      simple_mtx_lock(&print_stats_mutex);
+      if (!stats_enabled) {
+	 const char *stats_filename = getenv("GLSL_TO_TGSI_PRINT_STATS");
+	 if (stats_filename) {
+	    bool write_header = std::ifstream(stats_filename).fail();
+	    stats_log.open(stats_filename, std::ios_base::out | std::ios_base::app);
+	    stats_enabled = stats_log.good() ? 1 : -1;
+	    if (write_header)
+	       stats_log << "arrays,temps,temps in arrays,total,instructions\n";
+	 } else {
+	    stats_enabled = -1;
+	 }
+      }
+      simple_mtx_unlock(&print_stats_mutex);
+   }
+   return stats_enabled > 0;
+}
+#define PRINT_STATS(X) if (print_stats_enabled()) do { X; } while (false);
+#else
+#define PRINT_STATS(X)
+#endif
+
+
 static unsigned is_precise(const ir_variable *ir)
 {
    if (!ir)
@@ -347,6 +390,8 @@ public:
    void emit_block_mov(ir_assignment *ir, const struct glsl_type *type,
                        st_dst_reg *l, st_src_reg *r,
                        st_src_reg *cond, bool cond_swap);
+
+   void print_stats();
 
    void *mem_ctx;
 };
@@ -5491,6 +5536,27 @@ glsl_to_tgsi_visitor::renumber_registers(void)
    ralloc_free(first_writes);
 }
 
+#ifndef NDEBUG
+void glsl_to_tgsi_visitor::print_stats()
+{
+   int narray_registers = 0;
+   for (unsigned i = 0; i < this->next_array; ++i)
+      narray_registers += this->array_sizes[i];
+
+   int ninstructions = 0;
+   foreach_in_list(glsl_to_tgsi_instruction, inst, &instructions) {
+      ++ninstructions;
+   }
+
+   simple_mtx_lock(&print_stats_mutex);
+   stats_log << next_array << ", "
+	     << next_temp << ", "
+	     << narray_registers << ", "
+	     << next_temp + narray_registers << ", "
+	     << ninstructions << "\n";
+   simple_mtx_unlock(&print_stats_mutex);
+}
+#endif
 /* ------------------------- TGSI conversion stuff -------------------------- */
 
 /**
@@ -7003,6 +7069,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       assert(!"should not be reached");
       return NULL;
    }
+
+   PRINT_STATS(v->print_stats());
 
    return prog;
 }
