@@ -411,7 +411,7 @@ LifetimeEvaluatorTest::run(const vector<FakeCodeline>& code, bool& success)
    lifetime_result result(shader.get_num_temps());
 
    success =
-         get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(mem_ctx),
+	 get_temp_registers_required_live_ranges(mem_ctx, shader.get_program(mem_ctx),
                                                shader.get_num_temps(),
                                                &result[0]);
 
@@ -422,8 +422,9 @@ void LifetimeEvaluatorTest::run(const vector<FakeCodeline>& code, const temp_lt_
 {
    FakeShader shader(code);
    lifetime_result result(shader.get_num_temps());
+
    bool success =
-      get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(mem_ctx),
+      get_temp_registers_required_live_ranges(mem_ctx, shader.get_program(mem_ctx),
                                             shader.get_num_temps(),
                                             &result[0]);
    ASSERT_TRUE(success);
@@ -431,7 +432,7 @@ void LifetimeEvaluatorTest::run(const vector<FakeCodeline>& code, const temp_lt_
    check(result, e);
 }
 
-void LifetimeEvaluatorExactTest::check( const vector<lifetime>& lifetimes,
+void LifetimeEvaluatorExactTest::check( const vector<register_live_range>& lifetimes,
                                         const temp_lt_expect& e)
 {
    for (unsigned i = 1; i < lifetimes.size(); ++i) {
@@ -440,7 +441,7 @@ void LifetimeEvaluatorExactTest::check( const vector<lifetime>& lifetimes,
    }
 }
 
-void LifetimeEvaluatorAtLeastTest::check( const vector<lifetime>& lifetimes,
+void LifetimeEvaluatorAtLeastTest::check( const vector<register_live_range>& lifetimes,
                                           const temp_lt_expect& e)
 {
    for (unsigned i = 1; i < lifetimes.size(); ++i) {
@@ -449,7 +450,7 @@ void LifetimeEvaluatorAtLeastTest::check( const vector<lifetime>& lifetimes,
    }
 }
 
-void RegisterRemappingTest::run(const vector<lifetime>& lt,
+void RegisterRemappingTest::run(const vector<register_live_range>& lt,
                                 const vector<int>& expect)
 {
    rename_reg_pair proto{false,0};
@@ -476,8 +477,9 @@ void RegisterLifetimeAndRemappingTest::run(const vector<FakeCodeline>& code,
                                            const vector<int>& expect)
 {
      FakeShader shader(code);
-     std::vector<lifetime> lt(shader.get_num_temps());
-     get_temp_registers_required_lifetimes(mem_ctx, shader.get_program(mem_ctx),
+     std::vector<register_live_range> lt(shader.get_num_temps());
+
+     get_temp_registers_required_live_ranges(mem_ctx, shader.get_program(mem_ctx),
                                            shader.get_num_temps(), &lt[0]);
      this->run(lt, expect);
 }

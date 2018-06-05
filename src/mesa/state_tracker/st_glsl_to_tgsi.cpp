@@ -5593,19 +5593,19 @@ glsl_to_tgsi_visitor::split_arrays(void)
 void
 glsl_to_tgsi_visitor::merge_registers(void)
 {
-   struct lifetime *lifetimes =
-         rzalloc_array(mem_ctx, struct lifetime, this->next_temp);
+   struct register_live_range *reg_live_ranges =
+	 rzalloc_array(mem_ctx, struct register_live_range, this->next_temp);
 
-   if (get_temp_registers_required_lifetimes(mem_ctx, &this->instructions,
-                                             this->next_temp, lifetimes)) {
+   if (get_temp_registers_required_live_ranges(reg_live_ranges, &this->instructions,
+					     this->next_temp, reg_live_ranges)) {
       struct rename_reg_pair *renames =
-            rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
-      get_temp_registers_remapping(mem_ctx, this->next_temp, lifetimes, renames);
+	    rzalloc_array(reg_live_ranges, struct rename_reg_pair, this->next_temp);
+      get_temp_registers_remapping(reg_live_ranges, this->next_temp,
+				   reg_live_ranges, renames);
       rename_temp_registers(renames);
       ralloc_free(renames);
    }
-
-   ralloc_free(lifetimes);
+   ralloc_free(reg_live_ranges);
 }
 
 /* Reassign indices to temporary registers by reusing unused indices created
