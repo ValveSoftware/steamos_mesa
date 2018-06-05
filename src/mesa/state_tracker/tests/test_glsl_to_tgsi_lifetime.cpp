@@ -794,6 +794,31 @@ TEST_F(LifetimeEvaluatorExactTest, WriteInIfElseBranchSecondIfInLoop)
    run (code, temp_lt_expect({{-1,-1}, {2,9}}));
 }
 
+/* Within an IF clause within a loop test that if a write occured in both
+ * branches of a nested IF/ELSE clause, followed by the last read within the
+ * enclosing IF or ELSE clause, the combined read is registered as unconditional,
+ * i.e.that it doesn't extend its live range beyond that enclosing IF or ELSE
+ * clause.
+ */
+TEST_F(LifetimeEvaluatorExactTest, DeeplyNestedinLoop)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_UIF, {}, {in0}, {}},
+      {     TGSI_OPCODE_FSEQ, {1}, {in1,in2}, {}},
+      {     TGSI_OPCODE_UIF, {}, {1}, {}},
+      {       TGSI_OPCODE_MOV, {2}, {in1}, {}},
+      {     TGSI_OPCODE_ELSE },
+      {       TGSI_OPCODE_MOV, {2}, {in2}, {}},
+      {     TGSI_OPCODE_ENDIF },
+      {     TGSI_OPCODE_MOV, {3}, {2}, {}},
+      {   TGSI_OPCODE_ENDIF },
+      {   TGSI_OPCODE_ADD, {out0}, {3, in1}, {}},
+      { TGSI_OPCODE_ENDLOOP }
+   };
+   run (code, temp_lt_expect({{-1,-1}, {2,3}, {4, 8}, {0,11}}));
+}
+
 /** Regression test for bug #104803,
  *  Read and write in if/else path outside loop and later read in conditional
  *  within a loop. The first write is to be considered the dominant write.

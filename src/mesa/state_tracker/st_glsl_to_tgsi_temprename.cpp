@@ -741,6 +741,20 @@ void temp_comp_access::record_else_write(const prog_scope& scope)
          } else {
             current_unpaired_if_write_scope = nullptr;
          }
+	 /* Promote the first write scope to the enclosing scope because
+	  * the current IF/ELSE pair is now irrelevant for the analysis.
+	  * This is also required to evaluate the minimum life time for t in
+	  * {
+	  *    var t;
+	  *    if (a)
+	  *      t = ...
+	  *    else
+	  *      t = ...
+	  *    x = t;
+	  *    ...
+	  * }
+	  */
+	 first_write_scope = scope.parent();
 
          /* If some parent is IF/ELSE and in a loop then propagate the
           * write to that scope. Otherwise the write is unconditional
