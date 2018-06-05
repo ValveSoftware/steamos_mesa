@@ -35,6 +35,7 @@
 
 #include "nir/tgsi_to_nir.h"
 
+
 static const nir_shader_compiler_options options = {
 		.lower_fpow = true,
 		.lower_scmp = true,
@@ -203,6 +204,8 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 		ir3_optimize_loop(s);
 
 	OPT_V(s, nir_remove_dead_variables, nir_var_local);
+
+	OPT_V(s, nir_move_load_const);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");
