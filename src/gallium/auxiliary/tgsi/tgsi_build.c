@@ -1061,7 +1061,6 @@ tgsi_build_full_instruction(
    unsigned size = 0;
    unsigned i;
    struct tgsi_instruction *instruction;
-   struct tgsi_token *prev_token;
 
    if( maxsize <= size )
       return 0;
@@ -1074,7 +1073,6 @@ tgsi_build_full_instruction(
                                          full_inst->Instruction.NumDstRegs,
                                          full_inst->Instruction.NumSrcRegs,
                                          header);
-   prev_token = (struct tgsi_token  *) instruction;
 
    if (full_inst->Instruction.Label) {
       struct tgsi_instruction_label *instruction_label;
@@ -1088,8 +1086,7 @@ tgsi_build_full_instruction(
       *instruction_label = tgsi_build_instruction_label(
          full_inst->Label.Label,
          instruction,
-         header );
-      prev_token = (struct tgsi_token  *) instruction_label;
+	 header );
    }
 
    if (full_inst->Instruction.Texture) {
@@ -1107,7 +1104,6 @@ tgsi_build_full_instruction(
          full_inst->Texture.ReturnType,
          instruction,
          header   );
-      prev_token = (struct tgsi_token  *) instruction_texture;
 
       for (i = 0; i < full_inst->Texture.NumOffsets; i++) {
          struct tgsi_texture_offset *texture_offset;
@@ -1124,7 +1120,6 @@ tgsi_build_full_instruction(
             full_inst->TexOffsets[i].SwizzleZ,
             instruction,
             header);
-         prev_token = (struct tgsi_token *) texture_offset;
       }
    }
 
@@ -1143,7 +1138,6 @@ tgsi_build_full_instruction(
          full_inst->Memory.Format,
          instruction,
          header );
-      prev_token = (struct tgsi_token  *) instruction_memory;
    }
 
    for( i = 0;  i <   full_inst->Instruction.NumDstRegs; i++ ) {
