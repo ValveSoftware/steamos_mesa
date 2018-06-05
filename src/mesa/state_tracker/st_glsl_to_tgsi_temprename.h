@@ -55,7 +55,7 @@ struct register_live_range {
  */
 bool
 get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
-			   int ntemps, struct register_live_range *live_ranges);
+		  int ntemps, struct register_live_range *register_live_ranges);
 
 /** Estimate the merge remapping of the registers.
  * @param[in] mem_ctx a memory context that can be used with the ralloc_*

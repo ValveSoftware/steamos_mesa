@@ -898,14 +898,14 @@ register_live_range temp_comp_access::get_required_live_range()
 
 /* Helper class for sorting and searching the registers based
  * on live ranges. */
-class access_record {
+class register_merge_record {
 public:
    int begin;
    int end;
    int reg;
    bool erase;
 
-   bool operator < (const access_record& rhs) const {
+   bool operator < (const register_merge_record& rhs) const {
       return begin < rhs.begin;
    }
 };
@@ -918,30 +918,30 @@ public:
    void record_read(const st_src_reg& src, int line, prog_scope *scope);
    void record_write(const st_dst_reg& src, int line, prog_scope *scope);
 
-   void get_required_live_ranges(register_live_range *live_ranges);
+   void get_required_live_ranges(register_live_range *register_live_ranges);
 private:
 
    int ntemps;
-   temp_access *acc;
+   temp_access *temp_acc;
 
 };
 
 access_recorder::access_recorder(int _ntemps):
    ntemps(_ntemps)
 {
-   acc = new temp_access[ntemps];
+   temp_acc = new temp_access[ntemps];
 }
 
 access_recorder::~access_recorder()
 {
-   delete[] acc;
+   delete[] temp_acc;
 }
 
 void access_recorder::record_read(const st_src_reg& src, int line,
                                   prog_scope *scope)
 {
    if (src.file == PROGRAM_TEMPORARY)
-      acc[src.index].record_read(line, scope, src.swizzle);
+      temp_acc[src.index].record_read(line, scope, src.swizzle);
 
    if (src.reladdr)
       record_read(*src.reladdr, line, scope);
@@ -953,7 +953,7 @@ void access_recorder::record_write(const st_dst_reg& dst, int line,
                                    prog_scope *scope)
 {
    if (dst.file == PROGRAM_TEMPORARY)
-      acc[dst.index].record_write(line, scope, dst.writemask);
+      temp_acc[dst.index].record_write(line, scope, dst.writemask);
 
    if (dst.reladdr)
       record_read(*dst.reladdr, line, scope);
@@ -961,14 +961,14 @@ void access_recorder::record_write(const st_dst_reg& dst, int line,
       record_read(*dst.reladdr2, line, scope);
 }
 
-void access_recorder::get_required_live_ranges(struct register_live_range *live_ranges)
+void access_recorder::get_required_live_ranges(struct register_live_range *register_live_ranges)
 {
-   RENAME_DEBUG(debug_log << "=========live_ranges ==============\n");
+   RENAME_DEBUG(debug_log << "== register live ranges ==========\n");
    for(int i = 0; i < ntemps; ++i) {
       RENAME_DEBUG(debug_log << setw(4) << i);
-      live_ranges[i] = acc[i].get_required_live_range();
-      RENAME_DEBUG(debug_log << ": [" << live_ranges[i].begin << ", "
-		   << live_ranges[i].end << "]\n");
+      register_live_ranges[i] = temp_acc[i].get_required_live_range();
+      RENAME_DEBUG(debug_log << ": [" << register_live_ranges[i].begin << ", "
+		   << register_live_ranges[i].end << "]\n");
    }
    RENAME_DEBUG(debug_log << "==================================\n\n");
 }
@@ -986,7 +986,7 @@ static void dump_instruction(ostream& os, int line, prog_scope *scope,
  */
 bool
 get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
-					int ntemps, struct register_live_range *live_ranges)
+		  int ntemps, struct register_live_range *register_live_ranges)
 {
    int line = 0;
    int loop_id = 1;
@@ -1153,7 +1153,7 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
    if (cur_scope->end() < 0)
       cur_scope->set_end(line - 1);
 
-   access.get_required_live_ranges(live_ranges);
+   access.get_required_live_ranges(register_live_ranges);
    return true;
 }
 
@@ -1163,14 +1163,14 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
  * end points at the element past the end of the search range, and
  * the array comprising [start, end) must be sorted in ascending order.
  */
-static access_record*
-find_next_rename(access_record* start, access_record* end, int bound)
+static register_merge_record*
+find_next_rename(register_merge_record* start, register_merge_record* end, int bound)
 {
    int delta = (end - start);
 
    while (delta > 0) {
       int half = delta >> 1;
-      access_record* middle = start + half;
+      register_merge_record* middle = start + half;
 
       if (bound <= middle->begin) {
          delta = half;
@@ -1185,9 +1185,9 @@ find_next_rename(access_record* start, access_record* end, int bound)
 }
 
 #ifndef USE_STL_SORT
-static int access_record_compare (const void *a, const void *b) {
-   const access_record *aa = static_cast<const access_record*>(a);
-   const access_record *bb = static_cast<const access_record*>(b);
+static int register_merge_record_compare (const void *a, const void *b) {
+   const register_merge_record *aa = static_cast<const register_merge_record*>(a);
+   const register_merge_record *bb = static_cast<const register_merge_record*>(b);
    return aa->begin < bb->begin ? -1 : (aa->begin > bb->begin ? 1 : 0);
 }
 #endif
@@ -1196,9 +1196,9 @@ static int access_record_compare (const void *a, const void *b) {
  * search to find suitable merge candidates. */
 void get_temp_registers_remapping(void *mem_ctx, int ntemps,
 				  const struct register_live_range *live_ranges,
-                                  struct rename_reg_pair *result)
+				  struct rename_reg_pair *result)
 {
-   access_record *reg_access = ralloc_array(mem_ctx, access_record, ntemps);
+   register_merge_record *reg_access = ralloc_array(mem_ctx, register_merge_record, ntemps);
 
    int used_temps = 0;
    for (int i = 0; i < ntemps; ++i) {
@@ -1214,16 +1214,17 @@ void get_temp_registers_remapping(void *mem_ctx, int ntemps,
 #ifdef USE_STL_SORT
    std::sort(reg_access, reg_access + used_temps);
 #else
-   std::qsort(reg_access, used_temps, sizeof(access_record), access_record_compare);
+   std::qsort(reg_access, used_temps, sizeof(register_merge_record),
+	      register_merge_record_compare);
 #endif
 
-   access_record *trgt = reg_access;
-   access_record *reg_access_end = reg_access + used_temps;
-   access_record *first_erase = reg_access_end;
-   access_record *search_start = trgt + 1;
+   register_merge_record *trgt = reg_access;
+   register_merge_record *reg_access_end = reg_access + used_temps;
+   register_merge_record *first_erase = reg_access_end;
+   register_merge_record *search_start = trgt + 1;
 
    while (trgt != reg_access_end) {
-      access_record *src = find_next_rename(search_start, reg_access_end,
+      register_merge_record *src = find_next_rename(search_start, reg_access_end,
                                             trgt->end);
       if (src != reg_access_end) {
          result[src->reg].new_reg = trgt->reg;
@@ -1242,8 +1243,8 @@ void get_temp_registers_remapping(void *mem_ctx, int ntemps,
          /* Moving to the next target register it is time to remove
           * the already merged registers from the search range */
          if (first_erase != reg_access_end) {
-            access_record *outp = first_erase;
-            access_record *inp = first_erase + 1;
+	    register_merge_record *outp = first_erase;
+	    register_merge_record *inp = first_erase + 1;
 
             while (inp != reg_access_end) {
                if (!inp->erase)
