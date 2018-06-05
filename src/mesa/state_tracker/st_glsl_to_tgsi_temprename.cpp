@@ -22,6 +22,7 @@
  */
 
 #include "st_glsl_to_tgsi_temprename.h"
+#include "st_glsl_to_tgsi_array_merge.h"
 #include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_strings.h"
 #include "program/prog_instruction.h"
@@ -237,6 +238,27 @@ private:
    temp_comp_access comp[4];
    int access_mask;
    bool needs_component_tracking;
+};
+
+/* Class to track array access.
+ * Compared to the temporary tracking this is very simplified, mainly because
+ * with the likely indirect access one can not really establish access
+ * patterns for individual elements. Instead the life range evaluation is
+ * always for the whole array, handles only loops and the fact whether a
+ * value was accessed conditionally in a loop.
+ */
+class array_access {
+public:
+   array_access();
+   void record_access(int line, prog_scope *scope, int swizzle);
+   void get_required_live_range(array_live_range &lr);
+private:
+   int first_access;
+   int last_access;
+   prog_scope *first_access_scope;
+   prog_scope *last_access_scope;
+   unsigned accumulated_swizzle:4;
+   int conditional_access_in_loop:1;
 };
 
 prog_scope_storage::prog_scope_storage(void *mc, int n):
@@ -507,6 +529,86 @@ void temp_access::record_read(int line, prog_scope *scope, int readmask)
    if (readmask & WRITEMASK_W)
       comp[3].record_read(line, scope);
 }
+
+array_access::array_access():
+   first_access(-1),
+   last_access(-1),
+   first_access_scope(nullptr),
+   last_access_scope(nullptr),
+   accumulated_swizzle(0),
+   conditional_access_in_loop(false)
+{
+}
+
+void array_access::record_access(int line, prog_scope *scope, int swizzle)
+{
+   if (!first_access_scope) {
+      first_access = line;
+      first_access_scope = scope;
+   }
+   last_access_scope = scope;
+   last_access = line;
+   accumulated_swizzle |= swizzle;
+   if (scope->in_ifelse_scope() && scope->innermost_loop())
+      conditional_access_in_loop = true;
+}
+
+void array_access::get_required_live_range(array_live_range& lr)
+{
+   RENAME_DEBUG(debug_log << "first_access_scope=" << first_access_scope << "\n");
+   RENAME_DEBUG(debug_log << "last_access_scope=" << last_access_scope << "\n");
+
+   if (first_access_scope == last_access_scope) {
+      lr.set_live_range(first_access, last_access);
+      lr.set_access_mask(accumulated_swizzle);
+      return;
+   }
+
+   const prog_scope *shared_scope = first_access_scope;
+   const prog_scope *other_scope = last_access_scope;
+
+   assert(shared_scope);
+   RENAME_DEBUG(debug_log << "shared_scope=" << shared_scope << "\n");
+
+   if (conditional_access_in_loop) {
+      const prog_scope *help = shared_scope->outermost_loop();
+      if (help) {
+	 shared_scope = help;
+      } else {
+	 help = other_scope->outermost_loop();
+	 if (help)
+	    other_scope = help;
+      }
+      if (first_access > shared_scope->begin())
+	 first_access = shared_scope->begin();
+      if (last_access < shared_scope->end())
+	 last_access = shared_scope->end();
+   }
+
+   /* See if any of the two is the parent of the other. */
+   if (other_scope->contains_range_of(*shared_scope)) {
+      shared_scope = other_scope;
+   } else while (!shared_scope->contains_range_of(*other_scope)) {
+      assert(shared_scope->parent());
+      if (shared_scope->type() == loop_body) {
+	 if (last_access < shared_scope->end())
+	     last_access = shared_scope->end();
+      }
+      shared_scope = shared_scope->parent();
+   }
+
+   while (shared_scope != other_scope) {
+      if (other_scope->type() == loop_body) {
+	 if (last_access < other_scope->end())
+	     last_access = other_scope->end();
+      }
+      other_scope = other_scope->parent();
+   }
+
+   lr.set_live_range(first_access, last_access);
+   lr.set_access_mask(accumulated_swizzle);
+}
+
 
 inline static register_live_range make_live_range(int b, int e)
 {
