@@ -712,7 +712,6 @@ tgsi_default_instruction_label( void )
 static struct tgsi_instruction_label
 tgsi_build_instruction_label(
    unsigned label,
-   struct tgsi_token  *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
 {
@@ -745,7 +744,6 @@ tgsi_build_instruction_texture(
    unsigned texture,
    unsigned num_offsets,
    unsigned return_type,
-   struct tgsi_token *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
 {
@@ -780,7 +778,6 @@ tgsi_build_instruction_memory(
    unsigned qualifier,
    unsigned texture,
    unsigned format,
-   struct tgsi_token *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
 {
@@ -815,7 +812,6 @@ tgsi_default_texture_offset( void )
 static struct tgsi_texture_offset
 tgsi_build_texture_offset(
    int index, int file, int swizzle_x, int swizzle_y, int swizzle_z,
-   struct tgsi_token *prev_token,
    struct tgsi_instruction *instruction,
    struct tgsi_header *header )
 {
@@ -1091,7 +1087,6 @@ tgsi_build_full_instruction(
 
       *instruction_label = tgsi_build_instruction_label(
          full_inst->Label.Label,
-         prev_token,
          instruction,
          header );
       prev_token = (struct tgsi_token  *) instruction_label;
@@ -1110,7 +1105,6 @@ tgsi_build_full_instruction(
          full_inst->Texture.Texture,
          full_inst->Texture.NumOffsets,
          full_inst->Texture.ReturnType,
-         prev_token,
          instruction,
          header   );
       prev_token = (struct tgsi_token  *) instruction_texture;
@@ -1128,7 +1122,6 @@ tgsi_build_full_instruction(
             full_inst->TexOffsets[i].SwizzleX,
             full_inst->TexOffsets[i].SwizzleY,
             full_inst->TexOffsets[i].SwizzleZ,
-            prev_token,
             instruction,
             header);
          prev_token = (struct tgsi_token *) texture_offset;
@@ -1148,7 +1141,6 @@ tgsi_build_full_instruction(
          full_inst->Memory.Qualifier,
          full_inst->Memory.Texture,
          full_inst->Memory.Format,
-         prev_token,
          instruction,
          header );
       prev_token = (struct tgsi_token  *) instruction_memory;
