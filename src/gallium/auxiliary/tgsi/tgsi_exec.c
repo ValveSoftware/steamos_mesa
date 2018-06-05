@@ -1763,7 +1763,6 @@ static union tgsi_exec_channel *
 store_dest_dstret(struct tgsi_exec_machine *mach,
                  const union tgsi_exec_channel *chan,
                  const struct tgsi_full_dst_register *reg,
-                 const struct tgsi_full_instruction *inst,
                  uint chan_index,
                  enum tgsi_exec_datatype dst_datatype)
 {
@@ -1931,7 +1930,6 @@ static void
 store_dest_double(struct tgsi_exec_machine *mach,
                  const union tgsi_exec_channel *chan,
                  const struct tgsi_full_dst_register *reg,
-                 const struct tgsi_full_instruction *inst,
                  uint chan_index,
                  enum tgsi_exec_datatype dst_datatype)
 {
@@ -1939,8 +1937,7 @@ store_dest_double(struct tgsi_exec_machine *mach,
    const uint execmask = mach->ExecMask;
    int i;
 
-   dst = store_dest_dstret(mach, chan, reg, inst, chan_index,
-			   dst_datatype);
+   dst = store_dest_dstret(mach, chan, reg, chan_index, dst_datatype);
    if (!dst)
       return;
 
@@ -1962,8 +1959,7 @@ store_dest(struct tgsi_exec_machine *mach,
    const uint execmask = mach->ExecMask;
    int i;
 
-   dst = store_dest_dstret(mach, chan, reg, inst, chan_index,
-                    dst_datatype);
+   dst = store_dest_dstret(mach, chan, reg, chan_index, dst_datatype);
    if (!dst)
       return;
 
@@ -3603,9 +3599,9 @@ store_double_channel(struct tgsi_exec_machine *mach,
          }
    }
 
-   store_dest_double(mach, &dst[0], reg, inst, chan_0, TGSI_EXEC_DATA_UINT);
-   if (chan_1 != -1)
-      store_dest_double(mach, &dst[1], reg, inst, chan_1, TGSI_EXEC_DATA_UINT);
+   store_dest_double(mach, &dst[0], reg, chan_0, TGSI_EXEC_DATA_UINT);
+   if (chan_1 != (unsigned)-1)
+      store_dest_double(mach, &dst[1], reg, chan_1, TGSI_EXEC_DATA_UINT);
 }
 
 static void
