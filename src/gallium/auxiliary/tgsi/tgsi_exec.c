@@ -1477,7 +1477,6 @@ micro_sub(union tgsi_exec_channel *dst,
 
 static void
 fetch_src_file_channel(const struct tgsi_exec_machine *mach,
-                       const uint chan_index,
                        const uint file,
                        const uint swizzle,
                        const union tgsi_exec_channel *index,
@@ -1634,7 +1633,6 @@ fetch_source_d(const struct tgsi_exec_machine *mach,
       /* get current value of address register[swizzle] */
       swizzle = reg->Indirect.Swizzle;
       fetch_src_file_channel(mach,
-                             chan_index,
                              reg->Indirect.File,
                              swizzle,
                              &index2,
@@ -1694,7 +1692,6 @@ fetch_source_d(const struct tgsi_exec_machine *mach,
 
          swizzle = reg->DimIndirect.Swizzle;
          fetch_src_file_channel(mach,
-                                chan_index,
                                 reg->DimIndirect.File,
                                 swizzle,
                                 &index2,
@@ -1729,7 +1726,6 @@ fetch_source_d(const struct tgsi_exec_machine *mach,
 
    swizzle = tgsi_util_get_full_src_register_swizzle( reg, chan_index );
    fetch_src_file_channel(mach,
-                          chan_index,
                           reg->Register.File,
                           swizzle,
                           &index,
@@ -1808,7 +1804,6 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
 
       /* fetch values from the address/indirection register */
       fetch_src_file_channel(mach,
-                             chan_index,
                              reg->Indirect.File,
                              swizzle,
                              &index,
@@ -1858,7 +1853,6 @@ store_dest_dstret(struct tgsi_exec_machine *mach,
 
          swizzle = reg->DimIndirect.Swizzle;
          fetch_src_file_channel(mach,
-                                chan_index,
                                 reg->DimIndirect.File,
                                 swizzle,
                                 &index2,
@@ -2155,11 +2149,11 @@ fetch_texel_offsets(struct tgsi_exec_machine *mach,
       union tgsi_exec_channel index;
       union tgsi_exec_channel offset[3];
       index.i[0] = index.i[1] = index.i[2] = index.i[3] = inst->TexOffsets[0].Index;
-      fetch_src_file_channel(mach, 0, inst->TexOffsets[0].File,
+      fetch_src_file_channel(mach, inst->TexOffsets[0].File,
                              inst->TexOffsets[0].SwizzleX, &index, &ZeroVec, &offset[0]);
-      fetch_src_file_channel(mach, 0, inst->TexOffsets[0].File,
+      fetch_src_file_channel(mach, inst->TexOffsets[0].File,
                              inst->TexOffsets[0].SwizzleY, &index, &ZeroVec, &offset[1]);
-      fetch_src_file_channel(mach, 0, inst->TexOffsets[0].File,
+      fetch_src_file_channel(mach, inst->TexOffsets[0].File,
                              inst->TexOffsets[0].SwizzleZ, &index, &ZeroVec, &offset[2]);
      offsets[0] = offset[0].i[0];
      offsets[1] = offset[1].i[0];
@@ -2212,7 +2206,6 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
       index2.i[3] = reg->Indirect.Index;
 
       fetch_src_file_channel(mach,
-                             0,
                              reg->Indirect.File,
                              reg->Indirect.Swizzle,
                              &index2,
