@@ -157,5 +157,29 @@ std::ostream& operator << (std::ostream& os, const array_remapping& am)
    return os;
 }
 
+/* Apply the array remapping (internal use, exposed here for testing) */
+ bool get_array_remapping(int narrays, array_live_range *array_live_ranges,
+			 array_remapping *remapping);
+
+/* Apply the array remapping (internal use, exposed here for testing) */
+int remap_arrays(int narrays, unsigned *array_sizes,
+		 exec_list *instructions,
+		 array_remapping *map);
+
 }
+
+/** Remap the array access to finalize the array merging and interleaving.
+  * @param[in] narrays number of input arrays,
+  * @param[in,out] array_sizes length array of input arrays, on output the
+  *   array sizes will be updated according to the remapping,
+  * @param[in,out] instructions TGSI program, on output the arrays access is
+  *    remapped to the new array layout,
+  * @param[in] array_live_ranges live ranges and access information of the
+  *    arrays.
+  * @returns number of remaining arrays
+  */
+int merge_arrays(int narrays,
+		 unsigned *array_sizes,
+		 exec_list *instructions,
+		 struct array_live_range *arr_live_ranges);
 #endif
