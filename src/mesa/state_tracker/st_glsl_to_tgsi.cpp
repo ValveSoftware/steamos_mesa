@@ -383,6 +383,7 @@ public:
    void copy_propagate(void);
    int eliminate_dead_code(void);
 
+   void split_arrays(void);
    void merge_two_dsts(void);
    void merge_registers(void);
    void renumber_registers(void);
@@ -5483,6 +5484,107 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
    }
 }
 
+template <typename st_reg>
+void test_indirect_access(const st_reg& reg, bool *has_indirect_access)
+{
+   if (reg.file == PROGRAM_ARRAY) {
+      if (reg.reladdr || reg.reladdr2 || reg.has_index2) {
+	 has_indirect_access[reg.array_id] = true;
+	 if (reg.reladdr)
+	    test_indirect_access(*reg.reladdr, has_indirect_access);
+	 if (reg.reladdr2)
+	    test_indirect_access(*reg.reladdr, has_indirect_access);
+      }
+   }
+}
+
+template <typename st_reg>
+void remap_array(st_reg& reg, const int *array_remap_info,
+		 const bool *has_indirect_access)
+{
+   if (reg.file == PROGRAM_ARRAY) {
+      if (!has_indirect_access[reg.array_id]) {
+	 reg.file = PROGRAM_TEMPORARY;
+	 reg.index = reg.index + array_remap_info[reg.array_id];
+	 reg.array_id = 0;
+      } else {
+	 reg.array_id = array_remap_info[reg.array_id];
+      }
+
+      if (reg.reladdr)
+	 remap_array(*reg.reladdr, array_remap_info, has_indirect_access);
+
+      if (reg.reladdr2)
+	 remap_array(*reg.reladdr2, array_remap_info, has_indirect_access);
+   }
+}
+
+/* One-dimensional arrays whose elements are only accessed directly are
+ * replaced by an according set of temporary registers that then can become
+ * subject to further optimization steps like copy propagation and
+ * register merging.
+ */
+void
+glsl_to_tgsi_visitor::split_arrays(void)
+{
+   if (!next_array)
+      return;
+
+   bool *has_indirect_access = rzalloc_array(mem_ctx, bool, next_array + 1);
+
+   foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
+      for (unsigned j = 0; j < num_inst_src_regs(inst); j++)
+	 test_indirect_access(inst->src[j], has_indirect_access);
+
+      for (unsigned j = 0; j < inst->tex_offset_num_offset; j++)
+	 test_indirect_access(inst->tex_offsets[j], has_indirect_access);
+
+      for (unsigned j = 0; j < num_inst_dst_regs(inst); j++)
+	 test_indirect_access(inst->dst[j], has_indirect_access);
+
+      test_indirect_access(inst->resource, has_indirect_access);
+   }
+
+   unsigned array_offset = 0;
+   unsigned n_remaining_arrays = 0;
+
+   /* Double use: For arrays that get split this value will contain
+    * the base index of the temporary registers this array is replaced
+    * with. For arrays that remain it contains the new array ID.
+    */
+   int *array_remap_info = rzalloc_array(has_indirect_access, int,
+					 next_array + 1);
+
+   for (unsigned i = 1; i <= next_array; ++i) {
+      if (!has_indirect_access[i]) {
+	 array_remap_info[i] = this->next_temp + array_offset;
+	 array_offset += array_sizes[i - 1];
+      } else {
+	 array_sizes[n_remaining_arrays] = array_sizes[i-1];
+	 array_remap_info[i] = ++n_remaining_arrays;
+      }
+   }
+
+   if (next_array !=  n_remaining_arrays) {
+      foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
+	 for (unsigned j = 0; j < num_inst_src_regs(inst); j++)
+	    remap_array(inst->src[j], array_remap_info, has_indirect_access);
+
+	 for (unsigned j = 0; j < inst->tex_offset_num_offset; j++)
+	    remap_array(inst->tex_offsets[j], array_remap_info, has_indirect_access);
+
+	 for (unsigned j = 0; j < num_inst_dst_regs(inst); j++) {
+	    remap_array(inst->dst[j], array_remap_info, has_indirect_access);
+	 }
+	 remap_array(inst->resource, array_remap_info, has_indirect_access);
+      }
+   }
+
+   ralloc_free(has_indirect_access);
+   this->next_temp += array_offset;
+   next_array = n_remaining_arrays;
+}
+
 /* Merges temporary registers together where possible to reduce the number of
  * registers needed to run a program.
  *
@@ -6981,8 +7083,17 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    while (v->eliminate_dead_code());
 
    v->merge_two_dsts();
-   if (!skip_merge_registers)
+
+   if (!skip_merge_registers) {
+      v->split_arrays();
+      v->copy_propagate();
+      while (v->eliminate_dead_code());
+
       v->merge_registers();
+      v->copy_propagate();
+      while (v->eliminate_dead_code());
+   }
+
    v->renumber_registers();
 
    /* Write the END instruction. */
