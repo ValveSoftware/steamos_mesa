@@ -165,10 +165,17 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 			    (sctx->screen->tess_offchip_block_dw_size * 4) /
 			    output_patch_size);
 
-	/* Not necessary for correctness, but improves performance. The
-	 * specific value is taken from the proprietary driver.
+	/* Not necessary for correctness, but improves performance.
+	 * The hardware can do more, but the radeonsi shader constant is
+	 * limited to 6 bits.
 	 */
-	*num_patches = MIN2(*num_patches, 40);
+	*num_patches = MIN2(*num_patches, 63); /* triangles: 3 full waves except 3 lanes */
+
+	/* When distributed tessellation is unsupported, switch between SEs
+	 * at a higher frequency to compensate for it.
+	 */
+	if (!sctx->screen->has_distributed_tess && sctx->screen->info.max_se > 1)
+		*num_patches = MIN2(*num_patches, 16); /* recommended */
 
 	/* Make sure that vector lanes are reasonably occupied. It probably
 	 * doesn't matter much because this is LS-HS, and TES is likely to
