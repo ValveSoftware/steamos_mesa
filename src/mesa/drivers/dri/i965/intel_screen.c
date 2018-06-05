@@ -1266,22 +1266,23 @@ static GLboolean
 intel_query_dma_buf_formats(__DRIscreen *screen, int max,
                             int *formats, int *count)
 {
-   int i, j = 0;
+   int num_formats = 0, i;
 
-   if (max == 0) {
-      /* Note, sRGB formats not included. */
-      *count = ARRAY_SIZE(intel_image_formats) - 2;
-      return true;
+   for (i = 0; i < ARRAY_SIZE(intel_image_formats); i++) {
+      if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
+          intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
+         continue;
+
+      num_formats++;
+      if (max == 0)
+         continue;
+
+      formats[num_formats - 1] = intel_image_formats[i].fourcc;
+      if (num_formats >= max)
+         break;
    }
 
-   for (i = 0; i < (ARRAY_SIZE(intel_image_formats)) && j < max; i++) {
-     if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
-         intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
-       continue;
-     formats[j++] = intel_image_formats[i].fourcc;
-   }
-
-   *count = j;
+   *count = num_formats;
    return true;
 }
 
