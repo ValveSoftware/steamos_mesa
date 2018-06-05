@@ -749,3 +749,214 @@ TEST_F(ArrayMergeTest, MergeAndInterleave5)
    EXPECT_EQ(result[5], expect[4]);
 
 }
+
+/* Test two arrays life time simple */
+TEST_F(LifetimeEvaluatorExactTest, TwoArraysSimple)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {MT(1, 1, WRITEMASK_XYZW)}, {MT(0, in0, "")}, {}, ARR()},
+      { TGSI_OPCODE_MOV , {MT(2, 1, WRITEMASK_XYZW)}, {MT(0, in1, "")}, {}, ARR()},
+      { TGSI_OPCODE_ADD , {MT(0,out0, WRITEMASK_XYZW)}, {MT(1,1,"xyzw"), MT(2,1,"xyzw")}, {}, ARR()},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1,2,0,2, WRITEMASK_XYZW}, {2,2,1,2, WRITEMASK_XYZW}}));
+}
+
+/* Test two arrays life time simple */
+TEST_F(LifetimeEvaluatorExactTest, TwoArraysSimpleSwizzleX_Y)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {MT(1, 1, WRITEMASK_X)}, {MT(0, in0, "")}, {}, ARR()},
+      { TGSI_OPCODE_MOV , {MT(2, 1, WRITEMASK_Y)}, {MT(0, in1, "")}, {}, ARR()},
+      { TGSI_OPCODE_ADD , {MT(0,out0,1)}, {MT(1,1,"x"), MT(2,1,"y")}, {}, ARR()},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 2, 0, 2, WRITEMASK_X}, {2, 2, 1, 2, WRITEMASK_Y}}));
+}
+
+/* Test array written before loop and read inside, must survive the loop */
+TEST_F(LifetimeEvaluatorExactTest, ArraysWriteBeforLoopReadInside)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_X)}, {MT(0, in0, "")}, {}, ARR()},
+      { TGSI_OPCODE_BGNLOOP },
+      { TGSI_OPCODE_ADD, {MT(0,1, WRITEMASK_X)}, {MT(1,1,"x"), {MT(0,1, "x")}}, {}, ARR()},
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {1}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 1, 1, 4, WRITEMASK_X}}));
+}
+
+/* Test array written conditionally in loop must survive the whole loop */
+TEST_F(LifetimeEvaluatorExactTest, ArraysConditionalWriteInNestedLoop)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_BGNLOOP },
+      {     TGSI_OPCODE_IF, {}, {1}, {}},
+      {       TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_Z)}, {MT(0, in0, "")}, {}, ARR()},
+      {     TGSI_OPCODE_ENDIF },
+      {     TGSI_OPCODE_ADD, {MT(0,1, WRITEMASK_X)}, {MT(1,1,"z"), {MT(0,1, "x")}}, {}, ARR()},
+      {   TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {1}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 1, 1, 8, WRITEMASK_Z}}));
+}
+
+/* Test array read conditionally in loop before write must
+ * survive the whole loop
+ */
+TEST_F(LifetimeEvaluatorExactTest, ArraysConditionalReadBeforeWriteInNestedLoop)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_BGNLOOP },
+      {     TGSI_OPCODE_IF, {}, {1}, {}},
+      {     TGSI_OPCODE_ADD, {MT(0,1, WRITEMASK_X)}, {MT(1,1,"z"), {MT(0,1, "x")}}, {}, ARR()},
+      {     TGSI_OPCODE_ENDIF },
+      {       TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_Z)}, {MT(0, in0, "")}, {}, ARR()},
+      {   TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {1}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 1, 1, 8, WRITEMASK_Z}}));
+}
+
+
+/* Test array written conditionally in loop must survive the whole loop */
+TEST_F(LifetimeEvaluatorExactTest, ArraysConditionalWriteInNestedLoop2)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_BGNLOOP },
+      {     TGSI_OPCODE_IF, {}, {1}, {}},
+      {       TGSI_OPCODE_BGNLOOP },
+      {         TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_Z)}, {MT(0, in0, "")}, {}, ARR()},
+      {       TGSI_OPCODE_ENDLOOP },
+      {     TGSI_OPCODE_ENDIF },
+      {     TGSI_OPCODE_ADD, {MT(0,1, WRITEMASK_X)}, {MT(1,1,"z"), {MT(0,1, "x")}}, {}, ARR()},
+      {   TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {1}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 1, 1, 10, WRITEMASK_Z}}));
+}
+
+
+/* Test distinct loops */
+TEST_F(LifetimeEvaluatorExactTest, ArraysReadWriteInSeparateScopes)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_W)}, {MT(0, in0, "")}, {}, ARR()},
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_ADD, {MT(0,1, WRITEMASK_X)}, {MT(1,1,"w"), {MT(0,1, "x")}}, {}, ARR()},
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {1}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, array_lt_expect({{1, 1, 2, 6, WRITEMASK_W}}));
+}
+
+class ArrayRemapTest: public MesaTestWithMemCtx {
+
+public:
+   void run (const vector<FakeCodeline>& code,
+	     const vector<FakeCodeline>& expect,
+	     vector<unsigned> array_sizes,
+	     vector<array_remapping>& remapping) const;
+
+
+};
+
+TEST_F(ArrayRemapTest, ApplyMerge)
+{
+   vector<unsigned> array_sizes{0, 12, 11, 10, 9, 8, 7};
+
+   int8_t set_swizzle3[] = {1, -1, -1, -1};
+   int8_t set_swizzle5[] = {3, -1, -1, -1};
+   int8_t set_no_reswizzle[] = {0, 1, 2, 3};
+
+   vector<array_remapping> remapping = {
+      {},
+      array_remapping(),
+      {1, set_no_reswizzle},
+      {1, set_swizzle3},
+      {1, set_no_reswizzle},
+      {1, set_swizzle5},
+      {1, set_no_reswizzle}
+   };
+
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_X)}, {MT(0, in0, "x")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(2, 2, WRITEMASK_XY)}, {MT(0, in0, "xy")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(3, 3, WRITEMASK_X)}, {MT(0, in0, "x")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(4, 4, WRITEMASK_XYZ)}, {MT(0, in0, "xyz")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(5, 5, WRITEMASK_X)}, {MT(0, in0, "x")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(6, 6, WRITEMASK_XYZW)}, {MT(0, in0, "xyzw")}, {}, ARR()},
+
+      { TGSI_OPCODE_ADD, {MT(0, out0, WRITEMASK_X)}, {MT(1, 1, "x"), MT(0, in0, "y")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out0, WRITEMASK_YZ)}, {MT(2, 2, "xy"), MT(0, in0, "yz")}, {}, ARR()},
+      { TGSI_OPCODE_MUL, {MT(0, out0, WRITEMASK_W)}, {MT(3, 3, "x"), MT(0, in0, "x")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out1, WRITEMASK_XYZ)}, {MT(4, 4, "xyz"), MT(0, in0, "xyz")}, {}, ARR()},
+      { TGSI_OPCODE_MAD, {MT(0, out1, WRITEMASK_W)}, {MT(5, 5, "x"), MT(3, 1, "x"), MT(1, 1, "x")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out2, WRITEMASK_XYZW)}, {MT(6, 6, "xyzw"), MT(0, in0, "xyzw")}, {}, ARR()},
+
+      { TGSI_OPCODE_END}
+   };
+
+   const vector<FakeCodeline> expect = {
+      { TGSI_OPCODE_MOV, {MT(1, 1, WRITEMASK_X)}, {MT(0, in0, "x")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(1, 2, WRITEMASK_XY)}, {MT(0, in0, "xy")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(1, 3, WRITEMASK_Y)}, {MT(0, in0, "xx")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(1, 4, WRITEMASK_XYZ)}, {MT(0, in0, "xyz")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(1, 5, WRITEMASK_W)}, {MT(0, in0, "xxxx")}, {}, ARR()},
+      { TGSI_OPCODE_MOV, {MT(1, 6, WRITEMASK_XYZW)}, {MT(0, in0, "xyzw")}, {}, ARR()},
+
+      { TGSI_OPCODE_ADD, {MT(0, out0, WRITEMASK_X)}, {MT(1, 1, "x"), MT(0, in0, "y")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out0, WRITEMASK_YZ)}, {MT(1, 2, "xy"), MT(0, in0, "yz")}, {}, ARR()},
+      { TGSI_OPCODE_MUL, {MT(0, out0, WRITEMASK_W)}, {MT(1, 3, "y"), MT(0, in0, "xx")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out1, WRITEMASK_XYZ)}, {MT(1, 4, "xyz"), MT(0, in0, "xyz")}, {}, ARR()},
+      { TGSI_OPCODE_MAD, {MT(0, out1, WRITEMASK_W)}, {MT(1, 5, "w"), MT(1, 1, "yyyy"), MT(1, 1, "xxxx")}, {}, ARR()},
+      { TGSI_OPCODE_ADD, {MT(0, out2, WRITEMASK_XYZW)}, {MT(1, 6, "xyzw"), MT(0, in0, "xyzw")}, {}, ARR()},
+      { TGSI_OPCODE_END}
+   };
+
+   run(code, expect, array_sizes, remapping);
+
+}
+
+void ArrayRemapTest::run (const vector<FakeCodeline>& code,
+			  const vector<FakeCodeline>& expect,
+			  vector<unsigned> array_sizes,
+			  vector<array_remapping>& remapping) const
+{
+   FakeShader input(code);
+   FakeShader expect_shader(expect);
+   exec_list *program = input.get_program(mem_ctx);
+
+   int n_arrays = remap_arrays(array_sizes.size() - 1, &array_sizes[0],
+	 program, &remapping[0]);
+
+   EXPECT_EQ(n_arrays, expect_shader.get_num_arrays());
+
+   FakeShader remapped_program(program);
+
+   ASSERT_EQ(remapped_program.length(), expect_shader.length());
+
+   for (size_t i = 0; i < expect_shader.length(); i++) {
+      EXPECT_EQ(remapped_program.line(i), expect_shader.line(i));
+   }
+
+}
