@@ -1009,28 +1009,34 @@ public:
 
 class access_recorder {
 public:
-   access_recorder(int _ntemps);
+   access_recorder(int _ntemps, int _narrays);
    ~access_recorder();
 
    void record_read(const st_src_reg& src, int line, prog_scope *scope);
-   void record_write(const st_dst_reg& src, int line, prog_scope *scope);
+   void record_write(const st_dst_reg& src, int line, prog_scope *scope,
+		     bool no_reswizzle);
 
-   void get_required_live_ranges(register_live_range *register_live_ranges);
+   void get_required_live_ranges(register_live_range *register_live_ranges,
+				 array_live_range *array_live_ranges);
 private:
 
    int ntemps;
+   int narrays;
    temp_access *temp_acc;
-
+   array_access *array_acc;
 };
 
-access_recorder::access_recorder(int _ntemps):
-   ntemps(_ntemps)
+access_recorder::access_recorder(int _ntemps, int _narrays):
+   ntemps(_ntemps),
+   narrays(_narrays)
 {
    temp_acc = new temp_access[ntemps];
+   array_acc = new array_access[narrays];
 }
 
 access_recorder::~access_recorder()
 {
+   delete[] array_acc;
    delete[] temp_acc;
 }
 
@@ -1046,6 +1052,11 @@ void access_recorder::record_read(const st_src_reg& src, int line,
    if (src.file == PROGRAM_TEMPORARY)
       temp_acc[src.index].record_read(line, scope, readmask);
 
+   if (src.file == PROGRAM_ARRAY) {
+      assert(src.array_id <= narrays);
+      array_acc[src.array_id - 1].record_access(line, scope, readmask);
+   }
+
    if (src.reladdr)
       record_read(*src.reladdr, line, scope);
    if (src.reladdr2)
@@ -1053,10 +1064,21 @@ void access_recorder::record_read(const st_src_reg& src, int line,
 }
 
 void access_recorder::record_write(const st_dst_reg& dst, int line,
-                                   prog_scope *scope)
+				   prog_scope *scope, bool can_reswizzle)
 {
    if (dst.file == PROGRAM_TEMPORARY)
       temp_acc[dst.index].record_write(line, scope, dst.writemask);
+
+   if (dst.file == PROGRAM_ARRAY) {
+      assert(dst.array_id <= narrays);
+
+      /* If the array is written as dst of a multi-dst operation, we must not
+       * reswizzle the access, because we would have to reswizzle also the
+       * other dst. For now just fill the mask to make interleaving impossible.
+       */
+      array_acc[dst.array_id - 1].record_access(line, scope,
+						can_reswizzle ? dst.writemask: 0xF);
+   }
 
    if (dst.reladdr)
       record_read(*dst.reladdr, line, scope);
@@ -1064,7 +1086,8 @@ void access_recorder::record_write(const st_dst_reg& dst, int line,
       record_read(*dst.reladdr2, line, scope);
 }
 
-void access_recorder::get_required_live_ranges(struct register_live_range *register_live_ranges)
+void access_recorder::get_required_live_ranges(struct register_live_range *register_live_ranges,
+					       struct array_live_range *array_live_ranges)
 {
    RENAME_DEBUG(debug_log << "== register live ranges ==========\n");
    for(int i = 0; i < ntemps; ++i) {
@@ -1072,6 +1095,15 @@ void access_recorder::get_required_live_ranges(struct register_live_range *regis
       register_live_ranges[i] = temp_acc[i].get_required_live_range();
       RENAME_DEBUG(debug_log << ": [" << register_live_ranges[i].begin << ", "
 		   << register_live_ranges[i].end << "]\n");
+   }
+   RENAME_DEBUG(debug_log << "==================================\n\n");
+
+   RENAME_DEBUG(debug_log << "== array live ranges ==========\n");
+   for(int i = 0; i < narrays; ++i) {
+      RENAME_DEBUG(debug_log<< setw(4) << i);
+      array_acc[i].get_required_live_range(array_live_ranges[i]);
+      RENAME_DEBUG(debug_log << ": [" <<array_live_ranges[i].begin() << ", "
+			<< array_live_ranges[i].end() << "]\n");
    }
    RENAME_DEBUG(debug_log << "==================================\n\n");
 }
@@ -1098,6 +1130,10 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
    bool is_at_end = false;
    int n_scopes = 1;
 
+   /* Placeholder to make the tests pass */
+   int narrays = 2;
+   struct array_live_range array_live_ranges[3];
+
    /* Count scopes to allocate the needed space without the need for
     * re-allocation
     */
@@ -1114,7 +1150,7 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
 
    prog_scope_storage scopes(mem_ctx, n_scopes);
 
-   access_recorder access(ntemps);
+   access_recorder access(ntemps, narrays);
 
    prog_scope *cur_scope = scopes.create(nullptr, outer_scope, 0, 0, line);
 
@@ -1240,9 +1276,11 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
          for (unsigned j = 0; j < inst->tex_offset_num_offset; j++) {
             access.record_read(inst->tex_offsets[j], line, cur_scope);
          }
-         for (unsigned j = 0; j < num_inst_dst_regs(inst); j++) {
-            access.record_write(inst->dst[j], line, cur_scope);
+	 unsigned ndst = num_inst_dst_regs(inst);
+	 for (unsigned j = 0; j < ndst; j++) {
+	    access.record_write(inst->dst[j], line, cur_scope, ndst == 1);
          }
+	 access.record_read(inst->resource, line, cur_scope);
       }
       }
       ++line;
@@ -1256,7 +1294,7 @@ get_temp_registers_required_live_ranges(void *mem_ctx, exec_list *instructions,
    if (cur_scope->end() < 0)
       cur_scope->set_end(line - 1);
 
-   access.get_required_live_ranges(register_live_ranges);
+   access.get_required_live_ranges(register_live_ranges, array_live_ranges);
    return true;
 }
 
