@@ -2251,7 +2251,7 @@ exec_tex(struct tgsi_exec_machine *mach,
 
    assert(dim <= 4);
    if (shadow_ref >= 0)
-      assert(shadow_ref >= dim && shadow_ref < ARRAY_SIZE(args));
+      assert(shadow_ref >= dim && shadow_ref < (int)ARRAY_SIZE(args));
 
    /* fetch modifier to the last argument */
    if (modifier != TEX_MODIFIER_NONE) {
@@ -2287,7 +2287,7 @@ exec_tex(struct tgsi_exec_machine *mach,
          control = TGSI_SAMPLER_GATHER;
    }
    else {
-      for (i = dim; i < ARRAY_SIZE(args); i++)
+      for (i = dim; i < (int)ARRAY_SIZE(args); i++)
          args[i] = &ZeroVec;
    }
 
@@ -2339,8 +2339,8 @@ exec_lodq(struct tgsi_exec_machine *mach,
           const struct tgsi_full_instruction *inst)
 {
    uint resource_unit, sampler_unit;
-   int dim;
-   int i;
+   unsigned dim;
+   unsigned i;
    union tgsi_exec_channel coords[4];
    const union tgsi_exec_channel *args[ARRAY_SIZE(coords)];
    union tgsi_exec_channel r[2];
