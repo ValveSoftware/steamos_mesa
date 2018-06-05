@@ -834,7 +834,6 @@ struct ureg_src ureg_DECL_memory(struct ureg_program *ureg,
 
 static int
 match_or_expand_immediate64( const unsigned *v,
-                             int type,
                              unsigned nr,
                              unsigned *v2,
                              unsigned *pnr2,
@@ -886,7 +885,7 @@ match_or_expand_immediate( const unsigned *v,
    if (type == TGSI_IMM_FLOAT64 ||
        type == TGSI_IMM_UINT64 ||
        type == TGSI_IMM_INT64)
-      return match_or_expand_immediate64(v, type, nr, v2, pnr2, swizzle);
+      return match_or_expand_immediate64(v, nr, v2, pnr2, swizzle);
 
    *swizzle = 0;
 
