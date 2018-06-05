@@ -215,3 +215,103 @@ bool array_live_range::time_doesnt_overlap(const array_live_range& other) const
    return (other.last_access < first_access ||
 	   last_access < other.first_access);
 }
+
+namespace tgsi_array_merge {
+
+array_remapping::array_remapping():
+   target_id(0)
+{
+   for (int i = 0; i < 4; ++i) {
+      read_swizzle_map[i] = i;
+   }
+}
+
+array_remapping::array_remapping(int trgt_array_id, const int8_t swizzle[]):
+   target_id(trgt_array_id)
+{
+   for (int i = 0; i < 4; ++i) {
+      read_swizzle_map[i] = swizzle[i];
+   }
+}
+
+void array_remapping::init_from(const array_live_range& range)
+{
+   target_id = range.is_mapped() ? range.final_target()->array_id(): 0;
+   for (int i = 0; i < 4; ++i)
+      read_swizzle_map[i] = range.remap_one_swizzle(i);
+}
+
+
+int array_remapping::map_writemask(int write_mask) const
+{
+   assert(is_valid());
+   int result_write_mask = 0;
+   for (int i = 0; i < 4; ++i) {
+      if (1 << i & write_mask) {
+	 assert(read_swizzle_map[i] >= 0);
+	 result_write_mask |= 1 << read_swizzle_map[i];
+      }
+   }
+   return result_write_mask;
+}
+
+uint16_t array_remapping::move_read_swizzles(uint16_t original_swizzle) const
+{
+   assert(is_valid());
+   /* Since
+    *
+    *   dst.zw = src.xy in glsl actually is MOV dst.__zw src.__xy
+    *
+    * when interleaving the arrays the source swizzles must be moved
+    * according to the changed dst write mask.
+    */
+   uint16_t out_swizzle = 0;
+   for (int idx = 0; idx < 4; ++idx) {
+      uint16_t orig_swz = GET_SWZ(original_swizzle, idx);
+      int new_idx = read_swizzle_map[idx];
+      if (new_idx >= 0)
+	 out_swizzle |= orig_swz << 3 * new_idx;
+   }
+   return out_swizzle;
+}
+
+uint16_t array_remapping::map_swizzles(uint16_t old_swizzle) const
+{
+   uint16_t out_swizzle = 0;
+   for (int idx = 0; idx < 4; ++idx) {
+      uint16_t swz = read_swizzle_map[GET_SWZ(old_swizzle, idx)];
+      out_swizzle |= swz << 3 * idx;
+   }
+   return out_swizzle;
+}
+
+void array_remapping::print(std::ostream& os) const
+{
+   if (is_valid()) {
+      os << "[aid: " << target_id << " swz: ";
+      for (int i = 0; i < 4; ++i)
+	 os << (read_swizzle_map[i] >= 0 ? xyzw[read_swizzle_map[i]] : '_');
+      os << "]";
+   } else {
+      os << "[unused]";
+   }
+}
+
+/* Required by the unit tests */
+bool operator == (const array_remapping& lhs, const array_remapping& rhs)
+{
+   if (lhs.target_id != rhs.target_id)
+      return false;
+
+   if (lhs.target_id == 0)
+      return true;
+
+   for (int i = 0; i < 4; ++i) {
+      if (lhs.read_swizzle_map[i] != rhs.read_swizzle_map[i])
+	 return false;
+   }
+   return true;
+}
+
+/* end namespace tgsi_array_merge */
+}

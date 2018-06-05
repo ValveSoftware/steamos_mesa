@@ -95,4 +95,67 @@ std::ostream& operator << (std::ostream& os, const array_live_range& lt) {
    lt.print(os);
    return os;
 }
+
+namespace tgsi_array_merge {
+
+/* Helper class to apply array merge and interleav to the shader.
+ * The interface is exposed here to make unit tests possible.
+ */
+class array_remapping {
+public:
+
+   /** Create an invalid mapping that is used as place-holder for
+    * arrays that are not mapped at all.
+    */
+   array_remapping();
+
+   /* Predefined remapping, needed for testing */
+   array_remapping(int trgt_array_id, const int8_t swizzle[]);
+
+   /* Initialiaze the mapping from an array_live_range that has been
+    * processed by the array merge and interleave algorithm.
+    */
+   void init_from(const array_live_range& range);
+
+   /* (Re)-set target id, needed when the mapping is resolved */
+   void set_target_id(int tid) {target_id = tid;}
+
+   /* Defines a valid remapping */
+   bool is_valid() const {return target_id > 0;}
+
+   /* Translates the write mask to the new, interleaved component
+    * position
+    */
+   int map_writemask(int original_write_mask) const;
+
+   /* Translates all read swizzles to the new, interleaved component
+    * swizzles
+    */
+   uint16_t map_swizzles(uint16_t original_swizzle) const;
+
+   /* Move the read swizzles to the positiones that correspond to
+    * a changed write mask.
+    */
+   uint16_t move_read_swizzles(uint16_t original_swizzle) const;
+
+   unsigned target_array_id() const {return target_id;}
+
+   void print(std::ostream& os) const;
+
+   friend bool operator == (const array_remapping& lhs,
+			    const array_remapping& rhs);
+
+private:
+   unsigned target_id;
+   int8_t read_swizzle_map[4];
+};
+
+inline
+std::ostream& operator << (std::ostream& os, const array_remapping& am)
+{
+   am.print(os);
+   return os;
+}
+
+}
 #endif
