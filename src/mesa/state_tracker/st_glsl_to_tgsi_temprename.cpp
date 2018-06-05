@@ -494,13 +494,8 @@ void temp_access::record_write(int line, prog_scope *scope, int writemask)
       comp[3].record_write(line, scope);
 }
 
-void temp_access::record_read(int line, prog_scope *scope, int swizzle)
+void temp_access::record_read(int line, prog_scope *scope, int readmask)
 {
-   int readmask = 0;
-   for (int idx = 0; idx < 4; ++idx) {
-      int swz = GET_SWZ(swizzle, idx);
-      readmask |= (1 << swz) & 0xF;
-   }
    update_access_mask(readmask);
 
    if (readmask & WRITEMASK_X)
@@ -940,8 +935,14 @@ access_recorder::~access_recorder()
 void access_recorder::record_read(const st_src_reg& src, int line,
                                   prog_scope *scope)
 {
+   int readmask = 0;
+   for (int idx = 0; idx < 4; ++idx) {
+      int swz = GET_SWZ(src.swizzle, idx);
+      readmask |= (1 << swz) & 0xF;
+   }
+
    if (src.file == PROGRAM_TEMPORARY)
-      temp_acc[src.index].record_read(line, scope, src.swizzle);
+      temp_acc[src.index].record_read(line, scope, readmask);
 
    if (src.reladdr)
       record_read(*src.reladdr, line, scope);
