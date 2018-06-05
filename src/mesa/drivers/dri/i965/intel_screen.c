@@ -341,6 +341,10 @@ modifier_is_supported(const struct gen_device_info *devinfo,
       }
 
       mesa_format format = driImageFormatToGLFormat(dri_format);
+      /* Whether or not we support compression is based on the RGBA non-sRGB
+       * version of the format.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(format);
       format = _mesa_get_srgb_format_linear(format);
       if (!isl_format_supports_ccs_e(devinfo,
                                      brw_isl_format_for_mesa_format(format)))
@@ -1095,6 +1099,11 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
       image->strides[index] = strides[index];
 
       mesa_format format = driImageFormatToGLFormat(f->planes[i].dri_format);
+      /* The images we will create are actually based on the RGBA non-sRGB
+       * version of the format.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(format);
+      format = _mesa_get_srgb_format_linear(format);
 
       ok = isl_surf_init(&screen->isl_dev, &surf,
                          .dim = ISL_SURF_DIM_2D,
