@@ -146,7 +146,8 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 	 * resource usage. Also ensures that the number of tcs in and out
 	 * vertices per threadgroup are at most 256.
 	 */
-	*num_patches = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp) * 4;
+	unsigned max_verts_per_patch = MAX2(num_tcs_input_cp, num_tcs_output_cp);
+	*num_patches = 256 / max_verts_per_patch;
 
 	/* Make sure that the data fits in LDS. This assumes the shaders only
 	 * use LDS for the inputs and outputs.
@@ -173,7 +174,7 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 		/* SI bug workaround, related to power management. Limit LS-HS
 		 * threadgroups to only one wave.
 		 */
-		unsigned one_wave = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp);
+		unsigned one_wave = 64 / max_verts_per_patch;
 		*num_patches = MIN2(*num_patches, one_wave);
 	}
 
