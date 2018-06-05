@@ -84,7 +84,7 @@ static void translate_image(struct fd5_image *img, struct pipe_image_view *pimg)
 		img->array_pitch = 0;
 	} else {
 		lvl = pimg->u.tex.level;
-		img->offset = rsc->slices[lvl].offset;
+		img->offset = fd_resource_offset(rsc, lvl, pimg->u.tex.first_layer);
 		img->pitch  = rsc->slices[lvl].pitch * rsc->cpp;
 		img->array_pitch = rsc->layer_size;
 	}
