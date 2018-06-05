@@ -39,9 +39,12 @@ struct SWZ {};
 /* Use this to make the compiler pick the constructor with reladdr below */
 struct RA {};
 
+/* Use this to make the compiler pick the constructor with array below */
+struct ARR {};
+
 /* A line to describe a TGSI instruction for building mock shaders. */
 struct FakeCodeline {
-   FakeCodeline(tgsi_opcode _op): op(_op), max_temp_id(0) {}
+   FakeCodeline(tgsi_opcode _op): op(_op), max_temp_id(0), max_array_id(0) {}
    FakeCodeline(tgsi_opcode _op, const std::vector<int>& _dst, const std::vector<int>& _src,
                 const std::vector<int>&_to);
 
@@ -53,9 +56,14 @@ struct FakeCodeline {
                 const std::vector<std::tuple<int,int,int>>& _src,
                 const std::vector<std::tuple<int,int,int>>&_to, RA with_reladdr);
 
+   FakeCodeline(tgsi_opcode _op, const std::vector<std::tuple<int, int, int> > &_dst,
+		const std::vector<std::tuple<int,int, const char*>>& _src,
+		const std::vector<std::tuple<int,int, const char*>>&_to, ARR with_array);
+
    FakeCodeline(const glsl_to_tgsi_instruction& inst);
 
    int get_max_reg_id() const { return max_temp_id;}
+   int get_max_array_id() const { return max_array_id;}
 
    glsl_to_tgsi_instruction *get_codeline() const;
 
@@ -70,6 +78,8 @@ private:
    st_src_reg create_src_register(int src_idx, gl_register_file file);
    st_src_reg create_src_register(const std::tuple<int,int,int>& src);
    st_src_reg *create_rel_src_register(int idx);
+   st_src_reg create_array_src_register(const std::tuple<int,int,const char*>& r);
+   st_dst_reg create_array_dst_register(const std::tuple<int,int,int>& r);
 
    st_dst_reg create_dst_register(int dst_idx);
    st_dst_reg create_dst_register(int dst_idx, int writemask);
@@ -85,6 +95,7 @@ private:
    std::vector<st_src_reg> tex_offsets;
 
    int max_temp_id;
+   int max_array_id;
    static void *mem_ctx;
 };
 
@@ -112,14 +123,21 @@ public:
 
    exec_list* get_program(void *ctx) const;
    int get_num_temps() const;
+   int get_num_arrays() const;
+
+   size_t length() const;
+
+   const FakeCodeline& line(unsigned i) const;
 
 private:
 
    std::vector<FakeCodeline> program;
    int num_temps;
+   int num_arrays;
 };
 
 using temp_lt_expect = std::vector<std::vector<int>>;
+using array_lt_expect = std::vector<array_live_range>;
 
 class MesaTestWithMemCtx : public testing::Test {
    void SetUp();
@@ -131,12 +149,16 @@ protected:
 class LifetimeEvaluatorTest : public MesaTestWithMemCtx {
 protected:
    void run(const std::vector<FakeCodeline>& code, const temp_lt_expect& e);
+   void run(const std::vector<FakeCodeline>& code, const array_lt_expect& e);
 private:
-   using lifetime_result=std::vector<register_live_range>;
-   lifetime_result run(const std::vector<FakeCodeline>& code, bool& success);
+   using life_range_result=std::pair<std::vector<register_live_range>,
+				   std::vector<array_live_range>>;
+   life_range_result run(const std::vector<FakeCodeline>& code, bool& success);
 
    virtual void check(const std::vector<register_live_range>& result,
 		      const temp_lt_expect& e) = 0;
+   virtual void check(const std::vector<array_live_range>& lifetimes,
+		      const array_lt_expect& e) = 0;
 };
 
 /* This is a test class to check the exact life times of
@@ -146,6 +168,8 @@ protected:
    void check(const std::vector<register_live_range>& result,
 	      const temp_lt_expect& e);
 
+   void check(const std::vector<array_live_range>& result,
+	      const array_lt_expect& e);
 };
 
 /* This test class checks that the life time covers at least
@@ -156,6 +180,8 @@ protected:
 class LifetimeEvaluatorAtLeastTest : public LifetimeEvaluatorTest {
 protected:
    void check(const std::vector<register_live_range>& result, const temp_lt_expect& e);
+   void check(const std::vector<array_live_range>& result,
+	      const array_lt_expect& e);
 };
 
 /* With this test class the renaming mapping estimation is tested */
