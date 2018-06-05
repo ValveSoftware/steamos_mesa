@@ -607,7 +607,8 @@ tgsi_build_full_immediate(
    struct tgsi_header *header,
    unsigned maxsize )
 {
-   unsigned size = 0, i;
+   unsigned size = 0;
+   int i;
    struct tgsi_immediate *immediate;
 
    if( maxsize <= size )
@@ -1362,7 +1363,8 @@ tgsi_build_full_property(
    struct tgsi_header *header,
    unsigned maxsize )
 {
-   unsigned size = 0, i;
+   unsigned size = 0;
+   int i;
    struct tgsi_property *property;
 
    if( maxsize <= size )
