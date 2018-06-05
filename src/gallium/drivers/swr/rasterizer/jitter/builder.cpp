@@ -38,7 +38,7 @@ namespace SwrJit
     //////////////////////////////////////////////////////////////////////////
     /// @brief Contructor for Builder.
     /// @param pJitMgr - JitManager which contains modules, function passes, etc.
-    Builder::Builder(JitManager *pJitMgr) : mpJitMgr(pJitMgr), mpPrivateContext(nullptr)
+    Builder::Builder(JitManager* pJitMgr) : mpJitMgr(pJitMgr), mpPrivateContext(nullptr)
     {
         mVWidth   = pJitMgr->mVWidth;
         mVWidth16 = 16;
@@ -79,7 +79,7 @@ namespace SwrJit
 
         mSimd32Int8Ty = VectorType::get(mInt8Ty, 32);
 
-        if (sizeof(uint32_t *) == 4)
+        if (sizeof(uint32_t*) == 4)
         {
             mIntPtrTy       = mInt32Ty;
             mSimdIntPtrTy   = mSimdInt32Ty;
@@ -87,7 +87,7 @@ namespace SwrJit
         }
         else
         {
-            SWR_ASSERT(sizeof(uint32_t *) == 8);
+            SWR_ASSERT(sizeof(uint32_t*) == 8);
 
             mIntPtrTy       = mInt64Ty;
             mSimdIntPtrTy   = mSimdInt64Ty;
@@ -111,38 +111,38 @@ namespace SwrJit
     }
 
     /// @brief Mark this alloca as temporary to avoid hoisting later on
-    void Builder::SetTempAlloca(Value *inst)
+    void Builder::SetTempAlloca(Value* inst)
     {
-        AllocaInst *pAlloca = dyn_cast<AllocaInst>(inst);
+        AllocaInst* pAlloca = dyn_cast<AllocaInst>(inst);
         SWR_ASSERT(pAlloca, "Unexpected non-alloca instruction");
-        MDNode *N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, "is_temp_alloca"));
+        MDNode* N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, "is_temp_alloca"));
         pAlloca->setMetadata("is_temp_alloca", N);
     }
 
-    bool Builder::IsTempAlloca(Value *inst)
+    bool Builder::IsTempAlloca(Value* inst)
     {
-        AllocaInst *pAlloca = dyn_cast<AllocaInst>(inst);
+        AllocaInst* pAlloca = dyn_cast<AllocaInst>(inst);
         SWR_ASSERT(pAlloca, "Unexpected non-alloca instruction");
 
         return (pAlloca->getMetadata("is_temp_alloca") != nullptr);
     }
 
     // Returns true if able to find a call instruction to mark
-    bool Builder::SetNamedMetaDataOnCallInstr(Instruction *inst, StringRef mdName)
+    bool Builder::SetNamedMetaDataOnCallInstr(Instruction* inst, StringRef mdName)
     {
-        CallInst *pCallInstr = dyn_cast<CallInst>(inst);
+        CallInst* pCallInstr = dyn_cast<CallInst>(inst);
         if (pCallInstr)
         {
-            MDNode *N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, mdName));
+            MDNode* N = MDNode::get(JM()->mContext, MDString::get(JM()->mContext, mdName));
             pCallInstr->setMetadata(mdName, N);
             return true;
         }
         else
         {
             // Follow use def chain back up
-            for (Use &u : inst->operands())
+            for (Use& u : inst->operands())
             {
-                Instruction *srcInst = dyn_cast<Instruction>(u.get());
+                Instruction* srcInst = dyn_cast<Instruction>(u.get());
                 if (srcInst)
                 {
                     if (SetNamedMetaDataOnCallInstr(srcInst, mdName))
@@ -156,10 +156,9 @@ namespace SwrJit
         return false;
     }
 
-    bool Builder::HasNamedMetaDataOnCallInstr(Instruction *inst,
-                                              StringRef    mdName)
+    bool Builder::HasNamedMetaDataOnCallInstr(Instruction* inst, StringRef mdName)
     {
-        CallInst *pCallInstr = dyn_cast<CallInst>(inst);
+        CallInst* pCallInstr = dyn_cast<CallInst>(inst);
 
         if (!pCallInstr)
         {
@@ -171,7 +170,7 @@ namespace SwrJit
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief Packetizes the type. Assumes SOA conversion.
-    Type *Builder::GetVectorType(Type *pType)
+    Type* Builder::GetVectorType(Type* pType)
     {
         if (pType->isVectorTy())
         {
@@ -182,24 +181,24 @@ namespace SwrJit
         if (pType->isArrayTy())
         {
             uint32_t arraySize     = pType->getArrayNumElements();
-            Type *   pArrayType    = pType->getArrayElementType();
-            Type *   pVecArrayType = GetVectorType(pArrayType);
-            Type *   pVecType      = ArrayType::get(pVecArrayType, arraySize);
+            Type*    pArrayType    = pType->getArrayElementType();
+            Type*    pVecArrayType = GetVectorType(pArrayType);
+            Type*    pVecType      = ArrayType::get(pVecArrayType, arraySize);
             return pVecType;
         }
 
         // {float,int} should packetize to {<8 x float>, <8 x int>}
         if (pType->isAggregateType())
         {
-            uint32_t               numElems = pType->getStructNumElements();
-            SmallVector<Type *, 8> vecTypes;
+            uint32_t              numElems = pType->getStructNumElements();
+            SmallVector<Type*, 8> vecTypes;
             for (uint32_t i = 0; i < numElems; ++i)
             {
-                Type *pElemType    = pType->getStructElementType(i);
-                Type *pVecElemType = GetVectorType(pElemType);
+                Type* pElemType    = pType->getStructElementType(i);
+                Type* pVecElemType = GetVectorType(pElemType);
                 vecTypes.push_back(pVecElemType);
             }
-            Type *pVecType = StructType::get(JM()->mContext, vecTypes);
+            Type* pVecType = StructType::get(JM()->mContext, vecTypes);
             return pVecType;
         }
 
@@ -211,7 +210,7 @@ namespace SwrJit
         }
 
         // <ty> should packetize to <8 x <ty>>
-        Type *vecType = VectorType::get(pType, JM()->mVWidth);
+        Type* vecType = VectorType::get(pType, JM()->mVWidth);
         return vecType;
     }
-}
+} // namespace SwrJit

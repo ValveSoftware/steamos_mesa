@@ -1,32 +1,32 @@
 /****************************************************************************
-* Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the "Software"),
-* to deal in the Software without restriction, including without limitation
-* the rights to use, copy, modify, merge, publish, distribute, sublicense,
-* and/or sell copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice (including the next
-* paragraph) shall be included in all copies or substantial portions of the
-* Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-* IN THE SOFTWARE.
-*
-* @file JitManager.cpp
-*
-* @brief Implementation if the Jit Manager.
-*
-* Notes:
-*
-******************************************************************************/
+ * Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *
+ * @file JitManager.cpp
+ *
+ * @brief Implementation if the Jit Manager.
+ *
+ * Notes:
+ *
+ ******************************************************************************/
 #include "jit_pch.hpp"
 
 #include "JitManager.h"
@@ -59,21 +59,22 @@ using namespace SwrJit;
 //////////////////////////////////////////////////////////////////////////
 /// @brief Contructor for JitManager.
 /// @param simdWidth - SIMD width to be used in generated program.
-JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
-    : mContext(), mBuilder(mContext), mIsModuleFinalized(true), mJitNumber(0), mVWidth(simdWidth), mArch(arch)
+JitManager::JitManager(uint32_t simdWidth, const char *arch, const char *core) :
+    mContext(), mBuilder(mContext), mIsModuleFinalized(true), mJitNumber(0), mVWidth(simdWidth),
+    mArch(arch)
 {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
 
 
-    TargetOptions    tOpts;
+    TargetOptions tOpts;
     tOpts.AllowFPOpFusion = FPOpFusion::Fast;
-    tOpts.NoInfsFPMath = false;
-    tOpts.NoNaNsFPMath = false;
+    tOpts.NoInfsFPMath    = false;
+    tOpts.NoNaNsFPMath    = false;
     tOpts.UnsafeFPMath = false;
 
-    //tOpts.PrintMachineCode    = true;
+    // tOpts.PrintMachineCode    = true;
 
     std::unique_ptr<Module> newModule(new Module("", mContext));
     mpCurrentModule = newModule.get();
@@ -81,10 +82,10 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     StringRef hostCPUName;
 
     // force JIT to use the same CPU arch as the rest of swr
-    if(mArch.AVX512F())
+    if (mArch.AVX512F())
     {
 #if USE_SIMD16_SHADERS
-        if(mArch.AVX512ER())
+        if (mArch.AVX512ER())
         {
             hostCPUName = StringRef("knl");
         }
@@ -101,7 +102,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
             mVWidth = 8;
         }
     }
-    else if(mArch.AVX2())
+    else if (mArch.AVX2())
     {
         hostCPUName = StringRef("core-avx2");
         if (mVWidth == 0)
@@ -109,7 +110,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
             mVWidth = 8;
         }
     }
-    else if(mArch.AVX())
+    else if (mArch.AVX())
     {
         if (mArch.F16C())
         {
@@ -140,10 +141,10 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     mpCurrentModule->setTargetTriple(sys::getProcessTriple());
     mpExec = EngineBuilder(std::move(newModule))
-        .setTargetOptions(tOpts)
-        .setOptLevel(optLevel)
-        .setMCPU(hostCPUName)
-        .create();
+                 .setTargetOptions(tOpts)
+                 .setOptLevel(optLevel)
+                 .setMCPU(hostCPUName)
+                 .create();
 
     if (KNOB_JIT_ENABLE_CACHE)
     {
@@ -162,7 +163,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 #else
     // typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
 #endif
-    std::vector<Type*> fsArgs;
+    std::vector<Type *> fsArgs;
 
     // llvm5 is picky and does not take a void * type
     fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
@@ -211,32 +212,44 @@ void JitManager::SetupNewModule()
 }
 
 
-DIType* JitManager::CreateDebugStructType(StructType* pType, const std::string& name, DIFile* pFile, uint32_t lineNum,
-    const std::vector<std::pair<std::string, uint32_t>>& members)
+DIType *
+JitManager::CreateDebugStructType(StructType *                                         pType,
+                                  const std::string &                                  name,
+                                  DIFile *                                             pFile,
+                                  uint32_t                                             lineNum,
+                                  const std::vector<std::pair<std::string, uint32_t>> &members)
 {
-    DIBuilder builder(*mpCurrentModule);
-    SmallVector<Metadata*, 8> ElemTypes;
-    DataLayout DL = DataLayout(mpCurrentModule);
-    uint32_t size = DL.getTypeAllocSizeInBits(pType);
-    uint32_t alignment = DL.getABITypeAlignment(pType);
-    DINode::DIFlags flags = DINode::DIFlags::FlagPublic;
+    DIBuilder                  builder(*mpCurrentModule);
+    SmallVector<Metadata *, 8> ElemTypes;
+    DataLayout                 DL        = DataLayout(mpCurrentModule);
+    uint32_t                   size      = DL.getTypeAllocSizeInBits(pType);
+    uint32_t                   alignment = DL.getABITypeAlignment(pType);
+    DINode::DIFlags            flags     = DINode::DIFlags::FlagPublic;
 
-    DICompositeType* pDIStructTy = builder.createStructType(pFile, name, pFile, lineNum, size, alignment,
-        flags, nullptr, builder.getOrCreateArray(ElemTypes));
+    DICompositeType *pDIStructTy = builder.createStructType(pFile,
+                                                            name,
+                                                            pFile,
+                                                            lineNum,
+                                                            size,
+                                                            alignment,
+                                                            flags,
+                                                            nullptr,
+                                                            builder.getOrCreateArray(ElemTypes));
 
     // Register mapping now to break loops (in case struct contains itself or pointers to itself)
     mDebugStructMap[pType] = pDIStructTy;
 
     uint32_t idx = 0;
-    for (auto& elem : pType->elements())
+    for (auto &elem : pType->elements())
     {
-        std::string name = members[idx].first;
-        uint32_t lineNum = members[idx].second;
-        size = DL.getTypeAllocSizeInBits(elem);
-        alignment = DL.getABITypeAlignment(elem);
-        uint32_t offset = DL.getStructLayout(pType)->getElementOffsetInBits(idx);
-        llvm::DIType* pDebugTy = GetDebugType(elem);
-        ElemTypes.push_back(builder.createMemberType(pDIStructTy, name, pFile, lineNum, size, alignment, offset, flags, pDebugTy));
+        std::string name       = members[idx].first;
+        uint32_t    lineNum    = members[idx].second;
+        size                   = DL.getTypeAllocSizeInBits(elem);
+        alignment              = DL.getABITypeAlignment(elem);
+        uint32_t      offset   = DL.getStructLayout(pType)->getElementOffsetInBits(idx);
+        llvm::DIType *pDebugTy = GetDebugType(elem);
+        ElemTypes.push_back(builder.createMemberType(
+            pDIStructTy, name, pFile, lineNum, size, alignment, offset, flags, pDebugTy));
 
         idx++;
     }
@@ -245,54 +258,76 @@ DIType* JitManager::CreateDebugStructType(StructType* pType, const std::string& 
     return pDIStructTy;
 }
 
-DIType* JitManager::GetDebugArrayType(Type* pTy)
+DIType *JitManager::GetDebugArrayType(Type *pTy)
 {
-    DIBuilder builder(*mpCurrentModule);
-    DataLayout DL = DataLayout(mpCurrentModule);
-    ArrayType* pArrayTy = cast<ArrayType>(pTy);
-    uint32_t size = DL.getTypeAllocSizeInBits(pArrayTy);
-    uint32_t alignment = DL.getABITypeAlignment(pArrayTy);
+    DIBuilder  builder(*mpCurrentModule);
+    DataLayout DL        = DataLayout(mpCurrentModule);
+    ArrayType *pArrayTy  = cast<ArrayType>(pTy);
+    uint32_t   size      = DL.getTypeAllocSizeInBits(pArrayTy);
+    uint32_t   alignment = DL.getABITypeAlignment(pArrayTy);
 
-    SmallVector<Metadata*, 8> Elems;
+    SmallVector<Metadata *, 8> Elems;
     Elems.push_back(builder.getOrCreateSubrange(0, pArrayTy->getNumElements()));
-    return builder.createArrayType(size, alignment, GetDebugType(pArrayTy->getElementType()), builder.getOrCreateArray(Elems));
+    return builder.createArrayType(
+        size, alignment, GetDebugType(pArrayTy->getElementType()), builder.getOrCreateArray(Elems));
 }
 
 // Create a DIType from llvm Type
-DIType* JitManager::GetDebugType(Type* pTy)
+DIType *JitManager::GetDebugType(Type *pTy)
 {
-    DIBuilder builder(*mpCurrentModule);
+    DIBuilder    builder(*mpCurrentModule);
     Type::TypeID id = pTy->getTypeID();
 
     switch (id)
     {
-    case Type::VoidTyID: return builder.createUnspecifiedType("void"); break;
-    case Type::HalfTyID: return builder.createBasicType("float16", 16, dwarf::DW_ATE_float); break;
-    case Type::FloatTyID: return builder.createBasicType("float", 32, dwarf::DW_ATE_float); break;
-    case Type::DoubleTyID: return builder.createBasicType("double", 64, dwarf::DW_ATE_float); break;
-    case Type::IntegerTyID: return GetDebugIntegerType(pTy); break;
-    case Type::StructTyID: return GetDebugStructType(pTy); break;
-    case Type::ArrayTyID: return GetDebugArrayType(pTy); break;
-    case Type::PointerTyID: return builder.createPointerType(GetDebugType(pTy->getPointerElementType()), 64, 64); break;
-    case Type::VectorTyID: return GetDebugVectorType(pTy); break;
-    case Type::FunctionTyID: return GetDebugFunctionType(pTy); break;
-    default: SWR_ASSERT(false, "Unimplemented llvm type");
+    case Type::VoidTyID:
+        return builder.createUnspecifiedType("void");
+        break;
+    case Type::HalfTyID:
+        return builder.createBasicType("float16", 16, dwarf::DW_ATE_float);
+        break;
+    case Type::FloatTyID:
+        return builder.createBasicType("float", 32, dwarf::DW_ATE_float);
+        break;
+    case Type::DoubleTyID:
+        return builder.createBasicType("double", 64, dwarf::DW_ATE_float);
+        break;
+    case Type::IntegerTyID:
+        return GetDebugIntegerType(pTy);
+        break;
+    case Type::StructTyID:
+        return GetDebugStructType(pTy);
+        break;
+    case Type::ArrayTyID:
+        return GetDebugArrayType(pTy);
+        break;
+    case Type::PointerTyID:
+        return builder.createPointerType(GetDebugType(pTy->getPointerElementType()), 64, 64);
+        break;
+    case Type::VectorTyID:
+        return GetDebugVectorType(pTy);
+        break;
+    case Type::FunctionTyID:
+        return GetDebugFunctionType(pTy);
+        break;
+    default:
+        SWR_ASSERT(false, "Unimplemented llvm type");
     }
     return nullptr;
 }
 
 // Create a DISubroutineType from an llvm FunctionType
-DIType* JitManager::GetDebugFunctionType(Type* pTy)
+DIType *JitManager::GetDebugFunctionType(Type *pTy)
 {
-    SmallVector<Metadata*, 8> ElemTypes;
-    FunctionType* pFuncTy = cast<FunctionType>(pTy);
-    DIBuilder builder(*mpCurrentModule);
+    SmallVector<Metadata *, 8> ElemTypes;
+    FunctionType *             pFuncTy = cast<FunctionType>(pTy);
+    DIBuilder                  builder(*mpCurrentModule);
 
     // Add result type
     ElemTypes.push_back(GetDebugType(pFuncTy->getReturnType()));
 
     // Add arguments
-    for (auto& param : pFuncTy->params())
+    for (auto &param : pFuncTy->params())
     {
         ElemTypes.push_back(GetDebugType(param));
     }
@@ -300,60 +335,74 @@ DIType* JitManager::GetDebugFunctionType(Type* pTy)
     return builder.createSubroutineType(builder.getOrCreateTypeArray(ElemTypes));
 }
 
-DIType* JitManager::GetDebugIntegerType(Type* pTy)
+DIType *JitManager::GetDebugIntegerType(Type *pTy)
 {
-    DIBuilder builder(*mpCurrentModule);
-    IntegerType* pIntTy = cast<IntegerType>(pTy);
+    DIBuilder    builder(*mpCurrentModule);
+    IntegerType *pIntTy = cast<IntegerType>(pTy);
     switch (pIntTy->getBitWidth())
     {
-    case 1: return builder.createBasicType("int1", 1, dwarf::DW_ATE_unsigned); break;
-    case 8: return builder.createBasicType("int8", 8, dwarf::DW_ATE_signed); break;
-    case 16: return builder.createBasicType("int16", 16, dwarf::DW_ATE_signed); break;
-    case 32: return builder.createBasicType("int", 32, dwarf::DW_ATE_signed); break;
-    case 64: return builder.createBasicType("int64", 64, dwarf::DW_ATE_signed); break;
-    case 128: return builder.createBasicType("int128", 128, dwarf::DW_ATE_signed); break;
-    default: SWR_ASSERT(false, "Unimplemented integer bit width");
+    case 1:
+        return builder.createBasicType("int1", 1, dwarf::DW_ATE_unsigned);
+        break;
+    case 8:
+        return builder.createBasicType("int8", 8, dwarf::DW_ATE_signed);
+        break;
+    case 16:
+        return builder.createBasicType("int16", 16, dwarf::DW_ATE_signed);
+        break;
+    case 32:
+        return builder.createBasicType("int", 32, dwarf::DW_ATE_signed);
+        break;
+    case 64:
+        return builder.createBasicType("int64", 64, dwarf::DW_ATE_signed);
+        break;
+    case 128:
+        return builder.createBasicType("int128", 128, dwarf::DW_ATE_signed);
+        break;
+    default:
+        SWR_ASSERT(false, "Unimplemented integer bit width");
     }
     return nullptr;
 }
 
-DIType* JitManager::GetDebugVectorType(Type* pTy)
+DIType *JitManager::GetDebugVectorType(Type *pTy)
 {
-    DIBuilder builder(*mpCurrentModule);
-    VectorType* pVecTy = cast<VectorType>(pTy);
-    DataLayout DL = DataLayout(mpCurrentModule);
-    uint32_t size = DL.getTypeAllocSizeInBits(pVecTy);
-    uint32_t alignment = DL.getABITypeAlignment(pVecTy);
-    SmallVector<Metadata*, 1> Elems;
+    DIBuilder                  builder(*mpCurrentModule);
+    VectorType *               pVecTy    = cast<VectorType>(pTy);
+    DataLayout                 DL        = DataLayout(mpCurrentModule);
+    uint32_t                   size      = DL.getTypeAllocSizeInBits(pVecTy);
+    uint32_t                   alignment = DL.getABITypeAlignment(pVecTy);
+    SmallVector<Metadata *, 1> Elems;
     Elems.push_back(builder.getOrCreateSubrange(0, pVecTy->getVectorNumElements()));
 
-    return builder.createVectorType(size, alignment, GetDebugType(pVecTy->getVectorElementType()), builder.getOrCreateArray(Elems));
-
+    return builder.createVectorType(size,
+                                    alignment,
+                                    GetDebugType(pVecTy->getVectorElementType()),
+                                    builder.getOrCreateArray(Elems));
 }
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Dump function x86 assembly to file.
 /// @note This should only be called after the module has been jitted to x86 and the
 ///       module will not be further accessed.
-void JitManager::DumpAsm(Function* pFunction, const char* fileName)
+void JitManager::DumpAsm(Function *pFunction, const char *fileName)
 {
     if (KNOB_DUMP_SHADER_IR)
     {
-
 #if defined(_WIN32)
         DWORD pid = GetCurrentProcessId();
-        char procname[MAX_PATH];
+        char  procname[MAX_PATH];
         GetModuleFileNameA(NULL, procname, MAX_PATH);
-        const char* pBaseName = strrchr(procname, '\\');
+        const char *      pBaseName = strrchr(procname, '\\');
         std::stringstream outDir;
         outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
         CreateDirectoryPath(outDir.str().c_str());
 #endif
 
         std::error_code EC;
-        Module* pModule = pFunction->getParent();
-        const char *funcName = pFunction->getName().data();
-        char fName[256];
+        Module *        pModule  = pFunction->getParent();
+        const char *    funcName = pFunction->getName().data();
+        char            fName[256];
 #if defined(_WIN32)
         sprintf(fName, "%s\\%s.%s.asm", outDir.str().c_str(), funcName, fileName);
 #else
@@ -362,8 +411,8 @@ void JitManager::DumpAsm(Function* pFunction, const char* fileName)
 
         raw_fd_ostream filestream(fName, EC, llvm::sys::fs::F_None);
 
-        legacy::PassManager* pMPasses = new legacy::PassManager();
-        auto* pTarget = mpExec->getTargetMachine();
+        legacy::PassManager *pMPasses         = new legacy::PassManager();
+        auto *               pTarget          = mpExec->getTargetMachine();
         pTarget->Options.MCOptions.AsmVerbose = true;
         pTarget->addPassesToEmitFile(*pMPasses, filestream, TargetMachine::CGFT_AssemblyFile);
         pMPasses->run(*pModule);
@@ -376,9 +425,9 @@ std::string JitManager::GetOutputDir()
 {
 #if defined(_WIN32)
     DWORD pid = GetCurrentProcessId();
-    char procname[MAX_PATH];
+    char  procname[MAX_PATH];
     GetModuleFileNameA(NULL, procname, MAX_PATH);
-    const char* pBaseName = strrchr(procname, '\\');
+    const char *      pBaseName = strrchr(procname, '\\');
     std::stringstream outDir;
     outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid;
     CreateDirectoryPath(outDir.str().c_str());
@@ -396,8 +445,8 @@ void JitManager::DumpToFile(Module *M, const char *fileName)
         std::string outDir = GetOutputDir();
 
         std::error_code EC;
-        const char *funcName = M->getName().data();
-        char fName[256];
+        const char *    funcName = M->getName().data();
+        char            fName[256];
 #if defined(_WIN32)
         sprintf(fName, "%s\\%s.%s.ll", outDir.c_str(), funcName, fileName);
 #else
@@ -418,8 +467,8 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
         std::string outDir = GetOutputDir();
 
         std::error_code EC;
-        const char *funcName = f->getName().data();
-        char fName[256];
+        const char *    funcName = f->getName().data();
+        char            fName[256];
 #if defined(_WIN32)
         sprintf(fName, "%s\\%s.%s.ll", outDir.c_str(), funcName, fileName);
 #else
@@ -436,33 +485,32 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
         fd.flush();
 
         raw_fd_ostream fd_cfg(fName, EC, llvm::sys::fs::F_Text);
-        WriteGraph(fd_cfg, (const Function*)f);
+        WriteGraph(fd_cfg, (const Function *)f);
 
         fd_cfg.flush();
     }
 }
 
-extern "C"
+extern "C" {
+bool g_DllActive = true;
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Create JIT context.
+/// @param simdWidth - SIMD width to be used in generated program.
+HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char *arch, const char *core)
 {
-    bool g_DllActive = true;
+    return new JitManager(targetSimdWidth, arch, core);
+}
 
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief Create JIT context.
-    /// @param simdWidth - SIMD width to be used in generated program.
-    HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch, const char* core)
+//////////////////////////////////////////////////////////////////////////
+/// @brief Destroy JIT context.
+void JITCALL JitDestroyContext(HANDLE hJitContext)
+{
+    if (g_DllActive)
     {
-        return new JitManager(targetSimdWidth, arch, core);
+        delete reinterpret_cast<JitManager *>(hJitContext);
     }
-
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief Destroy JIT context.
-    void JITCALL JitDestroyContext(HANDLE hJitContext)
-    {
-        if (g_DllActive)
-        {
-            delete reinterpret_cast<JitManager*>(hJitContext);
-        }
-    }
+}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -474,31 +522,29 @@ extern "C"
 //////////////////////////////////////////////////////////////////////////
 struct JitCacheFileHeader
 {
-    void Init(
-        uint32_t llCRC,
-        uint32_t objCRC,
-        const std::string& moduleID,
-        const std::string& cpu,
-        uint32_t optLevel,
-        uint64_t objSize)
+    void Init(uint32_t           llCRC,
+              uint32_t           objCRC,
+              const std::string &moduleID,
+              const std::string &cpu,
+              uint32_t           optLevel,
+              uint64_t           objSize)
     {
         m_objSize = objSize;
-        m_llCRC = llCRC;
-        m_objCRC = objCRC;
+        m_llCRC   = llCRC;
+        m_objCRC  = objCRC;
         strncpy(m_ModuleID, moduleID.c_str(), JC_STR_MAX_LEN - 1);
         m_ModuleID[JC_STR_MAX_LEN - 1] = 0;
         strncpy(m_Cpu, cpu.c_str(), JC_STR_MAX_LEN - 1);
         m_Cpu[JC_STR_MAX_LEN - 1] = 0;
-        m_optLevel = optLevel;
+        m_optLevel                = optLevel;
     }
 
 
-    bool IsValid(uint32_t llCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel)
+    bool
+    IsValid(uint32_t llCRC, const std::string &moduleID, const std::string &cpu, uint32_t optLevel)
     {
-        if ((m_MagicNumber != JC_MAGIC_NUMBER) ||
-            (m_llCRC != llCRC) ||
-            (m_platformKey != JC_PLATFORM_KEY) ||
-            (m_optLevel != optLevel))
+        if ((m_MagicNumber != JC_MAGIC_NUMBER) || (m_llCRC != llCRC) ||
+            (m_platformKey != JC_PLATFORM_KEY) || (m_optLevel != optLevel))
         {
             return false;
         }
@@ -522,27 +568,25 @@ struct JitCacheFileHeader
     uint64_t GetObjectCRC() const { return m_objCRC; }
 
 private:
-    static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 4;
-    static const size_t     JC_STR_MAX_LEN = 32;
-    static const uint32_t   JC_PLATFORM_KEY =
-        (LLVM_VERSION_MAJOR << 24)  |
-        (LLVM_VERSION_MINOR << 16)  |
-        (LLVM_VERSION_PATCH << 8)   |
-        ((sizeof(void*) > sizeof(uint32_t)) ? 1 : 0);
+    static const uint64_t JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 4;
+    static const size_t   JC_STR_MAX_LEN  = 32;
+    static const uint32_t JC_PLATFORM_KEY = (LLVM_VERSION_MAJOR << 24) |
+                                            (LLVM_VERSION_MINOR << 16) | (LLVM_VERSION_PATCH << 8) |
+                                            ((sizeof(void *) > sizeof(uint32_t)) ? 1 : 0);
 
-    uint64_t m_MagicNumber = JC_MAGIC_NUMBER;
-    uint64_t m_objSize = 0;
-    uint32_t m_llCRC = 0;
-    uint32_t m_platformKey = JC_PLATFORM_KEY;
-    uint32_t m_objCRC = 0;
-    uint32_t m_optLevel = 0;
-    char m_ModuleID[JC_STR_MAX_LEN] = {};
-    char m_Cpu[JC_STR_MAX_LEN] = {};
+    uint64_t m_MagicNumber              = JC_MAGIC_NUMBER;
+    uint64_t m_objSize                  = 0;
+    uint32_t m_llCRC                    = 0;
+    uint32_t m_platformKey              = JC_PLATFORM_KEY;
+    uint32_t m_objCRC                   = 0;
+    uint32_t m_optLevel                 = 0;
+    char     m_ModuleID[JC_STR_MAX_LEN] = {};
+    char     m_Cpu[JC_STR_MAX_LEN]      = {};
 };
 
-static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
+static inline uint32_t ComputeModuleCRC(const llvm::Module *M)
 {
-    std::string bitcodeBuffer;
+    std::string        bitcodeBuffer;
     raw_string_ostream bitcodeStream(bitcodeBuffer);
 
 #if LLVM_VERSION_MAJOR >= 7
@@ -550,7 +594,7 @@ static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
 #else
     llvm::WriteBitcodeToFile(M, bitcodeStream);
 #endif
-    //M->print(bitcodeStream, nullptr, false);
+    // M->print(bitcodeStream, nullptr, false);
 
     bitcodeStream.flush();
 
@@ -561,21 +605,24 @@ static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
 JitCache::JitCache()
 {
 #if defined(__APPLE__) || defined(FORCE_LINUX) || defined(__linux__) || defined(__gnu_linux__)
-    if (strncmp(KNOB_JIT_CACHE_DIR.c_str(), "~/", 2) == 0) {
+    if (strncmp(KNOB_JIT_CACHE_DIR.c_str(), "~/", 2) == 0)
+    {
         char *homedir;
-        if (!(homedir = getenv("HOME"))) {
+        if (!(homedir = getenv("HOME")))
+        {
             homedir = getpwuid(getuid())->pw_dir;
         }
         mCacheDir = homedir;
         mCacheDir += (KNOB_JIT_CACHE_DIR.c_str() + 1);
-    } else
+    }
+    else
 #endif
     {
         mCacheDir = KNOB_JIT_CACHE_DIR;
     }
 }
 
-int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::string* pStdErr)
+int ExecUnhookedProcess(const std::string &CmdLine, std::string *pStdOut, std::string *pStdErr)
 {
     return ExecCmd(CmdLine, "", pStdOut, pStdErr);
 }
@@ -583,7 +630,7 @@ int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::s
 /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
 void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj)
 {
-    const std::string& moduleID = M->getModuleIdentifier();
+    const std::string &moduleID = M->getModuleIdentifier();
     if (!moduleID.length())
     {
         return;
@@ -605,7 +652,7 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
     objPath += JIT_OBJ_EXT;
 
     {
-        std::error_code err;
+        std::error_code      err;
         llvm::raw_fd_ostream fileObj(objPath.c_str(), err, llvm::sys::fs::F_None);
         fileObj << Obj.getBuffer();
         fileObj.flush();
@@ -613,14 +660,14 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
 
 
     {
-        std::error_code err;
+        std::error_code      err;
         llvm::raw_fd_ostream fileObj(filePath.c_str(), err, llvm::sys::fs::F_None);
 
         uint32_t objcrc = ComputeCRC(0, Obj.getBufferStart(), Obj.getBufferSize());
 
         header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, mOptLevel, Obj.getBufferSize());
 
-        fileObj.write((const char*)&header, sizeof(header));
+        fileObj.write((const char *)&header, sizeof(header));
         fileObj.flush();
     }
 }
@@ -628,10 +675,10 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
 /// Returns a pointer to a newly allocated MemoryBuffer that contains the
 /// object which corresponds with Module M, or 0 if an object is not
 /// available.
-std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
+std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module *M)
 {
-    const std::string& moduleID = M->getModuleIdentifier();
-    mCurrentModuleCRC = ComputeModuleCRC(M);
+    const std::string &moduleID = M->getModuleIdentifier();
+    mCurrentModuleCRC           = ComputeModuleCRC(M);
 
     if (!moduleID.length())
     {
@@ -649,8 +696,8 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     llvm::SmallString<MAX_PATH> objFilePath = filePath;
     objFilePath += JIT_OBJ_EXT;
 
-    FILE* fpObjIn = nullptr;
-    FILE* fpIn = fopen(filePath.c_str(), "rb");
+    FILE *fpObjIn = nullptr;
+    FILE *fpIn    = fopen(filePath.c_str(), "rb");
     if (!fpIn)
     {
         return nullptr;
@@ -681,7 +728,7 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
 #else
         pBuf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(size_t(header.GetObjectSize()));
 #endif
-        if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetObjectSize(), 1, fpObjIn))
+        if (!fread(const_cast<char *>(pBuf->getBufferStart()), header.GetObjectSize(), 1, fpObjIn))
         {
             pBuf = nullptr;
             break;
@@ -694,8 +741,7 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
             break;
         }
 
-    }
-    while (0);
+    } while (0);
 
     fclose(fpIn);
 
