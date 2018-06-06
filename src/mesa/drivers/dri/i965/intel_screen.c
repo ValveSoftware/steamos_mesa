@@ -1272,23 +1272,39 @@ intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
 }
 
 static bool
-intel_image_format_is_supported(const struct intel_image_format *fmt)
+intel_image_format_is_supported(const struct gen_device_info *devinfo,
+                                const struct intel_image_format *fmt)
 {
    if (fmt->fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
        fmt->fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
       return false;
 
+#ifndef NDEBUG
+   if (fmt->nplanes == 1) {
+      mesa_format format = driImageFormatToGLFormat(fmt->planes[0].dri_format);
+      /* The images we will create are actually based on the RGBA non-sRGB
+       * version of the format.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(format);
+      format = _mesa_get_srgb_format_linear(format);
+      enum isl_format isl_format = brw_isl_format_for_mesa_format(format);
+      assert(isl_format_supports_rendering(devinfo, isl_format));
+   }
+#endif
+
    return true;
 }
 
 static GLboolean
-intel_query_dma_buf_formats(__DRIscreen *screen, int max,
+intel_query_dma_buf_formats(__DRIscreen *_screen, int max,
                             int *formats, int *count)
 {
+   struct intel_screen *screen = _screen->driverPrivate;
    int num_formats = 0, i;
 
    for (i = 0; i < ARRAY_SIZE(intel_image_formats); i++) {
-      if (!intel_image_format_is_supported(&intel_image_formats[i]))
+      if (!intel_image_format_is_supported(&screen->devinfo,
+                                           &intel_image_formats[i]))
          continue;
 
       num_formats++;
@@ -1318,7 +1334,7 @@ intel_query_dma_buf_modifiers(__DRIscreen *_screen, int fourcc, int max,
    if (f == NULL)
       return false;
 
-   if (!intel_image_format_is_supported(f))
+   if (!intel_image_format_is_supported(&screen->devinfo, f))
       return false;
 
    for (i = 0; i < ARRAY_SIZE(supported_modifiers); i++) {
