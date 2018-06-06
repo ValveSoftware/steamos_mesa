@@ -374,11 +374,19 @@ format_gen(const struct gen_device_info *devinfo)
    return devinfo->gen * 10 + (devinfo->is_g4x || devinfo->is_haswell) * 5;
 }
 
+static bool
+format_info_exists(enum isl_format format)
+{
+   assert(format != ISL_FORMAT_UNSUPPORTED);
+   assert(format < ISL_NUM_FORMATS);
+   return format < ARRAY_SIZE(format_info) && format_info[format].exists;
+}
+
 bool
 isl_format_supports_rendering(const struct gen_device_info *devinfo,
                               enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    return format_gen(devinfo) >= format_info[format].render_target;
@@ -388,7 +396,7 @@ bool
 isl_format_supports_alpha_blending(const struct gen_device_info *devinfo,
                                    enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    return format_gen(devinfo) >= format_info[format].alpha_blend;
@@ -398,7 +406,7 @@ bool
 isl_format_supports_sampling(const struct gen_device_info *devinfo,
                              enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    if (devinfo->is_baytrail) {
@@ -431,7 +439,7 @@ bool
 isl_format_supports_filtering(const struct gen_device_info *devinfo,
                               enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    if (devinfo->is_baytrail) {
@@ -464,7 +472,7 @@ bool
 isl_format_supports_vertex_fetch(const struct gen_device_info *devinfo,
                                  enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    /* For vertex fetch, Bay Trail supports the same set of formats as Haswell
@@ -483,7 +491,7 @@ bool
 isl_format_supports_typed_writes(const struct gen_device_info *devinfo,
                                  enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    return format_gen(devinfo) >= format_info[format].typed_write;
@@ -504,7 +512,7 @@ bool
 isl_format_supports_typed_reads(const struct gen_device_info *devinfo,
                                 enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    return format_gen(devinfo) >= format_info[format].typed_read;
@@ -542,7 +550,7 @@ bool
 isl_format_supports_ccs_e(const struct gen_device_info *devinfo,
                           enum isl_format format)
 {
-   if (!format_info[format].exists)
+   if (!format_info_exists(format))
       return false;
 
    /* For simplicity, only report that a format supports CCS_E if blorp can
