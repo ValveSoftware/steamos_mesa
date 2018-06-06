@@ -3119,7 +3119,7 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
    GLdouble stack_vals[4] = { 0 };
    gl_constant_value *values = (gl_constant_value *) stack_vals;
    GLenum gl_type = GL_NONE;
-   unsigned int i;
+   unsigned int i, elements;
    static int in_array = 0;
    gl_register_file file = in_array ? PROGRAM_CONSTANT : PROGRAM_IMMEDIATE;
 
@@ -3241,6 +3241,7 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
       return;
    }
 
+   elements = ir->type->vector_elements;
    switch (ir->type->base_type) {
    case GLSL_TYPE_FLOAT:
       gl_type = GL_FLOAT;
@@ -3290,14 +3291,21 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
          values[i].u = ir->value.b[i] ? ctx->Const.UniformBooleanTrue : 0;
       }
       break;
+   case GLSL_TYPE_SAMPLER:
+   case GLSL_TYPE_IMAGE:
+      gl_type = GL_UNSIGNED_INT;
+      elements = 2;
+      values[0].u = ir->value.u64[0] & 0xffffffff;
+      values[1].u = ir->value.u64[0] >> 32;
+      break;
    default:
-      assert(!"Non-float/uint/int/bool constant");
+      assert(!"Non-float/uint/int/bool/sampler/image constant");
    }
 
    this->result = st_src_reg(file, -1, ir->type);
    this->result.index = add_constant(file,
                                      values,
-                                     ir->type->vector_elements,
+                                     elements,
                                      gl_type,
                                      &this->result.swizzle);
 }
