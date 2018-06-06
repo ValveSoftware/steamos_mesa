@@ -1262,6 +1262,16 @@ intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
                                             loaderPrivate);
 }
 
+static bool
+intel_image_format_is_supported(const struct intel_image_format *fmt)
+{
+   if (fmt->fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
+       fmt->fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
+      return false;
+
+   return true;
+}
+
 static GLboolean
 intel_query_dma_buf_formats(__DRIscreen *screen, int max,
                             int *formats, int *count)
@@ -1269,8 +1279,7 @@ intel_query_dma_buf_formats(__DRIscreen *screen, int max,
    int num_formats = 0, i;
 
    for (i = 0; i < ARRAY_SIZE(intel_image_formats); i++) {
-      if (intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SARGB8888 ||
-          intel_image_formats[i].fourcc == __DRI_IMAGE_FOURCC_SABGR8888)
+      if (!intel_image_format_is_supported(&intel_image_formats[i]))
          continue;
 
       num_formats++;
@@ -1298,6 +1307,9 @@ intel_query_dma_buf_modifiers(__DRIscreen *_screen, int fourcc, int max,
 
    f = intel_image_format_lookup(fourcc);
    if (f == NULL)
+      return false;
+
+   if (!intel_image_format_is_supported(f))
       return false;
 
    for (i = 0; i < ARRAY_SIZE(supported_modifiers); i++) {
