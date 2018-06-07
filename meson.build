@@ -605,13 +605,34 @@ if with_gallium_st_nine
   endif
 endif
 
+if get_option('power8') != 'false'
+  if host_machine.cpu_family() == 'ppc64le'
+    if cc.get_id() == 'gcc' and cc.version().version_compare('< 4.8')
+      error('Altivec is not supported with gcc version < 4.8.')
+    endif
+    if cc.compiles('''
+        #include <altivec.h>
+        int main() {
+          vector unsigned char r;
+          vector unsigned int v = vec_splat_u32 (1);
+          r = __builtin_vec_vgbbd ((vector unsigned char) v);
+          return 0;
+        }''',
+        args : '-mpower8-vector',
+        name : 'POWER8 intrinsics')
+      pre_args += ['-D_ARCH_PWR8', '-mpower8-vector']
+    elif get_option('power8') == 'true'
+      error('POWER8 intrinsic support required but not found.')
+    endif
+  endif
+endif
+
 _opencl = get_option('gallium-opencl')
 if _opencl != 'disabled'
   if not with_gallium
     error('OpenCL Clover implementation requires at least one gallium driver.')
   endif
 
-  # TODO: alitvec?
   dep_clc = dependency('libclc')
   with_gallium_opencl = true
   with_opencl_icd = _opencl == 'icd'
@@ -839,8 +860,6 @@ if not cc.links('''#include <stdint.h>
   pre_args += '-DMISSING_64_BIT_ATOMICS'
 endif
 
-# TODO: endian
-# TODO: powr8
 # TODO: shared/static? Is this even worth doing?
 
 # When cross compiling we generally need to turn off the use of assembly,
@@ -870,7 +889,6 @@ endif
 
 with_asm_arch = ''
 if with_asm
-  # TODO: SPARC and PPC
   if host_machine.cpu_family() == 'x86'
     if system_has_kms_drm
       with_asm_arch = 'x86'
@@ -900,6 +918,11 @@ if with_asm
     if system_has_kms_drm
       with_asm_arch = 'sparc'
       pre_args += ['-DUSE_SPARC_ASM']
+    endif
+  elif host_machine.cpu_family() == 'ppc64le'
+    if system_has_kms_drm
+      with_asm_arch = 'ppc64le'
+      pre_args += ['-DUSE_PPC64LE_ASM']
     endif
   endif
 endif

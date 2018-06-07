@@ -304,3 +304,10 @@ option(
   choices : ['freedreno', 'glsl', 'intel', 'nir', 'nouveau', 'all'],
   description : 'List of tools to build.',
 )
+option(
+  'power8',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'true', 'false'],
+  description : 'Enable power8 optimizations.',
+)
