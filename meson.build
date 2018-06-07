@@ -841,14 +841,24 @@ endif
 # TODO: powr8
 # TODO: shared/static? Is this even worth doing?
 
-# Building x86 assembly code requires running x86 binaries. It is possible for
-# x86_64 OSes to run x86 binaries, so don't disable asm in those cases
-# TODO: it should be possible to use an exe_wrapper to run the binary during
-# the build. 
+# When cross compiling we generally need to turn off the use of assembly,
+# because mesa's assembly relies on building an executable for the host system,
+# and running it to get information about struct sizes. There is at least one
+# case of cross compiling where we can use asm, and that's x86_64 -> x86 when
+# host OS == build OS, since in that case the build machine can run the host's
+# binaries.
 if meson.is_cross_build() 
-  if not (build_machine.cpu_family() == 'x86_64' and host_machine.cpu_family() == 'x86'
-          and build_machine.system() == host_machine.system())
-    message('Cross compiling to x86 from non-x86, disabling asm')
+  if build_machine.system() != host_machine.system()
+    # TODO: It may be possible to do this with an exe_wrapper (like wine).
+    message('Cross compiling from one OS to another, disabling assembly.')
+    with_asm = false
+  elif not (build_machine.cpu_family() == 'x86_64' and host_machine.cpu_family() == 'x86')
+    # TODO: There may be other cases where the 64 bit version of the
+    # architecture can run 32 bit binaries (aarch64 and armv7 for example)
+    message('''
+      Cross compiling to different architectures, and the host cannot run
+      the build machine's binaries. Disabling assembly.
+    ''')
     with_asm = false
   endif
 endif
