@@ -61,7 +61,7 @@ class StringTable:
         """
         fragments = [
             '"%s\\0" /* %s */' % (
-                te[0].encode('string_escape'),
+                te[0].encode('unicode_escape').decode(),
                 ', '.join(str(idx) for idx in te[2])
             )
             for te in self.table
