@@ -852,7 +852,10 @@ if meson.is_cross_build()
     # TODO: It may be possible to do this with an exe_wrapper (like wine).
     message('Cross compiling from one OS to another, disabling assembly.')
     with_asm = false
-  elif not (build_machine.cpu_family() == 'x86_64' and host_machine.cpu_family() == 'x86')
+  elif not (build_machine.cpu_family().startswith('x86') and host_machine.cpu_family() == 'x86')
+    # FIXME: Gentoo always sets -m32 for x86_64 -> x86 builds, resulting in an
+    # x86 -> x86 cross compile. We use startswith rather than == to handle this
+    # case.
     # TODO: There may be other cases where the 64 bit version of the
     # architecture can run 32 bit binaries (aarch64 and armv7 for example)
     message('''
