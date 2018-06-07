@@ -745,7 +745,6 @@ static void si_emit_clip_state(struct si_context *sctx)
 
 static void si_emit_clip_regs(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct si_shader_selector *vs_sel = vs->selector;
 	struct tgsi_shader_info *info = &vs_sel->info;
@@ -773,12 +772,14 @@ static void si_emit_clip_regs(struct si_context *sctx)
 	clipdist_mask &= rs->clip_plane_enable;
 	culldist_mask |= clipdist_mask;
 
-	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
+	radeon_opt_set_context_reg(sctx, R_02881C_PA_CL_VS_OUT_CNTL,
+		SI_TRACKED_PA_CL_VS_OUT_CNTL,
 		vs_sel->pa_cl_vs_out_cntl |
 		S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0F) != 0) |
 		S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xF0) != 0) |
 		clipdist_mask | (culldist_mask << 8));
-	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
+	radeon_opt_set_context_reg(sctx, R_028810_PA_CL_CLIP_CNTL,
+		SI_TRACKED_PA_CL_CLIP_CNTL,
 		rs->pa_cl_clip_cntl |
 		ucp_mask |
 		S_028810_CLIP_DISABLE(window_space));
