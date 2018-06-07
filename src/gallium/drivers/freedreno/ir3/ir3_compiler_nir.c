@@ -1975,7 +1975,8 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	struct ir3_block *b = ctx->block;
 	const nir_variable *var = intr->variables[0]->var;
 	struct ir3_instruction *sam;
-	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
+	struct ir3_instruction * const *src0 = get_src(ctx, &intr->src[0]);
+	struct ir3_instruction *coords[4];
 	unsigned flags, ncoords = get_image_coords(var, &flags);
 	unsigned tex_idx = get_image_slot(ctx, intr->variables[0]);
 	type_t type = get_image_type(var);
@@ -1987,6 +1988,12 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		flags &= ~IR3_INSTR_3D;
 		flags |= IR3_INSTR_A;
 	}
+
+	for (unsigned i = 0; i < ncoords; i++)
+		coords[i] = src0[i];
+
+	if (ncoords == 1)
+		coords[ncoords++] = create_immed(b, 0);
 
 	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, create_collect(ctx, coords, ncoords), NULL);
