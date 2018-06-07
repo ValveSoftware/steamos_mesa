@@ -3250,8 +3250,10 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx)
 		    rs && !rs->multisample_enable)
 			small_prim_filter_cntl &= C_028830_SMALL_PRIM_FILTER_ENABLE;
 
-		radeon_set_context_reg(cs, R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
-				       small_prim_filter_cntl);
+		radeon_opt_set_context_reg(sctx,
+					   R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
+					   SI_TRACKED_PA_SU_SMALL_PRIM_FILTER_CNTL,
+					   small_prim_filter_cntl);
 	}
 }
 
