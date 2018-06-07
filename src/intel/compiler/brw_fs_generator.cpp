@@ -1421,15 +1421,16 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
       brw_pop_insn_state(p);
 
+      brw_inst_set_sfid(devinfo, send, GEN6_SFID_DATAPORT_CONSTANT_CACHE);
       brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UD));
       brw_set_src0(p, send, retype(payload, BRW_REGISTER_TYPE_UD));
-      brw_set_dp_read_message(p, send, surf_index,
-                              BRW_DATAPORT_OWORD_BLOCK_DWORDS(inst->exec_size),
-                              GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
-                              GEN6_SFID_DATAPORT_CONSTANT_CACHE,
-                              1, /* mlen */
-                              true, /* header */
-                              DIV_ROUND_UP(inst->size_written, REG_SIZE));
+      brw_set_desc(p, send,
+                   brw_message_desc(devinfo, 1, DIV_ROUND_UP(inst->size_written,
+                                                             REG_SIZE), true) |
+                   brw_dp_read_desc(devinfo, surf_index,
+                                    BRW_DATAPORT_OWORD_BLOCK_DWORDS(inst->exec_size),
+                                    GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
+                                    BRW_DATAPORT_READ_TARGET_DATA_CACHE));
 
    } else {
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
@@ -1445,17 +1446,16 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       brw_set_src1(p, insn_and, brw_imm_ud(0x0ff));
 
       /* dst = send(payload, a0.0 | <descriptor>) */
-      brw_inst *insn = brw_send_indirect_message(
+      brw_send_indirect_message(
          p, GEN6_SFID_DATAPORT_CONSTANT_CACHE,
          retype(dst, BRW_REGISTER_TYPE_UD),
-         retype(payload, BRW_REGISTER_TYPE_UD), addr, 0);
-      brw_set_dp_read_message(p, insn, 0 /* surface */,
-                              BRW_DATAPORT_OWORD_BLOCK_DWORDS(inst->exec_size),
-                              GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
-                              GEN6_SFID_DATAPORT_CONSTANT_CACHE,
-                              1, /* mlen */
-                              true, /* header */
-                              DIV_ROUND_UP(inst->size_written, REG_SIZE));
+         retype(payload, BRW_REGISTER_TYPE_UD), addr,
+         brw_message_desc(devinfo, 1,
+                          DIV_ROUND_UP(inst->size_written, REG_SIZE), true) |
+         brw_dp_read_desc(devinfo, 0 /* surface */,
+                          BRW_DATAPORT_OWORD_BLOCK_DWORDS(inst->exec_size),
+                          GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
+                          BRW_DATAPORT_READ_TARGET_DATA_CACHE));
 
       brw_pop_insn_state(p);
    }

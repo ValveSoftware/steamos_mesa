@@ -524,34 +524,6 @@ brw_set_dp_write_message(struct brw_codegen *p,
       brw_inst_set_null_rt(devinfo, insn, false);
 }
 
-void
-brw_set_dp_read_message(struct brw_codegen *p,
-			brw_inst *insn,
-			unsigned binding_table_index,
-			unsigned msg_control,
-			unsigned msg_type,
-			unsigned target_cache,
-			unsigned msg_length,
-                        bool header_present,
-			unsigned response_length)
-{
-   const struct gen_device_info *devinfo = p->devinfo;
-   const unsigned sfid = (devinfo->gen >= 6 ? target_cache :
-                          BRW_SFID_DATAPORT_READ);
-
-   brw_set_desc(p, insn, brw_message_desc(
-                   devinfo, msg_length, response_length, header_present));
-
-   const unsigned opcode = brw_inst_opcode(devinfo, insn);
-   if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC)
-      brw_inst_set_sfid(devinfo, insn, sfid);
-   brw_inst_set_binding_table_index(devinfo, insn, binding_table_index);
-   brw_inst_set_dp_read_msg_type(devinfo, insn, msg_type);
-   brw_inst_set_dp_read_msg_control(devinfo, insn, msg_control);
-   if (devinfo->gen < 6)
-      brw_inst_set_dp_read_target_cache(devinfo, insn, target_cache);
-}
-
 static void
 gen7_set_dp_scratch_message(struct brw_codegen *p,
                             brw_inst *inst,
@@ -2104,7 +2076,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
    const unsigned target_cache =
       (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
        devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
+       BRW_SFID_DATAPORT_READ);
 
    {
       brw_push_insn_state(p);
@@ -2124,6 +2096,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
    {
       brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
 
+      brw_inst_set_sfid(devinfo, insn, target_cache);
       assert(brw_inst_pred_control(devinfo, insn) == 0);
       brw_inst_set_compression(devinfo, insn, false);
 
@@ -2135,15 +2108,12 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
          brw_inst_set_base_mrf(devinfo, insn, mrf.nr);
       }
 
-      brw_set_dp_read_message(p,
-			      insn,
-                              brw_scratch_surface_idx(p),
-			      BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
-			      BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ, /* msg_type */
-			      target_cache,
-			      1, /* msg_length */
-                              true, /* header_present */
-			      rlen);
+      brw_set_desc(p, insn,
+                   brw_message_desc(devinfo, 1, rlen, true) |
+                   brw_dp_read_desc(devinfo, brw_scratch_surface_idx(p),
+                                    BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
+                                    BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ,
+                                    BRW_DATAPORT_READ_TARGET_RENDER_CACHE));
    }
 }
 
@@ -2195,7 +2165,7 @@ void brw_oword_block_read(struct brw_codegen *p,
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned target_cache =
       (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_CONSTANT_CACHE :
-       BRW_DATAPORT_READ_TARGET_DATA_CACHE);
+       BRW_SFID_DATAPORT_READ);
    const unsigned exec_size = 1 << brw_get_default_exec_size(p);
 
    /* On newer hardware, offset is in units of owords. */
@@ -2224,6 +2194,8 @@ void brw_oword_block_read(struct brw_codegen *p,
 
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
 
+   brw_inst_set_sfid(devinfo, insn, target_cache);
+
    /* cast dest to a uword[8] vector */
    dest = retype(vec8(dest), BRW_REGISTER_TYPE_UW);
 
@@ -2235,13 +2207,12 @@ void brw_oword_block_read(struct brw_codegen *p,
       brw_inst_set_base_mrf(devinfo, insn, mrf.nr);
    }
 
-   brw_set_dp_read_message(p, insn, bind_table_index,
-                           BRW_DATAPORT_OWORD_BLOCK_DWORDS(exec_size),
-			   BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ,
-			   target_cache,
-			   1, /* msg_length */
-                           true, /* header_present */
-			   DIV_ROUND_UP(exec_size, 8)); /* response_length */
+   brw_set_desc(p, insn,
+                brw_message_desc(devinfo, 1, DIV_ROUND_UP(exec_size, 8), true) |
+                brw_dp_read_desc(devinfo, bind_table_index,
+                                 BRW_DATAPORT_OWORD_BLOCK_DWORDS(exec_size),
+                                 BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ,
+                                 BRW_DATAPORT_READ_TARGET_DATA_CACHE));
 
    brw_pop_insn_state(p);
 }
@@ -2324,14 +2295,16 @@ gen9_fb_READ(struct brw_codegen *p,
       brw_get_default_exec_size(p) == BRW_EXECUTE_16 ? 0 : 1;
    brw_inst *insn = next_insn(p, BRW_OPCODE_SENDC);
 
+   brw_inst_set_sfid(devinfo, insn, GEN6_SFID_DATAPORT_RENDER_CACHE);
    brw_set_dest(p, insn, dst);
    brw_set_src0(p, insn, payload);
-   brw_set_dp_read_message(p, insn, binding_table_index,
-                           per_sample << 5 | msg_subtype,
-                           GEN9_DATAPORT_RC_RENDER_TARGET_READ,
-                           GEN6_SFID_DATAPORT_RENDER_CACHE,
-                           msg_length, true /* header_present */,
-                           response_length);
+   brw_set_desc(
+      p, insn,
+      brw_message_desc(devinfo, msg_length, response_length, true) |
+      brw_dp_read_desc(devinfo, binding_table_index,
+                       per_sample << 5 | msg_subtype,
+                       GEN9_DATAPORT_RC_RENDER_TARGET_READ,
+                       BRW_DATAPORT_READ_TARGET_RENDER_CACHE));
    brw_inst_set_rt_slot_group(devinfo, insn, brw_get_default_group(p) / 16);
 
    return insn;

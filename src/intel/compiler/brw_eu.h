@@ -245,16 +245,6 @@ ROUND(RNDE)
 
 /* Helpers for SEND instruction:
  */
-void brw_set_dp_read_message(struct brw_codegen *p,
-			     brw_inst *insn,
-			     unsigned binding_table_index,
-			     unsigned msg_control,
-			     unsigned msg_type,
-			     unsigned target_cache,
-			     unsigned msg_length,
-                             bool header_present,
-			     unsigned response_length);
-
 void brw_set_dp_write_message(struct brw_codegen *p,
 			      brw_inst *insn,
 			      unsigned binding_table_index,
@@ -313,6 +303,34 @@ brw_sampler_desc(const struct gen_device_info *devinfo,
    else
       return (desc | SET_BITS(return_format, 13, 12) |
               SET_BITS(msg_type, 15, 14));
+}
+
+/**
+ * Construct a message descriptor immediate with the specified dataport read
+ * function controls.
+ */
+static inline uint32_t
+brw_dp_read_desc(const struct gen_device_info *devinfo,
+                 unsigned binding_table_index,
+                 unsigned msg_control,
+                 unsigned msg_type,
+                 unsigned target_cache)
+{
+   const unsigned desc = SET_BITS(binding_table_index, 7, 0);
+   if (devinfo->gen >= 7)
+      return (desc | SET_BITS(msg_control, 13, 8) |
+              SET_BITS(msg_type, 17, 14));
+   else if (devinfo->gen >= 6)
+      return (desc | SET_BITS(msg_control, 12, 8) |
+              SET_BITS(msg_type, 16, 13));
+   else if (devinfo->gen >= 5 || devinfo->is_g4x)
+      return (desc | SET_BITS(msg_control, 10, 8) |
+              SET_BITS(msg_type, 13, 11) |
+              SET_BITS(target_cache, 15, 14));
+   else
+      return (desc | SET_BITS(msg_control, 11, 8) |
+              SET_BITS(msg_type, 13, 12) |
+              SET_BITS(target_cache, 15, 14));
 }
 
 void brw_urb_WRITE(struct brw_codegen *p,

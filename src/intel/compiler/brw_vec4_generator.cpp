@@ -1155,23 +1155,23 @@ generate_scratch_read(struct brw_codegen *p,
    const unsigned target_cache =
       devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
       devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-      BRW_DATAPORT_READ_TARGET_RENDER_CACHE;
+      BRW_SFID_DATAPORT_READ;
 
    /* Each of the 8 channel enables is considered for whether each
     * dword is written.
     */
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_inst_set_sfid(devinfo, send, target_cache);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(devinfo, send, inst->base_mrf);
-   brw_set_dp_read_message(p, send,
-                           brw_scratch_surface_idx(p),
-			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
-			   msg_type, target_cache,
-			   2, /* mlen */
-                           true, /* header_present */
-			   1 /* rlen */);
+   brw_set_desc(p, send,
+                brw_message_desc(devinfo, 2, 1, true) |
+                brw_dp_read_desc(devinfo,
+                                 brw_scratch_surface_idx(p),
+                                 BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
+                                 msg_type, BRW_DATAPORT_READ_TARGET_RENDER_CACHE));
 }
 
 static void
@@ -1265,7 +1265,7 @@ generate_pull_constant_load(struct brw_codegen *p,
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned target_cache =
       (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_SAMPLER_CACHE :
-       BRW_DATAPORT_READ_TARGET_DATA_CACHE);
+       BRW_SFID_DATAPORT_READ);
    assert(index.file == BRW_IMMEDIATE_VALUE &&
 	  index.type == BRW_REGISTER_TYPE_UD);
    uint32_t surf_index = index.ud;
@@ -1303,18 +1303,17 @@ generate_pull_constant_load(struct brw_codegen *p,
     * dword is written.
     */
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_inst_set_sfid(devinfo, send, target_cache);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
-   brw_set_dp_read_message(p, send,
-			   surf_index,
-			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
-			   msg_type,
-                           target_cache,
-			   2, /* mlen */
-                           true, /* header_present */
-			   1 /* rlen */);
+   brw_set_desc(p, send,
+                brw_message_desc(devinfo, 2, 1, true) |
+                brw_dp_read_desc(devinfo, surf_index,
+                                 BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
+                                 msg_type,
+                                 BRW_DATAPORT_READ_TARGET_DATA_CACHE));
 }
 
 static void
