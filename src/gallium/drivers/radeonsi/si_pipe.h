@@ -1033,6 +1033,8 @@ struct si_context {
 
 	void (*dma_clear_buffer)(struct si_context *sctx, struct pipe_resource *dst,
 				 uint64_t offset, uint64_t size, unsigned value);
+
+	struct si_tracked_regs			tracked_regs;
 };
 
 /* cik_sdma.c */

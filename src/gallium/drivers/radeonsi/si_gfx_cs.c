@@ -321,4 +321,7 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 	ctx->last_num_tcs_input_cp = -1;
 
 	ctx->cs_shader_state.initialized = false;
+
+	/* Set all saved registers state to unknown */
+	ctx->tracked_regs.reg_saved = 0;
 }

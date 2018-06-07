@@ -1343,28 +1343,25 @@ void si_save_qbo_state(struct si_context *sctx, struct si_qbo_state *st)
 
 static void si_emit_db_render_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-	unsigned db_shader_control;
-
-	radeon_set_context_reg_seq(cs, R_028000_DB_RENDER_CONTROL, 2);
+	unsigned db_shader_control, db_render_control, db_count_control;
 
 	/* DB_RENDER_CONTROL */
 	if (sctx->dbcb_depth_copy_enabled ||
 	    sctx->dbcb_stencil_copy_enabled) {
-		radeon_emit(cs,
-			    S_028000_DEPTH_COPY(sctx->dbcb_depth_copy_enabled) |
-			    S_028000_STENCIL_COPY(sctx->dbcb_stencil_copy_enabled) |
-			    S_028000_COPY_CENTROID(1) |
-			    S_028000_COPY_SAMPLE(sctx->dbcb_copy_sample));
+		db_render_control =
+			S_028000_DEPTH_COPY(sctx->dbcb_depth_copy_enabled) |
+			S_028000_STENCIL_COPY(sctx->dbcb_stencil_copy_enabled) |
+			S_028000_COPY_CENTROID(1) |
+			S_028000_COPY_SAMPLE(sctx->dbcb_copy_sample);
 	} else if (sctx->db_flush_depth_inplace || sctx->db_flush_stencil_inplace) {
-		radeon_emit(cs,
-			    S_028000_DEPTH_COMPRESS_DISABLE(sctx->db_flush_depth_inplace) |
-			    S_028000_STENCIL_COMPRESS_DISABLE(sctx->db_flush_stencil_inplace));
+		db_render_control =
+			S_028000_DEPTH_COMPRESS_DISABLE(sctx->db_flush_depth_inplace) |
+			S_028000_STENCIL_COMPRESS_DISABLE(sctx->db_flush_stencil_inplace);
 	} else {
-		radeon_emit(cs,
-			    S_028000_DEPTH_CLEAR_ENABLE(sctx->db_depth_clear) |
-			    S_028000_STENCIL_CLEAR_ENABLE(sctx->db_stencil_clear));
+		db_render_control =
+			S_028000_DEPTH_CLEAR_ENABLE(sctx->db_depth_clear) |
+			S_028000_STENCIL_CLEAR_ENABLE(sctx->db_stencil_clear);
 	}
 
 	/* DB_COUNT_CONTROL (occlusion queries) */
@@ -1373,28 +1370,33 @@ static void si_emit_db_render_state(struct si_context *sctx)
 		bool perfect = sctx->num_perfect_occlusion_queries > 0;
 
 		if (sctx->chip_class >= CIK) {
-			radeon_emit(cs,
-				    S_028004_PERFECT_ZPASS_COUNTS(perfect) |
-				    S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples) |
-				    S_028004_ZPASS_ENABLE(1) |
-				    S_028004_SLICE_EVEN_ENABLE(1) |
-				    S_028004_SLICE_ODD_ENABLE(1));
+			db_count_control =
+				S_028004_PERFECT_ZPASS_COUNTS(perfect) |
+				S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples) |
+				S_028004_ZPASS_ENABLE(1) |
+				S_028004_SLICE_EVEN_ENABLE(1) |
+				S_028004_SLICE_ODD_ENABLE(1);
 		} else {
-			radeon_emit(cs,
-				    S_028004_PERFECT_ZPASS_COUNTS(perfect) |
-				    S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples));
+			db_count_control =
+				S_028004_PERFECT_ZPASS_COUNTS(perfect) |
+				S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples);
 		}
 	} else {
 		/* Disable occlusion queries. */
 		if (sctx->chip_class >= CIK) {
-			radeon_emit(cs, 0);
+			db_count_control = 0;
 		} else {
-			radeon_emit(cs, S_028004_ZPASS_INCREMENT_DISABLE(1));
+			db_count_control = S_028004_ZPASS_INCREMENT_DISABLE(1);
 		}
 	}
 
+	radeon_opt_set_context_reg2(sctx, R_028000_DB_RENDER_CONTROL,
+				    SI_TRACKED_DB_RENDER_CONTROL, db_render_control,
+				    db_count_control);
+
 	/* DB_RENDER_OVERRIDE2 */
-	radeon_set_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2,
+	radeon_opt_set_context_reg(sctx,  R_028010_DB_RENDER_OVERRIDE2,
+		SI_TRACKED_DB_RENDER_OVERRIDE2,
 		S_028010_DISABLE_ZMASK_EXPCLEAR_OPTIMIZATION(sctx->db_depth_disable_expclear) |
 		S_028010_DISABLE_SMEM_EXPCLEAR_OPTIMIZATION(sctx->db_stencil_disable_expclear) |
 		S_028010_DECOMPRESS_Z_ON_FLUSH(sctx->framebuffer.nr_samples >= 4));
@@ -1415,8 +1417,8 @@ static void si_emit_db_render_state(struct si_context *sctx)
 	    !sctx->screen->rbplus_allowed)
 		db_shader_control |= S_02880C_DUAL_QUAD_DISABLE(1);
 
-	radeon_set_context_reg(cs, R_02880C_DB_SHADER_CONTROL,
-			       db_shader_control);
+	radeon_opt_set_context_reg(sctx, R_02880C_DB_SHADER_CONTROL,
+				   SI_TRACKED_DB_SHADER_CONTROL, db_shader_control);
 }
 
 /*

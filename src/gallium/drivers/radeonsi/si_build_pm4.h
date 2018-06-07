@@ -110,4 +110,47 @@ static inline void radeon_set_uconfig_reg_idx(struct radeon_winsys_cs *cs,
 	radeon_emit(cs, value);
 }
 
+/* Emit PKT3_SET_CONTEXT_REG if the register value is different. */
+static inline void radeon_opt_set_context_reg(struct si_context *sctx, unsigned offset,
+					      enum si_tracked_reg reg, unsigned value)
+{
+	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+
+	if (!(sctx->tracked_regs.reg_saved & (1 << reg)) ||
+	    sctx->tracked_regs.reg_value[reg] != value ) {
+
+		radeon_set_context_reg(cs, offset, value);
+
+		sctx->tracked_regs.reg_saved |= 1 << reg;
+		sctx->tracked_regs.reg_value[reg] = value;
+	}
+}
+
+/**
+ * Set 2 consecutive registers if any registers value is different.
+ * @param offset        starting register offset
+ * @param value1        is written to first register
+ * @param value2        is written to second register
+ */
+static inline void radeon_opt_set_context_reg2(struct si_context *sctx, unsigned offset,
+					       enum si_tracked_reg reg, unsigned value1,
+					       unsigned value2)
+{
+	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+
+	if (!(sctx->tracked_regs.reg_saved & (1 << reg)) ||
+	    !(sctx->tracked_regs.reg_saved & (1 << (reg + 1))) ||
+	    sctx->tracked_regs.reg_value[reg] != value1 ||
+	    sctx->tracked_regs.reg_value[reg+1] != value2 ) {
+
+		radeon_set_context_reg_seq(cs, offset, 2);
+		radeon_emit(cs, value1);
+		radeon_emit(cs, value2);
+
+		sctx->tracked_regs.reg_value[reg] = value1;
+		sctx->tracked_regs.reg_value[reg+1] = value2;
+		sctx->tracked_regs.reg_saved |= 3 << reg;
+	}
+}
+
 #endif
