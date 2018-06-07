@@ -1220,7 +1220,9 @@ if with_platform_wayland
   dep_wayland_client = dependency('wayland-client', version : '>=1.11')
   dep_wayland_server = dependency('wayland-server', version : '>=1.11')
   if with_egl
-    dep_wayland_egl = dependency('wayland-egl', version : '>=1.15')
+    dep_wayland_egl = dependency('wayland-egl-backend', version : '>= 3')
+    dep_wayland_egl_headers = declare_dependency(
+      compile_args : run_command(prog_pkgconfig, ['wayland-egl-backend', '--cflags']).stdout().split())
   endif
   wayland_dmabuf_xml = join_paths(
     dep_wl_protocols.get_pkgconfig_variable('pkgdatadir'), 'unstable',

@@ -116,7 +116,7 @@ if with_platform_surfaceless
   files_egl += files('drivers/dri2/platform_surfaceless.c')
 endif
 if with_platform_wayland
-  deps_for_egl += [dep_wayland_client, dep_wayland_server, dep_wayland_egl]
+  deps_for_egl += [dep_wayland_client, dep_wayland_server, dep_wayland_egl_headers]
   link_for_egl += libwayland_drm
   files_egl += files('drivers/dri2/platform_wayland.c')
   files_egl += [
