@@ -325,13 +325,13 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 
 static void si_emit_dpbb_disable(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
-
-	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
-			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
-			       S_028C44_DISABLE_START_OF_PRIM(1));
-	radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
-			       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
+	radeon_opt_set_context_reg(sctx, R_028C44_PA_SC_BINNER_CNTL_0,
+		SI_TRACKED_PA_SC_BINNER_CNTL_0,
+		S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
+		S_028C44_DISABLE_START_OF_PRIM(1));
+	radeon_opt_set_context_reg(sctx, R_028060_DB_DFSM_CONTROL,
+				   SI_TRACKED_DB_DFSM_CONTROL,
+				   S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
 }
 
 void si_emit_dpbb_state(struct si_context *sctx)
@@ -431,18 +431,20 @@ void si_emit_dpbb_state(struct si_context *sctx)
 	if (bin_size.y >= 32)
 		bin_size_extend.y = util_logbase2(bin_size.y) - 5;
 
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
-	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
-			       S_028C44_BINNING_MODE(V_028C44_BINNING_ALLOWED) |
-			       S_028C44_BIN_SIZE_X(bin_size.x == 16) |
-			       S_028C44_BIN_SIZE_Y(bin_size.y == 16) |
-			       S_028C44_BIN_SIZE_X_EXTEND(bin_size_extend.x) |
-			       S_028C44_BIN_SIZE_Y_EXTEND(bin_size_extend.y) |
-			       S_028C44_CONTEXT_STATES_PER_BIN(context_states_per_bin) |
-			       S_028C44_PERSISTENT_STATES_PER_BIN(persistent_states_per_bin) |
-			       S_028C44_DISABLE_START_OF_PRIM(disable_start_of_prim) |
-			       S_028C44_FPOVS_PER_BATCH(fpovs_per_batch) |
-			       S_028C44_OPTIMAL_BIN_SELECTION(1));
-	radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
-			       S_028060_PUNCHOUT_MODE(punchout_mode));
+	radeon_opt_set_context_reg(
+		sctx, R_028C44_PA_SC_BINNER_CNTL_0,
+		SI_TRACKED_PA_SC_BINNER_CNTL_0,
+		S_028C44_BINNING_MODE(V_028C44_BINNING_ALLOWED) |
+		S_028C44_BIN_SIZE_X(bin_size.x == 16) |
+		S_028C44_BIN_SIZE_Y(bin_size.y == 16) |
+		S_028C44_BIN_SIZE_X_EXTEND(bin_size_extend.x) |
+		S_028C44_BIN_SIZE_Y_EXTEND(bin_size_extend.y) |
+		S_028C44_CONTEXT_STATES_PER_BIN(context_states_per_bin) |
+		S_028C44_PERSISTENT_STATES_PER_BIN(persistent_states_per_bin) |
+		S_028C44_DISABLE_START_OF_PRIM(disable_start_of_prim) |
+		S_028C44_FPOVS_PER_BATCH(fpovs_per_batch) |
+		S_028C44_OPTIMAL_BIN_SELECTION(1));
+	radeon_opt_set_context_reg(sctx, R_028060_DB_DFSM_CONTROL,
+				   SI_TRACKED_DB_DFSM_CONTROL,
+				   S_028060_PUNCHOUT_MODE(punchout_mode));
 }
