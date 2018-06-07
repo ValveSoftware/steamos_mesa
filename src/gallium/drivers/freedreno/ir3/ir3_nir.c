@@ -255,7 +255,7 @@ ir3_nir_scan_driver_consts(nir_shader *shader,
 					if (layout->image_dims.mask & (1 << idx))
 						break;
 					layout->image_dims.mask |= (1 << idx);
-					layout->ssbo_size.off[idx] =
+					layout->image_dims.off[idx] =
 						layout->image_dims.count;
 					layout->image_dims.count += 3; /* three const per */
 					break;
