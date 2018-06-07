@@ -50,6 +50,7 @@ with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
 with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
+with_glx_read_only_text = get_option('glx-read-only-text')
 with_osmesa = get_option('osmesa')
 with_swr_arches = get_option('swr-arches')
 with_tools = get_option('tools')
@@ -874,6 +875,10 @@ if with_asm
       with_asm_arch = 'x86'
       pre_args += ['-DUSE_X86_ASM', '-DUSE_MMX_ASM', '-DUSE_3DNOW_ASM',
                    '-DUSE_SSE_ASM']
+
+      if with_glx_read_only_text
+         pre_args += ['-DGLX_X86_READONLY_TEXT']
+      endif
     endif
   elif host_machine.cpu_family() == 'x86_64'
     if system_has_kms_drm
