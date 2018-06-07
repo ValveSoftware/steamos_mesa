@@ -351,6 +351,20 @@ brw_dp_write_desc(const struct gen_device_info *devinfo,
 }
 
 /**
+ * Construct a message descriptor immediate with the specified dataport
+ * surface function controls.
+ */
+static inline uint32_t
+brw_dp_surface_desc(const struct gen_device_info *devinfo,
+                    unsigned msg_type,
+                    unsigned msg_control)
+{
+   assert(devinfo->gen >= 7);
+   return (SET_BITS(msg_control, 13, 8) |
+           SET_BITS(msg_type, 17, 14));
+}
+
+/**
  * Construct a message descriptor immediate with the specified pixel
  * interpolator function controls.
  */
