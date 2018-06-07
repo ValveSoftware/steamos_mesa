@@ -969,6 +969,9 @@ emit_frag_end(struct v3d_compile *c)
                 conf |= TLB_SAMPLE_MODE_PER_PIXEL;
                 conf |= (7 - rt) << TLB_RENDER_TARGET_SHIFT;
 
+                if (c->fs_key->swap_color_rb & (1 << rt))
+                        num_components = MAX2(num_components, 3);
+
                 assert(num_components != 0);
                 switch (glsl_get_base_type(var->type)) {
                 case GLSL_TYPE_UINT:
@@ -1360,7 +1363,7 @@ ntq_setup_outputs(struct v3d_compile *c)
                 assert(array_len == 1);
                 (void)array_len;
 
-                for (int i = 0; i < glsl_get_vector_elements(var->type); i++) {
+                for (int i = 0; i < 4; i++) {
                         add_output(c, loc + var->data.location_frac + i,
                                    var->data.location,
                                    var->data.location_frac + i);
