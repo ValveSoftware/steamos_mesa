@@ -87,7 +87,8 @@ static void si_emit_cb_render_state(struct si_context *sctx)
 	    (sctx->ps_shader.cso->info.colors_written & 0x3) != 0x3)
 		cb_target_mask = 0;
 
-	radeon_set_context_reg(cs, R_028238_CB_TARGET_MASK, cb_target_mask);
+	radeon_opt_set_context_reg(sctx, R_028238_CB_TARGET_MASK,
+				   SI_TRACKED_CB_TARGET_MASK, cb_target_mask);
 
 	/* GFX9: Flush DFSM when CB_TARGET_MASK changes.
 	 * I think we don't have to do anything between IBs.
@@ -111,10 +112,12 @@ static void si_emit_cb_render_state(struct si_context *sctx)
 				  blend->blend_enable_4bit & cb_target_mask &&
 				  sctx->framebuffer.nr_samples >= 2;
 
-		radeon_set_context_reg(cs, R_028424_CB_DCC_CONTROL,
-				       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
-				       S_028424_OVERWRITE_COMBINER_WATERMARK(4) |
-				       S_028424_OVERWRITE_COMBINER_DISABLE(oc_disable));
+		radeon_opt_set_context_reg(
+				sctx, R_028424_CB_DCC_CONTROL,
+				SI_TRACKED_CB_DCC_CONTROL,
+				S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
+				S_028424_OVERWRITE_COMBINER_WATERMARK(4) |
+				S_028424_OVERWRITE_COMBINER_DISABLE(oc_disable));
 	}
 
 	/* RB+ register settings. */
@@ -242,10 +245,11 @@ static void si_emit_cb_render_state(struct si_context *sctx)
 			}
 		}
 
-		radeon_set_context_reg_seq(cs, R_028754_SX_PS_DOWNCONVERT, 3);
-		radeon_emit(cs, sx_ps_downconvert);	/* R_028754_SX_PS_DOWNCONVERT */
-		radeon_emit(cs, sx_blend_opt_epsilon);	/* R_028758_SX_BLEND_OPT_EPSILON */
-		radeon_emit(cs, sx_blend_opt_control);	/* R_02875C_SX_BLEND_OPT_CONTROL */
+		/* SX_PS_DOWNCONVERT, SX_BLEND_OPT_EPSILON, SX_BLEND_OPT_CONTROL */
+		radeon_opt_set_context_reg3(sctx, R_028754_SX_PS_DOWNCONVERT,
+					    SI_TRACKED_SX_PS_DOWNCONVERT,
+					    sx_ps_downconvert, sx_blend_opt_epsilon,
+					    sx_blend_opt_control);
 	}
 }
 
