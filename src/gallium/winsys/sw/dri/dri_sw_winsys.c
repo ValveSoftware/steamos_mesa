@@ -233,7 +233,7 @@ dri_sw_displaytarget_display(struct sw_winsys *ws,
    unsigned width, height, x = 0, y = 0;
    unsigned blsize = util_format_get_blocksize(dri_sw_dt->format);
    unsigned offset = 0;
-   void *data = dri_sw_dt->data;
+   char *data = dri_sw_dt->data;
 
    /* Set the width to 'stride / cpp'.
     *
