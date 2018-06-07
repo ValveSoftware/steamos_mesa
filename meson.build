@@ -1110,6 +1110,7 @@ if dep_libdrm.found()
 endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
+llvm_optional_modules = []
 if with_amd_vk or with_gallium_radeonsi or with_gallium_r600
   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
   if with_gallium_r600
@@ -1121,7 +1122,7 @@ if with_gallium_opencl
     'all-targets', 'linker', 'coverage', 'instrumentation', 'ipo', 'irreader',
     'lto', 'option', 'objcarcopts', 'profiledata',
   ]
-  # TODO: optional modules
+  llvm_optional_modules += ['coroutines', 'opencl']
 endif
 
 if with_amd_vk or with_gallium_radeonsi
@@ -1137,12 +1138,20 @@ endif
 _llvm = get_option('llvm')
 if _llvm == 'auto'
   dep_llvm = dependency(
-    'llvm', version : _llvm_version, modules : llvm_modules,
+    'llvm',
+    version : _llvm_version,
+    modules : llvm_modules,
+    optional_modules : llvm_optional_modules,
     required : with_amd_vk or with_gallium_radeonsi or with_gallium_swr or with_gallium_opencl,
   )
   with_llvm = dep_llvm.found()
 elif _llvm == 'true'
-  dep_llvm = dependency('llvm', version : _llvm_version, modules : llvm_modules)
+  dep_llvm = dependency(
+    'llvm',
+    version : _llvm_version,
+    modules : llvm_modules,
+    optional_modules : llvm_optional_modules,
+  )
   with_llvm = true
 else
   dep_llvm = null_dep
