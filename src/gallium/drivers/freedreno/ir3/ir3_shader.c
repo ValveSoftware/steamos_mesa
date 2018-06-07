@@ -660,9 +660,14 @@ emit_image_dims(struct fd_context *ctx, const struct ir3_shader_variant *v,
 			img = &si->si[index];
 			rsc = fd_resource(img->resource);
 
-			dims[off + 0] = rsc->cpp;
+			dims[off + 0] = util_format_get_blocksize(img->format);
 			if (img->resource->target != PIPE_BUFFER) {
 				unsigned lvl = img->u.tex.level;
+				/* note for 2d/cube/etc images, even if re-interpreted
+				 * as a different color format, the pixel size should
+				 * be the same, so use original dimensions for y and z
+				 * stride:
+				 */
 				dims[off + 1] = rsc->slices[lvl].pitch * rsc->cpp;
 				dims[off + 2] = rsc->slices[lvl].size0;
 			}
