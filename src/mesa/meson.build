@@ -649,8 +649,14 @@ if with_asm_arch == 'x86'
 elif with_asm_arch == 'x86_64'
   files_libmesa_common += files('x86-64/x86-64.h', 'x86-64/xform4.S')
   inc_libmesa_asm = include_directories('x86-64')
+elif with_asm_arch == 'sparc'
+  files_libmesa_common += files(
+    'sparc/sparc_clip.S',
+    'sparc/norm.S',
+    'sparc/xform.S',
+  )
+  inc_libmesa_asm = include_directories('sparc')
 endif
-# TODO: sparc
 
 format_fallback_c = custom_target(
   'format_fallback.c',

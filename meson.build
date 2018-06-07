@@ -896,6 +896,11 @@ if with_asm
       with_asm_arch = 'aarch64'
       pre_args += ['-DUSE_AARCH64_ASM']
     endif
+  elif host_machine.cpu_family() == 'sparc64'
+    if system_has_kms_drm
+      with_asm_arch = 'sparc'
+      pre_args += ['-DUSE_SPARC_ASM']
+    endif
   endif
 endif
 
