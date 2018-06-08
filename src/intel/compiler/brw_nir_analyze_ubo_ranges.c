@@ -141,10 +141,16 @@ analyze_ubos_block(struct ubo_analysis_state *state, nir_block *block)
          if (offset >= 64)
             continue;
 
+         /* The value might span multiple 32-byte chunks. */
+         const int bytes = nir_intrinsic_dest_components(intrin) *
+                           (nir_dest_bit_size(intrin->dest) / 8);
+         const int end = DIV_ROUND_UP(offset_const->u32[0] + bytes, 32);
+         const int regs = end - offset + 1;
+
          /* TODO: should we count uses in loops as higher benefit? */
 
          struct ubo_block_info *info = get_block_info(state, block);
-         info->offsets |= 1ull << offset;
+         info->offsets |= ((1ull << regs) - 1) << offset;
          info->uses[offset]++;
       }
    }
