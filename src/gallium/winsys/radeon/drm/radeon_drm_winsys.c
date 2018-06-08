@@ -471,6 +471,32 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     radeon_get_drm_value(ws->fd, RADEON_INFO_MAX_SE, NULL,
                          &ws->info.max_se);
 
+    switch (ws->info.family) {
+    case CHIP_HAINAN:
+    case CHIP_KABINI:
+    case CHIP_MULLINS:
+        ws->info.num_tcc_blocks = 2;
+        break;
+    case CHIP_VERDE:
+    case CHIP_OLAND:
+    case CHIP_BONAIRE:
+    case CHIP_KAVERI:
+        ws->info.num_tcc_blocks = 4;
+        break;
+    case CHIP_PITCAIRN:
+        ws->info.num_tcc_blocks = 8;
+        break;
+    case CHIP_TAHITI:
+        ws->info.num_tcc_blocks = 12;
+        break;
+    case CHIP_HAWAII:
+        ws->info.num_tcc_blocks = 16;
+        break;
+    default:
+        ws->info.num_tcc_blocks = 0;
+        break;
+    }
+
     if (!ws->info.max_se) {
         switch (ws->info.family) {
         default:
