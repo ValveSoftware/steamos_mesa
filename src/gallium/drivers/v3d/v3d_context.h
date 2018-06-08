@@ -424,9 +424,6 @@ struct v3d_context {
 struct v3d_rasterizer_state {
         struct pipe_rasterizer_state base;
 
-        /* VC5_CONFIGURATION_BITS */
-        uint8_t config_bits[3];
-
         float point_size;
 
         /**
@@ -445,14 +442,6 @@ struct v3d_depth_stencil_alpha_state {
         struct pipe_depth_stencil_alpha_state base;
 
         enum v3d_ez_state ez_state;
-
-        /** Uniforms for stencil state.
-         *
-         * Index 0 is either the front config, or the front-and-back config.
-         * Index 1 is the back config if doing separate back stencil.
-         * Index 2 is the writemask config if it's not a common mask value.
-         */
-        uint32_t stencil_uniforms[3];
 
         uint8_t stencil_front[6];
         uint8_t stencil_back[6];
