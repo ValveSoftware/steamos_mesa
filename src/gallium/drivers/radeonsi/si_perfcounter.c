@@ -345,9 +345,9 @@ static struct si_pc_block_base cik_SRBM = {
  * blocks here matters.
  */
 static struct si_pc_block groups_CIK[] = {
-	{ &cik_CB, 226, 4 },
+	{ &cik_CB, 226},
 	{ &cik_CPF, 17 },
-	{ &cik_DB, 257, 4 },
+	{ &cik_DB, 257},
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
 	{ &cik_PA_SU, 153 },
@@ -357,7 +357,7 @@ static struct si_pc_block groups_CIK[] = {
 	{ &cik_SX, 32 },
 	{ &cik_TA, 111, 11 },
 	{ &cik_TCA, 39, 2 },
-	{ &cik_TCC, 160, 16 },
+	{ &cik_TCC, 160},
 	{ &cik_TD, 55, 11 },
 	{ &cik_TCP, 154, 11 },
 	{ &cik_GDS, 121 },
@@ -372,9 +372,9 @@ static struct si_pc_block groups_CIK[] = {
 };
 
 static struct si_pc_block groups_VI[] = {
-	{ &cik_CB, 405, 4 },
+	{ &cik_CB, 405},
 	{ &cik_CPF, 19 },
-	{ &cik_DB, 257, 4 },
+	{ &cik_DB, 257},
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
 	{ &cik_PA_SU, 153 },
@@ -384,7 +384,7 @@ static struct si_pc_block groups_VI[] = {
 	{ &cik_SX, 34 },
 	{ &cik_TA, 119, 16 },
 	{ &cik_TCA, 35, 2 },
-	{ &cik_TCC, 192, 16 },
+	{ &cik_TCC, 192},
 	{ &cik_TD, 55, 16 },
 	{ &cik_TCP, 180, 16 },
 	{ &cik_GDS, 121 },
@@ -399,9 +399,9 @@ static struct si_pc_block groups_VI[] = {
 };
 
 static struct si_pc_block groups_gfx9[] = {
-	{ &cik_CB, 438, 4 },
+	{ &cik_CB, 438},
 	{ &cik_CPF, 32 },
-	{ &cik_DB, 328, 4 },
+	{ &cik_DB, 328},
 	{ &cik_GRBM, 38 },
 	{ &cik_GRBMSE, 16 },
 	{ &cik_PA_SU, 292 },
@@ -411,7 +411,7 @@ static struct si_pc_block groups_gfx9[] = {
 	{ &cik_SX, 208 },
 	{ &cik_TA, 119, 16 },
 	{ &cik_TCA, 35, 2 },
-	{ &cik_TCC, 256, 16 },
+	{ &cik_TCC, 256},
 	{ &cik_TD, 57, 16 },
 	{ &cik_TCP, 85, 16 },
 	{ &cik_GDS, 121 },
@@ -704,10 +704,13 @@ void si_init_perfcounters(struct si_screen *screen)
 		struct si_pc_block *block = &blocks[i];
 		unsigned instances = block->instances;
 
-		if (!strcmp(block->b->name, "IA")) {
-			if (screen->info.max_se > 2)
-				instances = 2;
-		}
+		if (!strcmp(block->b->name, "CB") ||
+		    !strcmp(block->b->name, "DB"))
+			instances = screen->info.max_se;
+		else if (!strcmp(block->b->name, "TCC"))
+			instances = screen->info.num_tcc_blocks;
+		else if (!strcmp(block->b->name, "IA"))
+			instances = MAX2(1, screen->info.max_se / 2);
 
 		si_perfcounters_add_block(screen, pc,
 					    block->b->name,
