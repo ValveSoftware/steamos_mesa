@@ -183,7 +183,7 @@ struct v3d_vertex_stateobj {
         struct pipe_vertex_element pipe[VC5_MAX_ATTRIBUTES];
         unsigned num_elements;
 
-        uint8_t attrs[12 * VC5_MAX_ATTRIBUTES];
+        uint8_t attrs[16 * VC5_MAX_ATTRIBUTES];
         struct v3d_bo *default_attribute_values;
 };
 
