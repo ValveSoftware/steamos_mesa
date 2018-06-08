@@ -623,10 +623,10 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    }
 
    if (stencil_irb && brw->stencil_write_enabled) {
-      brw_depth_cache_add_bo(brw, stencil_irb->mt->bo);
       struct intel_mipmap_tree *stencil_mt =
          stencil_irb->mt->stencil_mt != NULL ?
          stencil_irb->mt->stencil_mt : stencil_irb->mt;
+      brw_depth_cache_add_bo(brw, stencil_mt->bo);
       intel_miptree_finish_write(brw, stencil_mt, stencil_irb->mt_level,
                                  stencil_irb->mt_layer,
                                  stencil_irb->layer_count, ISL_AUX_USAGE_NONE);
