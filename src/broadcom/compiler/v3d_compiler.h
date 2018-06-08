@@ -244,8 +244,6 @@ enum quniform_contents {
 
         QUNIFORM_TEXTURE_BORDER_COLOR,
 
-        QUNIFORM_STENCIL,
-
         QUNIFORM_ALPHA_REF,
         QUNIFORM_SAMPLE_MASK,
 

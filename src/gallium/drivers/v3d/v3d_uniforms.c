@@ -348,14 +348,6 @@ v3d_write_uniforms(struct v3d_context *v3d, struct v3d_compiled_shader *shader,
                                                         uinfo->data[i]));
                         break;
 
-                case QUNIFORM_STENCIL:
-                        cl_aligned_u32(&uniforms,
-                                       v3d->zsa->stencil_uniforms[uinfo->data[i]] |
-                                       (uinfo->data[i] <= 1 ?
-                                        (v3d->stencil_ref.ref_value[uinfo->data[i]] << 8) :
-                                        0));
-                        break;
-
                 case QUNIFORM_ALPHA_REF:
                         cl_aligned_f(&uniforms,
                                      v3d->zsa->base.alpha.ref_value);
@@ -469,7 +461,6 @@ v3d_set_shader_uniform_dirty_flags(struct v3d_compiled_shader *shader)
                         dirty |= VC5_DIRTY_FRAGTEX | VC5_DIRTY_VERTTEX;
                         break;
 
-                case QUNIFORM_STENCIL:
                 case QUNIFORM_ALPHA_REF:
                         dirty |= VC5_DIRTY_ZSA;
                         break;
