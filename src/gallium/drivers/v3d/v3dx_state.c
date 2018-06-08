@@ -194,6 +194,8 @@ v3d_create_depth_stencil_alpha_state(struct pipe_context *pctx,
         const struct pipe_stencil_state *back = &cso->stencil[1];
 
         if (front->enabled) {
+                STATIC_ASSERT(sizeof(so->stencil_front) >=
+                              cl_packet_length(STENCIL_CONFIG));
                 v3dx_pack(&so->stencil_front, STENCIL_CONFIG, config) {
                         config.front_config = true;
                         /* If !back->enabled, then the front values should be
@@ -214,6 +216,8 @@ v3d_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                 }
         }
         if (back->enabled) {
+                STATIC_ASSERT(sizeof(so->stencil_back) >=
+                              cl_packet_length(STENCIL_CONFIG));
                 v3dx_pack(&so->stencil_back, STENCIL_CONFIG, config) {
                         config.front_config = false;
                         config.back_config = true;
@@ -699,6 +703,8 @@ v3d_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 
         v3dx_pack(map, TEXTURE_SHADER_STATE, tex) {
 #else /* V3D_VERSION < 40 */
+        STATIC_ASSERT(sizeof(so->texture_shader_state) >=
+                      cl_packet_length(TEXTURE_SHADER_STATE));
         v3dx_pack(&so->texture_shader_state, TEXTURE_SHADER_STATE, tex) {
 #endif
 
