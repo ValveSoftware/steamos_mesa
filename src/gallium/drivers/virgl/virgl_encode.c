@@ -589,12 +589,15 @@ int virgl_encode_sampler_view(struct virgl_context *ctx,
                              const struct pipe_sampler_view *state)
 {
    unsigned elem_size = util_format_get_blocksize(state->format);
-
+   struct virgl_screen *rs = virgl_screen(ctx->base.screen);
    uint32_t tmp;
+   uint32_t dword_fmt_target = state->format;
    virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_CREATE_OBJECT, VIRGL_OBJECT_SAMPLER_VIEW, VIRGL_OBJ_SAMPLER_VIEW_SIZE));
    virgl_encoder_write_dword(ctx->cbuf, handle);
    virgl_encoder_write_res(ctx, res);
-   virgl_encoder_write_dword(ctx->cbuf, state->format);
+   if (rs->caps.caps.v2.capability_bits & VIRGL_CAP_TEXTURE_VIEW)
+     dword_fmt_target |= (state->target << 24);
+   virgl_encoder_write_dword(ctx->cbuf, dword_fmt_target);
    if (res->u.b.target == PIPE_BUFFER) {
       virgl_encoder_write_dword(ctx->cbuf, state->u.buf.offset / elem_size);
       virgl_encoder_write_dword(ctx->cbuf, (state->u.buf.offset + state->u.buf.size) / elem_size - 1);

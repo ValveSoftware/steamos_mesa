@@ -200,6 +200,7 @@ enum virgl_formats {
 /* These are used by the capability_bits field in virgl_caps_v2. */
 #define VIRGL_CAP_NONE 0
 #define VIRGL_CAP_TGSI_INVARIANT       (1 << 0)
+#define VIRGL_CAP_TEXTURE_VIEW         (1 << 1)
 
 #define VIRGL_BIND_DEPTH_STENCIL (1 << 0)
 #define VIRGL_BIND_RENDER_TARGET (1 << 1)
