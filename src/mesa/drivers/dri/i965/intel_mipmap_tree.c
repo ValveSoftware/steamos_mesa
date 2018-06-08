@@ -3470,7 +3470,9 @@ intel_miptree_map_depthstencil(struct brw_context *brw,
    if (!map->buffer)
       return;
 
-   intel_miptree_access_raw(brw, mt, level, slice,
+   intel_miptree_access_raw(brw, z_mt, level, slice,
+                            map->mode & GL_MAP_WRITE_BIT);
+   intel_miptree_access_raw(brw, s_mt, level, slice,
                             map->mode & GL_MAP_WRITE_BIT);
 
    /* One of either READ_BIT or WRITE_BIT or both is set.  READ_BIT implies no
