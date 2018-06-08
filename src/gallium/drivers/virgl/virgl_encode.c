@@ -419,6 +419,8 @@ int virgl_encoder_draw_vbo(struct virgl_context *ctx,
                           const struct pipe_draw_info *info)
 {
    uint32_t length = VIRGL_DRAW_VBO_SIZE;
+   if (info->mode == PIPE_PRIM_PATCHES)
+      length = VIRGL_DRAW_VBO_SIZE_TESS;
    if (info->indirect)
       length = VIRGL_DRAW_VBO_SIZE_INDIRECT;
    virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_DRAW_VBO, 0, length));
@@ -437,9 +439,11 @@ int virgl_encoder_draw_vbo(struct virgl_context *ctx,
       virgl_encoder_write_dword(ctx->cbuf, info->count_from_stream_output->buffer_size);
    else
       virgl_encoder_write_dword(ctx->cbuf, 0);
+   if (length >= VIRGL_DRAW_VBO_SIZE_TESS) {
+      virgl_encoder_write_dword(ctx->cbuf, info->vertices_per_patch); /* vertices per patch */
+      virgl_encoder_write_dword(ctx->cbuf, info->drawid); /* drawid */
+   }
    if (length == VIRGL_DRAW_VBO_SIZE_INDIRECT) {
-      virgl_encoder_write_dword(ctx->cbuf, 0); /* vertices per patch */
-      virgl_encoder_write_dword(ctx->cbuf, 0); /* drawid */
       virgl_encoder_write_res(ctx, virgl_resource(info->indirect->buffer));
       virgl_encoder_write_dword(ctx->cbuf, info->indirect->offset);
       virgl_encoder_write_dword(ctx->cbuf, 0); /* indirect stride */
@@ -889,5 +893,18 @@ int virgl_encode_bind_shader(struct virgl_context *ctx,
    virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_BIND_SHADER, 0, 2));
    virgl_encoder_write_dword(ctx->cbuf, handle);
    virgl_encoder_write_dword(ctx->cbuf, type);
+   return 0;
+}
+
+int virgl_encode_set_tess_state(struct virgl_context *ctx,
+                                const float outer[4],
+                                const float inner[2])
+{
+   int i;
+   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_SET_TESS_STATE, 0, 6));
+   for (i = 0; i < 4; i++)
+      virgl_encoder_write_dword(ctx->cbuf, fui(outer[i]));
+   for (i = 0; i < 2; i++)
+      virgl_encoder_write_dword(ctx->cbuf, fui(inner[i]));
    return 0;
 }

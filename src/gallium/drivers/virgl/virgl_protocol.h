@@ -83,6 +83,8 @@ enum virgl_context_cmd {
    VIRGL_CCMD_CREATE_SUB_CTX,
    VIRGL_CCMD_DESTROY_SUB_CTX,
    VIRGL_CCMD_BIND_SHADER,
+
+   VIRGL_CCMD_SET_TESS_STATE,
 };
 
 /*
@@ -480,5 +482,8 @@ enum virgl_context_cmd {
 #define VIRGL_BIND_SHADER_SIZE 2
 #define VIRGL_BIND_SHADER_HANDLE 1
 #define VIRGL_BIND_SHADER_TYPE 2
+
+/* tess state */
+#define VIRGL_TESS_STATE_SIZE 6
 
 #endif

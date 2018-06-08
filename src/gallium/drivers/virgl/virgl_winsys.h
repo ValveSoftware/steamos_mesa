@@ -127,7 +127,7 @@ static inline void virgl_ws_fill_new_caps_defaults(struct virgl_drm_caps *caps)
    caps->caps.v2.max_geom_total_output_components = 1024;
    caps->caps.v2.max_vertex_outputs = 32;
    caps->caps.v2.max_vertex_attribs = 16;
-   caps->caps.v2.max_shader_patch_varyings = 0;
+   caps->caps.v2.max_shader_patch_varyings = 30;
    caps->caps.v2.min_texel_offset = -8;
    caps->caps.v2.max_texel_offset = 7;
    caps->caps.v2.min_texture_gather_offset = -8;

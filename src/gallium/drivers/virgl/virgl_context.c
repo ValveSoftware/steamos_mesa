@@ -492,6 +492,18 @@ static void *virgl_create_vs_state(struct pipe_context *ctx,
    return virgl_shader_encoder(ctx, shader, PIPE_SHADER_VERTEX);
 }
 
+static void *virgl_create_tcs_state(struct pipe_context *ctx,
+                                   const struct pipe_shader_state *shader)
+{
+   return virgl_shader_encoder(ctx, shader, PIPE_SHADER_TESS_CTRL);
+}
+
+static void *virgl_create_tes_state(struct pipe_context *ctx,
+                                   const struct pipe_shader_state *shader)
+{
+   return virgl_shader_encoder(ctx, shader, PIPE_SHADER_TESS_EVAL);
+}
+
 static void *virgl_create_gs_state(struct pipe_context *ctx,
                                    const struct pipe_shader_state *shader)
 {
@@ -534,6 +546,26 @@ virgl_delete_vs_state(struct pipe_context *ctx,
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
 }
 
+static void
+virgl_delete_tcs_state(struct pipe_context *ctx,
+                       void *tcs)
+{
+   uint32_t handle = (unsigned long)tcs;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
+}
+
+static void
+virgl_delete_tes_state(struct pipe_context *ctx,
+                      void *tes)
+{
+   uint32_t handle = (unsigned long)tes;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
+}
+
 static void virgl_bind_vs_state(struct pipe_context *ctx,
                                         void *vss)
 {
@@ -541,6 +573,24 @@ static void virgl_bind_vs_state(struct pipe_context *ctx,
    struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_VERTEX);
+}
+
+static void virgl_bind_tcs_state(struct pipe_context *ctx,
+                               void *vss)
+{
+   uint32_t handle = (unsigned long)vss;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_TESS_CTRL);
+}
+
+static void virgl_bind_tes_state(struct pipe_context *ctx,
+                               void *vss)
+{
+   uint32_t handle = (unsigned long)vss;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_TESS_EVAL);
 }
 
 static void virgl_bind_gs_state(struct pipe_context *ctx,
@@ -801,6 +851,18 @@ static void virgl_set_clip_state(struct pipe_context *ctx,
    virgl_encoder_set_clip_state(vctx, clip);
 }
 
+static void virgl_set_tess_state(struct pipe_context *ctx,
+                                 const float default_outer_level[4],
+                                 const float default_inner_level[2])
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *rs = virgl_screen(ctx->screen);
+
+   if (!rs->caps.caps.v1.bset.has_tessellation_shaders)
+      return;
+   virgl_encode_set_tess_state(vctx, default_outer_level, default_inner_level);
+}
+
 static void virgl_resource_copy_region(struct pipe_context *ctx,
                                       struct pipe_resource *dst,
                                       unsigned dst_level,
@@ -893,15 +955,22 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.set_vertex_buffers = virgl_set_vertex_buffers;
    vctx->base.set_constant_buffer = virgl_set_constant_buffer;
 
+   vctx->base.set_tess_state = virgl_set_tess_state;
    vctx->base.create_vs_state = virgl_create_vs_state;
+   vctx->base.create_tcs_state = virgl_create_tcs_state;
+   vctx->base.create_tes_state = virgl_create_tes_state;
    vctx->base.create_gs_state = virgl_create_gs_state;
    vctx->base.create_fs_state = virgl_create_fs_state;
 
    vctx->base.bind_vs_state = virgl_bind_vs_state;
+   vctx->base.bind_tcs_state = virgl_bind_tcs_state;
+   vctx->base.bind_tes_state = virgl_bind_tes_state;
    vctx->base.bind_gs_state = virgl_bind_gs_state;
    vctx->base.bind_fs_state = virgl_bind_fs_state;
 
    vctx->base.delete_vs_state = virgl_delete_vs_state;
+   vctx->base.delete_tcs_state = virgl_delete_tcs_state;
+   vctx->base.delete_tes_state = virgl_delete_tes_state;
    vctx->base.delete_gs_state = virgl_delete_gs_state;
    vctx->base.delete_fs_state = virgl_delete_fs_state;
 
