@@ -2305,11 +2305,11 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
       }
 
       if (type_sz(dst.type) == 8) {
-         shuffle_32bit_load_result_to_64bit_data(
-            bld, tmp_dst, retype(tmp_dst, BRW_REGISTER_TYPE_F), num_components);
-
-         for (unsigned c = 0; c < num_components; c++)
-            bld.MOV(offset(dst, bld, iter * 2 + c), offset(tmp_dst, bld, c));
+         shuffle_from_32bit_read(bld,
+                                 offset(dst, bld, iter * 2),
+                                 retype(tmp_dst, BRW_REGISTER_TYPE_D),
+                                 0,
+                                 num_components);
       }
 
       if (num_iterations > 1) {
