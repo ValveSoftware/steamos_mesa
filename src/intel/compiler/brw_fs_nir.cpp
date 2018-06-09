@@ -3353,6 +3353,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       unsigned base = nir_intrinsic_base(instr);
       unsigned comp = nir_intrinsic_component(instr);
       unsigned num_components = instr->num_components;
+      fs_reg orig_dest = dest;
       enum brw_reg_type type = dest.type;
 
       /* Special case fields in the VUE header */
@@ -3368,6 +3369,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
           */
          type = BRW_REGISTER_TYPE_F;
          num_components *= 2;
+         dest = bld.vgrf(type, num_components);
       }
 
       for (unsigned int i = 0; i < num_components; i++) {
@@ -3376,10 +3378,8 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       }
 
       if (nir_dest_bit_size(instr->dest) == 64) {
-         shuffle_32bit_load_result_to_64bit_data(bld,
-                                                 dest,
-                                                 retype(dest, type),
-                                                 instr->num_components);
+         shuffle_from_32bit_read(bld, orig_dest, dest, 0,
+                                 instr->num_components);
       }
       break;
    }
