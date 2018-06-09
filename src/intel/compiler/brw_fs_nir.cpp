@@ -5362,6 +5362,107 @@ shuffle_16bit_data_for_32bit_write(const fs_builder &bld,
    }
 }
 
+/*
+ * This helper takes a source register and un/shuffles it into the destination
+ * register.
+ *
+ * If source type size is smaller than destination type size the operation
+ * needed is a component shuffle. The opposite case would be an unshuffle. If
+ * source/destination type size is equal a shuffle is done that would be
+ * equivalent to a simple MOV.
+ *
+ * For example, if source is a 16-bit type and destination is 32-bit. A 3
+ * components .xyz 16-bit vector on SIMD8 would be.
+ *
+ *    |x1|x2|x3|x4|x5|x6|x7|x8|y1|y2|y3|y4|y5|y6|y7|y8|
+ *    |z1|z2|z3|z4|z5|z6|z7|z8|  |  |  |  |  |  |  |  |
+ *
+ * This helper will return the following 2 32-bit components with the 16-bit
+ * values shuffled:
+ *
+ *    |x1 y1|x2 y2|x3 y3|x4 y4|x5 y5|x6 y6|x7 y7|x8 y8|
+ *    |z1   |z2   |z3   |z4   |z5   |z6   |z7   |z8   |
+ *
+ * For unshuffle, the example would be the opposite, a 64-bit type source
+ * and a 32-bit destination. A 2 component .xy 64-bit vector on SIMD8
+ * would be:
+ *
+ *    | x1l   x1h | x2l   x2h | x3l   x3h | x4l   x4h |
+ *    | x5l   x5h | x6l   x6h | x7l   x7h | x8l   x8h |
+ *    | y1l   y1h | y2l   y2h | y3l   y3h | y4l   y4h |
+ *    | y5l   y5h | y6l   y6h | y7l   y7h | y8l   y8h |
+ *
+ * The returned result would be the following 4 32-bit components unshuffled:
+ *
+ *    | x1l | x2l | x3l | x4l | x5l | x6l | x7l | x8l |
+ *    | x1h | x2h | x3h | x4h | x5h | x6h | x7h | x8h |
+ *    | y1l | y2l | y3l | y4l | y5l | y6l | y7l | y8l |
+ *    | y1h | y2h | y3h | y4h | y5h | y6h | y7h | y8h |
+ *
+ * - Source and destination register must not be overlapped.
+ * - components units are measured in terms of the smaller type between
+ *   source and destination because we are un/shuffling the smaller
+ *   components from/into the bigger ones.
+ * - first_component parameter allows skipping source components.
+ */
+void
+shuffle_src_to_dst(const fs_builder &bld,
+                   const fs_reg &dst,
+                   const fs_reg &src,
+                   uint32_t first_component,
+                   uint32_t components)
+{
+   if (type_sz(src.type) == type_sz(dst.type)) {
+      assert(!regions_overlap(dst,
+         type_sz(dst.type) * bld.dispatch_width() * components,
+         offset(src, bld, first_component),
+         type_sz(src.type) * bld.dispatch_width() * components));
+      for (unsigned i = 0; i < components; i++) {
+         bld.MOV(retype(offset(dst, bld, i), src.type),
+                 offset(src, bld, i + first_component));
+      }
+   } else if (type_sz(src.type) < type_sz(dst.type)) {
+      /* Source is shuffled into destination */
+      unsigned size_ratio = type_sz(dst.type) / type_sz(src.type);
+      assert(!regions_overlap(dst,
+         type_sz(dst.type) * bld.dispatch_width() *
+         DIV_ROUND_UP(components, size_ratio),
+         offset(src, bld, first_component),
+         type_sz(src.type) * bld.dispatch_width() * components));
+
+      brw_reg_type shuffle_type =
+         brw_reg_type_from_bit_size(8 * type_sz(src.type),
+                                    BRW_REGISTER_TYPE_D);
+      for (unsigned i = 0; i < components; i++) {
+         fs_reg shuffle_component_i =
+            subscript(offset(dst, bld, i / size_ratio),
+                      shuffle_type, i % size_ratio);
+         bld.MOV(shuffle_component_i,
+                 retype(offset(src, bld, i + first_component), shuffle_type));
+      }
+   } else {
+      /* Source is unshuffled into destination */
+      unsigned size_ratio = type_sz(src.type) / type_sz(dst.type);
+      assert(!regions_overlap(dst,
+         type_sz(dst.type) * bld.dispatch_width() * components,
+         offset(src, bld, first_component / size_ratio),
+         type_sz(src.type) * bld.dispatch_width() *
+         DIV_ROUND_UP(components + (first_component % size_ratio),
+                      size_ratio)));
+
+      brw_reg_type shuffle_type =
+         brw_reg_type_from_bit_size(8 * type_sz(dst.type),
+                                    BRW_REGISTER_TYPE_D);
+      for (unsigned i = 0; i < components; i++) {
+         fs_reg shuffle_component_i =
+            subscript(offset(src, bld, (first_component + i) / size_ratio),
+                      shuffle_type, (first_component + i) % size_ratio);
+         bld.MOV(retype(offset(dst, bld, i), shuffle_type),
+                 shuffle_component_i);
+      }
+   }
+}
+
 fs_reg
 setup_imm_df(const fs_builder &bld, double v)
 {
