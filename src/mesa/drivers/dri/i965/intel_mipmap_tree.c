@@ -668,8 +668,6 @@ make_separate_stencil_surface(struct brw_context *brw,
    if (!mt->stencil_mt)
       return false;
 
-   mt->stencil_mt->r8stencil_needs_update = true;
-
    return true;
 }
 
@@ -2933,7 +2931,7 @@ intel_update_r8stencil(struct brw_context *brw,
    assert(devinfo->gen >= 7);
    struct intel_mipmap_tree *src =
       mt->format == MESA_FORMAT_S_UINT8 ? mt : mt->stencil_mt;
-   if (!src || devinfo->gen >= 8 || !src->r8stencil_needs_update)
+   if (!src || devinfo->gen >= 8)
       return;
 
    assert(src->surf.size > 0);
@@ -2956,6 +2954,9 @@ intel_update_r8stencil(struct brw_context *brw,
                             BO_ALLOC_BUSY, 0, NULL);
       assert(mt->r8stencil_mt);
    }
+
+   if (src->r8stencil_needs_update == false)
+      return;
 
    struct intel_mipmap_tree *dst = mt->r8stencil_mt;
 
