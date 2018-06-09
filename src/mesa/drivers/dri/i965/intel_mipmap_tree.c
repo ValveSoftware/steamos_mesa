@@ -3119,12 +3119,12 @@ intel_miptree_map_blit(struct brw_context *brw,
 		       unsigned int level, unsigned int slice)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   map->linear_mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
-                                         /* first_level */ 0,
-                                         /* last_level */ 0,
-                                         map->w, map->h, 1,
-                                         /* samples */ 1,
-                                         MIPTREE_CREATE_LINEAR);
+   map->linear_mt = make_surface(brw, GL_TEXTURE_2D, mt->format,
+                                 0, 0, map->w, map->h, 1, 1,
+                                 ISL_TILING_LINEAR_BIT,
+                                 ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                                 ISL_SURF_USAGE_TEXTURE_BIT,
+                                 0, 0, NULL);
 
    if (!map->linear_mt) {
       fprintf(stderr, "Failed to allocate blit temporary\n");
