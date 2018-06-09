@@ -4297,11 +4297,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              * aligned. Shuffling only one component would be the same as
              * striding it.
              */
-            fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D,
-                                  DIV_ROUND_UP(num_components, 2));
-            shuffle_16bit_data_for_32bit_write(bld, tmp, write_src,
-                                               num_components);
-            write_src = tmp;
+            write_src = shuffle_for_32bit_write(bld, write_src, 0,
+                                                num_components);
          }
 
          fs_reg offset_reg;
