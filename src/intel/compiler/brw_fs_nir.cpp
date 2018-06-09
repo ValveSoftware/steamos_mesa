@@ -5463,6 +5463,49 @@ shuffle_src_to_dst(const fs_builder &bld,
    }
 }
 
+void
+shuffle_from_32bit_read(const fs_builder &bld,
+                        const fs_reg &dst,
+                        const fs_reg &src,
+                        uint32_t first_component,
+                        uint32_t components)
+{
+   assert(type_sz(src.type) == 4);
+
+   /* This function takes components in units of the destination type while
+    * shuffle_src_to_dst takes components in units of the smallest type
+    */
+   if (type_sz(dst.type) > 4) {
+      assert(type_sz(dst.type) == 8);
+      first_component *= 2;
+      components *= 2;
+   }
+
+   shuffle_src_to_dst(bld, dst, src, first_component, components);
+}
+
+fs_reg
+shuffle_for_32bit_write(const fs_builder &bld,
+                        const fs_reg &src,
+                        uint32_t first_component,
+                        uint32_t components)
+{
+   fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_D,
+                         DIV_ROUND_UP (components * type_sz(src.type), 4));
+   /* This function takes components in units of the source type while
+    * shuffle_src_to_dst takes components in units of the smallest type
+    */
+   if (type_sz(src.type) > 4) {
+      assert(type_sz(src.type) == 8);
+      first_component *= 2;
+      components *= 2;
+   }
+
+   shuffle_src_to_dst(bld, dst, src, first_component, components);
+
+   return dst;
+}
+
 fs_reg
 setup_imm_df(const fs_builder &bld, double v)
 {
