@@ -2434,16 +2434,8 @@ do_untyped_vector_read(const fs_builder &bld,
                                                 BRW_PREDICATE_NONE);
 
          /* Shuffle the 32-bit load result into valid 64-bit data */
-         const fs_reg packed_result = bld.vgrf(dest.type, iter_components);
-         shuffle_32bit_load_result_to_64bit_data(
-            bld, packed_result, read_result, iter_components);
-
-         /* Move each component to its destination */
-         read_result = retype(read_result, BRW_REGISTER_TYPE_DF);
-         for (int c = 0; c < iter_components; c++) {
-            bld.MOV(offset(dest, bld, it * 2 + c),
-                    offset(packed_result, bld, c));
-         }
+         shuffle_from_32bit_read(bld, offset(dest, bld, it * 2),
+                                 read_result, 0, iter_components);
 
          bld.ADD(read_offset, read_offset, brw_imm_ud(16));
       }
