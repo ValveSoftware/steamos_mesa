@@ -2372,10 +2372,8 @@ do_untyped_vector_read(const fs_builder &bld,
                               1 /* dims */,
                               num_components_32bit,
                               BRW_PREDICATE_NONE);
-         shuffle_32bit_load_result_to_16bit_data(bld,
-               retype(dest, BRW_REGISTER_TYPE_W),
-               retype(read_result, BRW_REGISTER_TYPE_D),
-               first_component, num_components);
+         shuffle_from_32bit_read(bld, dest, read_result, first_component,
+                                 num_components);
       } else {
          fs_reg read_offset = bld.vgrf(BRW_REGISTER_TYPE_UD);
          for (unsigned i = 0; i < num_components; i++) {
