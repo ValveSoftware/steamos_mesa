@@ -649,28 +649,6 @@ fail:
    return NULL;
 }
 
-static bool
-make_separate_stencil_surface(struct brw_context *brw,
-                              struct intel_mipmap_tree *mt)
-{
-   mt->stencil_mt = make_surface(brw, mt->target, MESA_FORMAT_S_UINT8,
-                                 0, mt->surf.levels - 1,
-                                 mt->surf.logical_level0_px.width,
-                                 mt->surf.logical_level0_px.height,
-                                 mt->surf.dim == ISL_SURF_DIM_3D ?
-                                    mt->surf.logical_level0_px.depth :
-                                    mt->surf.logical_level0_px.array_len,
-                                 mt->surf.samples, ISL_TILING_W_BIT,
-                                 ISL_SURF_USAGE_STENCIL_BIT |
-                                 ISL_SURF_USAGE_TEXTURE_BIT,
-                                 BO_ALLOC_BUSY, 0, NULL);
-
-   if (!mt->stencil_mt)
-      return false;
-
-   return true;
-}
-
 /* Return the usual surface usage flags for the given format. */
 static isl_surf_usage_flags_t
 mt_surf_usage(mesa_format format)
@@ -730,7 +708,12 @@ miptree_create(struct brw_context *brw,
       return NULL;
 
    if (needs_separate_stencil(brw, mt, format)) {
-      if (!make_separate_stencil_surface(brw, mt)) {
+      mt->stencil_mt =
+         make_surface(brw, target, MESA_FORMAT_S_UINT8, first_level, last_level,
+                      width0, height0, depth0, num_samples,
+                      ISL_TILING_W_BIT, mt_surf_usage(MESA_FORMAT_S_UINT8),
+                      alloc_flags, 0, NULL);
+      if (mt->stencil_mt == NULL) {
          intel_miptree_release(&mt);
          return NULL;
       }
