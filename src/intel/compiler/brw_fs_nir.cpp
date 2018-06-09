@@ -2842,8 +2842,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                 * for that.
                 */
                unsigned channel = iter * 2 + i;
-               fs_reg dest = shuffle_64bit_data_for_32bit_write(bld,
-                  offset(value, bld, channel), 1);
+               fs_reg dest = shuffle_for_32bit_write(bld, value, channel, 1);
 
                srcs[header_regs + (i + first_component) * 2] = dest;
                srcs[header_regs + (i + first_component) * 2 + 1] =
@@ -3697,8 +3696,8 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
       unsigned type_size = 4;
       if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
-         val_reg = shuffle_64bit_data_for_32bit_write(bld,
-            val_reg, instr->num_components);
+         val_reg = shuffle_for_32bit_write(bld, val_reg, 0,
+                                           instr->num_components);
       }
 
       unsigned type_slots = type_size / 4;
@@ -4239,8 +4238,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              * iteration handle the rest.
              */
             num_components = MIN2(2, num_components);
-            write_src = shuffle_64bit_data_for_32bit_write(bld, write_src,
-                                                           num_components);
+            write_src = shuffle_for_32bit_write(bld, write_src, 0,
+                                                num_components);
          } else if (type_size < 4) {
             assert(type_size == 2);
             /* For 16-bit types we pack two consecutive values into a 32-bit
@@ -4336,7 +4335,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned num_components = instr->num_components;
       unsigned first_component = nir_intrinsic_component(instr);
       if (nir_src_bit_size(instr->src[0]) == 64) {
-         src = shuffle_64bit_data_for_32bit_write(bld, src, num_components);
+         src = shuffle_for_32bit_write(bld, src, 0, num_components);
          num_components *= 2;
       }
 
