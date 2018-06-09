@@ -151,8 +151,12 @@ void si_init_resource_fields(struct si_screen *sscreen,
 		 * Write-combined CPU mappings are fine, the kernel
 		 * ensures all CPU writes finish before the GPU
 		 * executes a command stream.
+		 *
+		 * radeon doesn't have good BO move throttling, so put all
+		 * persistent buffers into GTT to prevent VRAM CPU page faults.
 		 */
-		if (!sscreen->info.kernel_flushes_hdp_before_ib)
+		if (!sscreen->info.kernel_flushes_hdp_before_ib ||
+		    sscreen->info.drm_major == 2)
 			res->domains = RADEON_DOMAIN_GTT;
 	}
 
