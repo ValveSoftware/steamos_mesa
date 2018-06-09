@@ -5263,40 +5263,6 @@ shuffle_32bit_load_result_to_64bit_data(const fs_builder &bld,
    }
 }
 
-void
-shuffle_32bit_load_result_to_16bit_data(const fs_builder &bld,
-                                        const fs_reg &dst,
-                                        const fs_reg &src,
-                                        uint32_t first_component,
-                                        uint32_t components)
-{
-   assert(type_sz(src.type) == 4);
-   assert(type_sz(dst.type) == 2);
-
-   /* A temporary is used to un-shuffle the 32-bit data of each component in
-    * into a valid 16-bit vector. We can't write directly to dst because it
-    * can be the same register as src and in that case the first MOV in the
-    * loop below would overwrite the data read in the second MOV.
-    */
-   fs_reg tmp = retype(bld.vgrf(src.type), dst.type);
-
-   for (unsigned i = 0; i < components; i++) {
-      const fs_reg component_i =
-         subscript(offset(src, bld, (first_component + i) / 2), dst.type,
-                   (first_component + i) % 2);
-
-      bld.MOV(offset(tmp, bld, i % 2), component_i);
-
-      if (i % 2) {
-         bld.MOV(offset(dst, bld, i -1), offset(tmp, bld, 0));
-         bld.MOV(offset(dst, bld, i), offset(tmp, bld, 1));
-      }
-   }
-   if (components % 2) {
-      bld.MOV(offset(dst, bld, components - 1), tmp);
-   }
-}
-
 /**
  * This helper does the inverse operation of
  * SHUFFLE_32BIT_LOAD_RESULT_TO_64BIT_DATA.
@@ -5327,34 +5293,6 @@ shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
    }
 
    return dst;
-}
-
-void
-shuffle_16bit_data_for_32bit_write(const fs_builder &bld,
-                                   const fs_reg &dst,
-                                   const fs_reg &src,
-                                   uint32_t components)
-{
-   assert(type_sz(src.type) == 2);
-   assert(type_sz(dst.type) == 4);
-
-   /* A temporary is used to shuffle the 16-bit data of each component in the
-    * 32-bit data vector. We can't write directly to dst because it can be the
-    * same register as src and in that case the first MOV in the loop below
-    * would overwrite the data read in the second MOV.
-    */
-   fs_reg tmp = bld.vgrf(dst.type);
-
-   for (unsigned i = 0; i < components; i++) {
-      const fs_reg component_i = offset(src, bld, i);
-      bld.MOV(subscript(tmp, src.type, i % 2), component_i);
-      if (i % 2) {
-         bld.MOV(offset(dst, bld, i / 2), tmp);
-      }
-   }
-   if (components % 2) {
-      bld.MOV(offset(dst, bld, components / 2), tmp);
-   }
 }
 
 /*
