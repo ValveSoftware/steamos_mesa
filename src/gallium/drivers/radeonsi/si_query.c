@@ -1942,7 +1942,11 @@ static struct pipe_driver_query_info si_driver_query_list[] = {
 	X("GPU-db-busy",		GPU_DB_BUSY,		UINT64, AVERAGE),
 	X("GPU-cp-busy",		GPU_CP_BUSY,		UINT64, AVERAGE),
 	X("GPU-cb-busy",		GPU_CB_BUSY,		UINT64, AVERAGE),
+
+	/* SRBM_STATUS2 */
 	X("GPU-sdma-busy",		GPU_SDMA_BUSY,		UINT64, AVERAGE),
+
+	/* CP_STAT */
 	X("GPU-pfp-busy",		GPU_PFP_BUSY,		UINT64, AVERAGE),
 	X("GPU-meq-busy",		GPU_MEQ_BUSY,		UINT64, AVERAGE),
 	X("GPU-me-busy",		GPU_ME_BUSY,		UINT64, AVERAGE),
@@ -1957,16 +1961,23 @@ static struct pipe_driver_query_info si_driver_query_list[] = {
 
 static unsigned si_get_num_queries(struct si_screen *sscreen)
 {
-	if (sscreen->info.drm_major == 2 && sscreen->info.drm_minor >= 42)
-		return ARRAY_SIZE(si_driver_query_list);
-	else if (sscreen->info.drm_major == 3) {
+	/* amdgpu */
+	if (sscreen->info.drm_major == 3) {
 		if (sscreen->info.chip_class >= VI)
 			return ARRAY_SIZE(si_driver_query_list);
 		else
 			return ARRAY_SIZE(si_driver_query_list) - 7;
 	}
-	else
-		return ARRAY_SIZE(si_driver_query_list) - 25;
+
+	/* radeon */
+	if (sscreen->info.has_read_registers_query) {
+		if (sscreen->info.chip_class == CIK)
+			return ARRAY_SIZE(si_driver_query_list) - 6;
+		else
+			return ARRAY_SIZE(si_driver_query_list) - 7;
+	}
+
+	return ARRAY_SIZE(si_driver_query_list) - 21;
 }
 
 static int si_get_driver_query_info(struct pipe_screen *screen,
