@@ -142,8 +142,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 	}
 
 	if (res->b.b.target == PIPE_BUFFER &&
-	    res->b.b.flags & (PIPE_RESOURCE_FLAG_MAP_PERSISTENT |
-			      PIPE_RESOURCE_FLAG_MAP_COHERENT)) {
+	    res->b.b.flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT) {
 		/* Use GTT for all persistent mappings with older
 		 * kernels, because they didn't always flush the HDP
 		 * cache before CS execution.
