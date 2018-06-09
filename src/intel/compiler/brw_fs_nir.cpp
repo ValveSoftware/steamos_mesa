@@ -2665,13 +2665,10 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
           * or SSBOs.
           */
          if (type_sz(dst.type) == 8) {
-            shuffle_32bit_load_result_to_64bit_data(
-               bld, dst, retype(dst, BRW_REGISTER_TYPE_F), num_components);
-
-            for (unsigned c = 0; c < num_components; c++) {
-               bld.MOV(offset(orig_dst, bld, iter * 2 + c),
-                       offset(dst, bld, c));
-            }
+            shuffle_from_32bit_read(bld,
+                                    offset(orig_dst, bld, iter * 2),
+                                    retype(dst, BRW_REGISTER_TYPE_D),
+                                    0, num_components);
          }
 
          /* Copy the temporary to the destination to deal with writemasking.
@@ -3014,13 +3011,10 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
              * or SSBOs.
              */
             if (type_sz(dest.type) == 8) {
-               shuffle_32bit_load_result_to_64bit_data(
-                  bld, dest, retype(dest, BRW_REGISTER_TYPE_F), num_components);
-
-               for (unsigned c = 0; c < num_components; c++) {
-                  bld.MOV(offset(orig_dest, bld, iter * 2 + c),
-                          offset(dest, bld, c));
-               }
+               shuffle_from_32bit_read(bld,
+                                       offset(orig_dest, bld, iter * 2),
+                                       retype(dest, BRW_REGISTER_TYPE_D),
+                                       0, num_components);
             }
 
             /* If we are loading double data and we need a second read message
