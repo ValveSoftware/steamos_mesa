@@ -499,10 +499,6 @@ private:
    void *mem_ctx;
 };
 
-fs_reg shuffle_64bit_data_for_32bit_write(const brw::fs_builder &bld,
-                                          const fs_reg &src,
-                                          uint32_t components);
-
 void shuffle_from_32bit_read(const brw::fs_builder &bld,
                              const fs_reg &dst,
                              const fs_reg &src,

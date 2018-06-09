@@ -5190,38 +5190,6 @@ fs_visitor::nir_emit_jump(const fs_builder &bld, nir_jump_instr *instr)
    }
 }
 
-/**
- * This helper does the inverse operation of
- * SHUFFLE_32BIT_LOAD_RESULT_TO_64BIT_DATA.
- *
- * We need to do this when we are going to use untyped write messsages that
- * operate with 32-bit components in order to arrange our 64-bit data to be
- * in the expected layout.
- *
- * Notice that callers of this function, unlike in the case of the inverse
- * operation, would typically need to call this with dst and src being
- * different registers, since they would otherwise corrupt the original
- * 64-bit data they are about to write. Because of this the function checks
- * that the src and dst regions involved in the operation do not overlap.
- */
-fs_reg
-shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
-                                   const fs_reg &src,
-                                   uint32_t components)
-{
-   assert(type_sz(src.type) == 8);
-
-   fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_D, 2 * components);
-
-   for (unsigned i = 0; i < components; i++) {
-      const fs_reg component_i = offset(src, bld, i);
-      bld.MOV(offset(dst, bld, 2 * i), subscript(component_i, dst.type, 0));
-      bld.MOV(offset(dst, bld, 2 * i + 1), subscript(component_i, dst.type, 1));
-   }
-
-   return dst;
-}
-
 /*
  * This helper takes a source register and un/shuffles it into the destination
  * register.
