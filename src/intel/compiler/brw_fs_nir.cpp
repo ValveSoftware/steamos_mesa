@@ -2483,16 +2483,11 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       if (type_sz(dest.type) == 8)
          first_component /= 2;
 
-      for (unsigned j = 0; j < num_components; j++) {
-         bld.MOV(offset(dest, bld, j), offset(src, bld, j + first_component));
-      }
-
-      if (type_sz(dest.type) == 8) {
-         shuffle_32bit_load_result_to_64bit_data(bld,
-                                                 dest,
-                                                 retype(dest, BRW_REGISTER_TYPE_F),
-                                                 instr->num_components);
-      }
+      /* For 16-bit support maybe a temporary will be needed to copy from
+       * the ATTR file.
+       */
+      shuffle_from_32bit_read(bld, dest, retype(src, BRW_REGISTER_TYPE_D),
+                              first_component, num_components);
       break;
    }
 
