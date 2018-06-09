@@ -5192,59 +5192,6 @@ fs_visitor::nir_emit_jump(const fs_builder &bld, nir_jump_instr *instr)
 }
 
 /**
- * This helper takes the result of a load operation that reads 32-bit elements
- * in this format:
- *
- * x x x x x x x x
- * y y y y y y y y
- * z z z z z z z z
- * w w w w w w w w
- *
- * and shuffles the data to get this:
- *
- * x y x y x y x y
- * x y x y x y x y
- * z w z w z w z w
- * z w z w z w z w
- *
- * Which is exactly what we want if the load is reading 64-bit components
- * like doubles, where x represents the low 32-bit of the x double component
- * and y represents the high 32-bit of the x double component (likewise with
- * z and w for double component y). The parameter @components represents
- * the number of 64-bit components present in @src. This would typically be
- * 2 at most, since we can only fit 2 double elements in the result of a
- * vec4 load.
- *
- * Notice that @dst and @src can be the same register.
- */
-void
-shuffle_32bit_load_result_to_64bit_data(const fs_builder &bld,
-                                        const fs_reg &dst,
-                                        const fs_reg &src,
-                                        uint32_t components)
-{
-   assert(type_sz(src.type) == 4);
-   assert(type_sz(dst.type) == 8);
-
-   /* A temporary that we will use to shuffle the 32-bit data of each
-    * component in the vector into valid 64-bit data. We can't write directly
-    * to dst because dst can be (and would usually be) the same as src
-    * and in that case the first MOV in the loop below would overwrite the
-    * data read in the second MOV.
-    */
-   fs_reg tmp = bld.vgrf(dst.type);
-
-   for (unsigned i = 0; i < components; i++) {
-      const fs_reg component_i = offset(src, bld, 2 * i);
-
-      bld.MOV(subscript(tmp, src.type, 0), component_i);
-      bld.MOV(subscript(tmp, src.type, 1), offset(component_i, bld, 1));
-
-      bld.MOV(offset(dst, bld, i), tmp);
-   }
-}
-
-/**
  * This helper does the inverse operation of
  * SHUFFLE_32BIT_LOAD_RESULT_TO_64BIT_DATA.
  *
