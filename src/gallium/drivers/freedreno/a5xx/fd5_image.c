@@ -160,19 +160,6 @@ static void emit_image_tex(struct fd_ringbuffer *ring, unsigned slot,
 static void emit_image_ssbo(struct fd_ringbuffer *ring, unsigned slot,
 		struct fd5_image *img, enum pipe_shader_type shader)
 {
-	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + 4);
-	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(slot) |
-		CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
-		CP_LOAD_STATE4_0_STATE_BLOCK(imgsb[shader]) |
-		CP_LOAD_STATE4_0_NUM_UNIT(1));
-	OUT_RING(ring, CP_LOAD_STATE4_1_STATE_TYPE(0) |
-		CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
-	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
-	OUT_RING(ring, A5XX_SSBO_0_0_BASE_LO(0));
-	OUT_RING(ring, A5XX_SSBO_0_1_PITCH(img->pitch));
-	OUT_RING(ring, A5XX_SSBO_0_2_ARRAY_PITCH(img->array_pitch));
-	OUT_RING(ring, A5XX_SSBO_0_3_CPP(img->cpp));
-
 	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + 2);
 	OUT_RING(ring, CP_LOAD_STATE4_0_DST_OFF(slot) |
 		CP_LOAD_STATE4_0_STATE_SRC(SS4_DIRECT) |
