@@ -854,7 +854,7 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
          }
 
          if (next_batch.map == NULL) {
-            fprintf(ctx->fp, "Secondary batch at 0x%08"PRIx64" unavailable",
+            fprintf(ctx->fp, "Secondary batch at 0x%08"PRIx64" unavailable\n",
                     next_batch.addr);
          }
 
