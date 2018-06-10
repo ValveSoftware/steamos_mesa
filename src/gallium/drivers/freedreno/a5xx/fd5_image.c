@@ -107,7 +107,7 @@ static void translate_image(struct fd5_image *img, struct pipe_image_view *pimg)
 	case PIPE_TEXTURE_CUBE:
 	case PIPE_TEXTURE_CUBE_ARRAY:
 		img->array_pitch = rsc->layer_size;
-		img->depth = layers / 6;
+		img->depth = layers;
 		break;
 	case PIPE_TEXTURE_3D:
 		img->array_pitch = rsc->slices[lvl].size0;

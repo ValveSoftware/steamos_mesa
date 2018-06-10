@@ -669,7 +669,12 @@ emit_image_dims(struct fd_context *ctx, const struct ir3_shader_variant *v,
 				 * stride:
 				 */
 				dims[off + 1] = rsc->slices[lvl].pitch * rsc->cpp;
-				dims[off + 2] = rsc->slices[lvl].size0;
+				/* see corresponding logic in fd_resource_offset(): */
+				if (rsc->layer_first) {
+					dims[off + 2] = rsc->layer_size;
+				} else {
+					dims[off + 2] = rsc->slices[lvl].size0;
+				}
 			}
 		}
 
