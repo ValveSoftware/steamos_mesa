@@ -334,17 +334,6 @@ aub_file_open(const char *filename)
    return file;
 }
 
-static struct aub_file *
-aub_file_stdin(void)
-{
-   struct aub_file *file;
-
-   file = calloc(1, sizeof *file);
-   file->stream = stdin;
-
-   return file;
-}
-
 #define TYPE(dw)       (((dw) >> 29) & 7)
 #define OPCODE(dw)     (((dw) >> 23) & 0x3f)
 #define SUBOPCODE(dw)  (((dw) >> 16) & 0x7f)
@@ -382,8 +371,7 @@ aub_file_decode_batch(struct aub_file *file)
    uint32_t *p, h, *new_cursor;
    int header_length, bias;
 
-   if (file->end - file->cursor < 1)
-      return AUB_ITEM_DECODE_NEED_MORE_DATA;
+   assert(file->cursor < file->end);
 
    p = file->cursor;
    h = *p;
@@ -405,13 +393,11 @@ aub_file_decode_batch(struct aub_file *file)
 
    new_cursor = p + header_length + bias;
    if ((h & 0xffff0000) == MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK)) {
-      if (file->end - file->cursor < 4)
-         return AUB_ITEM_DECODE_NEED_MORE_DATA;
+      assert(file->end - file->cursor >= 4);
       new_cursor += p[4] / 4;
    }
 
-   if (new_cursor > file->end)
-      return AUB_ITEM_DECODE_NEED_MORE_DATA;
+   assert(new_cursor <= file->end);
 
    switch (h & 0xffff0000) {
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_HEADER):
@@ -452,48 +438,6 @@ aub_file_more_stuff(struct aub_file *file)
    return file->cursor < file->end || (file->stream && !feof(file->stream));
 }
 
-#define AUB_READ_BUFFER_SIZE (4096)
-#define MAX(a, b) ((a) < (b) ? (b) : (a))
-
-static void
-aub_file_data_grow(struct aub_file *file)
-{
-   size_t old_size = (file->mem_end - file->map) * 4;
-   size_t new_size = MAX(old_size * 2, AUB_READ_BUFFER_SIZE);
-   uint32_t *new_start = realloc(file->map, new_size);
-
-   file->cursor = new_start + (file->cursor - file->map);
-   file->end = new_start + (file->end - file->map);
-   file->map = new_start;
-   file->mem_end = file->map + (new_size / 4);
-}
-
-static bool
-aub_file_data_load(struct aub_file *file)
-{
-   size_t r;
-
-   if (file->stream == NULL)
-      return false;
-
-   /* First remove any consumed data */
-   if (file->cursor > file->map) {
-      memmove(file->map, file->cursor,
-              (file->end - file->cursor) * 4);
-      file->end -= file->cursor - file->map;
-      file->cursor = file->map;
-   }
-
-   /* Then load some new data in */
-   if ((file->mem_end - file->end) < (AUB_READ_BUFFER_SIZE / 4))
-      aub_file_data_grow(file);
-
-   r = fread(file->end, 1, (file->mem_end - file->end) * 4, file->stream);
-   file->end += r / 4;
-
-   return r != 0;
-}
-
 static void
 setup_pager(void)
 {
@@ -525,9 +469,8 @@ static void
 print_help(const char *progname, FILE *file)
 {
    fprintf(file,
-           "Usage: %s [OPTION]... [FILE]\n"
-           "Decode aub file contents from either FILE or the standard input.\n\n"
-           "A valid --gen option must be provided.\n\n"
+           "Usage: %s [OPTION]... FILE\n"
+           "Decode aub file contents from FILE.\n\n"
            "      --help             display this help and exit\n"
            "      --gen=platform     decode for given platform (3 letter platform name)\n"
            "      --headers          decode only command headers\n"
@@ -596,13 +539,13 @@ int main(int argc, char *argv[])
       }
    }
 
-   if (help || argc == 1) {
+   if (optind < argc)
+      input_file = argv[optind];
+
+   if (help || !input_file) {
       print_help(argv[0], stderr);
       exit(0);
    }
-
-   if (optind < argc)
-      input_file = argv[optind];
 
    /* Do this before we redirect stdout to pager. */
    if (option_color == COLOR_AUTO)
@@ -610,11 +553,6 @@ int main(int argc, char *argv[])
 
    if (isatty(1) && pager)
       setup_pager();
-
-   if (input_file == NULL)
-      file = aub_file_stdin();
-   else
-      file = aub_file_open(input_file);
 
    /* mmap a terabyte for our gtt space. */
    gtt_size = 1ull << 40;
@@ -625,26 +563,10 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
    }
 
-   while (aub_file_more_stuff(file)) {
-      switch (aub_file_decode_batch(file)) {
-      case AUB_ITEM_DECODE_OK:
-         break;
-      case AUB_ITEM_DECODE_NEED_MORE_DATA:
-         if (!file->stream) {
-            file->cursor = file->end;
-            break;
-         }
-         if (aub_file_more_stuff(file) && !aub_file_data_load(file)) {
-            fprintf(stderr, "failed to load data from stdin\n");
-            exit(EXIT_FAILURE);
-         }
-         break;
-      default:
-         fprintf(stderr, "failed to parse aubdump data\n");
-         exit(EXIT_FAILURE);
-      }
-   }
+   file = aub_file_open(input_file);
 
+   while (aub_file_more_stuff(file) &&
+          aub_file_decode_batch(file) == AUB_ITEM_DECODE_OK);
 
    fflush(stdout);
    /* close the stdout which is opened to write the output */
