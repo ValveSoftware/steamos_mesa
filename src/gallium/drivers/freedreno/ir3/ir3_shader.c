@@ -559,10 +559,8 @@ emit_user_consts(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring, struct fd_constbuf_stateobj *constbuf)
 {
 	const unsigned index = 0;     /* user consts are index 0 */
-	/* TODO save/restore dirty_mask for binning pass instead: */
-	uint32_t dirty_mask = constbuf->enabled_mask;
 
-	if (dirty_mask & (1 << index)) {
+	if (constbuf->enabled_mask & (1 << index)) {
 		struct pipe_constant_buffer *cb = &constbuf->cb[index];
 		unsigned size = align(cb->buffer_size, 4) / 4; /* size in dwords */
 
@@ -587,7 +585,6 @@ emit_user_consts(struct fd_context *ctx, const struct ir3_shader_variant *v,
 			ctx->emit_const(ring, v->type, 0,
 					cb->buffer_offset, size,
 					cb->user_buffer, cb->buffer);
-			constbuf->dirty_mask &= ~(1 << index);
 		}
 	}
 }

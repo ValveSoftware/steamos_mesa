@@ -219,11 +219,10 @@ fd5_emit_images(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum pipe_shader_type shader)
 {
 	struct fd_shaderimg_stateobj *so = &ctx->shaderimg[shader];
+	unsigned enabled_mask = so->enabled_mask;
 
-	so->dirty_mask &= so->enabled_mask;
-
-	while (so->dirty_mask) {
-		unsigned index = u_bit_scan(&so->dirty_mask);
+	while (enabled_mask) {
+		unsigned index = u_bit_scan(&enabled_mask);
 		unsigned slot = get_image_slot(index);
 		struct fd5_image img;
 
@@ -233,4 +232,3 @@ fd5_emit_images(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		emit_image_ssbo(ring, slot, &img, shader);
 	}
 }
-

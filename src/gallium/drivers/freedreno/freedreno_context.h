@@ -69,26 +69,22 @@ struct fd_program_stateobj {
 struct fd_constbuf_stateobj {
 	struct pipe_constant_buffer cb[PIPE_MAX_CONSTANT_BUFFERS];
 	uint32_t enabled_mask;
-	uint32_t dirty_mask;
 };
 
 struct fd_shaderbuf_stateobj {
 	struct pipe_shader_buffer sb[PIPE_MAX_SHADER_BUFFERS];
 	uint32_t enabled_mask;
-	uint32_t dirty_mask;
 };
 
 struct fd_shaderimg_stateobj {
 	struct pipe_image_view si[PIPE_MAX_SHADER_IMAGES];
 	uint32_t enabled_mask;
-	uint32_t dirty_mask;
 };
 
 struct fd_vertexbuf_stateobj {
 	struct pipe_vertex_buffer vb[PIPE_MAX_ATTRIBS];
 	unsigned count;
 	uint32_t enabled_mask;
-	uint32_t dirty_mask;
 };
 
 struct fd_vertex_stateobj {

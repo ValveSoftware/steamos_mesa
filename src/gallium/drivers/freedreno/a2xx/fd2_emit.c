@@ -58,10 +58,6 @@ emit_constants(struct fd_ringbuffer *ring, uint32_t base,
 	uint32_t start_base = base;
 	unsigned i;
 
-	// XXX TODO only emit dirty consts.. but we need to keep track if
-	// they are clobbered by a clear, gmem2mem, or mem2gmem..
-	constbuf->dirty_mask = enabled_mask;
-
 	/* emit user constants: */
 	while (enabled_mask) {
 		unsigned index = ffs(enabled_mask) - 1;
@@ -79,25 +75,21 @@ emit_constants(struct fd_ringbuffer *ring, uint32_t base,
 		if (shader && ((base - start_base) >= (shader->first_immediate * 4)))
 			break;
 
-		if (constbuf->dirty_mask & (1 << index)) {
-			const uint32_t *dwords;
+		const uint32_t *dwords;
 
-			if (cb->user_buffer) {
-				dwords = cb->user_buffer;
-			} else {
-				struct fd_resource *rsc = fd_resource(cb->buffer);
-				dwords = fd_bo_map(rsc->bo);
-			}
-
-			dwords = (uint32_t *)(((uint8_t *)dwords) + cb->buffer_offset);
-
-			OUT_PKT3(ring, CP_SET_CONSTANT, size + 1);
-			OUT_RING(ring, base);
-			for (i = 0; i < size; i++)
-				OUT_RING(ring, *(dwords++));
-
-			constbuf->dirty_mask &= ~(1 << index);
+		if (cb->user_buffer) {
+			dwords = cb->user_buffer;
+		} else {
+			struct fd_resource *rsc = fd_resource(cb->buffer);
+			dwords = fd_bo_map(rsc->bo);
 		}
+
+		dwords = (uint32_t *)(((uint8_t *)dwords) + cb->buffer_offset);
+
+		OUT_PKT3(ring, CP_SET_CONSTANT, size + 1);
+		OUT_RING(ring, base);
+		for (i = 0; i < size; i++)
+			OUT_RING(ring, *(dwords++));
 
 		base += size;
 		enabled_mask &= ~(1 << index);
