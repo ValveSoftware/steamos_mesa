@@ -686,11 +686,16 @@ miptree_create(struct brw_context *brw,
                enum intel_miptree_create_flags flags)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   isl_tiling_flags_t tiling_flags = ISL_TILING_ANY_MASK;
+
+   /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
+   if (devinfo->gen < 6 && _mesa_is_format_color_format(format))
+      tiling_flags &= ~ISL_TILING_Y0_BIT;
 
    if (format == MESA_FORMAT_S_UINT8)
       return make_surface(brw, target, format, first_level, last_level,
                           width0, height0, depth0, num_samples,
-                          ISL_TILING_W_BIT,
+                          tiling_flags,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
                           BO_ALLOC_BUSY,
@@ -708,7 +713,7 @@ miptree_create(struct brw_context *brw,
       struct intel_mipmap_tree *mt = make_surface(
          brw, target, devinfo->gen >= 6 ? depth_only_format : format,
          first_level, last_level,
-         width0, height0, depth0, num_samples, ISL_TILING_Y0_BIT,
+         width0, height0, depth0, num_samples, tiling_flags,
          ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
          BO_ALLOC_BUSY, 0, NULL);
 
@@ -734,12 +739,6 @@ miptree_create(struct brw_context *brw,
 
    if (flags & MIPTREE_CREATE_BUSY)
       alloc_flags |= BO_ALLOC_BUSY;
-
-   isl_tiling_flags_t tiling_flags = ISL_TILING_ANY_MASK;
-
-   /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
-   if (devinfo->gen < 6)
-      tiling_flags &= ~ISL_TILING_Y0_BIT;
 
    struct intel_mipmap_tree *mt = make_surface(
                                      brw, target, format,
