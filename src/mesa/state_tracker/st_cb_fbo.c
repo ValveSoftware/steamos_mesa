@@ -159,22 +159,66 @@ st_renderbuffer_alloc_storage(struct gl_context * ctx,
     * Find the supported number of samples >= rb->NumSamples
     */
    if (rb->NumSamples > 0) {
-      unsigned start, i;
+      unsigned start, start_storage;
 
       if (ctx->Const.MaxSamples > 1 &&  rb->NumSamples == 1) {
          /* don't try num_samples = 1 with drivers that support real msaa */
          start = 2;
+         start_storage = 2;
       } else {
          start = rb->NumSamples;
+         start_storage = rb->NumStorageSamples;
       }
 
-      for (i = start; i <= ctx->Const.MaxSamples; i++) {
-         format = st_choose_renderbuffer_format(st, internalFormat, i, i);
+      if (ctx->Extensions.AMD_framebuffer_multisample_advanced) {
+         if (rb->_BaseFormat == GL_DEPTH_COMPONENT ||
+             rb->_BaseFormat == GL_DEPTH_STENCIL ||
+             rb->_BaseFormat == GL_STENCIL_INDEX) {
+            /* Find a supported depth-stencil format. */
+            for (unsigned samples = start;
+                 samples <= ctx->Const.MaxDepthStencilFramebufferSamples;
+                 samples++) {
+               format = st_choose_renderbuffer_format(st, internalFormat,
+                                                      samples, samples);
 
-         if (format != PIPE_FORMAT_NONE) {
-            rb->NumSamples = i;
-            rb->NumStorageSamples = i;
-            break;
+               if (format != PIPE_FORMAT_NONE) {
+                  rb->NumSamples = samples;
+                  rb->NumStorageSamples = samples;
+                  break;
+               }
+            }
+         } else {
+            /* Find a supported color format, samples >= storage_samples. */
+            for (unsigned storage_samples = start_storage;
+                 storage_samples <= ctx->Const.MaxColorFramebufferStorageSamples;
+                 storage_samples++) {
+               for (unsigned samples = MAX2(start, storage_samples);
+                    samples <= ctx->Const.MaxColorFramebufferSamples;
+                    samples++) {
+                  format = st_choose_renderbuffer_format(st, internalFormat,
+                                                         samples,
+                                                         storage_samples);
+
+                  if (format != PIPE_FORMAT_NONE) {
+                     rb->NumSamples = samples;
+                     rb->NumStorageSamples = storage_samples;
+                     goto found;
+                  }
+               }
+            }
+            found:;
+         }
+      } else {
+         for (unsigned samples = start; samples <= ctx->Const.MaxSamples;
+              samples++) {
+            format = st_choose_renderbuffer_format(st, internalFormat,
+                                                   samples, samples);
+
+            if (format != PIPE_FORMAT_NONE) {
+               rb->NumSamples = samples;
+               rb->NumStorageSamples = samples;
+               break;
+            }
          }
       }
    } else {
@@ -467,6 +511,7 @@ st_update_renderbuffer_surface(struct st_context *st,
 
    if (!surf ||
        surf->texture->nr_samples != strb->Base.NumSamples ||
+       surf->texture->nr_storage_samples != strb->Base.NumStorageSamples ||
        surf->format != format ||
        surf->texture != resource ||
        surf->width != rtt_width ||
