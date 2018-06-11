@@ -692,8 +692,19 @@ miptree_create(struct brw_context *brw,
    if (devinfo->gen < 6 && _mesa_is_format_color_format(format))
       tiling_flags &= ~ISL_TILING_Y0_BIT;
 
+   mesa_format mt_fmt;
+   if (_mesa_is_format_color_format(format)) {
+      mt_fmt = intel_lower_compressed_format(brw, format);
+   } else {
+      /* Fix up the Z miptree format for how we're splitting out separate
+       * stencil. Gen7 expects there to be no stencil bits in its depth buffer.
+       */
+      mt_fmt = (devinfo->gen < 6) ? format :
+               intel_depth_format_for_depthstencil_format(format);
+   }
+
    if (format == MESA_FORMAT_S_UINT8)
-      return make_surface(brw, target, format, first_level, last_level,
+      return make_surface(brw, target, mt_fmt, first_level, last_level,
                           width0, height0, depth0, num_samples,
                           tiling_flags,
                           ISL_SURF_USAGE_STENCIL_BIT |
@@ -705,13 +716,8 @@ miptree_create(struct brw_context *brw,
    const GLenum base_format = _mesa_get_format_base_format(format);
    if ((base_format == GL_DEPTH_COMPONENT ||
         base_format == GL_DEPTH_STENCIL)) {
-      /* Fix up the Z miptree format for how we're splitting out separate
-       * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
-       */
-      const mesa_format depth_only_format =
-         intel_depth_format_for_depthstencil_format(format);
       struct intel_mipmap_tree *mt = make_surface(
-         brw, target, devinfo->gen >= 6 ? depth_only_format : format,
+         brw, target, mt_fmt,
          first_level, last_level,
          width0, height0, depth0, num_samples, tiling_flags,
          ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
@@ -729,19 +735,13 @@ miptree_create(struct brw_context *brw,
       return mt;
    }
 
-   mesa_format tex_format = format;
-   mesa_format etc_format = MESA_FORMAT_NONE;
    uint32_t alloc_flags = 0;
-
-   format = intel_lower_compressed_format(brw, format);
-
-   etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
    if (flags & MIPTREE_CREATE_BUSY)
       alloc_flags |= BO_ALLOC_BUSY;
 
    struct intel_mipmap_tree *mt = make_surface(
-                                     brw, target, format,
+                                     brw, target, mt_fmt,
                                      first_level, last_level,
                                      width0, height0, depth0,
                                      num_samples, tiling_flags,
@@ -751,7 +751,7 @@ miptree_create(struct brw_context *brw,
    if (!mt)
       return NULL;
 
-   mt->etc_format = etc_format;
+   mt->etc_format = (mt_fmt != format) ? format : MESA_FORMAT_NONE;
 
    if (!(flags & MIPTREE_CREATE_NO_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
