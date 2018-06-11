@@ -83,7 +83,7 @@ st_renderbuffer_alloc_sw_storage(struct gl_context * ctx,
       format = PIPE_FORMAT_R16G16B16A16_SNORM;
    }
    else {
-      format = st_choose_renderbuffer_format(st, internalFormat, 0);
+      format = st_choose_renderbuffer_format(st, internalFormat, 0, 0);
 
       /* Not setting gl_renderbuffer::Format here will cause
        * FRAMEBUFFER_UNSUPPORTED and ValidateFramebuffer will not be called.
@@ -169,7 +169,7 @@ st_renderbuffer_alloc_storage(struct gl_context * ctx,
       }
 
       for (i = start; i <= ctx->Const.MaxSamples; i++) {
-         format = st_choose_renderbuffer_format(st, internalFormat, i);
+         format = st_choose_renderbuffer_format(st, internalFormat, i, i);
 
          if (format != PIPE_FORMAT_NONE) {
             rb->NumSamples = i;
@@ -178,7 +178,7 @@ st_renderbuffer_alloc_storage(struct gl_context * ctx,
          }
       }
    } else {
-      format = st_choose_renderbuffer_format(st, internalFormat, 0);
+      format = st_choose_renderbuffer_format(st, internalFormat, 0, 0);
    }
 
    /* Not setting gl_renderbuffer::Format here will cause
