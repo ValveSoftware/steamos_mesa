@@ -686,6 +686,8 @@ miptree_create(struct brw_context *brw,
                enum intel_miptree_create_flags flags)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const uint32_t alloc_flags = (flags & MIPTREE_CREATE_BUSY) ?
+                                BO_ALLOC_BUSY : 0;
    isl_tiling_flags_t tiling_flags = ISL_TILING_ANY_MASK;
 
    /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
@@ -709,7 +711,7 @@ miptree_create(struct brw_context *brw,
                           tiling_flags,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
-                          BO_ALLOC_BUSY,
+                          alloc_flags,
                           0,
                           NULL);
 
@@ -721,7 +723,7 @@ miptree_create(struct brw_context *brw,
          first_level, last_level,
          width0, height0, depth0, num_samples, tiling_flags,
          ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
-         BO_ALLOC_BUSY, 0, NULL);
+         alloc_flags, 0, NULL);
 
       if (needs_separate_stencil(brw, mt, format) &&
           !make_separate_stencil_surface(brw, mt)) {
@@ -734,11 +736,6 @@ miptree_create(struct brw_context *brw,
 
       return mt;
    }
-
-   uint32_t alloc_flags = 0;
-
-   if (flags & MIPTREE_CREATE_BUSY)
-      alloc_flags |= BO_ALLOC_BUSY;
 
    struct intel_mipmap_tree *mt = make_surface(
                                      brw, target, mt_fmt,
