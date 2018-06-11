@@ -29,6 +29,9 @@ project(
   default_options : ['buildtype=debugoptimized', 'c_std=c99', 'cpp_std=c++11']
 )
 
+cc = meson.get_compiler('c')
+cpp = meson.get_compiler('cpp')
+
 null_dep = dependency('', required : false)
 
 system_has_kms_drm = ['openbsd', 'netbsd', 'freebsd', 'dragonfly', 'linux'].contains(host_machine.system())
@@ -669,7 +672,6 @@ if has_mako.returncode() != 0
   error('Python (2.x) mako module required to build mesa.')
 endif
 
-cc = meson.get_compiler('c')
 if cc.get_id() == 'gcc' and cc.version().version_compare('< 4.4.6')
   error('When using GCC, version 4.4.6 or later is required.')
 endif
@@ -749,7 +751,6 @@ if cc.has_argument('-fvisibility=hidden')
 endif
 
 # Check for generic C++ arguments
-cpp = meson.get_compiler('cpp')
 cpp_args = []
 foreach a : ['-Wall', '-fno-math-errno', '-fno-trapping-math',
              '-Qunused-arguments']
