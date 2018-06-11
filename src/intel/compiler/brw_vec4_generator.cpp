@@ -777,10 +777,9 @@ generate_tcs_urb_write(struct brw_codegen *p,
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, send, brw_null_reg());
    brw_set_src0(p, send, urb_header);
+   brw_set_desc(p, send, brw_message_desc(devinfo, inst->mlen, 0, true));
 
-   brw_set_message_descriptor(p, send, BRW_SFID_URB,
-                              inst->mlen /* mlen */, 0 /* rlen */,
-                              true /* header */, false /* eot */);
+   brw_inst_set_sfid(devinfo, send, BRW_SFID_URB);
    brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_WRITE_OWORD);
    brw_inst_set_urb_global_offset(devinfo, send, inst->offset);
    if (inst->urb_write_flags & BRW_URB_WRITE_EOT) {
@@ -953,9 +952,9 @@ generate_vec4_urb_read(struct brw_codegen *p,
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
 
-   brw_set_message_descriptor(p, send, BRW_SFID_URB,
-                              1 /* mlen */, 1 /* rlen */,
-                              true /* header */, false /* eot */);
+   brw_set_desc(p, send, brw_message_desc(devinfo, 1, 1, true));
+
+   brw_inst_set_sfid(devinfo, send, BRW_SFID_URB);
    brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_READ_OWORD);
    brw_inst_set_urb_swizzle_control(devinfo, send, BRW_URB_SWIZZLE_INTERLEAVE);
    brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
@@ -989,9 +988,9 @@ generate_tcs_release_input(struct brw_codegen *p,
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, send, brw_null_reg());
    brw_set_src0(p, send, header);
-   brw_set_message_descriptor(p, send, BRW_SFID_URB,
-                              1 /* mlen */, 0 /* rlen */,
-                              true /* header */, false /* eot */);
+   brw_set_desc(p, send, brw_message_desc(devinfo, 1, 0, true));
+
+   brw_inst_set_sfid(devinfo, send, BRW_SFID_URB);
    brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_READ_OWORD);
    brw_inst_set_urb_complete(devinfo, send, 1);
    brw_inst_set_urb_swizzle_control(devinfo, send, is_unpaired.ud ?

@@ -360,48 +360,6 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 }
 
 /**
- * Set the Message Descriptor and Extended Message Descriptor fields
- * for SEND messages.
- *
- * \note This zeroes out the Function Control bits, so it must be called
- *       \b before filling out any message-specific data.  Callers can
- *       choose not to fill in irrelevant bits; they will be zero.
- */
-void
-brw_set_message_descriptor(struct brw_codegen *p,
-			   brw_inst *inst,
-			   enum brw_message_target sfid,
-			   unsigned msg_length,
-			   unsigned response_length,
-			   bool header_present,
-			   bool end_of_thread)
-{
-   const struct gen_device_info *devinfo = p->devinfo;
-
-   brw_set_src1(p, inst, brw_imm_d(0));
-
-   /* For indirect sends, `inst` will not be the SEND/SENDC instruction
-    * itself; instead, it will be a MOV/OR into the address register.
-    *
-    * In this case, we avoid setting the extended message descriptor bits,
-    * since they go on the later SEND/SENDC instead and if set here would
-    * instead clobber the conditionalmod bits.
-    */
-   unsigned opcode = brw_inst_opcode(devinfo, inst);
-   if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC) {
-      brw_inst_set_sfid(devinfo, inst, sfid);
-   }
-
-   brw_inst_set_mlen(devinfo, inst, msg_length);
-   brw_inst_set_rlen(devinfo, inst, response_length);
-   brw_inst_set_eot(devinfo, inst, end_of_thread);
-
-   if (devinfo->gen >= 5) {
-      brw_inst_set_header_present(devinfo, inst, header_present);
-   }
-}
-
-/**
  * Specify the descriptor and extended descriptor immediate for a SEND(C)
  * message instruction.
  */
@@ -453,9 +411,10 @@ static void brw_set_math_message( struct brw_codegen *p,
       break;
    }
 
+   brw_set_desc(p, inst, brw_message_desc(
+                   devinfo, msg_length, response_length, false));
 
-   brw_set_message_descriptor(p, inst, BRW_SFID_MATH,
-			      msg_length, response_length, false, false);
+   brw_inst_set_sfid(devinfo, inst, BRW_SFID_MATH);
    brw_inst_set_math_msg_function(devinfo, inst, function);
    brw_inst_set_math_msg_signed_int(devinfo, inst, integer_type);
    brw_inst_set_math_msg_precision(devinfo, inst, low_precision);
@@ -473,8 +432,11 @@ static void brw_set_ff_sync_message(struct brw_codegen *p,
 {
    const struct gen_device_info *devinfo = p->devinfo;
 
-   brw_set_message_descriptor(p, insn, BRW_SFID_URB,
-			      1, response_length, true, end_of_thread);
+   brw_set_desc(p, insn, brw_message_desc(
+                   devinfo, 1, response_length, true));
+
+   brw_inst_set_sfid(devinfo, insn, BRW_SFID_URB);
+   brw_inst_set_eot(devinfo, insn, end_of_thread);
    brw_inst_set_urb_opcode(devinfo, insn, 1); /* FF_SYNC */
    brw_inst_set_urb_allocate(devinfo, insn, allocate);
    /* The following fields are not used by FF_SYNC: */
@@ -498,9 +460,11 @@ static void brw_set_urb_message( struct brw_codegen *p,
    assert(devinfo->gen < 7 || !(flags & BRW_URB_WRITE_ALLOCATE));
    assert(devinfo->gen >= 7 || !(flags & BRW_URB_WRITE_PER_SLOT_OFFSET));
 
-   brw_set_message_descriptor(p, insn, BRW_SFID_URB,
-			      msg_length, response_length, true,
-                              flags & BRW_URB_WRITE_EOT);
+   brw_set_desc(p, insn, brw_message_desc(
+                   devinfo, msg_length, response_length, true));
+
+   brw_inst_set_sfid(devinfo, insn, BRW_SFID_URB);
+   brw_inst_set_eot(devinfo, insn, !!(flags & BRW_URB_WRITE_EOT));
 
    if (flags & BRW_URB_WRITE_OWORD) {
       assert(msg_length == 2); /* header + one OWORD of data */
@@ -543,9 +507,11 @@ brw_set_dp_write_message(struct brw_codegen *p,
    const unsigned sfid = (devinfo->gen >= 6 ? target_cache :
                           BRW_SFID_DATAPORT_WRITE);
 
-   brw_set_message_descriptor(p, insn, sfid, msg_length, response_length,
-			      header_present, end_of_thread);
+   brw_set_desc(p, insn, brw_message_desc(
+                   devinfo, msg_length, response_length, header_present));
 
+   brw_inst_set_sfid(devinfo, insn, sfid);
+   brw_inst_set_eot(devinfo, insn, !!end_of_thread);
    brw_inst_set_binding_table_index(devinfo, insn, binding_table_index);
    brw_inst_set_dp_write_msg_type(devinfo, insn, msg_type);
    brw_inst_set_dp_write_msg_control(devinfo, insn, msg_control);
@@ -573,9 +539,12 @@ brw_set_dp_read_message(struct brw_codegen *p,
    const unsigned sfid = (devinfo->gen >= 6 ? target_cache :
                           BRW_SFID_DATAPORT_READ);
 
-   brw_set_message_descriptor(p, insn, sfid, msg_length, response_length,
-			      header_present, false);
+   brw_set_desc(p, insn, brw_message_desc(
+                   devinfo, msg_length, response_length, header_present));
 
+   const unsigned opcode = brw_inst_opcode(devinfo, insn);
+   if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC)
+      brw_inst_set_sfid(devinfo, insn, sfid);
    brw_inst_set_binding_table_index(devinfo, insn, binding_table_index);
    brw_inst_set_dp_read_msg_type(devinfo, insn, msg_type);
    brw_inst_set_dp_read_msg_control(devinfo, insn, msg_control);
@@ -597,9 +566,12 @@ brw_set_sampler_message(struct brw_codegen *p,
 {
    const struct gen_device_info *devinfo = p->devinfo;
 
-   brw_set_message_descriptor(p, inst, BRW_SFID_SAMPLER, msg_length,
-			      response_length, header_present, false);
+   brw_set_desc(p, inst, brw_message_desc(
+                   devinfo, msg_length, response_length, header_present));
 
+   const unsigned opcode = brw_inst_opcode(devinfo, inst);
+   if (opcode == BRW_OPCODE_SEND || opcode == BRW_OPCODE_SENDC)
+      brw_inst_set_sfid(devinfo, inst, BRW_SFID_SAMPLER);
    brw_inst_set_binding_table_index(devinfo, inst, binding_table_index);
    brw_inst_set_sampler(devinfo, inst, sampler);
    brw_inst_set_sampler_msg_type(devinfo, inst, msg_type);
@@ -628,8 +600,10 @@ gen7_set_dp_scratch_message(struct brw_codegen *p,
    const unsigned block_size = (devinfo->gen >= 8 ? _mesa_logbase2(num_regs) :
                                 num_regs - 1);
 
-   brw_set_message_descriptor(p, inst, GEN7_SFID_DATAPORT_DATA_CACHE,
-                              mlen, rlen, header_present, false);
+   brw_set_desc(p, inst, brw_message_desc(
+                   devinfo, mlen, rlen, header_present));
+
+   brw_inst_set_sfid(devinfo, inst, GEN7_SFID_DATAPORT_DATA_CACHE);
    brw_inst_set_dp_category(devinfo, inst, 1); /* Scratch Block Read/Write msgs */
    brw_inst_set_scratch_read_write(devinfo, inst, write);
    brw_inst_set_scratch_type(devinfo, inst, dword);
@@ -3309,11 +3283,10 @@ brw_set_memory_fence_message(struct brw_codegen *p,
 {
    const struct gen_device_info *devinfo = p->devinfo;
 
-   brw_set_message_descriptor(p, insn, sfid,
-                              1 /* message length */,
-                              (commit_enable ? 1 : 0) /* response length */,
-                              true /* header present */,
-                              false);
+   brw_set_desc(p, insn, brw_message_desc(
+                   devinfo, 1, (commit_enable ? 1 : 0), true));
+
+   brw_inst_set_sfid(devinfo, insn, sfid);
 
    switch (sfid) {
    case GEN6_SFID_DATAPORT_RENDER_CACHE:
@@ -3682,7 +3655,8 @@ void brw_shader_time_add(struct brw_codegen *p,
    brw_set_src0(p, send, brw_vec1_reg(payload.file,
                                       payload.nr, 0));
    brw_set_src1(p, send, brw_imm_ud(0));
-   brw_set_message_descriptor(p, send, sfid, 2, 0, false, false);
+   brw_set_desc(p, send, brw_message_desc(p->devinfo, 2, 0, false));
+   brw_inst_set_sfid(p->devinfo, send, sfid);
    brw_inst_set_binding_table_index(p->devinfo, send, surf_index);
    brw_set_dp_untyped_atomic_message(p, send, BRW_AOP_ADD, false);
 
@@ -3707,13 +3681,9 @@ brw_barrier(struct brw_codegen *p, struct brw_reg src)
    brw_set_dest(p, inst, retype(brw_null_reg(), BRW_REGISTER_TYPE_UW));
    brw_set_src0(p, inst, src);
    brw_set_src1(p, inst, brw_null_reg());
+   brw_set_desc(p, inst, brw_message_desc(devinfo, 1, 0, false));
 
-   brw_set_message_descriptor(p, inst, BRW_SFID_MESSAGE_GATEWAY,
-                              1 /* msg_length */,
-                              0 /* response_length */,
-                              false /* header_present */,
-                              false /* end_of_thread */);
-
+   brw_inst_set_sfid(devinfo, inst, BRW_SFID_MESSAGE_GATEWAY);
    brw_inst_set_gateway_notify(devinfo, inst, 1);
    brw_inst_set_gateway_subfuncid(devinfo, inst,
                                   BRW_MESSAGE_GATEWAY_SFID_BARRIER_MSG);

@@ -256,14 +256,6 @@ void brw_set_sampler_message(struct brw_codegen *p,
                              unsigned simd_mode,
                              unsigned return_format);
 
-void brw_set_message_descriptor(struct brw_codegen *p,
-                                brw_inst *inst,
-                                enum brw_message_target sfid,
-                                unsigned msg_length,
-                                unsigned response_length,
-                                bool header_present,
-                                bool end_of_thread);
-
 void brw_set_dp_read_message(struct brw_codegen *p,
 			     brw_inst *insn,
 			     unsigned binding_table_index,
@@ -286,6 +278,27 @@ void brw_set_dp_write_message(struct brw_codegen *p,
 			      unsigned response_length,
 			      unsigned end_of_thread,
 			      unsigned send_commit_msg);
+
+/**
+ * Construct a message descriptor immediate with the specified common
+ * descriptor controls.
+ */
+static inline uint32_t
+brw_message_desc(const struct gen_device_info *devinfo,
+                 unsigned msg_length,
+                 unsigned response_length,
+                 bool header_present)
+{
+   if (devinfo->gen >= 5) {
+      return (SET_BITS(msg_length, 28, 25) |
+              SET_BITS(response_length, 24, 20) |
+              SET_BITS(header_present, 19, 19));
+   } else {
+      return (SET_BITS(msg_length, 23, 20) |
+              SET_BITS(response_length, 19, 16));
+   }
+}
+
 
 void brw_urb_WRITE(struct brw_codegen *p,
 		   struct brw_reg dest,
