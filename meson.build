@@ -835,7 +835,9 @@ if cc.compiles('''#include <stdint.h>
                     struct {
                       uint64_t *v;
                     } x;
-                    return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
+                    return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE) &
+                           (int)__atomic_add_fetch(x.v, (uint64_t)1, __ATOMIC_ACQ_REL);
+
                   }''',
                name : 'GCC atomic builtins')
   pre_args += '-DUSE_GCC_ATOMIC_BUILTINS'
@@ -851,7 +853,8 @@ if cc.compiles('''#include <stdint.h>
                        struct {
                          uint64_t *v;
                        } x;
-                       return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
+                       return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE) &
+                              (int)__atomic_add_fetch(x.v, (uint64_t)1, __ATOMIC_ACQ_REL);
                      }''',
                   name : 'GCC atomic builtins required -latomic')
     dep_atomic = cc.find_library('atomic')
