@@ -481,6 +481,7 @@ _mesa_update_texture_renderbuffer(struct gl_context *ctx,
    rb->Height = texImage->Height2;
    rb->Depth = texImage->Depth2;
    rb->NumSamples = texImage->NumSamples;
+   rb->NumStorageSamples = texImage->NumSamples;
    rb->TexImage = texImage;
 
    if (driver_RenderTexture_is_safe(att))
@@ -2237,7 +2238,8 @@ _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
    if (rb->InternalFormat == internalFormat &&
        rb->Width == (GLuint) width &&
        rb->Height == (GLuint) height &&
-       rb->NumSamples == samples) {
+       rb->NumSamples == samples &&
+       rb->NumStorageSamples == storageSamples) {
       /* no change in allocation needed */
       return;
    }
@@ -2245,6 +2247,7 @@ _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
    /* These MUST get set by the AllocStorage func */
    rb->Format = MESA_FORMAT_NONE;
    rb->NumSamples = samples;
+   rb->NumStorageSamples = storageSamples;
 
    /* Now allocate the storage */
    assert(rb->AllocStorage);
@@ -2265,6 +2268,7 @@ _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
       rb->InternalFormat = GL_NONE;
       rb->_BaseFormat = GL_NONE;
       rb->NumSamples = 0;
+      rb->NumStorageSamples = 0;
    }
 
    /* Invalidate the framebuffers the renderbuffer is attached in. */
@@ -2584,19 +2588,24 @@ get_render_buffer_parameteriv(struct gl_context *ctx,
    case GL_RENDERBUFFER_DEPTH_SIZE_EXT:
    case GL_RENDERBUFFER_STENCIL_SIZE_EXT:
       *params = get_component_bits(pname, rb->_BaseFormat, rb->Format);
-      break;
+      return;
    case GL_RENDERBUFFER_SAMPLES:
       if ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_framebuffer_object)
           || _mesa_is_gles3(ctx)) {
          *params = rb->NumSamples;
-         break;
+         return;
       }
-      /* fallthrough */
-   default:
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname=%s)", func,
-                  _mesa_enum_to_string(pname));
-      return;
+      break;
+   case GL_RENDERBUFFER_STORAGE_SAMPLES_AMD:
+      if (ctx->Extensions.AMD_framebuffer_multisample_advanced) {
+         *params = rb->NumStorageSamples;
+         return;
+      }
+      break;
    }
+
+   _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname=%s)", func,
+               _mesa_enum_to_string(pname));
 }
 
 

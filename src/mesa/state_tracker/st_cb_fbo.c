@@ -173,6 +173,7 @@ st_renderbuffer_alloc_storage(struct gl_context * ctx,
 
          if (format != PIPE_FORMAT_NONE) {
             rb->NumSamples = i;
+            rb->NumStorageSamples = i;
             break;
          }
       }
@@ -204,7 +205,7 @@ st_renderbuffer_alloc_storage(struct gl_context * ctx,
    templ.depth0 = 1;
    templ.array_size = 1;
    templ.nr_samples = rb->NumSamples;
-   templ.nr_storage_samples = rb->NumSamples;
+   templ.nr_storage_samples = rb->NumStorageSamples;
 
    if (util_format_is_depth_or_stencil(format)) {
       templ.bind = PIPE_BIND_DEPTH_STENCIL;
@@ -284,6 +285,7 @@ st_new_renderbuffer_fb(enum pipe_format format, unsigned samples, boolean sw)
    _mesa_init_renderbuffer(&strb->Base, 0);
    strb->Base.ClassID = 0x4242; /* just a unique value */
    strb->Base.NumSamples = samples;
+   strb->Base.NumStorageSamples = samples;
    strb->Base.Format = st_pipe_format_to_mesa_format(format);
    strb->Base._BaseFormat = _mesa_get_format_base_format(strb->Base.Format);
    strb->software = sw;

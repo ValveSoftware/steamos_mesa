@@ -290,6 +290,7 @@ intel_alloc_private_renderbuffer_storage(struct gl_context * ctx, struct gl_rend
    assert(rb->Format != MESA_FORMAT_NONE);
 
    rb->NumSamples = intel_quantize_num_samples(screen, rb->NumSamples);
+   rb->NumStorageSamples = rb->NumSamples;
    rb->Width = width;
    rb->Height = height;
    rb->_BaseFormat = _mesa_get_format_base_format(rb->Format);
@@ -433,6 +434,7 @@ intel_create_winsys_renderbuffer(struct intel_screen *screen,
    _mesa_init_renderbuffer(rb, 0);
    rb->ClassID = INTEL_RB_CLASS;
    rb->NumSamples = num_samples;
+   rb->NumStorageSamples = num_samples;
 
    /* The base format and internal format must be derived from the user-visible
     * format (that is, the gl_config's format), even if we internally use
