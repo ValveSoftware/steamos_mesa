@@ -722,48 +722,24 @@ miptree_create(struct brw_context *brw,
                intel_depth_format_for_depthstencil_format(format);
    }
 
-   if (format == MESA_FORMAT_S_UINT8)
-      return make_surface(brw, target, mt_fmt, first_level, last_level,
-                          width0, height0, depth0, num_samples,
-                          tiling_flags,
-                          mt_surf_usage(mt_fmt),
-                          alloc_flags,
-                          0,
-                          NULL);
+   struct intel_mipmap_tree *mt =
+      make_surface(brw, target, mt_fmt, first_level, last_level,
+                   width0, height0, depth0, num_samples,
+                   tiling_flags, mt_surf_usage(mt_fmt),
+                   alloc_flags, 0, NULL);
 
-   const GLenum base_format = _mesa_get_format_base_format(format);
-   if ((base_format == GL_DEPTH_COMPONENT ||
-        base_format == GL_DEPTH_STENCIL)) {
-      struct intel_mipmap_tree *mt = make_surface(
-         brw, target, mt_fmt,
-         first_level, last_level,
-         width0, height0, depth0, num_samples, tiling_flags,
-         mt_surf_usage(mt_fmt),
-         alloc_flags, 0, NULL);
+   if (mt == NULL)
+      return NULL;
 
-      if (needs_separate_stencil(brw, mt, format) &&
-          !make_separate_stencil_surface(brw, mt)) {
+   if (needs_separate_stencil(brw, mt, format)) {
+      if (!make_separate_stencil_surface(brw, mt)) {
          intel_miptree_release(&mt);
          return NULL;
       }
-
-      if (!(flags & MIPTREE_CREATE_NO_AUX))
-         intel_miptree_choose_aux_usage(brw, mt);
-
-      return mt;
    }
 
-   struct intel_mipmap_tree *mt = make_surface(
-                                     brw, target, mt_fmt,
-                                     first_level, last_level,
-                                     width0, height0, depth0,
-                                     num_samples, tiling_flags,
-                                     mt_surf_usage(mt_fmt),
-                                     alloc_flags, 0, NULL);
-   if (!mt)
-      return NULL;
-
-   mt->etc_format = (mt_fmt != format) ? format : MESA_FORMAT_NONE;
+   mt->etc_format = (_mesa_is_format_color_format(format) && mt_fmt != format) ?
+                    format : MESA_FORMAT_NONE;
 
    if (!(flags & MIPTREE_CREATE_NO_AUX))
       intel_miptree_choose_aux_usage(brw, mt);
