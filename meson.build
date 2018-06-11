@@ -769,6 +769,10 @@ foreach a : ['-Wall', '-Werror=implicit-function-declaration',
     c_args += a
   endif
 endforeach
+if cc.has_argument('-Wmissing-field-initializers')
+  c_args += '-Wno-missing-field-initializers'
+endif
+
 c_vis_args = []
 if cc.has_argument('-fvisibility=hidden')
   c_vis_args += '-fvisibility=hidden'
@@ -785,9 +789,12 @@ endforeach
 
 # For some reason, the test for -Wno-foo always succeeds with gcc, even if the
 # option is not supported. Hence, check for -Wfoo instead.
-if cpp.has_argument('-Wnon-virtual-dtor')
-  cpp_args += '-Wno-non-virtual-dtor'
-endif
+
+foreach a : ['non-virtual-dtor', 'missing-field-initializers']
+  if cpp.has_argument('-W' + a)
+    cpp_args += '-Wno-' + a
+  endif
+endforeach
 
 no_override_init_args = []
 foreach a : ['override-init', 'initializer-overrides']
