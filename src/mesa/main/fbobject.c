@@ -969,7 +969,9 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
    GLuint numImages;
    GLenum intFormat = GL_NONE; /* color buffers' internal format */
    GLuint minWidth = ~0, minHeight = ~0, maxWidth = 0, maxHeight = 0;
-   GLint numSamples = -1;
+   GLint numColorSamples = -1;
+   GLint numColorStorageSamples = -1;
+   GLint numDepthSamples = -1;
    GLint fixedSampleLocations = -1;
    GLint i;
    GLuint j;
@@ -1046,6 +1048,8 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
 
       /* get width, height, format of the renderbuffer/texture
        */
+      unsigned attNumSamples, attNumStorageSamples;
+
       if (att->Type == GL_TEXTURE) {
          const struct gl_texture_image *texImg = att->Renderbuffer->TexImage;
          att_tex_target = att->Texture->Target;
@@ -1066,14 +1070,6 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
             return;
          }
 
-         if (numSamples < 0)
-            numSamples = texImg->NumSamples;
-         else if (numSamples != texImg->NumSamples) {
-            fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
-            fbo_incomplete(ctx, "inconsistent sample count", -1);
-            return;
-         }
-
          if (fixedSampleLocations < 0)
             fixedSampleLocations = texImg->FixedSampleLocations;
          else if (fixedSampleLocations != texImg->FixedSampleLocations) {
@@ -1081,6 +1077,9 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
             fbo_incomplete(ctx, "inconsistent fixed sample locations", -1);
             return;
          }
+
+         attNumSamples = texImg->NumSamples;
+         attNumStorageSamples = texImg->NumSamples;
       }
       else if (att->Type == GL_RENDERBUFFER_EXT) {
          minWidth = MIN2(minWidth, att->Renderbuffer->Width);
@@ -1091,14 +1090,6 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
          attFormat = att->Renderbuffer->Format;
          numImages++;
 
-         if (numSamples < 0)
-            numSamples = att->Renderbuffer->NumSamples;
-         else if (numSamples != att->Renderbuffer->NumSamples) {
-            fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
-            fbo_incomplete(ctx, "inconsistent sample count", -1);
-            return;
-         }
-
          /* RENDERBUFFER has fixedSampleLocations implicitly true */
          if (fixedSampleLocations < 0)
             fixedSampleLocations = GL_TRUE;
@@ -1107,10 +1098,36 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
             fbo_incomplete(ctx, "inconsistent fixed sample locations", -1);
             return;
          }
+
+         attNumSamples = att->Renderbuffer->NumSamples;
+         attNumStorageSamples = att->Renderbuffer->NumStorageSamples;
       }
       else {
          assert(att->Type == GL_NONE);
          continue;
+      }
+
+      if (i >= 0) {
+         /* Color buffers. */
+         if (numColorSamples < 0) {
+            assert(numColorStorageSamples < 0);
+            numColorSamples = attNumSamples;
+            numColorStorageSamples = attNumStorageSamples;
+         } else if (numColorSamples != attNumSamples ||
+                    numColorStorageSamples != attNumStorageSamples) {
+            fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
+            fbo_incomplete(ctx, "inconsistent sample counts", -1);
+            return;
+         }
+      } else {
+         /* Depth/stencil buffers. */
+         if (numDepthSamples < 0) {
+            numDepthSamples = attNumSamples;
+         } else if (numDepthSamples != attNumSamples) {
+            fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
+            fbo_incomplete(ctx, "inconsistent sample counts", -1);
+            return;
+         }
       }
 
       /* Update flags describing color buffer datatypes */
@@ -1216,6 +1233,51 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
        * The same requirements are also in place for GL 4.5,
        * Section 9.4.1 "Framebuffer Attachment Completeness", pg 310-311
        */
+   }
+
+   if (ctx->Extensions.AMD_framebuffer_multisample_advanced) {
+      /* See if non-matching sample counts are supported. */
+      if (numColorSamples >= 0 && numDepthSamples >= 0) {
+         bool found = false;
+
+         assert(numColorStorageSamples != -1);
+
+         numColorSamples = MAX2(numColorSamples, 1);
+         numColorStorageSamples = MAX2(numColorStorageSamples, 1);
+         numDepthSamples = MAX2(numDepthSamples, 1);
+
+         if (numColorSamples == 1 && numColorStorageSamples == 1 &&
+             numDepthSamples == 1) {
+            found = true;
+         } else {
+            for (i = 0; i < ctx->Const.NumSupportedMultisampleModes; i++) {
+               GLint *counts =
+                  &ctx->Const.SupportedMultisampleModes[i].NumColorSamples;
+
+               if (counts[0] == numColorSamples &&
+                   counts[1] == numColorStorageSamples &&
+                   counts[2] == numDepthSamples) {
+                  found = true;
+                  break;
+               }
+            }
+         }
+
+         if (!found) {
+            fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
+            fbo_incomplete(ctx, "unsupported sample counts", -1);
+            return;
+         }
+      }
+   } else {
+      /* If the extension is unsupported, all sample counts must be equal. */
+      if (numColorSamples >= 0 &&
+          (numColorSamples != numColorStorageSamples ||
+           (numDepthSamples >= 0 && numColorSamples != numDepthSamples))) {
+         fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE;
+         fbo_incomplete(ctx, "inconsistent sample counts", -1);
+         return;
+      }
    }
 
    fb->MaxNumLayers = max_layer_count;

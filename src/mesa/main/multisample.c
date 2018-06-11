@@ -226,6 +226,58 @@ _mesa_check_sample_count(struct gl_context *ctx, GLenum target,
       return GL_INVALID_OPERATION;
    }
 
+   if (ctx->Extensions.AMD_framebuffer_multisample_advanced &&
+       target == GL_RENDERBUFFER) {
+      if (!_mesa_is_depth_or_stencil_format(internalFormat)) {
+         /* From the AMD_framebuffer_multisample_advanced spec:
+          *
+          *    "An INVALID_OPERATION error is generated if <internalformat>
+          *     is a color format and <storageSamples> is greater than
+          *     the implementation-dependent limit MAX_COLOR_FRAMEBUFFER_-
+          *     STORAGE_SAMPLES_AMD."
+          */
+         if (samples > ctx->Const.MaxColorFramebufferSamples)
+            return GL_INVALID_OPERATION;
+
+         /* From the AMD_framebuffer_multisample_advanced spec:
+          *
+          *    "An INVALID_OPERATION error is generated if <internalformat>
+          *     is a color format and <storageSamples> is greater than
+          *     the implementation-dependent limit MAX_COLOR_FRAMEBUFFER_-
+          *     STORAGE_SAMPLES_AMD."
+          */
+         if (storageSamples > ctx->Const.MaxColorFramebufferStorageSamples)
+            return GL_INVALID_OPERATION;
+
+         /* From the AMD_framebuffer_multisample_advanced spec:
+          *
+          *    "An INVALID_OPERATION error is generated if <storageSamples> is
+          *     greater than <samples>."
+          */
+         if (storageSamples > samples)
+            return GL_INVALID_OPERATION;
+
+         /* Color renderbuffer sample counts are now fully validated
+          * according to AMD_framebuffer_multisample_advanced.
+          */
+         return GL_NO_ERROR;
+      } else {
+         /* From the AMD_framebuffer_multisample_advanced spec:
+          *
+          *    "An INVALID_OPERATION error is generated if <internalformat> is
+          *     a depth or stencil format and <storageSamples> is not equal to
+          *     <samples>."
+          */
+         if (storageSamples != samples)
+            return GL_INVALID_OPERATION;
+      }
+   } else {
+      /* If the extension is unsupported, it's not possible to set
+       * storageSamples differently.
+       */
+      assert(samples == storageSamples);
+   }
+
    /* If ARB_internalformat_query is supported, then treat its highest
     * returned sample count as the absolute maximum for this format; it is
     * allowed to exceed MAX_SAMPLES.
