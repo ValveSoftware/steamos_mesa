@@ -673,6 +673,23 @@ make_separate_stencil_surface(struct brw_context *brw,
    return true;
 }
 
+/* Return the usual surface usage flags for the given format. */
+static isl_surf_usage_flags_t
+mt_surf_usage(mesa_format format)
+{
+   switch(_mesa_get_format_base_format(format)) {
+   case GL_DEPTH_COMPONENT:
+      return ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT;
+   case GL_DEPTH_STENCIL:
+      return ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_STENCIL_BIT |
+             ISL_SURF_USAGE_TEXTURE_BIT;
+   case GL_STENCIL_INDEX:
+      return ISL_SURF_USAGE_STENCIL_BIT | ISL_SURF_USAGE_TEXTURE_BIT;
+   default:
+      return ISL_SURF_USAGE_RENDER_TARGET_BIT | ISL_SURF_USAGE_TEXTURE_BIT;
+   }
+}
+
 static struct intel_mipmap_tree *
 miptree_create(struct brw_context *brw,
                GLenum target,
@@ -709,8 +726,7 @@ miptree_create(struct brw_context *brw,
       return make_surface(brw, target, mt_fmt, first_level, last_level,
                           width0, height0, depth0, num_samples,
                           tiling_flags,
-                          ISL_SURF_USAGE_STENCIL_BIT |
-                          ISL_SURF_USAGE_TEXTURE_BIT,
+                          mt_surf_usage(mt_fmt),
                           alloc_flags,
                           0,
                           NULL);
@@ -722,7 +738,7 @@ miptree_create(struct brw_context *brw,
          brw, target, mt_fmt,
          first_level, last_level,
          width0, height0, depth0, num_samples, tiling_flags,
-         ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
+         mt_surf_usage(mt_fmt),
          alloc_flags, 0, NULL);
 
       if (needs_separate_stencil(brw, mt, format) &&
@@ -742,8 +758,7 @@ miptree_create(struct brw_context *brw,
                                      first_level, last_level,
                                      width0, height0, depth0,
                                      num_samples, tiling_flags,
-                                     ISL_SURF_USAGE_RENDER_TARGET_BIT |
-                                     ISL_SURF_USAGE_TEXTURE_BIT,
+                                     mt_surf_usage(mt_fmt),
                                      alloc_flags, 0, NULL);
    if (!mt)
       return NULL;
@@ -812,12 +827,11 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
    if ((base_format == GL_DEPTH_COMPONENT ||
         base_format == GL_DEPTH_STENCIL)) {
-      const mesa_format depth_only_format =
+      const mesa_format mt_fmt = (devinfo->gen < 6) ? format :
          intel_depth_format_for_depthstencil_format(format);
-      mt = make_surface(brw, target,
-                        devinfo->gen >= 6 ? depth_only_format : format,
+      mt = make_surface(brw, target, mt_fmt,
                         0, 0, width, height, depth, 1, ISL_TILING_Y0_BIT,
-                        ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
+                        mt_surf_usage(mt_fmt),
                         0, pitch, bo);
       if (!mt)
          return NULL;
@@ -832,8 +846,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
       mt = make_surface(brw, target, MESA_FORMAT_S_UINT8,
                         0, 0, width, height, depth, 1,
                         ISL_TILING_W_BIT,
-                        ISL_SURF_USAGE_STENCIL_BIT |
-                        ISL_SURF_USAGE_TEXTURE_BIT,
+                        mt_surf_usage(MESA_FORMAT_S_UINT8),
                         0, pitch, bo);
       if (!mt)
          return NULL;
@@ -858,8 +871,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
    mt = make_surface(brw, target, format,
                      0, 0, width, height, depth, 1,
                      1lu << tiling,
-                     ISL_SURF_USAGE_RENDER_TARGET_BIT |
-                     ISL_SURF_USAGE_TEXTURE_BIT,
+                     mt_surf_usage(format),
                      0, pitch, bo);
    if (!mt)
       return NULL;
