@@ -445,7 +445,8 @@ int main() {
     struct {
         uint64_t *v;
     } x;
-    return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
+    return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE) &
+           (int)__atomic_add_fetch(x.v, (uint64_t)1, __ATOMIC_ACQ_REL);
 }]])], GCC_ATOMIC_BUILTINS_SUPPORTED=yes, GCC_ATOMIC_BUILTINS_SUPPORTED=no)
 
 dnl If that didn't work, we try linking with -latomic, which is needed on some
@@ -459,7 +460,8 @@ if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" != xyes; then
         struct {
             uint64_t *v;
         } x;
-        return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE);
+        return (int)__atomic_load_n(x.v, __ATOMIC_ACQUIRE) &
+               (int)__atomic_add_fetch(x.v, (uint64_t)1, __ATOMIC_ACQ_REL);
    }]])], GCC_ATOMIC_BUILTINS_SUPPORTED=yes LIBATOMIC_LIBS="-latomic",
           GCC_ATOMIC_BUILTINS_SUPPORTED=no)
    LDFLAGS=$save_LDFLAGS
