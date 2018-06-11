@@ -52,8 +52,9 @@ appropriate, you should ask your question on `Freenode's #dri-devel
 necessary.
 Remember that not everyone is in the same timezone as you, so it might
 take a while before someone qualified sees your question.
-To figure out who you're talking to or who to ping on your question,
-check out `Who's Who on IRC <https://dri.freedesktop.org/wiki/WhosWho/>`_
+To figure out who you're talking to, or which nick to ping for your
+question, check out `Who's Who on IRC
+<https://dri.freedesktop.org/wiki/WhosWho/>`_.
 
 The next best option is to ask your question in an email to the
 mailing lists: `mesa-dev\@lists.freedesktop.org
