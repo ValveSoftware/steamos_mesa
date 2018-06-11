@@ -2216,7 +2216,8 @@ invalidate_rb(GLuint key, void *data, void *userData)
 void
 _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
                            GLenum internalFormat, GLsizei width,
-                           GLsizei height, GLsizei samples)
+                           GLsizei height, GLsizei samples,
+                           GLsizei storageSamples)
 {
    const GLenum baseFormat = _mesa_base_fbo_format(ctx, internalFormat);
 
@@ -2227,7 +2228,8 @@ _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
    if (samples != 0) {
       assert(samples > 0);
       assert(_mesa_check_sample_count(ctx, GL_RENDERBUFFER,
-                                      internalFormat, samples) == GL_NO_ERROR);
+                                      internalFormat, samples,
+                                      storageSamples) == GL_NO_ERROR);
    }
 
    FLUSH_VERTICES(ctx, _NEW_BUFFERS);
@@ -2279,7 +2281,8 @@ _mesa_renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
 static void
 renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
                      GLenum internalFormat, GLsizei width,
-                     GLsizei height, GLsizei samples, const char *func)
+                     GLsizei height, GLsizei samples, GLsizei storageSamples,
+                     const char *func)
 {
    GLenum baseFormat;
    GLenum sample_count_error;
@@ -2306,30 +2309,34 @@ renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
    if (samples == NO_SAMPLES) {
       /* NumSamples == 0 indicates non-multisampling */
       samples = 0;
+      storageSamples = 0;
    }
    else {
       /* check the sample count;
        * note: driver may choose to use more samples than what's requested
        */
       sample_count_error = _mesa_check_sample_count(ctx, GL_RENDERBUFFER,
-            internalFormat, samples);
+            internalFormat, samples, storageSamples);
 
       /* Section 2.5 (GL Errors) of OpenGL 3.0 specification, page 16:
        *
        * "If a negative number is provided where an argument of type sizei or
        * sizeiptr is specified, the error INVALID VALUE is generated."
        */
-      if (samples < 0) {
+      if (samples < 0 || storageSamples < 0) {
          sample_count_error = GL_INVALID_VALUE;
       }
 
       if (sample_count_error != GL_NO_ERROR) {
-         _mesa_error(ctx, sample_count_error, "%s(samples=%d)", func, samples);
+         _mesa_error(ctx, sample_count_error,
+                     "%s(samples=%d, storageSamples=%d)", func, samples,
+                     storageSamples);
          return;
       }
    }
 
-   _mesa_renderbuffer_storage(ctx, rb, internalFormat, width, height, samples);
+   _mesa_renderbuffer_storage(ctx, rb, internalFormat, width, height, samples,
+                              storageSamples);
 }
 
 /**
@@ -2339,7 +2346,7 @@ renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
 static void
 renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
                            GLsizei width, GLsizei height, GLsizei samples,
-                           const char *func)
+                           GLsizei storageSamples, const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
 
@@ -2364,7 +2371,8 @@ renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
       return;
    }
 
-   renderbuffer_storage(ctx, rb, internalFormat, width, height, samples, func);
+   renderbuffer_storage(ctx, rb, internalFormat, width, height, samples,
+                        storageSamples, func);
 }
 
 /**
@@ -2375,7 +2383,7 @@ renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
 static void
 renderbuffer_storage_target(GLenum target, GLenum internalFormat,
                             GLsizei width, GLsizei height, GLsizei samples,
-                            const char *func)
+                            GLsizei storageSamples, const char *func)
 {
    GET_CURRENT_CONTEXT(ctx);
 
@@ -2406,7 +2414,7 @@ renderbuffer_storage_target(GLenum target, GLenum internalFormat,
    }
 
    renderbuffer_storage(ctx, ctx->CurrentRenderbuffer, internalFormat, width,
-                        height, samples, func);
+                        height, samples, storageSamples, func);
 }
 
 
@@ -2469,7 +2477,7 @@ _mesa_RenderbufferStorage(GLenum target, GLenum internalFormat,
     * a token value here just for error reporting purposes.
     */
    renderbuffer_storage_target(target, internalFormat, width, height,
-                               NO_SAMPLES, "glRenderbufferStorage");
+                               NO_SAMPLES, 0, "glRenderbufferStorage");
 }
 
 
@@ -2479,7 +2487,8 @@ _mesa_RenderbufferStorageMultisample(GLenum target, GLsizei samples,
                                      GLsizei width, GLsizei height)
 {
    renderbuffer_storage_target(target, internalFormat, width, height,
-                               samples, "glRenderbufferStorageMultisample");
+                               samples, samples,
+                               "glRenderbufferStorageMultisample");
 }
 
 
@@ -2500,7 +2509,7 @@ _es_RenderbufferStorageEXT(GLenum target, GLenum internalFormat,
       break;
    }
 
-   renderbuffer_storage_target(target, internalFormat, width, height, 0,
+   renderbuffer_storage_target(target, internalFormat, width, height, 0, 0,
                                "glRenderbufferStorageEXT");
 }
 
@@ -2513,7 +2522,7 @@ _mesa_NamedRenderbufferStorage(GLuint renderbuffer, GLenum internalformat,
     * a token value here just for error reporting purposes.
     */
    renderbuffer_storage_named(renderbuffer, internalformat, width, height,
-                              NO_SAMPLES, "glNamedRenderbufferStorage");
+                              NO_SAMPLES, 0, "glNamedRenderbufferStorage");
 }
 
 void GLAPIENTRY
@@ -2522,7 +2531,7 @@ _mesa_NamedRenderbufferStorageMultisample(GLuint renderbuffer, GLsizei samples,
                                           GLsizei width, GLsizei height)
 {
    renderbuffer_storage_named(renderbuffer, internalformat, width, height,
-                              samples,
+                              samples, samples,
                               "glNamedRenderbufferStorageMultisample");
 }
 

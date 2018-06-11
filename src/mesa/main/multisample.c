@@ -209,7 +209,8 @@ _mesa_MinSampleShading(GLclampf value)
  */
 GLenum
 _mesa_check_sample_count(struct gl_context *ctx, GLenum target,
-                         GLenum internalFormat, GLsizei samples)
+                         GLenum internalFormat, GLsizei samples,
+                         GLsizei storageSamples)
 {
    /* Section 4.4 (Framebuffer objects), page 198 of the OpenGL ES 3.0.0
     * specification says:
