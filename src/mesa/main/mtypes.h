@@ -3937,6 +3937,21 @@ struct gl_constants
    GLint MaxDepthTextureSamples;
    GLint MaxIntegerSamples;
 
+   /** GL_AMD_framebuffer_multisample_advanced */
+   GLint MaxColorFramebufferSamples;
+   GLint MaxColorFramebufferStorageSamples;
+   GLint MaxDepthStencilFramebufferSamples;
+
+   /* An array of supported MSAA modes allowing different sample
+    * counts per attachment type.
+    */
+   struct {
+      GLint NumColorSamples;
+      GLint NumColorStorageSamples;
+      GLint NumDepthStencilSamples;
+   } SupportedMultisampleModes[40];
+   GLint NumSupportedMultisampleModes;
+
    /**
     * GL_EXT_texture_multisample_blit_scaled implementation assumes that
     * samples are laid out in a rectangular grid roughly corresponding to
@@ -4235,6 +4250,7 @@ struct gl_extensions
    GLboolean OES_texture_view;
    GLboolean OES_viewport_array;
    /* vendor extensions */
+   GLboolean AMD_framebuffer_multisample_advanced;
    GLboolean AMD_performance_monitor;
    GLboolean AMD_pinned_memory;
    GLboolean AMD_seamless_cubemap_per_texture;
