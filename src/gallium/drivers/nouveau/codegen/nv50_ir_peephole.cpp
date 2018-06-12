@@ -283,6 +283,8 @@ class IndirectPropagation : public Pass
 {
 private:
    virtual bool visit(BasicBlock *);
+
+   BuildUtil bld;
 };
 
 bool
@@ -293,6 +295,8 @@ IndirectPropagation::visit(BasicBlock *bb)
 
    for (Instruction *i = bb->getEntry(); i; i = next) {
       next = i->next;
+
+      bld.setPosition(i, false);
 
       for (int s = 0; i->srcExists(s); ++s) {
          Instruction *insn;
@@ -323,6 +327,14 @@ IndirectPropagation::visit(BasicBlock *bb)
                 !targ->insnCanLoadOffset(i, s, imm.reg.data.s32))
                continue;
             i->setIndirect(s, 0, NULL);
+            i->setSrc(s, cloneShallow(func, i->getSrc(s)));
+            i->src(s).get()->reg.data.offset += imm.reg.data.u32;
+         } else if (insn->op == OP_SHLADD) {
+            if (!insn->src(2).getImmediate(imm) ||
+                !targ->insnCanLoadOffset(i, s, imm.reg.data.s32))
+               continue;
+            i->setIndirect(s, 0, bld.mkOp2v(
+               OP_SHL, TYPE_U32, bld.getSSA(), insn->getSrc(0), insn->getSrc(1)));
             i->setSrc(s, cloneShallow(func, i->getSrc(s)));
             i->src(s).get()->reg.data.offset += imm.reg.data.u32;
          }
