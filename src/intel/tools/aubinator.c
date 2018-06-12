@@ -56,8 +56,8 @@
 
 /* options */
 
-static bool option_full_decode = true;
-static bool option_print_offsets = true;
+static int option_full_decode = true;
+static int option_print_offsets = true;
 static int max_vbo_lines = -1;
 static enum { COLOR_AUTO, COLOR_ALWAYS, COLOR_NEVER } option_color;
 
