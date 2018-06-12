@@ -699,8 +699,7 @@ miptree_create(struct brw_context *brw,
 
    const GLenum base_format = _mesa_get_format_base_format(format);
    if ((base_format == GL_DEPTH_COMPONENT ||
-        base_format == GL_DEPTH_STENCIL) &&
-       !(flags & MIPTREE_CREATE_LINEAR)) {
+        base_format == GL_DEPTH_STENCIL)) {
       /* Fix up the Z miptree format for how we're splitting out separate
        * stencil.  Gen7 expects there to be no stencil bits in its depth buffer.
        */
@@ -736,8 +735,7 @@ miptree_create(struct brw_context *brw,
    if (flags & MIPTREE_CREATE_BUSY)
       alloc_flags |= BO_ALLOC_BUSY;
 
-   isl_tiling_flags_t tiling_flags = (flags & MIPTREE_CREATE_LINEAR) ?
-      ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
+   isl_tiling_flags_t tiling_flags = ISL_TILING_ANY_MASK;
 
    /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
    if (devinfo->gen < 6)
@@ -860,11 +858,6 @@ intel_miptree_create_for_bo(struct brw_context *brw,
     * that's outside of the scope of the mt.
     */
    assert(pitch >= 0);
-
-   /* The BO already has a tiling format and we shouldn't confuse the lower
-    * layers by making it try to find a tiling format again.
-    */
-   assert((flags & MIPTREE_CREATE_LINEAR) == 0);
 
    mt = make_surface(brw, target, format,
                      0, 0, width, height, depth, 1,

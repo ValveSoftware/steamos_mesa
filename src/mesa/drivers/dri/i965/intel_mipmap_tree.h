@@ -370,16 +370,13 @@ enum intel_miptree_create_flags {
     */
    MIPTREE_CREATE_BUSY     = 1 << 0,
 
-   /** Create a linear (not tiled) miptree */
-   MIPTREE_CREATE_LINEAR   = 1 << 1,
-
    /** Create the miptree with auxiliary compression disabled
     *
     * This does not prevent the caller of intel_miptree_create from coming
     * along later and turning auxiliary compression back on but it does mean
     * that the miptree will be created with mt->aux_usage == NONE.
     */
-   MIPTREE_CREATE_NO_AUX   = 1 << 2,
+   MIPTREE_CREATE_NO_AUX   = 1 << 1,
 };
 
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
