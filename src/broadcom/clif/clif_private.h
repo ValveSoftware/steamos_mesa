@@ -33,6 +33,7 @@ struct clif_bo {
         uint32_t offset;
         uint32_t size;
         void *vaddr;
+        bool dumped;
 };
 
 struct clif_dump {
