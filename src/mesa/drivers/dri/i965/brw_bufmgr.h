@@ -37,6 +37,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <time.h>
+
 #include "util/u_atomic.h"
 #include "util/list.h"
 
