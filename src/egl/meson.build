@@ -140,8 +140,6 @@ if with_platform_haiku
   deps_for_egl += cpp.find_library('be')
 endif
 
-# TODO: glvnd
-
 if cc.has_function('mincore')
   c_args_for_egl += '-DHAVE_MINCORE'
 endif

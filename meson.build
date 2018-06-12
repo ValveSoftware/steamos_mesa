@@ -1217,8 +1217,6 @@ if get_option('selinux')
   pre_args += '-DMESA_SELINUX'
 endif
 
-# TODO: llvm-prefix and llvm-shared-libs
-
 if with_libunwind != 'false'
   dep_unwind = dependency('libunwind', required : with_libunwind == 'true')
   if dep_unwind.found()
@@ -1227,8 +1225,6 @@ if with_libunwind != 'false'
 else
   dep_unwind = null_dep
 endif
-
-# TODO: gallium-hud
 
 if with_osmesa != 'none'
   if with_osmesa == 'classic' and not with_dri_swrast
@@ -1353,10 +1349,6 @@ if _sensors != 'false'
 else
   dep_lmsensors = null_dep
 endif
-
-# TODO: various libdirs
-
-# TODO: gallium driver dirs
 
 foreach a : pre_args
   add_project_arguments(a, language : ['c', 'cpp'])
