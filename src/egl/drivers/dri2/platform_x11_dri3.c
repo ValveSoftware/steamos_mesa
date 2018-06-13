@@ -281,7 +281,7 @@ dri3_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
       return NULL;
    }
 
-   format = dri2_format_for_depth(bp_reply->depth);
+   format = dri2_format_for_depth(dri2_dpy, bp_reply->depth);
    if (format == __DRI_IMAGE_FORMAT_NONE) {
       _eglError(EGL_BAD_PARAMETER,
                 "dri3_create_image_khr: unsupported pixmap depth");
@@ -333,7 +333,7 @@ dri3_create_image_khr_pixmap_from_buffers(_EGLDisplay *disp, _EGLContext *ctx,
       return EGL_NO_IMAGE_KHR;
    }
 
-   format = dri2_format_for_depth(bp_reply->depth);
+   format = dri2_format_for_depth(dri2_dpy, bp_reply->depth);
    if (format == __DRI_IMAGE_FORMAT_NONE) {
       _eglError(EGL_BAD_PARAMETER,
                 "dri3_create_image_khr: unsupported pixmap depth");
