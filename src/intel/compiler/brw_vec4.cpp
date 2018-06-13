@@ -810,6 +810,14 @@ vec4_visitor::opt_algebraic()
          }
          break;
 
+      case BRW_OPCODE_OR:
+         if (inst->src[1].is_zero()) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[1] = src_reg();
+            progress = true;
+         }
+         break;
+
       case VEC4_OPCODE_UNPACK_UNIFORM:
          if (inst->src[0].file != UNIFORM) {
             inst->opcode = BRW_OPCODE_MOV;
