@@ -170,7 +170,6 @@ TargetGM107::isBarrierRequired(const Instruction *insn) const
       }
       break;
    case OPCLASS_ARITH:
-      // TODO: IMUL/IMAD require barriers too, use of XMAD instead!
       if ((insn->op == OP_MUL || insn->op == OP_MAD) &&
           !isFloatType(insn->dType))
          return true;
