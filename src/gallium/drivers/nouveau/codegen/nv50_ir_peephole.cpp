@@ -379,6 +379,8 @@ private:
 
    CmpInstruction *findOriginForTestWithZero(Value *);
 
+   bool createMul(DataType ty, Value *def, Value *a, int64_t b, Value *c);
+
    unsigned int foldCount;
 
    BuildUtil bld;
@@ -953,10 +955,27 @@ ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
    }
 }
 
+bool
+ConstantFolding::createMul(DataType ty, Value *def, Value *a, int64_t b, Value *c)
+{
+   //a * (2^shl) -> a << shl
+   if (b >= 0 && util_is_power_of_two_or_zero64(b)) {
+      int shl = util_logbase2_64(b);
+
+      Value *res = c ? bld.getSSA() : def;
+      bld.mkOp2(OP_SHL, ty, res, a, bld.mkImm(shl));
+      if (c)
+         bld.mkOp2(OP_ADD, ty, def, res, c);
+
+      return true;
+   }
+
+   return false;
+}
+
 void
 ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 {
-   const Target *target = prog->getTarget();
    const int t = !s;
    const operation op = i->op;
    Instruction *newi = i;
@@ -1040,13 +1059,11 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->setSrc(s, i->getSrc(t));
          i->src(s).mod = i->src(t).mod;
       } else
-      if (!isFloatType(i->sType) && !imm0.isNegative() && imm0.isPow2()) {
-         i->op = OP_SHL;
-         imm0.applyLog2();
-         i->setSrc(0, i->getSrc(t));
-         i->src(0).mod = i->src(t).mod;
-         i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
-         i->src(1).mod = 0;
+      if (!isFloatType(i->dType) && !i->src(t).mod) {
+         bld.setPosition(i, false);
+         int64_t b = typeSizeof(i->dType) == 8 ? imm0.reg.data.s64 : imm0.reg.data.s32;
+         if (createMul(i->dType, i->getDef(0), i->getSrc(t), b, NULL))
+            delete_Instruction(prog, i);
       } else
       if (i->postFactor && i->sType == TYPE_F32) {
          /* Can't emit a postfactor with an immediate, have to fold it in */
@@ -1079,13 +1096,11 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->setSrc(2, NULL);
          i->op = OP_ADD;
       } else
-      if (s == 1 && !imm0.isNegative() && imm0.isPow2() &&
-          !isFloatType(i->dType) &&
-          target->isOpSupported(OP_SHLADD, i->dType) &&
-          !i->subOp) {
-         i->op = OP_SHLADD;
-         imm0.applyLog2();
-         i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
+      if (!isFloatType(i->dType) && !i->subOp && !i->src(t).mod && !i->src(2).mod) {
+         bld.setPosition(i, false);
+         int64_t b = typeSizeof(i->dType) == 8 ? imm0.reg.data.s64 : imm0.reg.data.s32;
+         if (createMul(i->dType, i->getDef(0), i->getSrc(t), b, i->getSrc(2)))
+            delete_Instruction(prog, i);
       }
       break;
    case OP_SUB:
