@@ -111,6 +111,60 @@ cmod_propagate_cmp_to_add(const gen_device_info *devinfo, bblock_t *block,
    return false;
 }
 
+/**
+ * Propagate conditional modifiers from NOT instructions
+ *
+ * Attempt to convert sequences like
+ *
+ *    or(8)           g78<8,8,1>      g76<8,8,1>UD    g77<8,8,1>UD
+ *    ...
+ *    not.nz.f0(8)    null            g78<8,8,1>UD
+ *
+ * into
+ *
+ *    or.z.f0(8)      g78<8,8,1>      g76<8,8,1>UD    g77<8,8,1>UD
+ */
+static bool
+cmod_propagate_not(const gen_device_info *devinfo, bblock_t *block,
+                   fs_inst *inst)
+{
+   const enum brw_conditional_mod cond = brw_negate_cmod(inst->conditional_mod);
+   bool read_flag = false;
+
+   if (cond != BRW_CONDITIONAL_Z && cond != BRW_CONDITIONAL_NZ)
+      return false;
+
+   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
+      if (regions_overlap(scan_inst->dst, scan_inst->size_written,
+                          inst->src[0], inst->size_read(0))) {
+         if (scan_inst->opcode != BRW_OPCODE_OR &&
+             scan_inst->opcode != BRW_OPCODE_AND)
+            break;
+
+         if (scan_inst->is_partial_write() ||
+             scan_inst->dst.offset != inst->src[0].offset ||
+             scan_inst->exec_size != inst->exec_size)
+            break;
+
+         if (scan_inst->can_do_cmod() &&
+             ((!read_flag && scan_inst->conditional_mod == BRW_CONDITIONAL_NONE) ||
+              scan_inst->conditional_mod == cond)) {
+            scan_inst->conditional_mod = cond;
+            inst->remove(block);
+            return true;
+         }
+         break;
+      }
+
+      if (scan_inst->flags_written())
+         break;
+
+      read_flag = read_flag || scan_inst->flags_read(devinfo);
+   }
+
+   return false;
+}
+
 static bool
 opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
 {
@@ -122,7 +176,8 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
 
       if ((inst->opcode != BRW_OPCODE_AND &&
            inst->opcode != BRW_OPCODE_CMP &&
-           inst->opcode != BRW_OPCODE_MOV) ||
+           inst->opcode != BRW_OPCODE_MOV &&
+           inst->opcode != BRW_OPCODE_NOT) ||
           inst->predicate != BRW_PREDICATE_NONE ||
           !inst->dst.is_null() ||
           (inst->src[0].file != VGRF && inst->src[0].file != ATTR &&
@@ -159,6 +214,11 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
        */
       if (inst->opcode == BRW_OPCODE_CMP && !inst->src[1].is_zero()) {
          progress = cmod_propagate_cmp_to_add(devinfo, block, inst) || progress;
+         continue;
+      }
+
+      if (inst->opcode == BRW_OPCODE_NOT) {
+         progress = cmod_propagate_not(devinfo, block, inst) || progress;
          continue;
       }
 
