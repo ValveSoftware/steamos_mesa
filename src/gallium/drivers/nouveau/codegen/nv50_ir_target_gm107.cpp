@@ -59,6 +59,7 @@ TargetGM107::isOpSupported(operation op, DataType ty) const
    case OP_POW:
    case OP_DIV:
    case OP_MOD:
+   case OP_XMAD:
       return false;
    case OP_SQRT:
       if (ty == TYPE_F64)
