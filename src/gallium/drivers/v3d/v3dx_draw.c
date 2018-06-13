@@ -371,7 +371,8 @@ v3d_update_job_ez(struct v3d_context *v3d, struct v3d_job *job)
                 job->ez_state = VC5_EZ_DISABLED;
         }
 
-        if (job->first_ez_state == VC5_EZ_UNDECIDED)
+        if (job->first_ez_state == VC5_EZ_UNDECIDED &&
+            (job->ez_state != VC5_EZ_DISABLED || job->draw_calls_queued == 0))
                 job->first_ez_state = job->ez_state;
 }
 
