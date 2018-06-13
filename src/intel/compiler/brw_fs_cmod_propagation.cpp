@@ -49,6 +49,77 @@
  */
 
 static bool
+cmod_propagate_cmp_to_add(const gen_device_info *devinfo, bblock_t *block,
+                          fs_inst *inst)
+{
+   bool read_flag = false;
+
+   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
+      /* The extra scope is to prevent compiler errors for gotos crossing a
+       * variable initializer (cond, below).
+       */
+      {
+         bool negate;
+
+         if (scan_inst->opcode != BRW_OPCODE_ADD)
+            goto not_match;
+
+         /* A CMP is basically a subtraction.  The result of the
+          * subtraction must be the same as the result of the addition.
+          * This means that one of the operands must be negated.  So (a +
+          * b) vs (a == -b) or (a + -b) vs (a == b).
+          */
+         if ((inst->src[0].equals(scan_inst->src[0]) &&
+              inst->src[1].negative_equals(scan_inst->src[1])) ||
+             (inst->src[0].equals(scan_inst->src[1]) &&
+              inst->src[1].negative_equals(scan_inst->src[0]))) {
+            negate = false;
+         } else if ((inst->src[0].negative_equals(scan_inst->src[0]) &&
+                     inst->src[1].equals(scan_inst->src[1])) ||
+                    (inst->src[0].negative_equals(scan_inst->src[1]) &&
+                     inst->src[1].equals(scan_inst->src[0]))) {
+            negate = true;
+         } else {
+            goto not_match;
+         }
+
+         if (scan_inst->is_partial_write() ||
+             scan_inst->exec_size != inst->exec_size)
+            goto not_match;
+
+         /* From the Sky Lake PRM Vol. 7 "Assigning Conditional Mods":
+          *
+          *    * Note that the [post condition signal] bits generated at
+          *      the output of a compute are before the .sat.
+          *
+          * So we don't have to bail if scan_inst has saturate.
+          */
+         /* Otherwise, try propagating the conditional. */
+         const enum brw_conditional_mod cond =
+            negate ? brw_swap_cmod(inst->conditional_mod)
+            : inst->conditional_mod;
+
+         if (scan_inst->can_do_cmod() &&
+             ((!read_flag && scan_inst->conditional_mod == BRW_CONDITIONAL_NONE) ||
+              scan_inst->conditional_mod == cond)) {
+            scan_inst->conditional_mod = cond;
+            inst->remove(block);
+            return true;
+         }
+         break;
+      }
+
+   not_match:
+      if (scan_inst->flags_written())
+         break;
+
+      read_flag = read_flag || scan_inst->flags_read(devinfo);
+   }
+
+   return false;
+}
+
+static bool
 opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
 {
    bool progress = false;
@@ -90,64 +161,17 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
           inst->conditional_mod != BRW_CONDITIONAL_NZ)
          continue;
 
+      /* A CMP with a second source of zero can match with anything.  A CMP
+       * with a second source that is not zero can only match with an ADD
+       * instruction.
+       */
+      if (inst->opcode == BRW_OPCODE_CMP && !inst->src[1].is_zero()) {
+         progress = cmod_propagate_cmp_to_add(devinfo, block, inst) || progress;
+         continue;
+      }
+
       bool read_flag = false;
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-         /* A CMP with a second source of zero can match with anything.  A CMP
-          * with a second source that is not zero can only match with an ADD
-          * instruction.
-          */
-         if (inst->opcode == BRW_OPCODE_CMP && !inst->src[1].is_zero()) {
-            bool negate;
-
-            if (scan_inst->opcode != BRW_OPCODE_ADD)
-               goto not_match;
-
-            /* A CMP is basically a subtraction.  The result of the
-             * subtraction must be the same as the result of the addition.
-             * This means that one of the operands must be negated.  So (a +
-             * b) vs (a == -b) or (a + -b) vs (a == b).
-             */
-            if ((inst->src[0].equals(scan_inst->src[0]) &&
-                 inst->src[1].negative_equals(scan_inst->src[1])) ||
-                (inst->src[0].equals(scan_inst->src[1]) &&
-                 inst->src[1].negative_equals(scan_inst->src[0]))) {
-               negate = false;
-            } else if ((inst->src[0].negative_equals(scan_inst->src[0]) &&
-                        inst->src[1].equals(scan_inst->src[1])) ||
-                       (inst->src[0].negative_equals(scan_inst->src[1]) &&
-                        inst->src[1].equals(scan_inst->src[0]))) {
-               negate = true;
-            } else {
-               goto not_match;
-            }
-
-            if (scan_inst->is_partial_write() ||
-                scan_inst->exec_size != inst->exec_size)
-               goto not_match;
-
-            /* From the Sky Lake PRM Vol. 7 "Assigning Conditional Mods":
-             *
-             *    * Note that the [post condition signal] bits generated at
-             *      the output of a compute are before the .sat.
-             *
-             * So we don't have to bail if scan_inst has saturate.
-             */
-
-            /* Otherwise, try propagating the conditional. */
-            const enum brw_conditional_mod cond =
-               negate ? brw_swap_cmod(inst->conditional_mod)
-                      : inst->conditional_mod;
-
-            if (scan_inst->can_do_cmod() &&
-                ((!read_flag && scan_inst->conditional_mod == BRW_CONDITIONAL_NONE) ||
-                 scan_inst->conditional_mod == cond)) {
-               scan_inst->conditional_mod = cond;
-               inst->remove(block);
-               progress = true;
-            }
-            break;
-         }
-
          if (regions_overlap(scan_inst->dst, scan_inst->size_written,
                              inst->src[0], inst->size_read(0))) {
             if (scan_inst->is_partial_write() ||
@@ -242,7 +266,6 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
             break;
          }
 
-      not_match:
          if (scan_inst->flags_written())
             break;
 
