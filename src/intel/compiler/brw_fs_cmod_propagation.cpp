@@ -55,14 +55,10 @@ cmod_propagate_cmp_to_add(const gen_device_info *devinfo, bblock_t *block,
    bool read_flag = false;
 
    foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-      /* The extra scope is to prevent compiler errors for gotos crossing a
-       * variable initializer (cond, below).
-       */
-      {
+      if (scan_inst->opcode == BRW_OPCODE_ADD &&
+          !scan_inst->is_partial_write() &&
+          scan_inst->exec_size == inst->exec_size) {
          bool negate;
-
-         if (scan_inst->opcode != BRW_OPCODE_ADD)
-            goto not_match;
 
          /* A CMP is basically a subtraction.  The result of the
           * subtraction must be the same as the result of the addition.
@@ -82,10 +78,6 @@ cmod_propagate_cmp_to_add(const gen_device_info *devinfo, bblock_t *block,
          } else {
             goto not_match;
          }
-
-         if (scan_inst->is_partial_write() ||
-             scan_inst->exec_size != inst->exec_size)
-            goto not_match;
 
          /* From the Sky Lake PRM Vol. 7 "Assigning Conditional Mods":
           *
