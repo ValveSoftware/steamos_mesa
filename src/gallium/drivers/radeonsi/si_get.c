@@ -920,8 +920,8 @@ static void si_query_memory_info(struct pipe_screen *screen,
 	 *
 	 * Instead, return statistics of this process.
 	 */
-	vram_usage = ws->query_value(ws, RADEON_REQUESTED_VRAM_MEMORY) / 1024;
-	gtt_usage =  ws->query_value(ws, RADEON_REQUESTED_GTT_MEMORY) / 1024;
+	vram_usage = ws->query_value(ws, RADEON_VRAM_USAGE) / 1024;
+	gtt_usage =  ws->query_value(ws, RADEON_GTT_USAGE) / 1024;
 
 	info->avail_device_memory =
 		vram_usage <= info->total_device_memory ?
