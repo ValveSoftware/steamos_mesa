@@ -70,13 +70,21 @@ fd5_delete_compute_state(struct pipe_context *pctx, void *hwcso)
 
 /* maybe move to fd5_program? */
 static void
-cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v)
+cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v,
+		const struct pipe_grid_info *info)
 {
+	const unsigned *local_size = info->block;
 	const struct ir3_info *i = &v->info;
 	enum a3xx_threadsize thrsz;
 
-	/* note: blob uses local_size_x/y/z threshold to choose threadsize: */
-	thrsz = FOUR_QUADS;
+	/* maybe the limit should be 1024.. basically if we can't have full
+	 * occupancy, use TWO_QUAD mode to reduce divergence penalty.
+	 */
+	if ((local_size[0] * local_size[1] * local_size[2]) < 512) {
+		thrsz = TWO_QUADS;
+	} else {
+		thrsz = FOUR_QUADS;
+	}
 
 	OUT_PKT4(ring, REG_A5XX_SP_SP_CNTL, 1);
 	OUT_RING(ring, 0x00000000);        /* SP_SP_CNTL */
@@ -175,7 +183,7 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 	v = ir3_shader_variant(so->shader, key, &ctx->debug);
 
 	if (ctx->dirty_shader[PIPE_SHADER_COMPUTE] & FD_DIRTY_SHADER_PROG)
-		cs_program_emit(ring, v);
+		cs_program_emit(ring, v, info);
 
 	fd5_emit_cs_state(ctx, ring, v);
 	ir3_emit_cs_consts(v, ring, ctx, info);
