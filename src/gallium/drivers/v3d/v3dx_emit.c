@@ -431,8 +431,14 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 cl_emit(&job->bcl, DEPTH_OFFSET, depth) {
                         depth.depth_offset_factor =
                                 v3d->rasterizer->offset_factor;
-                        depth.depth_offset_units =
-                                v3d->rasterizer->offset_units;
+                        if (job->zsbuf &&
+                            job->zsbuf->format == PIPE_FORMAT_Z16_UNORM) {
+                                depth.depth_offset_units =
+                                        v3d->rasterizer->z16_offset_units;
+                        } else {
+                                depth.depth_offset_units =
+                                        v3d->rasterizer->offset_units;
+                        }
                 }
         }
 

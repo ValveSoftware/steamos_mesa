@@ -116,6 +116,7 @@ v3d_create_rasterizer_state(struct pipe_context *pctx,
 
         if (cso->offset_tri) {
                 so->offset_units = float_to_187_half(cso->offset_units);
+                so->z16_offset_units = float_to_187_half(cso->offset_units * 256.0);
                 so->offset_factor = float_to_187_half(cso->offset_scale);
         }
 
