@@ -215,7 +215,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum si_coherency coher)
+		     enum si_coherency coher, enum si_method xfer )
 {
 	struct radeon_winsys *ws = sctx->ws;
 	struct r600_resource *rdst = r600_resource(dst);
@@ -227,7 +227,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 	if (!size)
 		return;
 
-       dma_clear_size = size & ~3ull;
+	dma_clear_size = size & ~3ull;
 
 	/* Mark the buffer range of destination as valid (initialized),
 	 * so that transfer_map knows it should wait for the GPU when mapping
@@ -250,7 +250,9 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 	      * For example, DeusEx:MD has 21 buffer clears per frame and all
 	      * of them are moved to SDMA thanks to this. */
 	     !ws->cs_is_buffer_referenced(sctx->gfx_cs, rdst->buf,
-				          RADEON_USAGE_READWRITE))) {
+				          RADEON_USAGE_READWRITE)) &&
+	    /* bypass sdma transfer with param xfer */
+	    (xfer != SI_METHOD_CP_DMA)) {
 		sctx->dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
 
 		offset += dma_clear_size;
@@ -263,7 +265,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 
 		/* Flush the caches. */
 		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
+			       SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 		while (dma_clear_size) {
 			unsigned byte_count = MIN2(dma_clear_size, cp_dma_max_byte_count(sctx));
@@ -356,7 +358,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 	}
 
 	si_clear_buffer(sctx, dst, offset, size, dword_value,
-			SI_COHERENCY_SHADER);
+			SI_COHERENCY_SHADER, SI_METHOD_BEST);
 }
 
 /**

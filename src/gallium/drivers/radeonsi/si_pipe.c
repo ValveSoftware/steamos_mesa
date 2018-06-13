@@ -101,6 +101,7 @@ static const struct debug_named_value debug_options[] = {
 	{ "testvmfaultcp", DBG(TEST_VMFAULT_CP), "Invoke a CP VM fault test and exit." },
 	{ "testvmfaultsdma", DBG(TEST_VMFAULT_SDMA), "Invoke a SDMA VM fault test and exit." },
 	{ "testvmfaultshader", DBG(TEST_VMFAULT_SHADER), "Invoke a shader VM fault test and exit." },
+	{ "testclearbufperf", DBG(TEST_CLEARBUF_PERF), "Test Clearbuffer Performance" },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -545,7 +546,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		/* Clear the NULL constant buffer, because loads should return zeros. */
 		si_clear_buffer(sctx, sctx->null_const_buf.buffer, 0,
 				sctx->null_const_buf.buffer->width0, 0,
-				SI_COHERENCY_SHADER);
+				SI_COHERENCY_SHADER, SI_METHOD_BEST);
 	}
 
 	uint64_t max_threads_per_block;
@@ -1068,6 +1069,10 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 
 	if (sscreen->debug_flags & DBG(TEST_DMA))
 		si_test_dma(sscreen);
+
+	if (sscreen->debug_flags & DBG(TEST_CLEARBUF_PERF)) {
+		si_test_clearbuffer(sscreen);
+	}
 
 	if (sscreen->debug_flags & (DBG(TEST_VMFAULT_CP) |
 				      DBG(TEST_VMFAULT_SDMA) |

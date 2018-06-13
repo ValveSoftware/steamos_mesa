@@ -165,6 +165,7 @@ enum {
 	DBG_TEST_VMFAULT_CP,
 	DBG_TEST_VMFAULT_SDMA,
 	DBG_TEST_VMFAULT_SHADER,
+	DBG_TEST_CLEARBUF_PERF,
 };
 
 #define DBG_ALL_SHADERS		(((1 << (DBG_CS + 1)) - 1))
@@ -1110,10 +1111,15 @@ enum si_coherency {
 	SI_COHERENCY_CB_META,
 };
 
+enum si_method {
+	SI_METHOD_CP_DMA,
+	SI_METHOD_BEST,
+};
+
 void si_cp_dma_wait_for_idle(struct si_context *sctx);
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum si_coherency coher);
+		     enum si_coherency coher, enum si_method xfer);
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
@@ -1198,6 +1204,9 @@ void si_resume_queries(struct si_context *sctx);
 
 /* si_test_dma.c */
 void si_test_dma(struct si_screen *sscreen);
+
+/* si_test_clearbuffer.c */
+void si_test_clearbuffer(struct si_screen *sscreen);
 
 /* si_uvd.c */
 struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
