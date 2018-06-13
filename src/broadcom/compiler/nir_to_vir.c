@@ -1000,7 +1000,7 @@ emit_frag_end(struct v3d_compile *c)
                         struct qreg b = color[2];
                         struct qreg a = color[3];
 
-                        if (c->fs_key->f32_color_rb) {
+                        if (c->fs_key->f32_color_rb & (1 << rt)) {
                                 conf |= TLB_TYPE_F32_COLOR;
                                 conf |= ((num_components - 1) <<
                                          TLB_VEC_SIZE_MINUS_1_SHIFT);
