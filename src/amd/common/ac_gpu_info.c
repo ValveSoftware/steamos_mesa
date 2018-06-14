@@ -235,7 +235,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	}
 
 	if (info->drm_minor >= 9) {
-		struct drm_amdgpu_memory_info meminfo;
+		struct drm_amdgpu_memory_info meminfo = {};
 
 		r = amdgpu_query_info(dev, AMDGPU_INFO_MEMORY, sizeof(meminfo), &meminfo);
 		if (r) {
