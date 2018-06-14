@@ -562,9 +562,8 @@ decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
    struct gen_group *body =
       gen_spec_find_struct(ctx->spec, "3DSTATE_CONSTANT_BODY");
 
-   uint32_t read_length[4];
-   struct gen_batch_decode_bo buffer[4];
-   memset(buffer, 0, sizeof(buffer));
+   uint32_t read_length[4] = {0};
+   uint64_t read_addr[4];
 
    struct gen_field_iterator outer;
    gen_field_iterator_init(&outer, inst, p, 0, false);
@@ -581,18 +580,24 @@ decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
          if (sscanf(iter.name, "Read Length[%d]", &idx) == 1) {
             read_length[idx] = iter.raw_value;
          } else if (sscanf(iter.name, "Buffer[%d]", &idx) == 1) {
-            buffer[idx] = ctx_get_bo(ctx, iter.raw_value);
+            read_addr[idx] = iter.raw_value;
          }
       }
 
       for (int i = 0; i < 4; i++) {
-         if (read_length[i] == 0 || buffer[i].map == NULL)
+         if (read_length[i] == 0)
             continue;
+
+         struct gen_batch_decode_bo buffer = ctx_get_bo(ctx, read_addr[i]);
+         if (!buffer.map) {
+            fprintf(ctx->fp, "constant buffer %d unavailable\n", i);
+            continue;
+         }
 
          unsigned size = read_length[i] * 32;
          fprintf(ctx->fp, "constant buffer %d, size %u\n", i, size);
 
-         ctx_print_buffer(ctx, buffer[i], size, 0, -1);
+         ctx_print_buffer(ctx, buffer, size, 0, -1);
       }
    }
 }
