@@ -410,6 +410,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"info", RADV_DEBUG_INFO},
 	{"errors", RADV_DEBUG_ERRORS},
 	{"startup", RADV_DEBUG_STARTUP},
+	{"checkir", RADV_DEBUG_CHECKIR},
 	{NULL, 0}
 };
 

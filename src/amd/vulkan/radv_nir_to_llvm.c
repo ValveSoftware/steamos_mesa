@@ -2967,12 +2967,16 @@ handle_shader_outputs_post(struct ac_shader_abi *abi, unsigned max_outputs,
 	}
 }
 
-static void ac_llvm_finalize_module(struct radv_shader_context *ctx)
+static void ac_llvm_finalize_module(struct radv_shader_context *ctx,
+				    const struct radv_nir_compiler_options *options)
 {
 	LLVMPassManagerRef passmgr;
 	/* Create the pass manager */
 	passmgr = LLVMCreateFunctionPassManagerForModule(
 							ctx->ac.module);
+
+	if (options->check_ir)
+		LLVMAddVerifierPass(passmgr);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(passmgr);
@@ -3299,7 +3303,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (options->dump_preoptir)
 		ac_dump_module(ctx.ac.module);
 
-	ac_llvm_finalize_module(&ctx);
+	ac_llvm_finalize_module(&ctx, options);
 
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
@@ -3617,7 +3621,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	LLVMBuildRetVoid(ctx.ac.builder);
 
-	ac_llvm_finalize_module(&ctx);
+	ac_llvm_finalize_module(&ctx, options);
 
 	ac_compile_llvm_module(tm, ctx.ac.module, binary, config, shader_info,
 			       MESA_SHADER_VERTEX, options);

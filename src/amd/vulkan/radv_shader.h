@@ -119,6 +119,7 @@ struct radv_nir_compiler_options {
 	bool dump_shader;
 	bool dump_preoptir;
 	bool record_llvm_ir;
+	bool check_ir;
 	enum radeon_family family;
 	enum chip_class chip_class;
 	uint32_t tess_offchip_block_dw_size;
