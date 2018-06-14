@@ -1178,7 +1178,8 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 static void
 radv_update_bound_fast_clear_ds(struct radv_cmd_buffer *cmd_buffer,
 				struct radv_image *image,
-				VkClearDepthStencilValue ds_clear_value)
+				VkClearDepthStencilValue ds_clear_value,
+				VkImageAspectFlags aspects)
 {
 	struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
 	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
@@ -1200,6 +1201,17 @@ radv_update_bound_fast_clear_ds(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg_seq(cs, R_028028_DB_STENCIL_CLEAR, 2);
 	radeon_emit(cs, ds_clear_value.stencil);
 	radeon_emit(cs, fui(ds_clear_value.depth));
+
+	/* Update the ZRANGE_PRECISION value for the TC-compat bug. This is
+	 * only needed when clearing Z to 0.0.
+	 */
+	if ((aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+	    ds_clear_value.depth == 0.0) {
+		VkImageLayout layout = subpass->depth_stencil_attachment.layout;
+
+		radv_update_zrange_precision(cmd_buffer, &att->ds, image,
+					     layout, false);
+	}
 }
 
 /**
@@ -1227,36 +1239,8 @@ radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, ds_clear_value.stencil);
 	radeon_emit(cs, fui(ds_clear_value.depth));
 
-	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value);
-
-	/* Update the ZRANGE_PRECISION value for the TC-compat bug. This is
-	 * only needed when clearing Z to 0.0.
-	 */
-	if ((aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-	    ds_clear_value.depth == 0.0) {
-		struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
-		const struct radv_subpass *subpass = cmd_buffer->state.subpass;
-
-		if (!framebuffer || !subpass)
-			return;
-
-		if (subpass->depth_stencil_attachment.attachment == VK_ATTACHMENT_UNUSED)
-			return;
-
-		int idx = subpass->depth_stencil_attachment.attachment;
-		VkImageLayout layout = subpass->depth_stencil_attachment.layout;
-		struct radv_attachment_info *att = &framebuffer->attachments[idx];
-		struct radv_image *image = att->attachment->image;
-
-		/* Only needed if the image is currently bound as the depth
-		 * surface.
-		 */
-		if (att->attachment->image != image)
-			return;
-
-		radv_update_zrange_precision(cmd_buffer, &att->ds, image,
-					     layout, false);
-	}
+	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value,
+				        aspects);
 }
 
 /**
