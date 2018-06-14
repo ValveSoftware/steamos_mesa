@@ -1182,7 +1182,6 @@ static void si_get_hw_query_params(struct si_context *sctx,
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 	{
-		/* Offsets apply to EG+ */
 		static const unsigned offsets[] = {56, 48, 24, 32, 40, 16, 8, 0, 64, 72, 80};
 		params->start_offset = offsets[index];
 		params->end_offset = 88 + offsets[index];

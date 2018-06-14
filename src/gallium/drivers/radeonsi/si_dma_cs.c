@@ -28,7 +28,7 @@ static void si_dma_emit_wait_idle(struct si_context *sctx)
 {
 	struct radeon_cmdbuf *cs = sctx->dma_cs;
 
-	/* NOP waits for idle on Evergreen and later. */
+	/* NOP waits for idle. */
 	if (sctx->chip_class >= CIK)
 		radeon_emit(cs, 0x00000000); /* NOP */
 	else
