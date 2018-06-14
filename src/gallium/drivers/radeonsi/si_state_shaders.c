@@ -1976,6 +1976,34 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 	}
 }
 
+void si_schedule_initial_compile(struct si_context *sctx, unsigned processor,
+				 struct util_queue_fence *ready_fence,
+				 struct si_compiler_ctx_state *compiler_ctx_state,
+				 void *job, util_queue_execute_func execute)
+{
+	util_queue_fence_init(ready_fence);
+
+	struct util_async_debug_callback async_debug;
+	bool wait =
+		(sctx->debug.debug_message && !sctx->debug.async) ||
+		sctx->is_debug ||
+		si_can_dump_shader(sctx->screen, processor);
+
+	if (wait) {
+		u_async_debug_init(&async_debug);
+		compiler_ctx_state->debug = async_debug.base;
+	}
+
+	util_queue_add_job(&sctx->screen->shader_compiler_queue, job,
+			   ready_fence, execute, NULL);
+
+	if (wait) {
+		util_queue_fence_wait(ready_fence);
+		u_async_debug_drain(&async_debug, &sctx->debug);
+		u_async_debug_cleanup(&async_debug);
+	}
+}
+
 /* Return descriptor slot usage masks from the given shader info. */
 void si_get_active_slot_masks(const struct tgsi_shader_info *info,
 			      uint32_t *const_and_shader_buffers,
@@ -2244,29 +2272,10 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	}
 
 	(void) mtx_init(&sel->mutex, mtx_plain);
-	util_queue_fence_init(&sel->ready);
 
-	struct util_async_debug_callback async_debug;
-	bool wait =
-		(sctx->debug.debug_message && !sctx->debug.async) ||
-		sctx->is_debug ||
-		si_can_dump_shader(sscreen, sel->info.processor);
-
-	if (wait) {
-		u_async_debug_init(&async_debug);
-		sel->compiler_ctx_state.debug = async_debug.base;
-	}
-
-	util_queue_add_job(&sscreen->shader_compiler_queue, sel,
-			   &sel->ready, si_init_shader_selector_async,
-			   NULL);
-
-	if (wait) {
-		util_queue_fence_wait(&sel->ready);
-		u_async_debug_drain(&async_debug, &sctx->debug);
-		u_async_debug_cleanup(&async_debug);
-	}
-
+	si_schedule_initial_compile(sctx, sel->info.processor, &sel->ready,
+				    &sel->compiler_ctx_state, sel,
+				    si_init_shader_selector_async);
 	return sel;
 }
 

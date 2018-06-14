@@ -188,28 +188,11 @@ static void *si_create_compute_state(
 		program->compiler_ctx_state.debug = sctx->debug;
 		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
 		p_atomic_inc(&sscreen->num_shaders_created);
-		util_queue_fence_init(&program->ready);
 
-		struct util_async_debug_callback async_debug;
-		bool wait =
-			(sctx->debug.debug_message && !sctx->debug.async) ||
-			sctx->is_debug ||
-			si_can_dump_shader(sscreen, PIPE_SHADER_COMPUTE);
-
-		if (wait) {
-			u_async_debug_init(&async_debug);
-			program->compiler_ctx_state.debug = async_debug.base;
-		}
-
-		util_queue_add_job(&sscreen->shader_compiler_queue,
-				   program, &program->ready,
-				   si_create_compute_state_async, NULL);
-
-		if (wait) {
-			util_queue_fence_wait(&program->ready);
-			u_async_debug_drain(&async_debug, &sctx->debug);
-			u_async_debug_cleanup(&async_debug);
-		}
+		si_schedule_initial_compile(sctx, PIPE_SHADER_COMPUTE,
+					    &program->ready,
+					    &program->compiler_ctx_state,
+					    program, si_create_compute_state_async);
 	} else {
 		const struct pipe_llvm_program_header *header;
 		const char *code;
