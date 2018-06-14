@@ -6140,16 +6140,24 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx)
 			if (!shader->is_monolithic)
 				ac_init_exec_full_mask(&ctx->ac);
 
-			/* The barrier must execute for all shaders in a
-			 * threadgroup.
-			 */
-			si_llvm_emit_barrier(NULL, bld_base, NULL);
-
 			LLVMValueRef num_threads = si_unpack_param(ctx, ctx->param_merged_wave_info, 8, 8);
 			LLVMValueRef ena =
 				LLVMBuildICmp(ctx->ac.builder, LLVMIntULT,
 					    ac_get_thread_id(&ctx->ac), num_threads, "");
 			lp_build_if(&ctx->merged_wrap_if_state, &ctx->gallivm, ena);
+
+			/* The barrier must execute for all shaders in a
+			 * threadgroup.
+			 *
+			 * Execute the barrier inside the conditional block,
+			 * so that empty waves can jump directly to s_endpgm,
+			 * which will also signal the barrier.
+			 *
+			 * If the shader is TCS and the TCS epilog is present
+			 * and contains a barrier, it will wait there and then
+			 * reach s_endpgm.
+			 */
+			si_llvm_emit_barrier(NULL, bld_base, NULL);
 		}
 	}
 
