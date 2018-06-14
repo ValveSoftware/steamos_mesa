@@ -109,9 +109,12 @@ static void si_create_compute_state_async(void *job, int thread_index)
 		si_lower_nir(&sel);
 	}
 
+	/* Store the declared LDS size into tgsi_shader_info for the shader
+	 * cache to include it.
+	 */
+	sel.info.properties[TGSI_PROPERTY_CS_LOCAL_SIZE] = program->local_size;
 
 	sel.type = PIPE_SHADER_COMPUTE;
-	sel.local_size = program->local_size;
 	si_get_active_slot_masks(&sel.info,
 				 &program->active_const_and_shader_buffers,
 				 &program->active_samplers_and_images);

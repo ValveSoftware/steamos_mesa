@@ -277,6 +277,9 @@ enum {
 };
 
 enum {
+	/* Use a property enum that CS wouldn't use. */
+	TGSI_PROPERTY_CS_LOCAL_SIZE = TGSI_PROPERTY_FS_COORD_ORIGIN,
+
 	/* Use a property enum that VS wouldn't use. */
 	TGSI_PROPERTY_VS_BLIT_SGPRS = TGSI_PROPERTY_FS_COORD_ORIGIN,
 
@@ -389,9 +392,6 @@ struct si_shader_selector {
 	 * ANDed with spi_shader_col_format.
 	 */
 	unsigned	colors_written_4bit;
-
-	/* CS parameters */
-	unsigned local_size;
 
 	uint64_t	outputs_written_before_ps; /* "get_unique_index" bits */
 	uint64_t	outputs_written;	/* "get_unique_index" bits */

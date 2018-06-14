@@ -2297,6 +2297,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 void si_declare_compute_memory(struct si_shader_context *ctx)
 {
 	struct si_shader_selector *sel = ctx->shader->selector;
+	unsigned lds_size = sel->info.properties[TGSI_PROPERTY_CS_LOCAL_SIZE];
 
 	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, AC_LOCAL_ADDR_SPACE);
 	LLVMValueRef var;
@@ -2304,7 +2305,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx)
 	assert(!ctx->ac.lds);
 
 	var = LLVMAddGlobalInAddressSpace(ctx->ac.module,
-	                                  LLVMArrayType(ctx->i8, sel->local_size),
+	                                  LLVMArrayType(ctx->i8, lds_size),
 	                                  "compute_lds",
 	                                  AC_LOCAL_ADDR_SPACE);
 	LLVMSetAlignment(var, 4);

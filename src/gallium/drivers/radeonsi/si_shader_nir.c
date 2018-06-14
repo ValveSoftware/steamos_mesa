@@ -999,7 +999,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 	ctx->num_samplers = util_last_bit(info->samplers_declared);
 	ctx->num_images = util_last_bit(info->images_declared);
 
-	if (ctx->shader->selector->local_size) {
+	if (ctx->shader->selector->info.properties[TGSI_PROPERTY_CS_LOCAL_SIZE]) {
 		assert(nir->info.stage == MESA_SHADER_COMPUTE);
 		si_declare_compute_memory(ctx);
 	}
