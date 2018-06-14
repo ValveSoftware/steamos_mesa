@@ -1202,25 +1202,30 @@ radv_update_bound_fast_clear_ds(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, fui(ds_clear_value.depth));
 }
 
+/**
+ * Set the clear depth/stencil values to the image's metadata.
+ */
 void
-radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
-			  struct radv_image *image,
-			  VkClearDepthStencilValue ds_clear_value,
-			  VkImageAspectFlags aspects)
+radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+			   struct radv_image *image,
+			   VkClearDepthStencilValue ds_clear_value,
+			   VkImageAspectFlags aspects)
 {
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(image->bo);
+
 	va += image->offset + image->clear_value_offset;
 
 	assert(radv_image_has_htile(image));
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_WRITE_DATA, 4, 0));
-	radeon_emit(cmd_buffer->cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
-				    S_370_WR_CONFIRM(1) |
-				    S_370_ENGINE_SEL(V_370_PFP));
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
-	radeon_emit(cmd_buffer->cs, ds_clear_value.stencil);
-	radeon_emit(cmd_buffer->cs, fui(ds_clear_value.depth));
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 4, 0));
+	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+			S_370_WR_CONFIRM(1) |
+			S_370_ENGINE_SEL(V_370_PFP));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, ds_clear_value.stencil);
+	radeon_emit(cs, fui(ds_clear_value.depth));
 
 	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value);
 
@@ -1254,27 +1259,32 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
+/**
+ * Load the clear depth/stencil values from the image's metadata.
+ */
 static void
-radv_load_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
-			   struct radv_image *image)
+radv_load_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+			    struct radv_image *image)
 {
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(image->bo);
+
 	va += image->offset + image->clear_value_offset;
 
 	if (!radv_image_has_htile(image))
 		return;
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, 0));
-	radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-				    COPY_DATA_DST_SEL(COPY_DATA_REG) |
-				    COPY_DATA_COUNT_SEL);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
-	radeon_emit(cmd_buffer->cs, R_028028_DB_STENCIL_CLEAR >> 2);
-	radeon_emit(cmd_buffer->cs, 0);
+	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+	radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+			COPY_DATA_DST_SEL(COPY_DATA_REG) |
+			COPY_DATA_COUNT_SEL);
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, R_028028_DB_STENCIL_CLEAR >> 2);
+	radeon_emit(cs, 0);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
-	radeon_emit(cmd_buffer->cs, 0);
+	radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
+	radeon_emit(cs, 0);
 }
 
 /*
@@ -1444,7 +1454,7 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS;
 			cmd_buffer->state.offset_scale = att->ds.offset_scale;
 		}
-		radv_load_depth_clear_regs(cmd_buffer, image);
+		radv_load_ds_clear_metadata(cmd_buffer, image);
 	} else {
 		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9)
 			radeon_set_context_reg_seq(cmd_buffer->cs, R_028038_DB_Z_INFO, 2);
@@ -3934,7 +3944,7 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 		if (vk_format_is_stencil(image->vk_format))
 			aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
-		radv_set_depth_clear_regs(cmd_buffer, image, value, aspects);
+		radv_set_ds_clear_metadata(cmd_buffer, image, value, aspects);
 	}
 }
 
