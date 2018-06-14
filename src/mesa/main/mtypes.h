@@ -3722,6 +3722,12 @@ struct gl_constants
    GLboolean AllowGLSLExtensionDirectiveMidShader;
 
    /**
+    * Allow builtins as part of constant expressions. This was not allowed
+    * until GLSL 1.20 this allows it everywhere.
+    */
+   GLboolean AllowGLSLBuiltinConstantExpression;
+
+   /**
     * Allow GLSL built-in variables to be redeclared verbatim
     */
    GLboolean AllowGLSLBuiltinVariableRedeclaration;

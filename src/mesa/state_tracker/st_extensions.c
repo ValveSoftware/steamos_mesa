@@ -1134,6 +1134,9 @@ void st_init_extensions(struct pipe_screen *screen,
    if (options->allow_glsl_extension_directive_midshader)
       consts->AllowGLSLExtensionDirectiveMidShader = GL_TRUE;
 
+   if (options->allow_glsl_builtin_const_expression)
+      consts->AllowGLSLBuiltinConstantExpression = GL_TRUE;
+
    consts->MinMapBufferAlignment =
       screen->get_param(screen, PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT);
 

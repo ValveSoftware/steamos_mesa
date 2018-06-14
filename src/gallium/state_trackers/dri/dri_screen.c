@@ -74,6 +74,8 @@ dri_fill_st_options(struct dri_screen *screen)
       driQueryOptioni(optionCache, "force_glsl_version");
    options->allow_glsl_extension_directive_midshader =
       driQueryOptionb(optionCache, "allow_glsl_extension_directive_midshader");
+   options->allow_glsl_builtin_const_expression =
+      driQueryOptionb(optionCache, "allow_glsl_builtin_const_expression");
    options->allow_glsl_builtin_variable_redeclaration =
       driQueryOptionb(optionCache, "allow_glsl_builtin_variable_redeclaration");
    options->allow_higher_compat_version =
