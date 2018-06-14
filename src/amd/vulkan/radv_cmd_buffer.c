@@ -1299,6 +1299,37 @@ radv_set_dcc_need_cmask_elim_pred(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cmd_buffer->cs, pred_val >> 32);
 }
 
+/**
+ * Update the fast clear color values if the image is bound as a color buffer.
+ */
+static void
+radv_update_bound_fast_clear_color(struct radv_cmd_buffer *cmd_buffer,
+				   struct radv_image *image,
+				   int cb_idx,
+				   uint32_t color_values[2])
+{
+	struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
+	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	struct radv_attachment_info *att;
+	uint32_t att_idx;
+
+	if (!framebuffer || !subpass)
+		return;
+
+	att_idx = subpass->color_attachments[cb_idx].attachment;
+	if (att_idx == VK_ATTACHMENT_UNUSED)
+		return;
+
+	att = &framebuffer->attachments[att_idx];
+	if (att->attachment->image != image)
+		return;
+
+	radeon_set_context_reg_seq(cs, R_028C8C_CB_COLOR0_CLEAR_WORD0 + cb_idx * 0x3c, 2);
+	radeon_emit(cs, color_values[0]);
+	radeon_emit(cs, color_values[1]);
+}
+
 void
 radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_image *image,
@@ -1319,9 +1350,7 @@ radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cmd_buffer->cs, color_values[0]);
 	radeon_emit(cmd_buffer->cs, color_values[1]);
 
-	radeon_set_context_reg_seq(cmd_buffer->cs, R_028C8C_CB_COLOR0_CLEAR_WORD0 + idx * 0x3c, 2);
-	radeon_emit(cmd_buffer->cs, color_values[0]);
-	radeon_emit(cmd_buffer->cs, color_values[1]);
+	radv_update_bound_fast_clear_color(cmd_buffer, image, idx, color_values);
 }
 
 static void
