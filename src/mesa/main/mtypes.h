@@ -3728,6 +3728,12 @@ struct gl_constants
    GLboolean AllowGLSLBuiltinConstantExpression;
 
    /**
+    * Allow some relaxation of GLSL ES shader restrictions. This encompasses
+    * a number of relaxations to the ES shader rules.
+    */
+   GLboolean AllowGLSLRelaxedES;
+
+   /**
     * Allow GLSL built-in variables to be redeclared verbatim
     */
    GLboolean AllowGLSLBuiltinVariableRedeclaration;
