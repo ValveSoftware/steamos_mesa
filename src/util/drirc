@@ -178,6 +178,7 @@ TODO: document the other workarounds.
 
         <application name="Google Earth VR" executable="Earth.exe">
             <option name="allow_glsl_builtin_const_expression" value="true"/>
+            <option name="allow_glsl_relaxed_es" value="true"/>
         </application>
 
         <!-- The GL thread whitelist is below, workarounds are above.
