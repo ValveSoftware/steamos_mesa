@@ -1868,7 +1868,6 @@ radv_generate_graphics_pipeline_key(struct radv_pipeline *pipeline,
 	    pCreateInfo->pMultisampleState->rasterizationSamples > 1) {
 		uint32_t num_samples = pCreateInfo->pMultisampleState->rasterizationSamples;
 		uint32_t ps_iter_samples = radv_pipeline_get_ps_iter_samples(pCreateInfo->pMultisampleState);
-		key.multisample = true;
 		key.log2_num_samples = util_logbase2(num_samples);
 		key.log2_ps_iter_samples = util_logbase2(ps_iter_samples);
 	}
@@ -1909,7 +1908,6 @@ radv_fill_shader_keys(struct radv_shader_variant_key *keys,
 	for(int i = 0; i < MESA_SHADER_STAGES; ++i)
 		keys[i].has_multiview_view_index = key->has_multiview_view_index;
 
-	keys[MESA_SHADER_FRAGMENT].fs.multisample = key->multisample;
 	keys[MESA_SHADER_FRAGMENT].fs.col_format = key->col_format;
 	keys[MESA_SHADER_FRAGMENT].fs.is_int8 = key->is_int8;
 	keys[MESA_SHADER_FRAGMENT].fs.is_int10 = key->is_int10;
