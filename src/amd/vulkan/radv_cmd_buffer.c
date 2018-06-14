@@ -1171,6 +1171,37 @@ radv_emit_fb_ds_state(struct radv_cmd_buffer *cmd_buffer,
 			       ds->pa_su_poly_offset_db_fmt_cntl);
 }
 
+/**
+ * Update the fast clear depth/stencil values if the image is bound as a
+ * depth/stencil buffer.
+ */
+static void
+radv_update_bound_fast_clear_ds(struct radv_cmd_buffer *cmd_buffer,
+				struct radv_image *image,
+				VkClearDepthStencilValue ds_clear_value)
+{
+	struct radv_framebuffer *framebuffer = cmd_buffer->state.framebuffer;
+	const struct radv_subpass *subpass = cmd_buffer->state.subpass;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	struct radv_attachment_info *att;
+	uint32_t att_idx;
+
+	if (!framebuffer || !subpass)
+		return;
+
+	att_idx = subpass->depth_stencil_attachment.attachment;
+	if (att_idx == VK_ATTACHMENT_UNUSED)
+		return;
+
+	att = &framebuffer->attachments[att_idx];
+	if (att->attachment->image != image)
+		return;
+
+	radeon_set_context_reg_seq(cs, R_028028_DB_STENCIL_CLEAR, 2);
+	radeon_emit(cs, ds_clear_value.stencil);
+	radeon_emit(cs, fui(ds_clear_value.depth));
+}
+
 void
 radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_image *image,
@@ -1203,11 +1234,7 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
 		radeon_emit(cmd_buffer->cs, fui(ds_clear_value.depth));
 
-	radeon_set_context_reg_seq(cmd_buffer->cs, R_028028_DB_STENCIL_CLEAR + 4 * reg_offset, reg_count);
-	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT)
-		radeon_emit(cmd_buffer->cs, ds_clear_value.stencil); /* R_028028_DB_STENCIL_CLEAR */
-	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
-		radeon_emit(cmd_buffer->cs, fui(ds_clear_value.depth)); /* R_02802C_DB_DEPTH_CLEAR */
+	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value);
 
 	/* Update the ZRANGE_PRECISION value for the TC-compat bug. This is
 	 * only needed when clearing Z to 0.0.
