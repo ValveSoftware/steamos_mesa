@@ -45,7 +45,7 @@
  * Return the IR binary in a buffer. For TGSI the first 4 bytes contain its
  * size as integer.
  */
-static void *si_get_ir_binary(struct si_shader_selector *sel)
+void *si_get_ir_binary(struct si_shader_selector *sel)
 {
 	struct blob blob;
 	unsigned ir_size;
@@ -202,10 +202,9 @@ static bool si_load_shader_binary(struct si_shader *shader, void *binary)
  *
  * Returns false on failure, in which case the ir_binary should be freed.
  */
-static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
-					  void *ir_binary,
-					  struct si_shader *shader,
-					  bool insert_into_disk_cache)
+bool si_shader_cache_insert_shader(struct si_screen *sscreen, void *ir_binary,
+				   struct si_shader *shader,
+				   bool insert_into_disk_cache)
 {
 	void *hw_binary;
 	struct hash_entry *entry;
@@ -235,9 +234,8 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 	return true;
 }
 
-static bool si_shader_cache_load_shader(struct si_screen *sscreen,
-					void *ir_binary,
-				        struct si_shader *shader)
+bool si_shader_cache_load_shader(struct si_screen *sscreen, void *ir_binary,
+				 struct si_shader *shader)
 {
 	struct hash_entry *entry =
 		_mesa_hash_table_search(sscreen->shader_cache, ir_binary);
