@@ -880,7 +880,7 @@ int virgl_encoder_set_so_targets(struct virgl_context *ctx,
    virgl_encoder_write_dword(ctx->cbuf, append_bitmask);
    for (i = 0; i < num_targets; i++) {
       struct virgl_so_target *tg = virgl_so_target(targets[i]);
-      virgl_encoder_write_dword(ctx->cbuf, tg->handle);
+      virgl_encoder_write_dword(ctx->cbuf, tg ? tg->handle : 0);
    }
    return 0;
 }
