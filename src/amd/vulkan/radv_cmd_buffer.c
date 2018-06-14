@@ -1330,53 +1330,64 @@ radv_update_bound_fast_clear_color(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, color_values[1]);
 }
 
+/**
+ * Set the clear color values to the image's metadata.
+ */
 void
-radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
-			  struct radv_image *image,
-			  int idx,
-			  uint32_t color_values[2])
+radv_set_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+			      struct radv_image *image,
+			      int cb_idx,
+			      uint32_t color_values[2])
 {
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(image->bo);
+
 	va += image->offset + image->clear_value_offset;
 
 	assert(radv_image_has_cmask(image) || radv_image_has_dcc(image));
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_WRITE_DATA, 4, 0));
-	radeon_emit(cmd_buffer->cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
-				    S_370_WR_CONFIRM(1) |
-				    S_370_ENGINE_SEL(V_370_PFP));
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
-	radeon_emit(cmd_buffer->cs, color_values[0]);
-	radeon_emit(cmd_buffer->cs, color_values[1]);
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 4, 0));
+	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+			S_370_WR_CONFIRM(1) |
+			S_370_ENGINE_SEL(V_370_PFP));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, color_values[0]);
+	radeon_emit(cs, color_values[1]);
 
-	radv_update_bound_fast_clear_color(cmd_buffer, image, idx, color_values);
+	radv_update_bound_fast_clear_color(cmd_buffer, image, cb_idx,
+					   color_values);
 }
 
+/**
+ * Load the clear color values from the image's metadata.
+ */
 static void
-radv_load_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
-			   struct radv_image *image,
-			   int idx)
+radv_load_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+			       struct radv_image *image,
+			       int cb_idx)
 {
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(image->bo);
+
 	va += image->offset + image->clear_value_offset;
 
 	if (!radv_image_has_cmask(image) && !radv_image_has_dcc(image))
 		return;
 
-	uint32_t reg = R_028C8C_CB_COLOR0_CLEAR_WORD0 + idx * 0x3c;
+	uint32_t reg = R_028C8C_CB_COLOR0_CLEAR_WORD0 + cb_idx * 0x3c;
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, cmd_buffer->state.predicating));
-	radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-				    COPY_DATA_DST_SEL(COPY_DATA_REG) |
-				    COPY_DATA_COUNT_SEL);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
-	radeon_emit(cmd_buffer->cs, reg >> 2);
-	radeon_emit(cmd_buffer->cs, 0);
+	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, cmd_buffer->state.predicating));
+	radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+			COPY_DATA_DST_SEL(COPY_DATA_REG) |
+			COPY_DATA_COUNT_SEL);
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, reg >> 2);
+	radeon_emit(cs, 0);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_PFP_SYNC_ME, 0, cmd_buffer->state.predicating));
-	radeon_emit(cmd_buffer->cs, 0);
+	radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, cmd_buffer->state.predicating));
+	radeon_emit(cs, 0);
 }
 
 static void
@@ -1407,7 +1418,7 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		assert(att->attachment->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT);
 		radv_emit_fb_color_state(cmd_buffer, i, att, image, layout);
 
-		radv_load_color_clear_regs(cmd_buffer, image, i);
+		radv_load_color_clear_metadata(cmd_buffer, image, i);
 	}
 
 	if(subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
