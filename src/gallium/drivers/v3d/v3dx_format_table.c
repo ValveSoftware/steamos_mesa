@@ -145,12 +145,12 @@ static const struct v3d_format format_table[] = {
 #if V3D_VERSION >= 40
         FORMAT(S8_UINT_Z24_UNORM, D24S8,        DEPTH24_X8,  SWIZ_XXXX, 32, 1),
         FORMAT(X8Z24_UNORM,       D24S8,        DEPTH24_X8,  SWIZ_XXXX, 32, 1),
-        FORMAT(S8X24_UINT,        S8,           R32F,        SWIZ_XXXX, 32, 1),
-        FORMAT(Z32_FLOAT,         D32F,         R32F,        SWIZ_XXXX, 32, 1),
+        FORMAT(S8X24_UINT,        S8,           DEPTH_COMP32F, SWIZ_XXXX, 32, 1),
+        FORMAT(Z32_FLOAT,         D32F,         DEPTH_COMP32F, SWIZ_XXXX, 32, 1),
         FORMAT(Z16_UNORM,         D16,          DEPTH_COMP16,SWIZ_XXXX, 32, 1),
 
         /* Pretend we support this, but it'll be separate Z32F depth and S8. */
-        FORMAT(Z32_FLOAT_S8X24_UINT, D32F,      R32F,        SWIZ_XXXX, 32, 1),
+        FORMAT(Z32_FLOAT_S8X24_UINT, D32F,      DEPTH_COMP32F, SWIZ_XXXX, 32, 1),
 #else
         FORMAT(S8_UINT_Z24_UNORM, ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
         FORMAT(X8Z24_UNORM,       ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
