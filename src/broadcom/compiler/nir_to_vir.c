@@ -2006,9 +2006,10 @@ vir_emit_last_thrsw(struct v3d_compile *c)
                 c->last_thrsw->is_last_thrsw = true;
 }
 
-/* There's a flag in the shader for "centroid W used in addition to center W",
- * so we need to walk the program after VIR optimization to see if both are
- * used.
+/* There's a flag in the shader for "center W is needed for reasons other than
+ * non-centroid varyings", so we just walk the program after VIR optimization
+ * to see if it's used.  It should be harmless to set even if we only use
+ * center W for varyings.
  */
 static void
 vir_check_payload_w(struct v3d_compile *c)
@@ -2016,19 +2017,11 @@ vir_check_payload_w(struct v3d_compile *c)
         if (c->s->info.stage != MESA_SHADER_FRAGMENT)
                 return;
 
-        bool any_centroid = false;
-        for (int i = 0; i < ARRAY_SIZE(c->centroid_flags); i++) {
-                if (c->centroid_flags[i])
-                        any_centroid = true;
-        }
-        if (!any_centroid)
-                return;
-
         vir_for_each_inst_inorder(inst, c) {
                 for (int i = 0; i < vir_get_nsrc(inst); i++) {
                         if (inst->src[i].file == QFILE_REG &&
                             inst->src[i].index == 0) {
-                                c->uses_centroid_and_center_w = true;
+                                c->uses_center_w = true;
                                 return;
                         }
                 }
