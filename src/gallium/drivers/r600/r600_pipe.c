@@ -653,6 +653,8 @@ static int r600_get_shader_param(struct pipe_screen* pscreen,
 			return EG_MAX_ATOMIC_BUFFERS;
 		}
 		return 0;
+	case PIPE_SHADER_CAP_SCALAR_ISA:
+		return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		/* due to a bug in the shader compiler, some loops hang
 		 * if they are not unrolled, see:
