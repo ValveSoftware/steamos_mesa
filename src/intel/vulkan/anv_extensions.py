@@ -90,6 +90,7 @@ EXTENSIONS = [
     Extension('VK_KHR_external_semaphore',                1, True),
     Extension('VK_KHR_external_semaphore_capabilities',   1, True),
     Extension('VK_KHR_external_semaphore_fd',             1, True),
+    Extension('VK_KHR_get_display_properties2',           1, 'VK_USE_PLATFORM_DISPLAY_KHR'),
     Extension('VK_KHR_get_memory_requirements2',          1, True),
     Extension('VK_KHR_get_physical_device_properties2',   1, True),
     Extension('VK_KHR_get_surface_capabilities2',         1, 'ANV_HAS_SURFACE'),

@@ -41,6 +41,19 @@ anv_GetPhysicalDeviceDisplayPropertiesKHR(VkPhysicalDevice physical_device,
 }
 
 VkResult
+anv_GetPhysicalDeviceDisplayProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayProperties2KHR*                    pProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+   return wsi_display_get_physical_device_display_properties2(
+      physicalDevice, &pdevice->wsi_device,
+      pPropertyCount, pProperties);
+}
+
+VkResult
 anv_GetPhysicalDeviceDisplayPlanePropertiesKHR(
    VkPhysicalDevice physical_device,
    uint32_t *property_count,
@@ -51,6 +64,19 @@ anv_GetPhysicalDeviceDisplayPlanePropertiesKHR(
    return wsi_display_get_physical_device_display_plane_properties(
       physical_device, &pdevice->wsi_device,
       property_count, properties);
+}
+
+VkResult
+anv_GetPhysicalDeviceDisplayPlaneProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayPlaneProperties2KHR*               pProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+   return wsi_display_get_physical_device_display_plane_properties2(
+      physicalDevice, &pdevice->wsi_device,
+      pPropertyCount, pProperties);
 }
 
 VkResult
@@ -85,6 +111,22 @@ anv_GetDisplayModePropertiesKHR(VkPhysicalDevice physical_device,
 }
 
 VkResult
+anv_GetDisplayModeProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkDisplayKHR                                display,
+    uint32_t*                                   pPropertyCount,
+    VkDisplayModeProperties2KHR*                pProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+   return wsi_display_get_display_mode_properties2(physicalDevice,
+                                                   &pdevice->wsi_device,
+                                                   display,
+                                                   pPropertyCount,
+                                                   pProperties);
+}
+
+VkResult
 anv_CreateDisplayModeKHR(VkPhysicalDevice physical_device,
                          VkDisplayKHR display,
                          const VkDisplayModeCreateInfoKHR *create_info,
@@ -114,6 +156,20 @@ anv_GetDisplayPlaneCapabilitiesKHR(VkPhysicalDevice physical_device,
                                              mode_khr,
                                              plane_index,
                                              capabilities);
+}
+
+VkResult
+anv_GetDisplayPlaneCapabilities2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    const VkDisplayPlaneInfo2KHR*               pDisplayPlaneInfo,
+    VkDisplayPlaneCapabilities2KHR*             pCapabilities)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+   return wsi_get_display_plane_capabilities2(physicalDevice,
+                                              &pdevice->wsi_device,
+                                              pDisplayPlaneInfo,
+                                              pCapabilities);
 }
 
 VkResult
