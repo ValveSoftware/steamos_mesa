@@ -854,7 +854,21 @@ nvc0_set_framebuffer_state(struct pipe_context *pipe,
 
     util_copy_framebuffer_state(&nvc0->framebuffer, fb);
 
-    nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
+    nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER | NVC0_NEW_3D_SAMPLE_LOCATIONS;
+}
+
+static void
+nvc0_set_sample_locations(struct pipe_context *pipe,
+                          size_t size, const uint8_t *locations)
+{
+    struct nvc0_context *nvc0 = nvc0_context(pipe);
+
+    nvc0->sample_locations_enabled = size && locations;
+    if (size > sizeof(nvc0->sample_locations))
+       size = sizeof(nvc0->sample_locations);
+    memcpy(nvc0->sample_locations, locations, size);
+
+    nvc0->dirty_3d |= NVC0_NEW_3D_SAMPLE_LOCATIONS;
 }
 
 static void
@@ -1407,6 +1421,7 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->set_min_samples = nvc0_set_min_samples;
    pipe->set_constant_buffer = nvc0_set_constant_buffer;
    pipe->set_framebuffer_state = nvc0_set_framebuffer_state;
+   pipe->set_sample_locations = nvc0_set_sample_locations;
    pipe->set_polygon_stipple = nvc0_set_polygon_stipple;
    pipe->set_scissor_states = nvc0_set_scissor_states;
    pipe->set_viewport_states = nvc0_set_viewport_states;

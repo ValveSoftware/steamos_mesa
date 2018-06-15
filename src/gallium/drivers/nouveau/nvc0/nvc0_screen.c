@@ -271,6 +271,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_CONSERVATIVE_RASTER_POST_SNAP_TRIANGLES:
    case PIPE_CAP_CONSERVATIVE_RASTER_POST_SNAP_POINTS_LINES:
    case PIPE_CAP_CONSERVATIVE_RASTER_POST_DEPTH_COVERAGE:
+   case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
       return class_3d >= GM200_3D_CLASS;
    case PIPE_CAP_CONSERVATIVE_RASTER_PRE_SNAP_TRIANGLES:
       return class_3d >= GP100_3D_CLASS;
@@ -319,7 +320,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_CONSTBUF0_FLAGS:
    case PIPE_CAP_PACKED_UNIFORMS:
    case PIPE_CAP_CONSERVATIVE_RASTER_PRE_SNAP_POINTS_LINES:
-   case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -543,6 +543,36 @@ nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
    }
 
 #undef RET
+}
+
+static void
+nvc0_screen_get_sample_pixel_grid(struct pipe_screen *pscreen,
+                                  unsigned sample_count,
+                                  unsigned *width, unsigned *height)
+{
+   switch (sample_count) {
+   case 0:
+   case 1:
+      /* this could be 4x4, but the GL state tracker makes it difficult to
+       * create a 1x MSAA texture and smaller grids save CB space */
+      *width = 2;
+      *height = 4;
+      break;
+   case 2:
+      *width = 2;
+      *height = 4;
+      break;
+   case 4:
+      *width = 2;
+      *height = 2;
+      break;
+   case 8:
+      *width = 1;
+      *height = 2;
+      break;
+   default:
+      assert(0);
+   }
 }
 
 static void
@@ -871,6 +901,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    pscreen->get_param = nvc0_screen_get_param;
    pscreen->get_shader_param = nvc0_screen_get_shader_param;
    pscreen->get_paramf = nvc0_screen_get_paramf;
+   pscreen->get_sample_pixel_grid = nvc0_screen_get_sample_pixel_grid;
    pscreen->get_driver_query_info = nvc0_screen_get_driver_query_info;
    pscreen->get_driver_query_group_info = nvc0_screen_get_driver_query_group_info;
 

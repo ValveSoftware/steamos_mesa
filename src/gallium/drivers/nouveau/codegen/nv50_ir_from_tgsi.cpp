@@ -1520,6 +1520,10 @@ void Source::scanInstructionSrc(const Instruction& insn,
          info->out[src.getIndex(0)].oread = 1;
       }
    }
+   if (src.getFile() == TGSI_FILE_SYSTEM_VALUE) {
+      if (info->sv[src.getIndex(0)].sn == TGSI_SEMANTIC_SAMPLEPOS)
+         info->prop.fp.readsSampleLocations = true;
+   }
    if (src.getFile() != TGSI_FILE_INPUT)
       return;
 
@@ -1559,6 +1563,9 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
 
    if (insn.getOpcode() == TGSI_OPCODE_FBFETCH)
       info->prop.fp.readsFramebuffer = true;
+
+   if (insn.getOpcode() == TGSI_OPCODE_INTERP_SAMPLE)
+      info->prop.fp.readsSampleLocations = true;
 
    if (insn.dstCount()) {
       Instruction::DstRegister dst = insn.getDst(0);

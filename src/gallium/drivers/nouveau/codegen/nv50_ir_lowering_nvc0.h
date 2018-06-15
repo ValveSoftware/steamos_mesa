@@ -116,6 +116,7 @@ protected:
    void handleSharedATOMNVE4(Instruction *);
    void handleLDST(Instruction *);
    bool handleBUFQ(Instruction *);
+   void handlePIXLD(Instruction *);
 
    void checkPredicate(Instruction *);
 
@@ -142,6 +143,7 @@ private:
    void processSurfaceCoordsNVE4(TexInstruction *);
    void processSurfaceCoordsNVC0(TexInstruction *);
    void convertSurfaceFormat(TexInstruction *);
+   Value *calculateSampleOffset(Value *sampleID);
 
 protected:
    Value *loadTexHandle(Value *ptr, unsigned int slot);
