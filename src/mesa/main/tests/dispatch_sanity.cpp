@@ -1035,6 +1035,11 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_NV_conservative_raster_pre_snap_triangles */
    { "glConservativeRasterParameteriNV", 10, -1 },
 
+   /* GL_ARB_sample_locations */
+   { "glFramebufferSampleLocationsfvARB", 30, -1 },
+   { "glNamedFramebufferSampleLocationsfvARB", 30, -1 },
+   { "glEvaluateDepthValuesARB", 30, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2780,6 +2785,11 @@ const struct function gles31_functions_possible[] = {
    { "glDepthRangeArrayfvOES", 31, -1 },
    { "glDepthRangeIndexedfOES", 31, -1 },
    { "glGetFloati_vOES", 31, -1 },
+
+   /* GL_ARB_sample_locations */
+   { "glFramebufferSampleLocationsfvARB", 31, -1 },
+   { "glNamedFramebufferSampleLocationsfvARB", 31, -1 },
+   { "glEvaluateDepthValuesARB", 31, -1 },
 
    { NULL, 0, -1 },
  };
