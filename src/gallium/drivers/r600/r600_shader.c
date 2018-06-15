@@ -1247,7 +1247,7 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 	tgsi_parse_free(&parse);
 
 	if (ctx->info.reads_samplemask &&
-	    (ctx->info.uses_linear_sample || ctx->info.uses_linear_sample)) {
+	    (ctx->info.uses_linear_sample || ctx->info.uses_persp_sample)) {
 		inputs[1].enabled = true;
 	}
 
