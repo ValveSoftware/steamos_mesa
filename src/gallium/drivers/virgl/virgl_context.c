@@ -506,7 +506,7 @@ static void *virgl_shader_encoder(struct pipe_context *ctx,
    handle = virgl_object_assign_handle();
    /* encode VS state */
    ret = virgl_encode_shader_state(vctx, handle, type,
-                                   &shader->stream_output,
+                                   &shader->stream_output, 0,
                                    new_tokens);
    if (ret) {
       return NULL;
@@ -961,7 +961,7 @@ static void virgl_set_shader_buffers(struct pipe_context *ctx,
       pipe_resource_reference(&vctx->ssbos[shader][idx], NULL);
    }
 
-   uint32_t max_shader_buffer = shader == PIPE_SHADER_FRAGMENT ?
+   uint32_t max_shader_buffer = (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE) ?
       rs->caps.caps.v2.max_shader_buffer_frag_compute :
       rs->caps.caps.v2.max_shader_buffer_other_stages;
    if (!max_shader_buffer)
@@ -989,7 +989,7 @@ static void virgl_set_shader_images(struct pipe_context *ctx,
       pipe_resource_reference(&vctx->images[shader][idx], NULL);
    }
 
-   uint32_t max_shader_images = shader == PIPE_SHADER_FRAGMENT ?
+   uint32_t max_shader_images = (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE) ?
      rs->caps.caps.v2.max_shader_image_frag_compute :
      rs->caps.caps.v2.max_shader_image_other_stages;
    if (!max_shader_images)
@@ -1006,6 +1006,50 @@ static void virgl_memory_barrier(struct pipe_context *ctx,
    if (!(rs->caps.caps.v2.capability_bits & VIRGL_CAP_MEMORY_BARRIER))
       return;
    virgl_encode_memory_barrier(vctx, flags);
+}
+
+static void *virgl_create_compute_state(struct pipe_context *ctx,
+                                        const struct pipe_compute_state *state)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   uint32_t handle;
+   const struct tgsi_token *new_tokens = state->prog;
+   struct pipe_stream_output_info so_info = {};
+   int ret;
+
+   handle = virgl_object_assign_handle();
+   ret = virgl_encode_shader_state(vctx, handle, PIPE_SHADER_COMPUTE,
+                                   &so_info,
+                                   state->req_local_mem,
+                                   new_tokens);
+   if (ret) {
+      return NULL;
+   }
+
+   return (void *)(unsigned long)handle;
+}
+
+static void virgl_bind_compute_state(struct pipe_context *ctx, void *state)
+{
+   uint32_t handle = (unsigned long)state;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_COMPUTE);
+}
+
+static void virgl_delete_compute_state(struct pipe_context *ctx, void *state)
+{
+   uint32_t handle = (unsigned long)state;
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
+}
+
+static void virgl_launch_grid(struct pipe_context *ctx,
+                              const struct pipe_grid_info *info)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   virgl_encode_launch_grid(vctx, info);
 }
 
 static void
@@ -1117,6 +1161,11 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.delete_tes_state = virgl_delete_tes_state;
    vctx->base.delete_gs_state = virgl_delete_gs_state;
    vctx->base.delete_fs_state = virgl_delete_fs_state;
+
+   vctx->base.create_compute_state = virgl_create_compute_state;
+   vctx->base.bind_compute_state = virgl_bind_compute_state;
+   vctx->base.delete_compute_state = virgl_delete_compute_state;
+   vctx->base.launch_grid = virgl_launch_grid;
 
    vctx->base.clear = virgl_clear;
    vctx->base.draw_vbo = virgl_draw_vbo;

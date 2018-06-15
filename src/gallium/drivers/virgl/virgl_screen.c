@@ -139,7 +139,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
       return 0;
    case PIPE_CAP_COMPUTE:
-      return 0;
+      return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_COMPUTE_SHADER;
    case PIPE_CAP_USER_VERTEX_BUFFERS:
       return 0;
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
@@ -328,6 +328,10 @@ virgl_get_shader_param(struct pipe_screen *screen,
        !vscreen->caps.caps.v1.bset.has_tessellation_shaders)
       return 0;
 
+   if (shader == PIPE_SHADER_COMPUTE &&
+       !(vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_COMPUTE_SHADER))
+     return 0;
+
    switch(shader)
    {
    case PIPE_SHADER_FRAGMENT:
@@ -335,6 +339,7 @@ virgl_get_shader_param(struct pipe_screen *screen,
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_TESS_CTRL:
    case PIPE_SHADER_TESS_EVAL:
+   case PIPE_SHADER_COMPUTE:
       switch (param) {
       case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
       case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
@@ -373,15 +378,17 @@ virgl_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return 4096 * sizeof(float[4]);
       case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
-         if (shader == PIPE_SHADER_FRAGMENT)
+         if (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE)
             return vscreen->caps.caps.v2.max_shader_buffer_frag_compute;
          else
             return vscreen->caps.caps.v2.max_shader_buffer_other_stages;
       case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-         if (shader == PIPE_SHADER_FRAGMENT)
+         if (shader == PIPE_SHADER_FRAGMENT || shader == PIPE_SHADER_COMPUTE)
             return vscreen->caps.caps.v2.max_shader_image_frag_compute;
          else
             return vscreen->caps.caps.v2.max_shader_image_other_stages;
+      case PIPE_SHADER_CAP_SUPPORTED_IRS:
+         return (1 << PIPE_SHADER_IR_TGSI);
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       case PIPE_SHADER_CAP_INT64_ATOMICS:
@@ -424,6 +431,51 @@ virgl_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
    /* should only get here on unhandled cases */
    debug_printf("Unexpected PIPE_CAPF %d query\n", param);
    return 0.0;
+}
+
+static int
+virgl_get_compute_param(struct pipe_screen *screen,
+                        enum pipe_shader_ir ir_type,
+                        enum pipe_compute_cap param,
+                        void *ret)
+{
+   struct virgl_screen *vscreen = virgl_screen(screen);
+   if (!(vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_COMPUTE_SHADER))
+      return 0;
+   switch (param) {
+   case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
+      if (ret) {
+         uint64_t *grid_size = ret;
+         grid_size[0] = vscreen->caps.caps.v2.max_compute_grid_size[0];
+         grid_size[1] = vscreen->caps.caps.v2.max_compute_grid_size[1];
+         grid_size[2] = vscreen->caps.caps.v2.max_compute_grid_size[2];
+      }
+      return 3 * sizeof(uint64_t) ;
+   case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
+      if (ret) {
+         uint64_t *block_size = ret;
+         block_size[0] = vscreen->caps.caps.v2.max_compute_block_size[0];
+         block_size[1] = vscreen->caps.caps.v2.max_compute_block_size[1];
+         block_size[2] = vscreen->caps.caps.v2.max_compute_block_size[2];
+      }
+      return 3 * sizeof(uint64_t);
+   case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
+      if (ret) {
+         uint64_t *max_threads_per_block = ret;
+         *max_threads_per_block = vscreen->caps.caps.v2.max_compute_work_group_invocations;
+      }
+      return sizeof(uint64_t);
+   case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
+      if (ret) {
+         uint64_t *max_local_size = ret;
+         /* Value reported by the closed source driver. */
+         *max_local_size = vscreen->caps.caps.v2.max_compute_shared_memory_size;
+      }
+      return sizeof(uint64_t);
+   default:
+      break;
+   }
+   return 0;
 }
 
 static boolean
@@ -666,6 +718,7 @@ virgl_create_screen(struct virgl_winsys *vws)
    screen->base.get_vendor = virgl_get_vendor;
    screen->base.get_param = virgl_get_param;
    screen->base.get_shader_param = virgl_get_shader_param;
+   screen->base.get_compute_param = virgl_get_compute_param;
    screen->base.get_paramf = virgl_get_paramf;
    screen->base.is_format_supported = virgl_is_format_supported;
    screen->base.destroy = virgl_destroy_screen;

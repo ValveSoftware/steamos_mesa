@@ -90,6 +90,7 @@ extern int virgl_encode_shader_state(struct virgl_context *ctx,
                                      uint32_t handle,
                                      uint32_t type,
                                      const struct pipe_stream_output_info *so_info,
+                                     uint32_t cs_req_local_mem,
                                      const struct tgsi_token *tokens);
 
 int virgl_encode_stream_output_info(struct virgl_context *ctx,
@@ -269,4 +270,6 @@ int virgl_encode_set_shader_images(struct virgl_context *ctx,
                                    const struct pipe_image_view *images);
 int virgl_encode_memory_barrier(struct virgl_context *ctx,
                                 unsigned flags);
+int virgl_encode_launch_grid(struct virgl_context *ctx,
+                             const struct pipe_grid_info *grid_info);
 #endif
