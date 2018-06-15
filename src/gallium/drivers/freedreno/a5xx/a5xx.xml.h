@@ -11,13 +11,13 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    501 bytes, from 2018-01-31 18:26:32)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2018-01-08 14:56:24)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  36805 bytes, from 2018-05-20 19:03:35)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2018-06-01 15:43:47)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34755 bytes, from 2018-06-01 15:43:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13634 bytes, from 2018-06-10 17:35:36)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  41584 bytes, from 2018-06-18 14:25:44)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2018-01-10 16:21:40)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2018-01-08 14:56:24)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 146903 bytes, from 2018-06-01 15:44:19)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a6xx.xml          (  44551 bytes, from 2018-06-01 15:43:47)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a6xx_gmu.xml      (  10431 bytes, from 2018-03-16 17:55:10)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 147158 bytes, from 2018-06-18 14:25:44)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a6xx.xml          (  88437 bytes, from 2018-06-18 14:25:44)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a6xx_gmu.xml      (  10431 bytes, from 2018-06-10 17:37:04)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2018-01-08 14:56:24)
 
 Copyright (C) 2013-2018 by the following authors:
@@ -3300,6 +3300,7 @@ static inline uint32_t A5XX_RB_BLEND_CNTL_ENABLE_BLEND(uint32_t val)
 	return ((val) << A5XX_RB_BLEND_CNTL_ENABLE_BLEND__SHIFT) & A5XX_RB_BLEND_CNTL_ENABLE_BLEND__MASK;
 }
 #define A5XX_RB_BLEND_CNTL_INDEPENDENT_BLEND			0x00000100
+#define A5XX_RB_BLEND_CNTL_ALPHA_TO_COVERAGE			0x00000400
 #define A5XX_RB_BLEND_CNTL_SAMPLE_MASK__MASK			0xffff0000
 #define A5XX_RB_BLEND_CNTL_SAMPLE_MASK__SHIFT			16
 static inline uint32_t A5XX_RB_BLEND_CNTL_SAMPLE_MASK(uint32_t val)
@@ -3561,6 +3562,7 @@ static inline uint32_t A5XX_RB_BLIT_DST_ARRAY_PITCH(uint32_t val)
 
 #define REG_A5XX_RB_CLEAR_CNTL					0x0000e21c
 #define A5XX_RB_CLEAR_CNTL_FAST_CLEAR				0x00000002
+#define A5XX_RB_CLEAR_CNTL_MSAA_RESOLVE				0x00000004
 #define A5XX_RB_CLEAR_CNTL_MASK__MASK				0x000000f0
 #define A5XX_RB_CLEAR_CNTL_MASK__SHIFT				4
 static inline uint32_t A5XX_RB_CLEAR_CNTL_MASK(uint32_t val)
@@ -4151,6 +4153,7 @@ static inline uint32_t A5XX_SP_FS_CTRL_REG0_BRANCHSTACK(uint32_t val)
 #define REG_A5XX_SP_BLEND_CNTL					0x0000e5c9
 #define A5XX_SP_BLEND_CNTL_ENABLED				0x00000001
 #define A5XX_SP_BLEND_CNTL_UNK8					0x00000100
+#define A5XX_SP_BLEND_CNTL_ALPHA_TO_COVERAGE			0x00000400
 
 #define REG_A5XX_SP_FS_OUTPUT_CNTL				0x0000e5ca
 #define A5XX_SP_FS_OUTPUT_CNTL_MRT__MASK			0x0000000f
@@ -5036,6 +5039,12 @@ static inline uint32_t A5XX_TEX_CONST_0_SWIZ_W(enum a5xx_tex_swiz val)
 static inline uint32_t A5XX_TEX_CONST_0_MIPLVLS(uint32_t val)
 {
 	return ((val) << A5XX_TEX_CONST_0_MIPLVLS__SHIFT) & A5XX_TEX_CONST_0_MIPLVLS__MASK;
+}
+#define A5XX_TEX_CONST_0_SAMPLES__MASK				0x00300000
+#define A5XX_TEX_CONST_0_SAMPLES__SHIFT				20
+static inline uint32_t A5XX_TEX_CONST_0_SAMPLES(enum a3xx_msaa_samples val)
+{
+	return ((val) << A5XX_TEX_CONST_0_SAMPLES__SHIFT) & A5XX_TEX_CONST_0_SAMPLES__MASK;
 }
 #define A5XX_TEX_CONST_0_FMT__MASK				0x3fc00000
 #define A5XX_TEX_CONST_0_FMT__SHIFT				22

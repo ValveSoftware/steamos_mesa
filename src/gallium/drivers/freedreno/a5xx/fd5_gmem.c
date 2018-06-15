@@ -700,7 +700,7 @@ fd5_emit_sysmem_prep(struct fd_batch *batch)
 	OUT_RING(ring, 0x0);
 
 	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, UNK_19);
+	OUT_RING(ring, PC_CCU_INVALIDATE_COLOR);
 
 	OUT_PKT4(ring, REG_A5XX_PC_POWER_CNTL, 1);
 	OUT_RING(ring, 0x00000003);   /* PC_POWER_CNTL */
