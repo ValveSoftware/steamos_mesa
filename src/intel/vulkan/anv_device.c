@@ -430,7 +430,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
    device->compiler->supports_pull_constants = false;
-   device->compiler->constant_buffer_0_is_relative = true;
+   device->compiler->constant_buffer_0_is_relative =
+      device->info.gen < 8 || !device->has_context_isolation;
 
    isl_device_init(&device->isl_dev, &device->info, swizzled);
 
