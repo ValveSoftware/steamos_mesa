@@ -564,22 +564,41 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 	tex->buffer.bo_alignment = new_tex->buffer.bo_alignment;
 	tex->buffer.domains = new_tex->buffer.domains;
 	tex->buffer.flags = new_tex->buffer.flags;
-	tex->size = new_tex->size;
-	tex->db_render_format = new_tex->db_render_format;
-	tex->db_compatible = new_tex->db_compatible;
-	tex->can_sample_z = new_tex->can_sample_z;
-	tex->can_sample_s = new_tex->can_sample_s;
+
 	tex->surface = new_tex->surface;
+	tex->size = new_tex->size;
+	si_texture_reference(&tex->flushed_depth_texture,
+			     new_tex->flushed_depth_texture);
+
 	tex->fmask_offset = new_tex->fmask_offset;
 	tex->cmask = new_tex->cmask;
+	r600_resource_reference(&tex->cmask_buffer, new_tex->cmask_buffer);
+	tex->dcc_offset = new_tex->dcc_offset;
 	tex->cb_color_info = new_tex->cb_color_info;
+	memcpy(tex->color_clear_value, new_tex->color_clear_value,
+	       sizeof(tex->color_clear_value));
 	tex->last_msaa_resolve_target_micro_mode = new_tex->last_msaa_resolve_target_micro_mode;
+
 	tex->htile_offset = new_tex->htile_offset;
+	tex->depth_clear_value = new_tex->depth_clear_value;
+	tex->dirty_level_mask = new_tex->dirty_level_mask;
+	tex->stencil_dirty_level_mask = new_tex->stencil_dirty_level_mask;
+	tex->db_render_format = new_tex->db_render_format;
+	tex->stencil_clear_value = new_tex->stencil_clear_value;
 	tex->tc_compatible_htile = new_tex->tc_compatible_htile;
 	tex->depth_cleared = new_tex->depth_cleared;
 	tex->stencil_cleared = new_tex->stencil_cleared;
+	tex->upgraded_depth = new_tex->upgraded_depth;
+	tex->db_compatible = new_tex->db_compatible;
+	tex->can_sample_z = new_tex->can_sample_z;
+	tex->can_sample_s = new_tex->can_sample_s;
+
+	tex->separate_dcc_dirty = new_tex->separate_dcc_dirty;
 	tex->dcc_gather_statistics = new_tex->dcc_gather_statistics;
-	tex->framebuffers_bound = new_tex->framebuffers_bound;
+	r600_resource_reference(&tex->dcc_separate_buffer,
+				new_tex->dcc_separate_buffer);
+	r600_resource_reference(&tex->last_dcc_separate_buffer,
+				new_tex->last_dcc_separate_buffer);
 
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
 		assert(!tex->htile_offset);
