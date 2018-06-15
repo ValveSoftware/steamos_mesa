@@ -1225,19 +1225,31 @@ radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(image->bo);
+	unsigned reg_offset = 0, reg_count = 0;
 
 	va += image->offset + image->clear_value_offset;
 
 	assert(radv_image_has_htile(image));
 
-	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 4, 0));
+	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+		++reg_count;
+	} else {
+		++reg_offset;
+		va += 4;
+	}
+	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
+		++reg_count;
+
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 2 + reg_count, 0));
 	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
 			S_370_WR_CONFIRM(1) |
 			S_370_ENGINE_SEL(V_370_PFP));
 	radeon_emit(cs, va);
 	radeon_emit(cs, va >> 32);
-	radeon_emit(cs, ds_clear_value.stencil);
-	radeon_emit(cs, fui(ds_clear_value.depth));
+	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT)
+		radeon_emit(cs, ds_clear_value.stencil);
+	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
+		radeon_emit(cs, fui(ds_clear_value.depth));
 
 	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value,
 				        aspects);
@@ -1251,20 +1263,31 @@ radv_load_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 			    struct radv_image *image)
 {
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	VkImageAspectFlags aspects = vk_format_aspects(image->vk_format);
 	uint64_t va = radv_buffer_get_va(image->bo);
+	unsigned reg_offset = 0, reg_count = 0;
 
 	va += image->offset + image->clear_value_offset;
 
 	if (!radv_image_has_htile(image))
 		return;
 
+	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+		++reg_count;
+	} else {
+		++reg_offset;
+		va += 4;
+	}
+	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
+		++reg_count;
+
 	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 	radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
 			COPY_DATA_DST_SEL(COPY_DATA_REG) |
-			COPY_DATA_COUNT_SEL);
+			(reg_count == 2 ? COPY_DATA_COUNT_SEL : 0));
 	radeon_emit(cs, va);
 	radeon_emit(cs, va >> 32);
-	radeon_emit(cs, R_028028_DB_STENCIL_CLEAR >> 2);
+	radeon_emit(cs, (R_028028_DB_STENCIL_CLEAR + 4 * reg_offset) >> 2);
 	radeon_emit(cs, 0);
 
 	radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
