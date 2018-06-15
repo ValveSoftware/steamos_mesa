@@ -837,6 +837,8 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	rsc->internal_format = format;
 	rsc->cpp = util_format_get_blocksize(format);
+	prsc->nr_samples = MAX2(1, prsc->nr_samples);
+	rsc->cpp *= prsc->nr_samples;
 
 	assert(rsc->cpp);
 
@@ -919,8 +921,9 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	if (!rsc->bo)
 		goto fail;
 
+	prsc->nr_samples = MAX2(1, prsc->nr_samples);
 	rsc->internal_format = tmpl->format;
-	rsc->cpp = util_format_get_blocksize(tmpl->format);
+	rsc->cpp = prsc->nr_samples * util_format_get_blocksize(tmpl->format);
 	slice->pitch = handle->stride / rsc->cpp;
 	slice->offset = handle->offset;
 	slice->size0 = handle->stride * prsc->height0;
@@ -1029,14 +1032,6 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_blit_info info = *blit_info;
 	bool discard = false;
-
-	if (info.src.resource->nr_samples > 1 &&
-			info.dst.resource->nr_samples <= 1 &&
-			!util_format_is_depth_or_stencil(info.src.resource->format) &&
-			!util_format_is_pure_integer(info.src.resource->format)) {
-		DBG("color resolve unimplemented");
-		return;
-	}
 
 	if (info.render_condition_enable && !fd_render_condition_check(pctx))
 		return;

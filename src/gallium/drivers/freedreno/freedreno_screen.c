@@ -197,7 +197,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_SHADER_STENCIL_EXPORT:
 	case PIPE_CAP_TGSI_TEXCOORD:
 	case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
-	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
 	case PIPE_CAP_QUERY_MEMORY_INFO:
 	case PIPE_CAP_PCI_GROUP:
@@ -216,10 +215,15 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 	case PIPE_CAP_CONDITIONAL_RENDER:
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
-	case PIPE_CAP_FAKE_SW_MSAA:
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 	case PIPE_CAP_CLIP_HALFZ:
 		return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen);
+
+	case PIPE_CAP_FAKE_SW_MSAA:
+		return !fd_screen_get_param(pscreen, PIPE_CAP_TEXTURE_MULTISAMPLE);
+
+	case PIPE_CAP_TEXTURE_MULTISAMPLE:
+		return is_a5xx(screen);
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen) || is_a4xx(screen);

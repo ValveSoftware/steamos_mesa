@@ -245,6 +245,8 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 
 	util_copy_framebuffer_state(cso, framebuffer);
 
+	cso->samples = util_framebuffer_get_num_samples(cso);
+
 	ctx->dirty |= FD_DIRTY_FRAMEBUFFER;
 
 	ctx->disabled_scissor.minx = 0;

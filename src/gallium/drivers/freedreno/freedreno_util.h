@@ -431,6 +431,22 @@ pack_rgba(enum pipe_format format, const float *rgba)
 #define BIT(bit) (1u << bit)
 
 /*
+ * a3xx+ helpers:
+ */
+
+static inline enum a3xx_msaa_samples
+fd_msaa_samples(unsigned samples)
+{
+	switch (samples) {
+	default:
+		debug_assert(0);
+	case 1: return MSAA_ONE;
+	case 2: return MSAA_TWO;
+	case 4: return MSAA_FOUR;
+	}
+}
+
+/*
  * a4xx+ helpers:
  */
 

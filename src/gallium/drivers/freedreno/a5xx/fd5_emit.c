@@ -641,7 +641,8 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				fd5_rasterizer_stateobj(ctx->rasterizer);
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_SU_CNTL, 1);
-		OUT_RING(ring, rasterizer->gras_su_cntl);
+		OUT_RING(ring, rasterizer->gras_su_cntl |
+				COND(pfb->samples > 1, A5XX_GRAS_SU_CNTL_MSAA_ENABLE));
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_SU_POINT_MINMAX, 2);
 		OUT_RING(ring, rasterizer->gras_su_point_minmax);
@@ -734,7 +735,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		}
 	}
 
-	if ((dirty & FD_DIRTY_BLEND)) {
+	if (dirty & FD_DIRTY_BLEND) {
 		struct fd5_blend_stateobj *blend = fd5_blend_stateobj(ctx->blend);
 		uint32_t i;
 
@@ -764,12 +765,16 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, blend_control);
 		}
 
-		OUT_PKT4(ring, REG_A5XX_RB_BLEND_CNTL, 1);
-		OUT_RING(ring, blend->rb_blend_cntl |
-				A5XX_RB_BLEND_CNTL_SAMPLE_MASK(0xffff));
-
 		OUT_PKT4(ring, REG_A5XX_SP_BLEND_CNTL, 1);
 		OUT_RING(ring, blend->sp_blend_cntl);
+	}
+
+	if (dirty & (FD_DIRTY_BLEND | FD_DIRTY_SAMPLE_MASK)) {
+		struct fd5_blend_stateobj *blend = fd5_blend_stateobj(ctx->blend);
+
+		OUT_PKT4(ring, REG_A5XX_RB_BLEND_CNTL, 1);
+		OUT_RING(ring, blend->rb_blend_cntl |
+				A5XX_RB_BLEND_CNTL_SAMPLE_MASK(ctx->sample_mask));
 	}
 
 	if (dirty & FD_DIRTY_BLEND_COLOR) {

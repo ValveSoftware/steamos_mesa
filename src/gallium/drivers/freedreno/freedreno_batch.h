@@ -115,7 +115,6 @@ struct fd_batch {
 		FD_GMEM_DEPTH_ENABLED        = 0x02,
 		FD_GMEM_STENCIL_ENABLED      = 0x04,
 
-		FD_GMEM_MSAA_ENABLED         = 0x08,
 		FD_GMEM_BLEND_ENABLED        = 0x10,
 		FD_GMEM_LOGICOP_ENABLED      = 0x20,
 	} gmem_reason;

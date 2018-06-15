@@ -135,6 +135,8 @@ calculate_tiles(struct fd_batch *batch)
 			cbuf_cpp[i] = util_format_get_blocksize(pfb->cbufs[i]->format);
 		else
 			cbuf_cpp[i] = 4;
+		/* if MSAA, color buffers are super-sampled in GMEM: */
+		cbuf_cpp[i] *= pfb->samples;
 	}
 
 	if (!memcmp(gmem->zsbuf_cpp, zsbuf_cpp, sizeof(zsbuf_cpp)) &&
@@ -393,9 +395,11 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 
 	if (ctx->emit_sysmem_prep && !batch->nondraw) {
 		if (batch->cleared || batch->gmem_reason ||
-				((batch->num_draws > 5) && !batch->blit)) {
-			DBG("GMEM: cleared=%x, gmem_reason=%x, num_draws=%u",
-				batch->cleared, batch->gmem_reason, batch->num_draws);
+				((batch->num_draws > 5) && !batch->blit) ||
+				(pfb->samples > 1)) {
+			DBG("GMEM: cleared=%x, gmem_reason=%x, num_draws=%u, samples=%u",
+				batch->cleared, batch->gmem_reason, batch->num_draws,
+				pfb->samples);
 		} else if (!(fd_mesa_debug & FD_DBG_NOBYPASS)) {
 			sysmem = true;
 		}

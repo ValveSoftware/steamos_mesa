@@ -35,6 +35,20 @@
 
 #include "ir3_compiler.h"
 
+static bool
+valid_sample_count(unsigned sample_count)
+{
+	switch (sample_count) {
+	case 0:
+	case 1:
+	case 2:
+	case 4:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static boolean
 fd5_screen_is_format_supported(struct pipe_screen *pscreen,
 		enum pipe_format format,
@@ -45,7 +59,7 @@ fd5_screen_is_format_supported(struct pipe_screen *pscreen,
 	unsigned retval = 0;
 
 	if ((target >= PIPE_MAX_TEXTURE_TYPES) ||
-			(sample_count > 1) || /* TODO add MSAA */
+			!valid_sample_count(sample_count) ||
 			!util_format_is_supported(format, usage)) {
 		DBG("not supported: format=%s, target=%d, sample_count=%d, usage=%x",
 				util_format_name(format), target, sample_count, usage);
@@ -57,11 +71,11 @@ fd5_screen_is_format_supported(struct pipe_screen *pscreen,
 		retval |= PIPE_BIND_VERTEX_BUFFER;
 	}
 
-	if ((usage & PIPE_BIND_SAMPLER_VIEW) &&
+	if ((usage & (PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_SHADER_IMAGE)) &&
 			(target == PIPE_BUFFER ||
 			 util_format_get_blocksize(format) != 12) &&
 			(fd5_pipe2tex(format) != (enum a5xx_tex_fmt)~0)) {
-		retval |= PIPE_BIND_SAMPLER_VIEW;
+		retval |= usage & (PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_SHADER_IMAGE);
 	}
 
 	if ((usage & (PIPE_BIND_RENDER_TARGET |
