@@ -622,7 +622,7 @@ radv_blend_check_commutativity(struct radv_blend_state *blend,
 		(1u << VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA);
 
 	if (dst == VK_BLEND_FACTOR_ONE &&
-	    (src_allowed && (1u << src))) {
+	    (src_allowed & (1u << src))) {
 		/* Addition is commutative, but floating point addition isn't
 		 * associative: subtle changes can be introduced via different
 		 * rounding. Be conservative, only enable for min and max.
