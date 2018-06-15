@@ -3703,6 +3703,10 @@
     <field name="3D Rendering Instruction Disable" start="0" end="0" type="bool"/>
     <field name="Media Instruction Disable" start="1" end="1" type="bool"/>
     <field name="CONSTANT_BUFFER Address Offset Disable" start="4" end="4" type="bool"/>
+
+    <field name="3D Rendering Instruction Disable Mask" start="16" end="16" type="bool"/>
+    <field name="Media Instruction Disable Mask" start="17" end="17" type="bool"/>
+    <field name="CONSTANT_BUFFER Address Offset Disable Mask" start="20" end="20" type="bool"/>
   </register>
 
 </genxml>
