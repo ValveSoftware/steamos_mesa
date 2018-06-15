@@ -343,20 +343,18 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 cl_emit(&job->bcl, CLIP_WINDOW, clip) {
                         clip.clip_window_left_pixel_coordinate = minx;
                         clip.clip_window_bottom_pixel_coordinate = miny;
-                        clip.clip_window_width_in_pixels = maxx - minx;
-                        clip.clip_window_height_in_pixels = maxy - miny;
-
-#if V3D_VERSION < 41
-                        /* The HW won't entirely clip out when scissor w/h is
-                         * 0.  Just treat it the same as rasterizer discard.
-                         */
-                        if (clip.clip_window_width_in_pixels == 0 ||
-                            clip.clip_window_height_in_pixels == 0) {
+                        if (maxx > minx && maxy > miny) {
+                                clip.clip_window_width_in_pixels = maxx - minx;
+                                clip.clip_window_height_in_pixels = maxy - miny;
+                        } else if (V3D_VERSION < 41) {
+                                /* The HW won't entirely clip out when scissor
+                                 * w/h is 0.  Just treat it the same as
+                                 * rasterizer discard.
+                                 */
                                 rasterizer_discard = true;
                                 clip.clip_window_width_in_pixels = 1;
                                 clip.clip_window_height_in_pixels = 1;
                         }
-#endif
                 }
 
                 job->draw_min_x = MIN2(job->draw_min_x, minx);
