@@ -438,6 +438,9 @@ PIPE_CONSERVATIVE_RASTER_PRE_SNAP mode is supported for points and lines.
 works with conservative rasterization.
 * ``PIPE_CAP_MAX_CONSERVATIVE_RASTER_SUBPIXEL_PRECISION_BIAS``: The maximum
 subpixel precision bias in bits during conservative rasterization.
+* ``PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS``: True is the driver supports
+  programmable sample location through ```get_sample_pixel_grid``` and
+  ```set_sample_locations```.
 
 
 .. _pipe_capf:
