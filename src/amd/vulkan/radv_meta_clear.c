@@ -1020,8 +1020,6 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (iview->image->info.levels > 1)
 		goto fail;
 
-	if (iview->image->surface.is_linear)
-		goto fail;
 	if (!radv_image_extent_compare(iview->image, &iview->extent))
 		goto fail;
 
