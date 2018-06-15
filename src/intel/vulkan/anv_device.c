@@ -377,6 +377,9 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->use_softpin = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_SOFTPIN)
       && device->supports_48bit_addresses;
 
+   device->has_context_isolation =
+      anv_gem_get_param(fd, I915_PARAM_HAS_CONTEXT_ISOLATION);
+
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
    /* Starting with Gen10, the timestamp frequency of the command streamer may

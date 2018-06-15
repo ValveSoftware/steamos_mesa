@@ -856,6 +856,7 @@ struct anv_physical_device {
     bool                                        has_syncobj_wait;
     bool                                        has_context_priority;
     bool                                        use_softpin;
+    bool                                        has_context_isolation;
 
     struct anv_device_extension_table           supported_extensions;
 
