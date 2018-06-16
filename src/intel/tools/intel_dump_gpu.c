@@ -512,7 +512,7 @@ write_execlists_header(void)
    dwords = 5 + app_name_len / sizeof(uint32_t);
    dword_out(CMD_MEM_TRACE_VERSION | (dwords - 1));
    dword_out(AUB_MEM_TRACE_VERSION_FILE_VERSION);
-   dword_out(AUB_MEM_TRACE_VERSION_DEVICE_CNL);
+   dword_out(devinfo.simulator_id << AUB_MEM_TRACE_VERSION_DEVICE_SHIFT);
    dword_out(0);      /* version */
    dword_out(0);      /* version */
    data_out(app_name, app_name_len);
