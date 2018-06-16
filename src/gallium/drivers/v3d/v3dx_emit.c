@@ -694,6 +694,10 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                 so->targets[i];
                         struct v3d_resource *rsc = target ?
                                 v3d_resource(target->buffer) : NULL;
+                        struct pipe_shader_state *vs = &v3d->prog.bind_vs->base;
+                        struct pipe_stream_output_info *info = &vs->stream_output;
+                        uint32_t offset = (v3d->streamout.offsets[i] *
+                                           info->stride[i] * 4);
 
 #if V3D_VERSION >= 40
                         if (!target)
@@ -702,9 +706,10 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_BUFFER, output) {
                                 output.buffer_address =
                                         cl_address(rsc->bo,
-                                                   target->buffer_offset);
+                                                   target->buffer_offset +
+                                                   offset);
                                 output.buffer_size_in_32_bit_words =
-                                        target->buffer_size >> 2;
+                                        (target->buffer_size - offset) >> 2;
                                 output.buffer_number = i;
                         }
 #else /* V3D_VERSION < 40 */
@@ -712,7 +717,8 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                 if (target) {
                                         output.address =
                                                 cl_address(rsc->bo,
-                                                           target->buffer_offset);
+                                                           target->buffer_offset +
+                                                           offset);
                                 }
                         };
 #endif /* V3D_VERSION < 40 */

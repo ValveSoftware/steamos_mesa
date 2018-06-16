@@ -557,6 +557,12 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         }
         job->draw_calls_queued++;
 
+        /* Increment the TF offsets by how many verts we wrote.  XXX: This
+         * needs some clamping to the buffer size.
+         */
+        for (int i = 0; i < v3d->streamout.num_targets; i++)
+                v3d->streamout.offsets[i] += info->count;
+
         if (v3d->zsa && job->zsbuf &&
             (v3d->zsa->base.depth.enabled ||
              v3d->zsa->base.stencil[0].enabled)) {

@@ -189,6 +189,8 @@ struct v3d_vertex_stateobj {
 
 struct v3d_streamout_stateobj {
         struct pipe_stream_output_target *targets[PIPE_MAX_SO_BUFFERS];
+        /* Number of vertices we've written into the buffer so far. */
+        uint32_t offsets[PIPE_MAX_SO_BUFFERS];
         unsigned num_targets;
 };
 

@@ -902,8 +902,12 @@ v3d_set_stream_output_targets(struct pipe_context *pctx,
 
         assert(num_targets <= ARRAY_SIZE(so->targets));
 
-        for (i = 0; i < num_targets; i++)
+        for (i = 0; i < num_targets; i++) {
+                if (offsets[i] != -1)
+                        so->offsets[i] = offsets[i];
+
                 pipe_so_target_reference(&so->targets[i], targets[i]);
+        }
 
         for (; i < so->num_targets; i++)
                 pipe_so_target_reference(&so->targets[i], NULL);

@@ -152,6 +152,8 @@ v3d_set_transform_feedback_outputs(struct v3d_uncompiled_shader *so,
                         vpm_start_offset += write_size;
                         vpm_size -= write_size;
                 }
+                so->base.stream_output.stride[buffer] =
+                        stream_output->stride[buffer];
         }
 
         so->num_tf_outputs = slot_count;
