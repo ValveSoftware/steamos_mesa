@@ -100,8 +100,8 @@ static uint64_t si_desc_extract_buffer_address(const uint32_t *desc)
 		      ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc[1]) << 32);
 
 	/* Sign-extend the 48-bit address. */
-	if (va & (1ull << 47))
-		va |= 0xffffull << 48;
+	va <<= 16;
+	va = (int64_t)va >> 16;
 	return va;
 }
 
