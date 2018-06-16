@@ -63,4 +63,22 @@ if with_tools.contains('intel')
     install_dir: get_option('libexecdir'),
     install: true,
   )
+
+  configure_file(
+    input : 'intel_dump_gpu.in',
+    output : '@BASENAME@',
+    install_dir: get_option('bindir'),
+    configuration: sanitize_data,
+  )
+
+  libintel_dump_gpu = shared_library(
+    'intel_dump_gpu',
+    files('intel_dump_gpu.c'),
+    dependencies : dep_dl,
+    include_directories : [inc_common, inc_intel, inc_drm_uapi],
+    link_with : libintel_dev,
+    c_args : [c_vis_args, no_override_init_args],
+    install_dir: get_option('libexecdir'),
+    install : true
+  )
 endif
