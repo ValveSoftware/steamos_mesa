@@ -720,6 +720,51 @@ wsi_common_get_surface_capabilities2(struct wsi_device *wsi_device,
 }
 
 VkResult
+wsi_common_get_surface_capabilities2ext(
+   struct wsi_device *wsi_device,
+   VkSurfaceKHR _surface,
+   VkSurfaceCapabilities2EXT *pSurfaceCapabilities)
+{
+   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
+   struct wsi_interface *iface = wsi_device->wsi[surface->platform];
+
+   assert(pSurfaceCapabilities->sType ==
+          VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_EXT);
+
+   struct wsi_surface_supported_counters counters = {
+      .sType = VK_STRUCTURE_TYPE_WSI_SURFACE_SUPPORTED_COUNTERS_MESA,
+      .pNext = pSurfaceCapabilities->pNext,
+      .supported_surface_counters = 0,
+   };
+
+   VkSurfaceCapabilities2KHR caps2 = {
+      .sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR,
+      .pNext = &counters,
+   };
+
+   VkResult result = iface->get_capabilities2(surface, NULL, &caps2);
+
+   if (result == VK_SUCCESS) {
+      VkSurfaceCapabilities2EXT *ext_caps = pSurfaceCapabilities;
+      VkSurfaceCapabilitiesKHR khr_caps = caps2.surfaceCapabilities;
+
+      ext_caps->minImageCount = khr_caps.minImageCount;
+      ext_caps->maxImageCount = khr_caps.maxImageCount;
+      ext_caps->currentExtent = khr_caps.currentExtent;
+      ext_caps->minImageExtent = khr_caps.minImageExtent;
+      ext_caps->maxImageExtent = khr_caps.maxImageExtent;
+      ext_caps->maxImageArrayLayers = khr_caps.maxImageArrayLayers;
+      ext_caps->supportedTransforms = khr_caps.supportedTransforms;
+      ext_caps->currentTransform = khr_caps.currentTransform;
+      ext_caps->supportedCompositeAlpha = khr_caps.supportedCompositeAlpha;
+      ext_caps->supportedUsageFlags = khr_caps.supportedUsageFlags;
+      ext_caps->supportedSurfaceCounters = counters.supported_surface_counters;
+   }
+
+   return result;
+}
+
+VkResult
 wsi_common_get_surface_formats(struct wsi_device *wsi_device,
                                VkSurfaceKHR _surface,
                                uint32_t *pSurfaceFormatCount,
