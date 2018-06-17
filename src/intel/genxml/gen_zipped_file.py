@@ -42,10 +42,10 @@ def main():
     print("} genxml_files_table[] = {")
 
     xml_offset = 0
-    compressed_data = ''
+    compressed_data = b''
     for i in range(1, len(sys.argv)):
         filename = sys.argv[i]
-        xml = open(filename).read()
+        xml = open(filename, "rb").read()
         xml_length = len(xml)
         root = et.fromstring(xml)
 
