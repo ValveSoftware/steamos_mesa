@@ -79,7 +79,7 @@ class Value(object):
 static const ${val.c_type} ${val.name} = {
    { ${val.type_enum}, ${val.bit_size} },
 % if isinstance(val, Constant):
-   ${val.type()}, { ${hex(val)} /* ${val.value} */ },
+   ${val.type()}, { ${val.hex()} /* ${val.value} */ },
 % elif isinstance(val, Variable):
    ${val.index}, /* ${val.var_name} */
    ${'true' if val.is_constant else 'false'},
@@ -133,7 +133,7 @@ class Constant(Value):
          assert self.bit_size == 0 or self.bit_size == 32
          self.bit_size = 32
 
-   def __hex__(self):
+   def hex(self):
       if isinstance(self.value, (bool)):
          return 'NIR_TRUE' if self.value else 'NIR_FALSE'
       if isinstance(self.value, (int, long)):
