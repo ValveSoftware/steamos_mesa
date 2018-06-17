@@ -3299,10 +3299,13 @@ static bool radv_need_late_scissor_emission(struct radv_cmd_buffer *cmd_buffer,
 	if (!cmd_buffer->device->physical_device->has_scissor_bug)
 		return false;
 
+	uint32_t used_states = cmd_buffer->state.pipeline->graphics.needed_dynamic_state | ~RADV_CMD_DIRTY_DYNAMIC_ALL;
+
+	/* Index & Vertex buffer don't change context regs, and pipeline is handled later. */
+	used_states &= ~(RADV_CMD_DIRTY_INDEX_BUFFER | RADV_CMD_DIRTY_VERTEX_BUFFER | RADV_CMD_DIRTY_PIPELINE);
+
 	/* Assume all state changes except  these two can imply context rolls. */
-	if (cmd_buffer->state.dirty & ~(RADV_CMD_DIRTY_INDEX_BUFFER |
-	                                RADV_CMD_DIRTY_VERTEX_BUFFER |
-	                                RADV_CMD_DIRTY_PIPELINE))
+	if (cmd_buffer->state.dirty & used_states)
 		return true;
 
 	if (cmd_buffer->state.emitted_pipeline != cmd_buffer->state.pipeline)
