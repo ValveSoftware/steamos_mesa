@@ -157,7 +157,7 @@ anv_physical_device_api_version(struct anv_physical_device *device)
 %for version in API_VERSIONS:
     if (!(${version.enable}))
         return version;
-    version = ${version.max_patch_version.c_vk_version()};
+    version = ${version.version.c_vk_version()};
 
 %endfor
     return version;

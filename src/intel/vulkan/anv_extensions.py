@@ -44,20 +44,22 @@ class Extension:
         self.enable = _bool_to_c_expr(enable)
 
 class ApiVersion:
-    def __init__(self, max_patch_version, enable):
-        self.max_patch_version = max_patch_version
+    def __init__(self, version, enable):
+        self.version = version
         self.enable = _bool_to_c_expr(enable)
+
+API_PATCH_VERSION = 76
 
 # Supported API versions.  Each one is the maximum patch version for the given
 # version.  Version come in increasing order and each version is available if
 # it's provided "enable" condition is true and all previous versions are
 # available.
 API_VERSIONS = [
-    ApiVersion('1.0.57',    True),
+    ApiVersion('1.0',   True),
 
     # DRM_IOCTL_SYNCOBJ_WAIT is required for VK_KHR_external_fence which is a
     # required core feature in Vulkan 1.1
-    ApiVersion('1.1.0',     'device->has_syncobj_wait'),
+    ApiVersion('1.1',   'device->has_syncobj_wait'),
 ]
 
 MAX_API_VERSION = None # Computed later
@@ -160,6 +162,7 @@ class VkVersion:
 
 MAX_API_VERSION = VkVersion('0.0.0')
 for version in API_VERSIONS:
-    version.max_patch_version = VkVersion(version.max_patch_version)
-    assert version.max_patch_version > MAX_API_VERSION
-    MAX_API_VERSION = version.max_patch_version
+    version.version = VkVersion(version.version)
+    version.version.patch = API_PATCH_VERSION
+    assert version.version > MAX_API_VERSION
+    MAX_API_VERSION = version.version
