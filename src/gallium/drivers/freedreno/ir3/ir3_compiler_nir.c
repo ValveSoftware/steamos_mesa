@@ -118,6 +118,9 @@ struct ir3_context {
 	 */
 	bool unminify_coords;
 
+	/* on a3xx do txf_ms w/ isaml and scaled coords: */
+	bool txf_ms_with_isaml;
+
 	/* on a4xx, for array textures we need to add 0.5 to the array
 	 * index coordinate:
 	 */
@@ -125,6 +128,8 @@ struct ir3_context {
 
 	/* on a4xx, bitmask of samplers which need astc+srgb workaround: */
 	unsigned astc_srgb;
+
+	unsigned samples;             /* bitmask of x,y sample shifts */
 
 	unsigned max_texture_index;
 
@@ -155,23 +160,31 @@ compile_init(struct ir3_compiler *compiler,
 		ctx->flat_bypass = true;
 		ctx->levels_add_one = false;
 		ctx->unminify_coords = false;
+		ctx->txf_ms_with_isaml = false;
 		ctx->array_index_add_half = true;
 
-		if (so->type == SHADER_VERTEX)
+		if (so->type == SHADER_VERTEX) {
 			ctx->astc_srgb = so->key.vastc_srgb;
-		else if (so->type == SHADER_FRAGMENT)
+		} else if (so->type == SHADER_FRAGMENT) {
 			ctx->astc_srgb = so->key.fastc_srgb;
+		}
 
 	} else {
 		/* no special handling for "flat" */
 		ctx->flat_bypass = false;
 		ctx->levels_add_one = true;
 		ctx->unminify_coords = true;
+		ctx->txf_ms_with_isaml = true;
 		ctx->array_index_add_half = false;
+
+		if (so->type == SHADER_VERTEX) {
+			ctx->samples = so->key.vsamples;
+		} else if (so->type == SHADER_FRAGMENT) {
+			ctx->samples = so->key.fsamples;
+		}
 	}
 
 	ctx->compiler = compiler;
-	ctx->ir = so->ir;
 	ctx->so = so;
 	ctx->def_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
@@ -2601,7 +2614,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction * const *coord, * const *off, * const *ddx, * const *ddy;
-	struct ir3_instruction *lod, *compare, *proj;
+	struct ir3_instruction *lod, *compare, *proj, *sample_index;
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
@@ -2609,7 +2622,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	opc_t opc = 0;
 
 	coord = off = ddx = ddy = NULL;
-	lod = proj = compare = NULL;
+	lod = proj = compare = sample_index = NULL;
 
 	/* TODO: might just be one component for gathers? */
 	dst = get_dst(ctx, &tex->dest, 4);
@@ -2644,6 +2657,9 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 		case nir_tex_src_ddy:
 			ddy = get_src(ctx, &tex->src[i].src);
 			break;
+		case nir_tex_src_ms_index:
+			sample_index = get_src(ctx, &tex->src[i].src)[0];
+			break;
 		default:
 			compile_error(ctx, "Unhandled NIR tex src type: %d\n",
 					tex->src[i].src_type);
@@ -2670,7 +2686,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 		case 3:              opc = OPC_GATHER4A; break;
 		}
 		break;
-	case nir_texop_txf_ms:
+	case nir_texop_txf_ms:   opc = OPC_ISAMM;    break;
 	case nir_texop_txs:
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
@@ -2698,6 +2714,27 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 		src0[i] = coord[i];
 
 	nsrc0 = i;
+
+	/* NOTE a3xx (and possibly a4xx?) might be different, using isaml
+	 * with scaled x coord according to requested sample:
+	 */
+	if (tex->op == nir_texop_txf_ms) {
+		if (ctx->txf_ms_with_isaml) {
+			/* the samples are laid out in x dimension as
+			 *     0 1 2 3
+			 * x_ms = (x << ms) + sample_index;
+			 */
+			struct ir3_instruction *ms;
+			ms = create_immed(b, (ctx->samples >> (2 * tex->texture_index)) & 3);
+
+			src0[0] = ir3_SHL_B(b, src0[0], 0, ms, 0);
+			src0[0] = ir3_ADD_U(b, src0[0], 0, sample_index, 0);
+
+			opc = OPC_ISAML;
+		} else {
+			src0[nsrc0++] = sample_index;
+		}
+	}
 
 	/* scale up integer coords for TXF based on the LOD */
 	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
@@ -3726,7 +3763,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 			so->varying_in++;
 			so->inputs[i].compmask = (1 << maxcomp) - 1;
 			inloc += maxcomp;
-		} else if (!so->inputs[i].sysval){
+		} else if (!so->inputs[i].sysval) {
 			so->inputs[i].compmask = compmask;
 		}
 		so->inputs[i].regid = regid;
