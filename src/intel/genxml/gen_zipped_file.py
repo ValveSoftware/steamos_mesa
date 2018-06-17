@@ -62,8 +62,8 @@ def main():
     print("")
     print("static const uint8_t compress_genxmls[] = {")
     print("   ", end='')
-    for i, c in enumerate(compressed_data, start=1):
-        print("0x%.2x, " % ord(c), end='\n   ' if not i % 12 else '')
+    for i, c in enumerate(bytearray(compressed_data), start=1):
+        print("0x%.2x, " % c, end='\n   ' if not i % 12 else '')
     print('\n};')
 
 
