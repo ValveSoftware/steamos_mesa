@@ -60,10 +60,6 @@ with_tools = get_option('tools')
 if with_tools.contains('all')
   with_tools = ['freedreno', 'glsl', 'intel', 'nir', 'nouveau']
 endif
-if get_option('texture-float')
-  pre_args += '-DTEXTURE_FLOAT_ENABLED'
-  warning('Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
-endif
 
 dri_drivers_path = get_option('dri-drivers-path')
 if dri_drivers_path == ''
