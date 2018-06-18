@@ -1144,10 +1144,8 @@ if with_gallium_opencl
   llvm_optional_modules += ['coroutines', 'opencl']
 endif
 
-if with_amd_vk or with_gallium_radeonsi
+if with_amd_vk or with_gallium_radeonsi or with_gallium_swr
   _llvm_version = '>= 5.0.0'
-elif with_gallium_swr
-  _llvm_version = '>= 4.0.0'
 elif with_gallium_opencl or with_gallium_r600
   _llvm_version = '>= 3.9.0'
 else

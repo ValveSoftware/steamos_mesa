@@ -92,7 +92,7 @@ matrix:
         - BUILD=make
         - MAKEFLAGS="-j4"
         - MAKE_CHECK_COMMAND="true"
-        - LLVM_VERSION=4.0
+        - LLVM_VERSION=5.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - OVERRIDE_CC="gcc-4.8"
         - OVERRIDE_CXX="g++-4.8"
@@ -105,12 +105,12 @@ matrix:
       addons:
         apt:
           sources:
-            - llvm-toolchain-trusty-4.0
+            - llvm-toolchain-trusty-5.0
           packages:
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # From sources above
-            - llvm-4.0-dev
+            - llvm-5.0-dev
             # Common
             - xz-utils
             - x11proto-xf86vidmode-dev
@@ -432,7 +432,7 @@ matrix:
         - BUILD=scons
         - SCONSFLAGS="-j4"
         - SCONS_TARGET="swr=1"
-        - LLVM_VERSION=4.0
+        - LLVM_VERSION=5.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         # Keep it symmetrical to the make build. There's no actual SWR, yet.
         - SCONS_CHECK_COMMAND="true"
@@ -441,13 +441,13 @@ matrix:
       addons:
         apt:
           sources:
-            - llvm-toolchain-trusty-4.0
+            - llvm-toolchain-trusty-5.0
           packages:
             - scons
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # From sources above
-            - llvm-4.0-dev
+            - llvm-5.0-dev
             # Common
             - xz-utils
             - x11proto-xf86vidmode-dev
