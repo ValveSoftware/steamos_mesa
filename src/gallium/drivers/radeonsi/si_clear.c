@@ -447,7 +447,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		/* Fast clear is the most appropriate place to enable DCC for
 		 * displayable surfaces.
 		 */
-		if (!too_small) {
+		if (sctx->family == CHIP_STONEY && !too_small) {
 			vi_separate_dcc_try_enable(sctx, tex);
 
 			/* RB+ isn't supported with a CMASK clear only on Stoney,
@@ -455,8 +455,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			 * clears, which is weighed when determining whether to
 			 * enable separate DCC.
 			 */
-			if (tex->dcc_gather_statistics &&
-			    sctx->family == CHIP_STONEY)
+			if (tex->dcc_gather_statistics) /* only for Stoney */
 				tex->num_slow_clears++;
 		}
 
