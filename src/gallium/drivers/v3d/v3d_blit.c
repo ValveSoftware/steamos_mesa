@@ -195,6 +195,40 @@ static bool
 v3d_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
 {
         struct v3d_context *v3d = v3d_context(ctx);
+        struct v3d_resource *src = v3d_resource(info->src.resource);
+        struct pipe_resource *tiled = NULL;
+
+        if (!src->tiled) {
+                struct pipe_box box = {
+                        .x = 0,
+                        .y = 0,
+                        .width = u_minify(info->src.resource->width0,
+                                           info->src.level),
+                        .height = u_minify(info->src.resource->height0,
+                                           info->src.level),
+                        .depth = 1,
+                };
+                struct pipe_resource tmpl = {
+                        .target = info->src.resource->target,
+                        .format = info->src.resource->format,
+                        .width0 = box.width,
+                        .height0 = box.height,
+                        .depth0 = 1,
+                        .array_size = 1,
+                };
+                tiled = ctx->screen->resource_create(ctx->screen, &tmpl);
+                if (!tiled) {
+                        fprintf(stderr, "Failed to create tiled blit temp\n");
+                        return false;
+                }
+                ctx->resource_copy_region(ctx,
+                                          tiled, 0,
+                                          0, 0, 0,
+                                          info->src.resource, info->src.level,
+                                          &box);
+                info->src.level = 0;
+                info->src.resource = tiled;
+        }
 
         if (!util_blitter_is_blit_supported(v3d->blitter, info)) {
                 fprintf(stderr, "blit unsupported %s -> %s\n",
@@ -205,6 +239,8 @@ v3d_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
 
         v3d_blitter_save(v3d);
         util_blitter_blit(v3d->blitter, info);
+
+        pipe_resource_reference(&tiled, NULL);
 
         return true;
 }
