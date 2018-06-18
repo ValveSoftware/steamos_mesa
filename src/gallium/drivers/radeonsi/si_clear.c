@@ -432,20 +432,6 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		    !sctx->screen->info.htile_cmask_support_1d_tiling)
 			continue;
 
-		/* Fast clear is the most appropriate place to enable DCC for
-		 * displayable surfaces.
-		 */
-		vi_separate_dcc_try_enable(sctx, tex);
-
-		/* RB+ isn't supported with a CMASK clear only on Stoney,
-		 * so all clears are considered to be hypothetically slow
-		 * clears, which is weighed when determining whether to
-		 * enable separate DCC.
-		 */
-		if (tex->dcc_gather_statistics &&
-		    sctx->family == CHIP_STONEY)
-			tex->num_slow_clears++;
-
 		bool need_decompress_pass = false;
 
 		/* Use a slow clear for small surfaces where the cost of
@@ -457,6 +443,22 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		bool too_small = tex->buffer.b.b.nr_samples <= 1 &&
 				 tex->buffer.b.b.width0 *
 				 tex->buffer.b.b.height0 <= 512 * 512;
+
+		/* Fast clear is the most appropriate place to enable DCC for
+		 * displayable surfaces.
+		 */
+		if (!too_small) {
+			vi_separate_dcc_try_enable(sctx, tex);
+
+			/* RB+ isn't supported with a CMASK clear only on Stoney,
+			 * so all clears are considered to be hypothetically slow
+			 * clears, which is weighed when determining whether to
+			 * enable separate DCC.
+			 */
+			if (tex->dcc_gather_statistics &&
+			    sctx->family == CHIP_STONEY)
+				tex->num_slow_clears++;
+		}
 
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
