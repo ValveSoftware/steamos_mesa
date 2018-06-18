@@ -42,6 +42,7 @@
 #include "fd5_program.h"
 #include "fd5_rasterizer.h"
 #include "fd5_texture.h"
+#include "fd5_screen.h"
 #include "fd5_format.h"
 #include "fd5_zsa.h"
 
@@ -1101,7 +1102,15 @@ t7              opcode: CP_WAIT_FOR_IDLE (26) (1 dwords)
 static void
 fd5_emit_ib(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 {
+	/* for debug after a lock up, write a unique counter value
+	 * to scratch6 for each IB, to make it easier to match up
+	 * register dumps to cmdstream.  The combination of IB and
+	 * DRAW (scratch7) is enough to "triangulate" the particular
+	 * draw that caused lockup.
+	 */
+	emit_marker5(ring, 6);
 	__OUT_IB5(ring, target);
+	emit_marker5(ring, 6);
 }
 
 static void
