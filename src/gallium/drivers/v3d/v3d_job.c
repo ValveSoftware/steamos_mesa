@@ -73,6 +73,11 @@ v3d_job_free(struct v3d_context *v3d, struct v3d_job *job)
                 }
         }
         if (job->zsbuf) {
+                struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
+                if (rsc->separate_stencil)
+                        remove_from_ht(v3d->write_jobs,
+                                       &rsc->separate_stencil->base);
+
                 remove_from_ht(v3d->write_jobs, job->zsbuf->texture);
                 pipe_surface_reference(&job->zsbuf, NULL);
         }
@@ -274,8 +279,18 @@ v3d_get_job(struct v3d_context *v3d,
                         _mesa_hash_table_insert(v3d->write_jobs,
                                                 cbufs[i]->texture, job);
         }
-        if (zsbuf)
+        if (zsbuf) {
                 _mesa_hash_table_insert(v3d->write_jobs, zsbuf->texture, job);
+
+                struct v3d_resource *rsc = v3d_resource(zsbuf->texture);
+                if (rsc->separate_stencil) {
+                        v3d_flush_jobs_reading_resource(v3d,
+                                                        &rsc->separate_stencil->base);
+                        _mesa_hash_table_insert(v3d->write_jobs,
+                                                &rsc->separate_stencil->base,
+                                                job);
+                }
+        }
 
         memcpy(&job->key, &local_key, sizeof(local_key));
         _mesa_hash_table_insert(v3d->jobs, &job->key, job);
