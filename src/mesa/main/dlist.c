@@ -365,6 +365,25 @@ typedef enum
    OPCODE_UNIFORM_3UIV,
    OPCODE_UNIFORM_4UIV,
 
+   /* GL_ARB_gpu_shader_fp64 */
+   OPCODE_UNIFORM_1D,
+   OPCODE_UNIFORM_2D,
+   OPCODE_UNIFORM_3D,
+   OPCODE_UNIFORM_4D,
+   OPCODE_UNIFORM_1DV,
+   OPCODE_UNIFORM_2DV,
+   OPCODE_UNIFORM_3DV,
+   OPCODE_UNIFORM_4DV,
+   OPCODE_UNIFORM_MATRIX22D,
+   OPCODE_UNIFORM_MATRIX33D,
+   OPCODE_UNIFORM_MATRIX44D,
+   OPCODE_UNIFORM_MATRIX23D,
+   OPCODE_UNIFORM_MATRIX32D,
+   OPCODE_UNIFORM_MATRIX24D,
+   OPCODE_UNIFORM_MATRIX42D,
+   OPCODE_UNIFORM_MATRIX34D,
+   OPCODE_UNIFORM_MATRIX43D,
+
    /* OpenGL 4.0 / GL_ARB_tessellation_shader */
    OPCODE_PATCH_PARAMETER_I,
    OPCODE_PATCH_PARAMETER_FV_INNER,
@@ -604,6 +623,22 @@ union uint64_pair
    GLuint64 uint64;
    GLuint uint32[2];
 };
+
+
+union float64_pair
+{
+   GLdouble d;
+   GLuint uint32[2];
+};
+
+
+#define ASSIGN_DOUBLE_TO_NODES(n, idx, value)                              \
+   do {                                                                    \
+      union float64_pair tmp;                                              \
+      tmp.d = value;                                                       \
+      n[idx].ui = tmp.uint32[0];                                           \
+      n[idx+1].ui = tmp.uint32[1];                                         \
+   } while (0)
 
 
 /**
@@ -1034,6 +1069,10 @@ _mesa_delete_list(struct gl_context *ctx, struct gl_display_list *dlist)
          case OPCODE_UNIFORM_2FV:
          case OPCODE_UNIFORM_3FV:
          case OPCODE_UNIFORM_4FV:
+         case OPCODE_UNIFORM_1DV:
+         case OPCODE_UNIFORM_2DV:
+         case OPCODE_UNIFORM_3DV:
+         case OPCODE_UNIFORM_4DV:
          case OPCODE_UNIFORM_1IV:
          case OPCODE_UNIFORM_2IV:
          case OPCODE_UNIFORM_3IV:
@@ -1053,6 +1092,15 @@ _mesa_delete_list(struct gl_context *ctx, struct gl_display_list *dlist)
          case OPCODE_UNIFORM_MATRIX32:
          case OPCODE_UNIFORM_MATRIX34:
          case OPCODE_UNIFORM_MATRIX43:
+         case OPCODE_UNIFORM_MATRIX22D:
+         case OPCODE_UNIFORM_MATRIX33D:
+         case OPCODE_UNIFORM_MATRIX44D:
+         case OPCODE_UNIFORM_MATRIX24D:
+         case OPCODE_UNIFORM_MATRIX42D:
+         case OPCODE_UNIFORM_MATRIX23D:
+         case OPCODE_UNIFORM_MATRIX32D:
+         case OPCODE_UNIFORM_MATRIX34D:
+         case OPCODE_UNIFORM_MATRIX43D:
             free(get_pointer(&n[4]));
             break;
          case OPCODE_PROGRAM_UNIFORM_1FV:
@@ -6488,6 +6536,152 @@ save_Uniform4fvARB(GLint location, GLsizei count, const GLfloat *v)
 
 
 static void GLAPIENTRY
+save_Uniform1d(GLint location, GLdouble x)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_1D, 3);
+   if (n) {
+      n[1].i = location;
+      ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform1d(ctx->Exec, (location, x));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform2d(GLint location, GLdouble x, GLdouble y)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_2D, 5);
+   if (n) {
+      n[1].i = location;
+      ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+      ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform2d(ctx->Exec, (location, x, y));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform3d(GLint location, GLdouble x, GLdouble y, GLdouble z)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_3D, 7);
+   if (n) {
+      n[1].i = location;
+      ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+      ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+      ASSIGN_DOUBLE_TO_NODES(n, 6, z);
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform3d(ctx->Exec, (location, x, y, z));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform4d(GLint location, GLdouble x, GLdouble y, GLdouble z, GLdouble w)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_4D, 9);
+   if (n) {
+      n[1].i = location;
+      ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+      ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+      ASSIGN_DOUBLE_TO_NODES(n, 6, z);
+      ASSIGN_DOUBLE_TO_NODES(n, 8, w);
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform4d(ctx->Exec, (location, x, y, z, w));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform1dv(GLint location, GLsizei count, const GLdouble *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_1DV, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      save_pointer(&n[3], memdup(v, count * 1 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform1dv(ctx->Exec, (location, count, v));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform2dv(GLint location, GLsizei count, const GLdouble *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_2DV, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      save_pointer(&n[3], memdup(v, count * 2 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform2dv(ctx->Exec, (location, count, v));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform3dv(GLint location, GLsizei count, const GLdouble *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_3DV, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      save_pointer(&n[3], memdup(v, count * 3 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform3dv(ctx->Exec, (location, count, v));
+   }
+}
+
+
+static void GLAPIENTRY
+save_Uniform4dv(GLint location, GLsizei count, const GLdouble *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_4DV, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      save_pointer(&n[3], memdup(v, count * 4 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_Uniform4dv(ctx->Exec, (location, count, v));
+   }
+}
+
+
+static void GLAPIENTRY
 save_Uniform1iARB(GLint location, GLint x)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -6944,6 +7138,184 @@ save_UniformMatrix4x3fv(GLint location, GLsizei count, GLboolean transpose,
       CALL_UniformMatrix4x3fv(ctx->Exec, (location, count, transpose, m));
    }
 }
+
+
+static void GLAPIENTRY
+save_UniformMatrix2dv(GLint location, GLsizei count, GLboolean transpose,
+                      const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX22D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 2 * 2 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix2dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+static void GLAPIENTRY
+save_UniformMatrix3dv(GLint location, GLsizei count, GLboolean transpose,
+                      const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX33D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 3 * 3 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix3dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+static void GLAPIENTRY
+save_UniformMatrix4dv(GLint location, GLsizei count, GLboolean transpose,
+                      const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX44D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 4 * 4 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix4dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+
+static void GLAPIENTRY
+save_UniformMatrix2x3dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX23D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 2 * 3 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix2x3dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+
+static void GLAPIENTRY
+save_UniformMatrix3x2dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX32D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 3 * 2 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix3x2dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+
+static void GLAPIENTRY
+save_UniformMatrix2x4dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX24D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 2 * 4 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix2x4dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+static void GLAPIENTRY
+save_UniformMatrix4x2dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX42D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 4 * 2 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix4x2dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+
+static void GLAPIENTRY
+save_UniformMatrix3x4dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX34D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 3 * 4 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix3x4dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
+
+static void GLAPIENTRY
+save_UniformMatrix4x3dv(GLint location, GLsizei count, GLboolean transpose,
+                        const GLdouble *m)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_MATRIX43D, 3 + POINTER_DWORDS);
+   if (n) {
+      n[1].i = location;
+      n[2].i = count;
+      n[3].b = transpose;
+      save_pointer(&n[4], memdup(m, count * 4 * 3 * sizeof(GLdouble)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformMatrix4x3dv(ctx->Exec, (location, count, transpose, m));
+   }
+}
+
 
 static void GLAPIENTRY
 save_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
@@ -8825,6 +9197,72 @@ execute_list(struct gl_context *ctx, GLuint list)
          case OPCODE_UNIFORM_4FV:
             CALL_Uniform4fv(ctx->Exec, (n[1].i, n[2].i, get_pointer(&n[3])));
             break;
+         case OPCODE_UNIFORM_1D: {
+            union float64_pair x;
+
+            x.uint32[0] = n[2].ui;
+            x.uint32[1] = n[3].ui;
+
+            CALL_Uniform1d(ctx->Exec, (n[1].i, x.d));
+            break;
+         }
+         case OPCODE_UNIFORM_2D: {
+            union float64_pair x;
+            union float64_pair y;
+
+            x.uint32[0] = n[2].ui;
+            x.uint32[1] = n[3].ui;
+            y.uint32[0] = n[4].ui;
+            y.uint32[1] = n[5].ui;
+
+            CALL_Uniform2d(ctx->Exec, (n[1].i, x.d, y.d));
+            break;
+         }
+         case OPCODE_UNIFORM_3D: {
+            union float64_pair x;
+            union float64_pair y;
+            union float64_pair z;
+
+            x.uint32[0] = n[2].ui;
+            x.uint32[1] = n[3].ui;
+            y.uint32[0] = n[4].ui;
+            y.uint32[1] = n[5].ui;
+            z.uint32[0] = n[6].ui;
+            z.uint32[1] = n[7].ui;
+
+            CALL_Uniform3d(ctx->Exec, (n[1].i, x.d, y.d, z.d));
+            break;
+         }
+         case OPCODE_UNIFORM_4D: {
+            union float64_pair x;
+            union float64_pair y;
+            union float64_pair z;
+            union float64_pair w;
+
+            x.uint32[0] = n[2].ui;
+            x.uint32[1] = n[3].ui;
+            y.uint32[0] = n[4].ui;
+            y.uint32[1] = n[5].ui;
+            z.uint32[0] = n[6].ui;
+            z.uint32[1] = n[7].ui;
+            w.uint32[0] = n[8].ui;
+            w.uint32[1] = n[9].ui;
+
+            CALL_Uniform4d(ctx->Exec, (n[1].i, x.d, y.d, z.d, w.d));
+            break;
+         }
+         case OPCODE_UNIFORM_1DV:
+            CALL_Uniform1dv(ctx->Exec, (n[1].i, n[2].i, get_pointer(&n[3])));
+            break;
+         case OPCODE_UNIFORM_2DV:
+            CALL_Uniform2dv(ctx->Exec, (n[1].i, n[2].i, get_pointer(&n[3])));
+            break;
+         case OPCODE_UNIFORM_3DV:
+            CALL_Uniform3dv(ctx->Exec, (n[1].i, n[2].i, get_pointer(&n[3])));
+            break;
+         case OPCODE_UNIFORM_4DV:
+            CALL_Uniform4dv(ctx->Exec, (n[1].i, n[2].i, get_pointer(&n[3])));
+            break;
          case OPCODE_UNIFORM_1I:
             CALL_Uniform1i(ctx->Exec, (n[1].i, n[2].i));
             break;
@@ -8909,6 +9347,42 @@ execute_list(struct gl_context *ctx, GLuint list)
             break;
          case OPCODE_UNIFORM_MATRIX43:
             CALL_UniformMatrix4x3fv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX22D:
+            CALL_UniformMatrix2dv(ctx->Exec,
+                                  (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX33D:
+            CALL_UniformMatrix3dv(ctx->Exec,
+                                  (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX44D:
+            CALL_UniformMatrix4dv(ctx->Exec,
+                                  (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX23D:
+            CALL_UniformMatrix2x3dv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX32D:
+            CALL_UniformMatrix3x2dv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX24D:
+            CALL_UniformMatrix2x4dv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX42D:
+            CALL_UniformMatrix4x2dv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX34D:
+            CALL_UniformMatrix3x4dv(ctx->Exec,
+                                    (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
+            break;
+         case OPCODE_UNIFORM_MATRIX43D:
+            CALL_UniformMatrix4x3dv(ctx->Exec,
                                     (n[1].i, n[2].i, n[3].b, get_pointer(&n[4])));
             break;
 
@@ -10078,6 +10552,25 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
    SET_Uniform2uiv(table, save_Uniform2uiv);
    SET_Uniform3uiv(table, save_Uniform3uiv);
    SET_Uniform4uiv(table, save_Uniform4uiv);
+
+   /* GL_ARB_gpu_shader_fp64 */
+   SET_Uniform1d(table, save_Uniform1d);
+   SET_Uniform2d(table, save_Uniform2d);
+   SET_Uniform3d(table, save_Uniform3d);
+   SET_Uniform4d(table, save_Uniform4d);
+   SET_Uniform1dv(table, save_Uniform1dv);
+   SET_Uniform2dv(table, save_Uniform2dv);
+   SET_Uniform3dv(table, save_Uniform3dv);
+   SET_Uniform4dv(table, save_Uniform4dv);
+   SET_UniformMatrix2dv(table, save_UniformMatrix2dv);
+   SET_UniformMatrix3dv(table, save_UniformMatrix3dv);
+   SET_UniformMatrix4dv(table, save_UniformMatrix4dv);
+   SET_UniformMatrix2x3dv(table, save_UniformMatrix2x3dv);
+   SET_UniformMatrix3x2dv(table, save_UniformMatrix3x2dv);
+   SET_UniformMatrix2x4dv(table, save_UniformMatrix2x4dv);
+   SET_UniformMatrix4x2dv(table, save_UniformMatrix4x2dv);
+   SET_UniformMatrix3x4dv(table, save_UniformMatrix3x4dv);
+   SET_UniformMatrix4x3dv(table, save_UniformMatrix4x3dv);
 
    /* These are: */
    SET_BeginTransformFeedback(table, save_BeginTransformFeedback);
