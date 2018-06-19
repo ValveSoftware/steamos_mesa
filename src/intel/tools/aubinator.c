@@ -39,11 +39,22 @@
 
 #include "util/list.h"
 #include "util/macros.h"
+#include "util/rb_tree.h"
 
 #include "common/gen_decoder.h"
 #include "common/gen_disasm.h"
 #include "common/gen_gem.h"
 #include "intel_aub.h"
+
+#ifndef HAVE_MEMFD_CREATE
+#include <sys/syscall.h>
+
+static inline int
+memfd_create(const char *name, unsigned int flags)
+{
+   return syscall(SYS_memfd_create, name, flags);
+}
+#endif
 
 /* Below is the only command missing from intel_aub.h in libdrm
  * So, reuse intel_aub.h from libdrm and #define the
@@ -73,20 +84,39 @@ struct gen_batch_decode_ctx batch_ctx;
 struct bo_map {
    struct list_head link;
    struct gen_batch_decode_bo bo;
+   bool unmap_after_use;
+};
+
+struct ggtt_entry {
+   struct rb_node node;
+   uint64_t virt_addr;
+   uint64_t phys_addr;
+};
+
+struct phys_mem {
+   struct rb_node node;
+   uint64_t fd_offset;
+   uint64_t phys_addr;
+   uint8_t *data;
 };
 
 static struct list_head maps;
+static struct rb_tree ggtt = {NULL};
+static struct rb_tree mem = {NULL};
+int mem_fd = -1;
+off_t mem_fd_len = 0;
 
 FILE *outfile;
 
 struct brw_instruction;
 
 static void
-add_gtt_bo_map(struct gen_batch_decode_bo bo)
+add_gtt_bo_map(struct gen_batch_decode_bo bo, bool unmap_after_use)
 {
    struct bo_map *m = calloc(1, sizeof(*m));
 
    m->bo = bo;
+   m->unmap_after_use = unmap_after_use;
    list_add(&m->link, &maps);
 }
 
@@ -94,21 +124,209 @@ static void
 clear_bo_maps(void)
 {
    list_for_each_entry_safe(struct bo_map, i, &maps, link) {
+      if (i->unmap_after_use)
+         munmap((void *)i->bo.map, i->bo.size);
       list_del(&i->link);
       free(i);
    }
 }
 
-static struct gen_batch_decode_bo
-get_gen_batch_bo(void *user_data, uint64_t address)
+static inline struct ggtt_entry *
+ggtt_entry_next(struct ggtt_entry *entry)
 {
+   if (!entry)
+      return NULL;
+   struct rb_node *node = rb_node_next(&entry->node);
+   if (!node)
+      return NULL;
+   return rb_node_data(struct ggtt_entry, node, node);
+}
+
+static inline int
+cmp_uint64(uint64_t a, uint64_t b)
+{
+   if (a < b)
+      return -1;
+   if (a > b)
+      return 1;
+   return 0;
+}
+
+static inline int
+cmp_ggtt_entry(const struct rb_node *node, const void *addr)
+{
+   struct ggtt_entry *entry = rb_node_data(struct ggtt_entry, node, node);
+   return cmp_uint64(entry->virt_addr, *(const uint64_t *)addr);
+}
+
+static struct ggtt_entry *
+ensure_ggtt_entry(struct rb_tree *tree, uint64_t virt_addr)
+{
+   struct rb_node *node = rb_tree_search_sloppy(&ggtt, &virt_addr,
+                                                cmp_ggtt_entry);
+   int cmp = 0;
+   if (!node || (cmp = cmp_ggtt_entry(node, &virt_addr))) {
+      struct ggtt_entry *new_entry = calloc(1, sizeof(*new_entry));
+      new_entry->virt_addr = virt_addr;
+      rb_tree_insert_at(&ggtt, node, &new_entry->node, cmp > 0);
+      node = &new_entry->node;
+   }
+
+   return rb_node_data(struct ggtt_entry, node, node);
+}
+
+static struct ggtt_entry *
+search_ggtt_entry(uint64_t virt_addr)
+{
+   virt_addr &= ~0xfff;
+
+   struct rb_node *node = rb_tree_search(&ggtt, &virt_addr, cmp_ggtt_entry);
+
+   if (!node)
+      return NULL;
+
+   return rb_node_data(struct ggtt_entry, node, node);
+}
+
+static inline int
+cmp_phys_mem(const struct rb_node *node, const void *addr)
+{
+   struct phys_mem *mem = rb_node_data(struct phys_mem, node, node);
+   return cmp_uint64(mem->phys_addr, *(uint64_t *)addr);
+}
+
+static struct phys_mem *
+ensure_phys_mem(uint64_t phys_addr)
+{
+   struct rb_node *node = rb_tree_search_sloppy(&mem, &phys_addr, cmp_phys_mem);
+   int cmp = 0;
+   if (!node || (cmp = cmp_phys_mem(node, &phys_addr))) {
+      struct phys_mem *new_mem = calloc(1, sizeof(*new_mem));
+      new_mem->phys_addr = phys_addr;
+      new_mem->fd_offset = mem_fd_len;
+
+      int ftruncate_res = ftruncate(mem_fd, mem_fd_len += 4096);
+      assert(ftruncate_res == 0);
+
+      new_mem->data = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
+                           mem_fd, new_mem->fd_offset);
+      assert(new_mem->data != MAP_FAILED);
+
+      rb_tree_insert_at(&mem, node, &new_mem->node, cmp > 0);
+      node = &new_mem->node;
+   }
+
+   return rb_node_data(struct phys_mem, node, node);
+}
+
+static struct phys_mem *
+search_phys_mem(uint64_t phys_addr)
+{
+   phys_addr &= ~0xfff;
+
+   struct rb_node *node = rb_tree_search(&mem, &phys_addr, cmp_phys_mem);
+
+   if (!node)
+      return NULL;
+
+   return rb_node_data(struct phys_mem, node, node);
+}
+
+static void
+handle_ggtt_entry_write(uint64_t address, const void *_data, uint32_t _size)
+{
+   uint64_t virt_addr = (address / sizeof(uint64_t)) << 12;
+   const uint64_t *data = _data;
+   size_t size = _size / sizeof(*data);
+   for (const uint64_t *entry = data;
+        entry < data + size;
+        entry++, virt_addr += 4096) {
+      struct ggtt_entry *pt = ensure_ggtt_entry(&ggtt, virt_addr);
+      pt->phys_addr = *entry;
+   }
+}
+
+static void
+handle_physical_write(uint64_t phys_address, const void *data, uint32_t size)
+{
+   uint32_t to_write = size;
+   for (uint64_t page = phys_address & ~0xfff; page < phys_address + size; page += 4096) {
+      struct phys_mem *mem = ensure_phys_mem(page);
+      uint64_t offset = MAX2(page, phys_address) - page;
+      uint32_t size_this_page = MIN2(to_write, 4096 - offset);
+      to_write -= size_this_page;
+      memcpy(mem->data + offset, data, size_this_page);
+      data = (const uint8_t *)data + size_this_page;
+   }
+}
+
+static void
+handle_ggtt_write(uint64_t virt_address, const void *data, uint32_t size)
+{
+   uint32_t to_write = size;
+   for (uint64_t page = virt_address & ~0xfff; page < virt_address + size; page += 4096) {
+      struct ggtt_entry *entry = search_ggtt_entry(page);
+      assert(entry && entry->phys_addr & 0x1);
+
+      uint64_t offset = MAX2(page, virt_address) - page;
+      uint32_t size_this_page = MIN2(to_write, 4096 - offset);
+      to_write -= size_this_page;
+
+      uint64_t phys_page = entry->phys_addr & ~0xfff; /* Clear the validity bits. */
+      handle_physical_write(phys_page + offset, data, size_this_page);
+      data = (const uint8_t *)data + size_this_page;
+   }
+}
+
+static struct gen_batch_decode_bo
+get_ggtt_batch_bo(void *user_data, uint64_t address)
+{
+   struct gen_batch_decode_bo bo = {0};
+
    list_for_each_entry(struct bo_map, i, &maps, link)
       if (i->bo.addr <= address && i->bo.addr + i->bo.size > address)
          return i->bo;
 
-   return (struct gen_batch_decode_bo) { .map = NULL };
-}
+   address &= ~0xfff;
 
+   struct ggtt_entry *start =
+      (struct ggtt_entry *)rb_tree_search_sloppy(&ggtt, &address,
+                                                 cmp_ggtt_entry);
+   if (start && start->virt_addr < address)
+      start = ggtt_entry_next(start);
+   if (!start)
+      return bo;
+
+   struct ggtt_entry *last = start;
+   for (struct ggtt_entry *i = ggtt_entry_next(last);
+        i && last->virt_addr + 4096 == i->virt_addr;
+        last = i, i = ggtt_entry_next(last))
+      ;
+
+   bo.addr = MIN2(address, start->virt_addr);
+   bo.size = last->virt_addr - bo.addr + 4096;
+   bo.map = mmap(NULL, bo.size, PROT_READ, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+   assert(bo.map != MAP_FAILED);
+
+   for (struct ggtt_entry *i = start;
+        i;
+        i = i == last ? NULL : ggtt_entry_next(i)) {
+      uint64_t phys_addr = i->phys_addr & ~0xfff;
+      struct phys_mem *phys_mem = search_phys_mem(phys_addr);
+
+      if (!phys_mem)
+         continue;
+
+      uint32_t map_offset = i->virt_addr - address;
+      void *res = mmap((uint8_t *)bo.map + map_offset, 4096, PROT_READ,
+                       MAP_SHARED | MAP_FIXED, mem_fd, phys_mem->fd_offset);
+      assert(res != MAP_FAILED);
+   }
+
+   add_gtt_bo_map(bo, true);
+
+   return bo;
+}
 #define GEN_ENGINE_RENDER 1
 #define GEN_ENGINE_BLITTER 2
 
@@ -134,7 +352,7 @@ handle_trace_block(uint32_t *p)
    switch (operation) {
    case AUB_TRACE_OP_DATA_WRITE:
       if (address_space == AUB_TRACE_MEMTYPE_GTT)
-         add_gtt_bo_map(bo);
+         add_gtt_bo_map(bo, false);
       break;
    case AUB_TRACE_OP_COMMAND_WRITE:
       switch (type) {
@@ -175,7 +393,7 @@ aubinator_init(uint16_t aub_pci_id, const char *app_name)
    batch_flags |= GEN_BATCH_DECODE_FLOATS;
 
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, outfile, batch_flags,
-                             xml_path, get_gen_batch_bo, NULL, NULL);
+                             xml_path, get_ggtt_batch_bo, NULL, NULL);
    batch_ctx.max_vbo_decoded_lines = max_vbo_lines;
 
    char *color = GREEN_HEADER, *reset_color = NORMAL;
@@ -307,7 +525,7 @@ handle_memtrace_reg_write(uint32_t *p)
 
    const uint32_t pphwsp_size = 4096;
    uint32_t pphwsp_addr = context_descriptor & 0xfffff000;
-   struct gen_batch_decode_bo pphwsp_bo = get_gen_batch_bo(NULL, pphwsp_addr);
+   struct gen_batch_decode_bo pphwsp_bo = get_ggtt_batch_bo(NULL, pphwsp_addr);
    uint32_t *context = (uint32_t *)((uint8_t *)pphwsp_bo.map +
                                     (pphwsp_bo.addr - pphwsp_addr) +
                                     pphwsp_size);
@@ -316,10 +534,11 @@ handle_memtrace_reg_write(uint32_t *p)
    uint32_t ring_buffer_tail = context[7];
    uint32_t ring_buffer_start = context[9];
 
-   struct gen_batch_decode_bo ring_bo = get_gen_batch_bo(NULL,
-                                                         ring_buffer_start);
+   struct gen_batch_decode_bo ring_bo = get_ggtt_batch_bo(NULL,
+                                                          ring_buffer_start);
    assert(ring_bo.size > 0);
    void *commands = (uint8_t *)ring_bo.map + (ring_bo.addr - ring_buffer_start);
+
    (void)engine; /* TODO */
    gen_print_batch(&batch_ctx, commands, ring_buffer_tail - ring_buffer_head,
                    0);
@@ -340,10 +559,20 @@ handle_memtrace_mem_write(uint32_t *p)
    };
    uint32_t address_space = p[3] >> 28;
 
-   if (address_space != 1)
-      return;
-
-   add_gtt_bo_map(bo);
+   switch (address_space) {
+   case 0: /* GGTT */
+      handle_ggtt_write(bo.addr, bo.map, bo.size);
+      break;
+   case 1: /* Local */
+      add_gtt_bo_map(bo, false);
+      break;
+   case 2: /* Physical */
+      handle_physical_write(bo.addr, bo.map, bo.size);
+      break;
+   case 4: /* GGTT Entry */
+      handle_ggtt_entry_write(bo.addr, bo.map, bo.size);
+      break;
+   }
 }
 
 struct aub_file {
@@ -606,6 +835,8 @@ int main(int argc, char *argv[])
 
    if (isatty(1) && pager)
       setup_pager();
+
+   mem_fd = memfd_create("phys memory", 0);
 
    list_inithead(&maps);
 
