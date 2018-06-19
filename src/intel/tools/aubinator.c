@@ -37,10 +37,12 @@
 #include <sys/wait.h>
 #include <sys/mman.h>
 
+#include "util/list.h"
 #include "util/macros.h"
 
 #include "common/gen_decoder.h"
 #include "common/gen_disasm.h"
+#include "common/gen_gem.h"
 #include "intel_aub.h"
 
 /* Below is the only command missing from intel_aub.h in libdrm
@@ -68,12 +70,44 @@ char *input_file = NULL, *xml_path = NULL;
 struct gen_device_info devinfo;
 struct gen_batch_decode_ctx batch_ctx;
 
-uint64_t gtt_size, gtt_end;
-void *gtt;
+struct bo_map {
+   struct list_head link;
+   struct gen_batch_decode_bo bo;
+};
+
+static struct list_head maps;
 
 FILE *outfile;
 
 struct brw_instruction;
+
+static void
+add_gtt_bo_map(struct gen_batch_decode_bo bo)
+{
+   struct bo_map *m = calloc(1, sizeof(*m));
+
+   m->bo = bo;
+   list_add(&m->link, &maps);
+}
+
+static void
+clear_bo_maps(void)
+{
+   list_for_each_entry_safe(struct bo_map, i, &maps, link) {
+      list_del(&i->link);
+      free(i);
+   }
+}
+
+static struct gen_batch_decode_bo
+get_gen_batch_bo(void *user_data, uint64_t address)
+{
+   list_for_each_entry(struct bo_map, i, &maps, link)
+      if (i->bo.addr <= address && i->bo.addr + i->bo.size > address)
+         return i->bo;
+
+   return (struct gen_batch_decode_bo) { .map = NULL };
+}
 
 #define GEN_ENGINE_RENDER 1
 #define GEN_ENGINE_BLITTER 2
@@ -84,26 +118,23 @@ handle_trace_block(uint32_t *p)
    int operation = p[1] & AUB_TRACE_OPERATION_MASK;
    int type = p[1] & AUB_TRACE_TYPE_MASK;
    int address_space = p[1] & AUB_TRACE_ADDRESS_SPACE_MASK;
-   uint64_t offset = p[3];
-   uint32_t size = p[4];
    int header_length = p[0] & 0xffff;
-   uint32_t *data = p + header_length + 2;
    int engine = GEN_ENGINE_RENDER;
-
-   if (devinfo.gen >= 8)
-      offset += (uint64_t) p[5] << 32;
+   struct gen_batch_decode_bo bo = {
+      .map = p + header_length + 2,
+      /* Addresses written by aubdump here are in canonical form but the batch
+       * decoder always gives us addresses with the top 16bits zeroed, so do
+       * the same here.
+       */
+      .addr = gen_48b_address((devinfo.gen >= 8 ? ((uint64_t) p[5] << 32) : 0) |
+                              ((uint64_t) p[3])),
+      .size = p[4],
+   };
 
    switch (operation) {
    case AUB_TRACE_OP_DATA_WRITE:
-      if (address_space != AUB_TRACE_MEMTYPE_GTT)
-         break;
-      if (gtt_size < offset + size) {
-         fprintf(stderr, "overflow gtt space: %s\n", strerror(errno));
-         exit(EXIT_FAILURE);
-      }
-      memcpy((char *) gtt + offset, data, size);
-      if (gtt_end < offset + size)
-         gtt_end = offset + size;
+      if (address_space == AUB_TRACE_MEMTYPE_GTT)
+         add_gtt_bo_map(bo);
       break;
    case AUB_TRACE_OP_COMMAND_WRITE:
       switch (type) {
@@ -119,25 +150,11 @@ handle_trace_block(uint32_t *p)
       }
 
       (void)engine; /* TODO */
-      gen_print_batch(&batch_ctx, data, size, 0);
+      gen_print_batch(&batch_ctx, bo.map, bo.size, 0);
 
-      gtt_end = 0;
+      clear_bo_maps();
       break;
    }
-}
-
-static struct gen_batch_decode_bo
-get_gen_batch_bo(void *user_data, uint64_t address)
-{
-   if (address > gtt_end)
-      return (struct gen_batch_decode_bo) { .map = NULL };
-
-   /* We really only have one giant address range */
-   return (struct gen_batch_decode_bo) {
-      .addr = 0,
-      .map = gtt,
-      .size = gtt_size
-   };
 }
 
 static void
@@ -289,34 +306,44 @@ handle_memtrace_reg_write(uint32_t *p)
    }
 
    const uint32_t pphwsp_size = 4096;
-   uint32_t *context = (uint32_t*)(gtt + (context_descriptor & 0xfffff000) + pphwsp_size);
+   uint32_t pphwsp_addr = context_descriptor & 0xfffff000;
+   struct gen_batch_decode_bo pphwsp_bo = get_gen_batch_bo(NULL, pphwsp_addr);
+   uint32_t *context = (uint32_t *)((uint8_t *)pphwsp_bo.map +
+                                    (pphwsp_bo.addr - pphwsp_addr) +
+                                    pphwsp_size);
+
    uint32_t ring_buffer_head = context[5];
    uint32_t ring_buffer_tail = context[7];
    uint32_t ring_buffer_start = context[9];
-   uint32_t *commands = (uint32_t*)((uint8_t*)gtt + ring_buffer_start + ring_buffer_head);
+
+   struct gen_batch_decode_bo ring_bo = get_gen_batch_bo(NULL,
+                                                         ring_buffer_start);
+   assert(ring_bo.size > 0);
+   void *commands = (uint8_t *)ring_bo.map + (ring_bo.addr - ring_buffer_start);
    (void)engine; /* TODO */
-   gen_print_batch(&batch_ctx, commands, ring_buffer_tail - ring_buffer_head, 0);
+   gen_print_batch(&batch_ctx, commands, ring_buffer_tail - ring_buffer_head,
+                   0);
+   clear_bo_maps();
 }
 
 static void
 handle_memtrace_mem_write(uint32_t *p)
 {
-   uint64_t address = *(uint64_t*)&p[1];
+   struct gen_batch_decode_bo bo = {
+      .map = p + 5,
+      /* Addresses written by aubdump here are in canonical form but the batch
+       * decoder always gives us addresses with the top 16bits zeroed, so do
+       * the same here.
+       */
+      .addr = gen_48b_address(*(uint64_t*)&p[1]),
+      .size = p[4],
+   };
    uint32_t address_space = p[3] >> 28;
-   uint32_t size = p[4];
-   uint32_t *data = p + 5;
 
    if (address_space != 1)
       return;
 
-   if (gtt_size < address + size) {
-      fprintf(stderr, "overflow gtt space: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-   }
-
-   memcpy((char *) gtt + address, data, size);
-   if (gtt_end < address + size)
-      gtt_end = address + size;
+   add_gtt_bo_map(bo);
 }
 
 struct aub_file {
@@ -580,14 +607,7 @@ int main(int argc, char *argv[])
    if (isatty(1) && pager)
       setup_pager();
 
-   /* mmap a terabyte for our gtt space. */
-   gtt_size = 1ull << 40;
-   gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
-              MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
-   if (gtt == MAP_FAILED) {
-      fprintf(stderr, "failed to alloc gtt space: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-   }
+   list_inithead(&maps);
 
    file = aub_file_open(input_file);
 
