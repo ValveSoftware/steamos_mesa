@@ -1881,6 +1881,8 @@ fi
 if test x"$have_xlease" = xyes; then
     randr_modules="x11-xcb xcb-randr"
     PKG_CHECK_MODULES([XCB_RANDR], [$randr_modules])
+    xlib_randr_modules="xrandr"
+    PKG_CHECK_MODULES([XLIB_RANDR], [$xlib_randr_modules])
 fi
 
 AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$platforms" | grep -q 'x11')

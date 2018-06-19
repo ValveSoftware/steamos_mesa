@@ -170,7 +170,7 @@ if with_platform_drm
 endif
 
 if with_xlib_lease
-  anv_deps += dep_xcb_xrandr
+  anv_deps += [dep_xcb_xrandr, dep_xlib_xrandr]
   anv_flags += '-DVK_USE_PLATFORM_XLIB_XRANDR_EXT'
 endif
 

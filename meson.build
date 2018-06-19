@@ -1308,6 +1308,7 @@ dep_xcb_sync = null_dep
 dep_xcb_xfixes = null_dep
 dep_xshmfence = null_dep
 dep_xcb_xrandr = null_dep
+dep_xlib_xrandr = null_dep
 if with_platform_x11
   if with_glx == 'xlib' or with_glx == 'gallium-xlib'
     dep_x11 = dependency('x11')
@@ -1356,6 +1357,7 @@ if with_platform_x11
   endif
   if with_xlib_lease
     dep_xcb_xrandr = dependency('xcb-randr', version : '>= 1.12')
+    dep_xlib_xrandr = dependency('xrandr', version : '>= 1.3')
   endif
 endif
 
