@@ -95,7 +95,7 @@ struct radv_tcs_variant_key {
 struct radv_fs_variant_key {
 	uint32_t col_format;
 	uint8_t log2_ps_iter_samples;
-	uint8_t log2_num_samples;
+	uint8_t num_samples;
 	uint32_t is_int8;
 	uint32_t is_int10;
 };

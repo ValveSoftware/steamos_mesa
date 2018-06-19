@@ -361,7 +361,7 @@ struct radv_pipeline_key {
 	uint32_t is_int8;
 	uint32_t is_int10;
 	uint8_t log2_ps_iter_samples;
-	uint8_t log2_num_samples;
+	uint8_t num_samples;
 	uint32_t has_multiview_view_index : 1;
 	uint32_t optimisations_disabled : 1;
 };

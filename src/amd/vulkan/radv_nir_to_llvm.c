@@ -1648,9 +1648,14 @@ static LLVMValueRef load_sample_position(struct ac_shader_abi *abi,
 static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 {
 	struct radv_shader_context *ctx = radv_shader_context_from_abi(abi);
-	uint8_t log2_ps_iter_samples = ctx->shader_info->info.ps.force_persample ?
-		ctx->options->key.fs.log2_num_samples :
-		ctx->options->key.fs.log2_ps_iter_samples;
+	uint8_t log2_ps_iter_samples;
+
+	if (ctx->shader_info->info.ps.force_persample) {
+		log2_ps_iter_samples =
+			util_logbase2(ctx->options->key.fs.num_samples);
+	} else {
+		log2_ps_iter_samples = ctx->options->key.fs.log2_ps_iter_samples;
+	}
 
 	/* The bit pattern matches that used by fixed function fragment
 	 * processing. */
