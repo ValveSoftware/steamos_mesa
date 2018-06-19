@@ -224,46 +224,72 @@ handle_memtrace_version(uint32_t *p)
 static void
 handle_memtrace_reg_write(uint32_t *p)
 {
+   static struct execlist_regs {
+      uint32_t render_elsp[4];
+      int render_elsp_index;
+      uint32_t blitter_elsp[4];
+      int blitter_elsp_index;
+   } state = {};
+
    uint32_t offset = p[1];
    uint32_t value = p[5];
+
    int engine;
-   static int render_elsp_writes = 0;
-   static int blitter_elsp_writes = 0;
-   static int render_elsq0 = 0;
-   static int blitter_elsq0 = 0;
-   uint8_t *pphwsp;
+   uint64_t context_descriptor;
 
-   if (offset == 0x2230) {
-      render_elsp_writes++;
+   switch (offset) {
+   case 0x2230: /* render elsp */
+      state.render_elsp[state.render_elsp_index++] = value;
+      if (state.render_elsp_index < 4)
+         return;
+
+      state.render_elsp_index = 0;
       engine = GEN_ENGINE_RENDER;
-   } else if (offset == 0x22230) {
-      blitter_elsp_writes++;
+      context_descriptor = (uint64_t)state.render_elsp[2] << 32 |
+         state.render_elsp[3];
+      break;
+   case 0x22230: /* blitter elsp */
+      state.blitter_elsp[state.blitter_elsp_index++] = value;
+      if (state.blitter_elsp_index < 4)
+         return;
+
+      state.blitter_elsp_index = 0;
       engine = GEN_ENGINE_BLITTER;
-   } else if (offset == 0x2510) {
-      render_elsq0 = value;
-   } else if (offset == 0x22510) {
-      blitter_elsq0 = value;
-   } else if (offset == 0x2550 || offset == 0x22550) {
-      /* nothing */;
-   } else {
+      context_descriptor = (uint64_t)state.blitter_elsp[2] << 32 |
+         state.blitter_elsp[3];
+      break;
+   case 0x2510: /* render elsq0 lo */
+      state.render_elsp[3] = value;
       return;
-   }
-
-   if (render_elsp_writes > 3 || blitter_elsp_writes > 3) {
-      render_elsp_writes = blitter_elsp_writes = 0;
-      pphwsp = (uint8_t*)gtt + (value & 0xfffff000);
-   } else if (offset == 0x2550) {
+      break;
+   case 0x2514: /* render elsq0 hi */
+      state.render_elsp[2] = value;
+      return;
+      break;
+   case 0x22510: /* blitter elsq0 lo */
+      state.blitter_elsp[3] = value;
+      return;
+      break;
+   case 0x22514: /* blitter elsq0 hi */
+      state.blitter_elsp[2] = value;
+      return;
+      break;
+   case 0x2550: /* render elsc */
       engine = GEN_ENGINE_RENDER;
-      pphwsp = (uint8_t*)gtt + (render_elsq0 & 0xfffff000);
-   } else if (offset == 0x22550) {
+      context_descriptor = (uint64_t)state.render_elsp[2] << 32 |
+         state.render_elsp[3];
+      break;
+   case 0x22550: /* blitter elsc */
       engine = GEN_ENGINE_BLITTER;
-      pphwsp = (uint8_t*)gtt + (blitter_elsq0 & 0xfffff000);
-   } else {
+      context_descriptor = (uint64_t)state.blitter_elsp[2] << 32 |
+         state.blitter_elsp[3];
+      break;
+   default:
       return;
    }
 
    const uint32_t pphwsp_size = 4096;
-   uint32_t *context = (uint32_t*)(pphwsp + pphwsp_size);
+   uint32_t *context = (uint32_t*)(gtt + (context_descriptor & 0xfffff000) + pphwsp_size);
    uint32_t ring_buffer_head = context[5];
    uint32_t ring_buffer_tail = context[7];
    uint32_t ring_buffer_start = context[9];
