@@ -3366,7 +3366,6 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		cmd_buffer->device->physical_device->rad_info.chip_class >= CIK;
 	bool pipeline_is_dirty =
 		(cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE) &&
-		cmd_buffer->state.pipeline &&
 		cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline;
 
 	MAYBE_UNUSED unsigned cdw_max =
