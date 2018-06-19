@@ -834,26 +834,9 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 	if (chip_class >= GFX9 && flush_cb_db) {
 		unsigned cb_db_event, tc_flags;
 
-#if 0
-		/* This breaks a bunch of:
-		   dEQP-VK.renderpass.dedicated_allocation.formats.d32_sfloat_s8_uint.input*.
-		   use the big hammer always.
-		*/
 		/* Set the CB/DB flush event. */
-		switch (flush_cb_db) {
-		case RADV_CMD_FLAG_FLUSH_AND_INV_CB:
-			cb_db_event = V_028A90_FLUSH_AND_INV_CB_DATA_TS;
-			break;
-		case RADV_CMD_FLAG_FLUSH_AND_INV_DB:
-			cb_db_event = V_028A90_FLUSH_AND_INV_DB_DATA_TS;
-			break;
-		default:
-			/* both CB & DB */
-			cb_db_event = V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT;
-		}
-#else
 		cb_db_event = V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT;
-#endif
+
 		/* These are the only allowed combinations. If you need to
 		 * do multiple operations at once, do them separately.
 		 * All operations that invalidate L2 also seem to invalidate
