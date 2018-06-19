@@ -70,11 +70,6 @@ struct gen_batch_decode_ctx batch_ctx;
 
 uint64_t gtt_size, gtt_end;
 void *gtt;
-uint64_t general_state_base;
-uint64_t surface_state_base;
-uint64_t dynamic_state_base;
-uint64_t instruction_base;
-uint64_t instruction_bound;
 
 FILE *outfile;
 
