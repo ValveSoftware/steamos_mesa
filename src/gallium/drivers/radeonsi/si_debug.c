@@ -43,7 +43,7 @@ DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
  * Store a linearized copy of all chunks of \p cs together with the buffer
  * list in \p saved.
  */
-void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
+void si_save_cs(struct radeon_winsys *ws, struct radeon_cmdbuf *cs,
 		struct radeon_saved_cs *saved, bool get_buffer_list)
 {
 	uint32_t *buf;
@@ -346,7 +346,7 @@ static void si_log_chunk_type_cs_destroy(void *data)
 	free(chunk);
 }
 
-static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
+static void si_parse_current_ib(FILE *f, struct radeon_cmdbuf *cs,
 				unsigned begin, unsigned end,
 				int *last_trace_id, unsigned trace_id_count,
 				const char *name, enum chip_class chip_class)
@@ -359,7 +359,7 @@ static void si_parse_current_ib(FILE *f, struct radeon_winsys_cs *cs,
 		name, begin);
 
 	for (unsigned prev_idx = 0; prev_idx < cs->num_prev; ++prev_idx) {
-		struct radeon_winsys_cs_chunk *chunk = &cs->prev[prev_idx];
+		struct radeon_cmdbuf_chunk *chunk = &cs->prev[prev_idx];
 
 		if (begin < chunk->cdw) {
 			ac_parse_ib_chunk(f, chunk->buf + begin,

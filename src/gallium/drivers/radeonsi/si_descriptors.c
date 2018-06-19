@@ -1809,7 +1809,7 @@ static void si_upload_bindless_descriptor(struct si_context *sctx,
 					  unsigned num_dwords)
 {
 	struct si_descriptors *desc = &sctx->bindless_descriptors;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned desc_slot_offset = desc_slot * 16;
 	uint32_t *data;
 	uint64_t va;
@@ -2055,7 +2055,7 @@ void si_shader_change_notify(struct si_context *sctx)
 	}
 }
 
-static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
+static void si_emit_shader_pointer_head(struct radeon_cmdbuf *cs,
 					unsigned sh_offset,
 					unsigned pointer_count)
 {
@@ -2064,7 +2064,7 @@ static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
 }
 
 static void si_emit_shader_pointer_body(struct si_screen *sscreen,
-					struct radeon_winsys_cs *cs,
+					struct radeon_cmdbuf *cs,
 					uint64_t va)
 {
 	radeon_emit(cs, va);
@@ -2079,7 +2079,7 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 				   struct si_descriptors *desc,
 				   unsigned sh_base)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned sh_offset = sh_base + desc->shader_userdata_offset;
 
 	si_emit_shader_pointer_head(cs, sh_offset, 1);
@@ -2093,7 +2093,7 @@ static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
 	if (!sh_base)
 		return;
 
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
 
 	while (mask) {
@@ -2117,7 +2117,7 @@ static void si_emit_disjoint_shader_pointers(struct si_context *sctx,
 	if (!sh_base)
 		return;
 
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
 
 	while (mask) {
@@ -2184,7 +2184,7 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx)
 		~u_bit_consecutive(SI_DESCS_RW_BUFFERS, SI_DESCS_FIRST_COMPUTE);
 
 	if (sctx->vertex_buffer_pointer_dirty) {
-		struct radeon_winsys_cs *cs = sctx->gfx_cs;
+		struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 		/* Find the location of the VB descriptor pointer. */
 		/* TODO: In the future, the pointer will be packed in unused

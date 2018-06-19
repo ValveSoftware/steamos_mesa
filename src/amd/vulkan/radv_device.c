@@ -1892,7 +1892,7 @@ radv_get_hs_offchip_param(struct radv_device *device, uint32_t *max_offchip_buff
 }
 
 static void
-radv_emit_gs_ring_sizes(struct radv_queue *queue, struct radeon_winsys_cs *cs,
+radv_emit_gs_ring_sizes(struct radv_queue *queue, struct radeon_cmdbuf *cs,
 			struct radeon_winsys_bo *esgs_ring_bo,
 			uint32_t esgs_ring_size,
 			struct radeon_winsys_bo *gsvs_ring_bo,
@@ -1919,7 +1919,7 @@ radv_emit_gs_ring_sizes(struct radv_queue *queue, struct radeon_winsys_cs *cs,
 }
 
 static void
-radv_emit_tess_factor_ring(struct radv_queue *queue, struct radeon_winsys_cs *cs,
+radv_emit_tess_factor_ring(struct radv_queue *queue, struct radeon_cmdbuf *cs,
 			   unsigned hs_offchip_param, unsigned tf_ring_size,
 			   struct radeon_winsys_bo *tess_rings_bo)
 {
@@ -1954,7 +1954,7 @@ radv_emit_tess_factor_ring(struct radv_queue *queue, struct radeon_winsys_cs *cs
 }
 
 static void
-radv_emit_compute_scratch(struct radv_queue *queue, struct radeon_winsys_cs *cs,
+radv_emit_compute_scratch(struct radv_queue *queue, struct radeon_cmdbuf *cs,
 			  struct radeon_winsys_bo *compute_scratch_bo)
 {
 	uint64_t scratch_va;
@@ -1974,7 +1974,7 @@ radv_emit_compute_scratch(struct radv_queue *queue, struct radeon_winsys_cs *cs,
 
 static void
 radv_emit_global_shader_pointers(struct radv_queue *queue,
-				 struct radeon_winsys_cs *cs,
+				 struct radeon_cmdbuf *cs,
 				 struct radeon_winsys_bo *descriptor_bo)
 {
 	uint64_t va;
@@ -2019,9 +2019,9 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		     uint32_t gsvs_ring_size,
 		     bool needs_tess_rings,
 		     bool needs_sample_positions,
-		     struct radeon_winsys_cs **initial_full_flush_preamble_cs,
-                     struct radeon_winsys_cs **initial_preamble_cs,
-                     struct radeon_winsys_cs **continue_preamble_cs)
+		     struct radeon_cmdbuf **initial_full_flush_preamble_cs,
+                     struct radeon_cmdbuf **initial_preamble_cs,
+                     struct radeon_cmdbuf **continue_preamble_cs)
 {
 	struct radeon_winsys_bo *scratch_bo = NULL;
 	struct radeon_winsys_bo *descriptor_bo = NULL;
@@ -2029,7 +2029,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	struct radeon_winsys_bo *esgs_ring_bo = NULL;
 	struct radeon_winsys_bo *gsvs_ring_bo = NULL;
 	struct radeon_winsys_bo *tess_rings_bo = NULL;
-	struct radeon_winsys_cs *dest_cs[3] = {0};
+	struct radeon_cmdbuf *dest_cs[3] = {0};
 	bool add_tess_rings = false, add_sample_positions = false;
 	unsigned tess_factor_ring_size = 0, tess_offchip_ring_size = 0;
 	unsigned max_offchip_buffers;
@@ -2154,7 +2154,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		descriptor_bo = queue->descriptor_bo;
 
 	for(int i = 0; i < 3; ++i) {
-		struct radeon_winsys_cs *cs = NULL;
+		struct radeon_cmdbuf *cs = NULL;
 		cs = queue->device->ws->cs_create(queue->device->ws,
 						  queue->queue_family_index ? RING_COMPUTE : RING_GFX);
 		if (!cs)
@@ -2467,7 +2467,7 @@ VkResult radv_QueueSubmit(
 	uint32_t scratch_size = 0;
 	uint32_t compute_scratch_size = 0;
 	uint32_t esgs_ring_size = 0, gsvs_ring_size = 0;
-	struct radeon_winsys_cs *initial_preamble_cs = NULL, *initial_flush_preamble_cs = NULL, *continue_preamble_cs = NULL;
+	struct radeon_cmdbuf *initial_preamble_cs = NULL, *initial_flush_preamble_cs = NULL, *continue_preamble_cs = NULL;
 	VkResult result;
 	bool fence_emitted = false;
 	bool tess_rings_needed = false;
@@ -2498,7 +2498,7 @@ VkResult radv_QueueSubmit(
 		return result;
 
 	for (uint32_t i = 0; i < submitCount; i++) {
-		struct radeon_winsys_cs **cs_array;
+		struct radeon_cmdbuf **cs_array;
 		bool do_flush = !i || pSubmits[i].pWaitDstStageMask;
 		bool can_patch = true;
 		uint32_t advance;
@@ -2531,7 +2531,7 @@ VkResult radv_QueueSubmit(
 			continue;
 		}
 
-		cs_array = malloc(sizeof(struct radeon_winsys_cs *) *
+		cs_array = malloc(sizeof(struct radeon_cmdbuf *) *
 					        (pSubmits[i].commandBufferCount));
 
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
@@ -2547,7 +2547,7 @@ VkResult radv_QueueSubmit(
 		}
 
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j += advance) {
-			struct radeon_winsys_cs *initial_preamble = (do_flush && !j) ? initial_flush_preamble_cs : initial_preamble_cs;
+			struct radeon_cmdbuf *initial_preamble = (do_flush && !j) ? initial_flush_preamble_cs : initial_preamble_cs;
 			const struct radv_winsys_bo_list *bo_list = NULL;
 
 			advance = MIN2(max_cs_submission,

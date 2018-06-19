@@ -425,7 +425,7 @@ static struct si_pc_block groups_gfx9[] = {
 static void si_pc_emit_instance(struct si_context *sctx,
 				int se, int instance)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned value = S_030800_SH_BROADCAST_WRITES(1);
 
 	if (se >= 0) {
@@ -446,7 +446,7 @@ static void si_pc_emit_instance(struct si_context *sctx,
 static void si_pc_emit_shaders(struct si_context *sctx,
 			       unsigned shaders)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	radeon_set_uconfig_reg_seq(cs, R_036780_SQ_PERFCOUNTER_CTRL, 2);
 	radeon_emit(cs, shaders & 0x7f);
@@ -459,7 +459,7 @@ static void si_pc_emit_select(struct si_context *sctx,
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned idx;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 	unsigned dw;
@@ -552,7 +552,7 @@ static void si_pc_emit_select(struct si_context *sctx,
 static void si_pc_emit_start(struct si_context *sctx,
 			     struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	radeon_add_to_buffer_list(sctx, sctx->gfx_cs, buffer,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
@@ -578,7 +578,7 @@ static void si_pc_emit_start(struct si_context *sctx,
 static void si_pc_emit_stop(struct si_context *sctx,
 			    struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	si_gfx_write_event_eop(sctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
 			       EOP_DATA_SEL_VALUE_32BIT,
@@ -601,7 +601,7 @@ static void si_pc_emit_read(struct si_context *sctx,
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned idx;
 	unsigned reg = regs->counter0_lo;
 	unsigned reg_delta = 8;

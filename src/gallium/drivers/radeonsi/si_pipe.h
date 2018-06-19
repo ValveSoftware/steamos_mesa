@@ -744,8 +744,8 @@ struct si_context {
 
 	struct radeon_winsys		*ws;
 	struct radeon_winsys_ctx	*ctx;
-	struct radeon_winsys_cs		*gfx_cs;
-	struct radeon_winsys_cs		*dma_cs;
+	struct radeon_cmdbuf		*gfx_cs;
+	struct radeon_cmdbuf		*dma_cs;
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct pipe_fence_handle	*last_sdma_fence;
 	struct r600_resource		*eop_bug_scratch;
@@ -1132,7 +1132,7 @@ void cik_emit_prefetch_L2(struct si_context *sctx, bool vertex_stage_only);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
-void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
+void si_save_cs(struct radeon_winsys *ws, struct radeon_cmdbuf *cs,
 		struct radeon_saved_cs *saved, bool get_buffer_list);
 void si_clear_saved_cs(struct radeon_saved_cs *saved);
 void si_destroy_saved_cs(struct si_saved_cs *scs);
@@ -1531,7 +1531,7 @@ static inline bool util_prim_is_points_or_lines(unsigned prim)
  */
 static inline bool
 radeon_cs_memory_below_limit(struct si_screen *screen,
-			     struct radeon_winsys_cs *cs,
+			     struct radeon_cmdbuf *cs,
 			     uint64_t vram, uint64_t gtt)
 {
 	vram += cs->used_vram;
@@ -1556,7 +1556,7 @@ radeon_cs_memory_below_limit(struct si_screen *screen,
  * rebuilt.
  */
 static inline void radeon_add_to_buffer_list(struct si_context *sctx,
-					     struct radeon_winsys_cs *cs,
+					     struct radeon_cmdbuf *cs,
 					     struct r600_resource *rbo,
 					     enum radeon_bo_usage usage,
 					     enum radeon_bo_priority priority)

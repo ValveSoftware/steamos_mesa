@@ -76,7 +76,7 @@ void si_vid_destroy_buffer(struct rvid_buffer *buffer)
 }
 
 /* reallocate a buffer, preserving its content */
-bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
+bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_cmdbuf *cs,
 			  struct rvid_buffer *new_buf, unsigned new_size)
 {
 	struct si_screen *sscreen = (struct si_screen *)screen;

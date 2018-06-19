@@ -77,7 +77,7 @@ void r600_emit_cso_state(struct r600_context *rctx, struct r600_atom *atom)
 
 void r600_emit_alphatest_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_alphatest_state *a = (struct r600_alphatest_state*)atom;
 	unsigned alpha_ref = a->sx_alpha_ref;
 
@@ -241,7 +241,7 @@ static void r600_set_blend_color(struct pipe_context *ctx,
 
 void r600_emit_blend_color(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct pipe_blend_color *state = &rctx->blend_color.state;
 
 	radeon_set_context_reg_seq(cs, R_028414_CB_BLEND_RED, 4);
@@ -253,7 +253,7 @@ void r600_emit_blend_color(struct r600_context *rctx, struct r600_atom *atom)
 
 void r600_emit_vgt_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_vgt_state *a = (struct r600_vgt_state *)atom;
 
 	radeon_set_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, a->vgt_multi_prim_ib_reset_en);
@@ -287,7 +287,7 @@ static void r600_set_stencil_ref(struct pipe_context *ctx,
 
 void r600_emit_stencil_ref(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_stencil_ref_state *a = (struct r600_stencil_ref_state*)atom;
 
 	radeon_set_context_reg_seq(cs, R_028430_DB_STENCILREFMASK, 2);
@@ -1625,7 +1625,7 @@ void r600_setup_scratch_area_for_shader(struct r600_context *rctx,
 	if (scratch->dirty ||
 		unlikely(shader->scratch_space_needed != scratch->item_size ||
 		size > scratch->size)) {
-		struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+		struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 
 		scratch->dirty = false;
 
@@ -1969,7 +1969,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_clip_misc_state *state = &rctx->clip_misc_state;
 
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
@@ -1989,7 +1989,7 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 /* rast_prim is the primitive type after GS. */
 static inline void r600_emit_rasterizer_prim_state(struct r600_context *rctx)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	enum pipe_prim_type rast_prim = rctx->current_rast_prim;
 
 	/* Skip this if not rendering lines. */
@@ -2016,7 +2016,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct pipe_resource *indexbuf = info->has_user_indices ? NULL : info->index.resource;
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	bool has_user_indices = info->has_user_indices;
 	uint64_t mask;
@@ -2531,7 +2531,7 @@ bool sampler_state_needs_border_color(const struct pipe_sampler_state *state)
 void r600_emit_shader(struct r600_context *rctx, struct r600_atom *a)
 {
 
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_pipe_shader *shader = ((struct r600_shader_state*)a)->shader;
 
 	if (!shader)

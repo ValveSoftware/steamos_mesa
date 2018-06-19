@@ -2626,7 +2626,7 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 
 static void si_emit_spi_map(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo = ps ? &ps->selector->info : NULL;
@@ -3356,7 +3356,7 @@ bool si_update_shaders(struct si_context *sctx)
 
 static void si_emit_scratch_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	radeon_set_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
 			       sctx->spi_tmpring_size);

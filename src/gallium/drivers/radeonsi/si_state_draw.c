@@ -70,7 +70,7 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 				       const struct pipe_draw_info *info,
 				       unsigned *num_patches)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_shader *ls_current;
 	struct si_shader_selector *ls;
 	/* The TES pointer will only be used for sctx->last_tcs.
@@ -532,7 +532,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 /* rast_prim is the primitive type after GS. */
 static bool si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	enum pipe_prim_type rast_prim = sctx->current_rast_prim;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
@@ -569,7 +569,7 @@ static void si_emit_vs_state(struct si_context *sctx,
 	}
 
 	if (sctx->current_vs_state != sctx->last_vs_state) {
-		struct radeon_winsys_cs *cs = sctx->gfx_cs;
+		struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 		radeon_set_sh_reg(cs,
 			sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX] +
@@ -592,7 +592,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 				   const struct pipe_draw_info *info,
 				   unsigned num_patches)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned ia_multi_vgt_param;
 
@@ -644,7 +644,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				 unsigned index_offset)
 {
 	struct pipe_draw_indirect_info *indirect = info->indirect;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned sh_base_reg = sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX];
 	bool render_cond_bit = sctx->render_cond && !sctx->render_cond_force_off;
 	uint32_t index_max_size = 0;
@@ -846,7 +846,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 static void si_emit_surface_sync(struct si_context *sctx,
 				 unsigned cp_coher_cntl)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	if (sctx->chip_class >= GFX9) {
 		/* Flush caches and wait for the caches to assert idle. */
@@ -869,7 +869,7 @@ static void si_emit_surface_sync(struct si_context *sctx,
 
 void si_emit_cache_flush(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint32_t flags = sctx->flags;
 	uint32_t cp_coher_cntl = 0;
 	uint32_t flush_cb_db = flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
@@ -1548,7 +1548,7 @@ void si_draw_rectangle(struct blitter_context *blitter,
 
 void si_trace_emit(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint64_t va = sctx->current_saved_cs->trace_buf->gpu_address;
 	uint32_t trace_id = ++sctx->current_saved_cs->trace_id;
 

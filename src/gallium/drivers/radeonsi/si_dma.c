@@ -35,7 +35,7 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 				uint64_t src_offset,
 				uint64_t size)
 {
-	struct radeon_winsys_cs *cs = ctx->dma_cs;
+	struct radeon_cmdbuf *cs = ctx->dma_cs;
 	unsigned i, ncopy, count, max_size, sub_cmd, shift;
 	struct r600_resource *rdst = r600_resource(dst);
 	struct r600_resource *rsrc = r600_resource(src);
@@ -83,7 +83,7 @@ static void si_dma_clear_buffer(struct si_context *sctx,
 				uint64_t size,
 				unsigned clear_value)
 {
-	struct radeon_winsys_cs *cs = sctx->dma_cs;
+	struct radeon_cmdbuf *cs = sctx->dma_cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
@@ -131,7 +131,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 			     unsigned pitch,
 			     unsigned bpp)
 {
-	struct radeon_winsys_cs *cs = ctx->dma_cs;
+	struct radeon_cmdbuf *cs = ctx->dma_cs;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned dst_mode = rdst->surface.u.legacy.level[dst_level].mode;

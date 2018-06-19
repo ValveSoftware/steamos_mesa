@@ -88,7 +88,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 
 void r600_flush_emit(struct r600_context *rctx)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	unsigned cp_coher_cntl = 0;
 	unsigned wait_until = 0;
 
@@ -257,7 +257,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 			    struct pipe_fence_handle **fence)
 {
 	struct r600_context *ctx = context;
-	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = ctx->b.gfx.cs;
 	struct radeon_winsys *ws = ctx->b.ws;
 
 	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
@@ -433,7 +433,7 @@ void r600_begin_new_cs(struct r600_context *ctx)
 
 void r600_emit_pfp_sync_me(struct r600_context *rctx)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 
 	if (rctx->b.chip_class >= EVERGREEN &&
 	    rctx->b.screen->info.drm_minor >= 46) {
@@ -499,7 +499,7 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 			     struct pipe_resource *src, uint64_t src_offset,
 			     unsigned size)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 
 	assert(size);
 	assert(rctx->screen->b.has_cp_dma);
@@ -581,7 +581,7 @@ void r600_dma_copy_buffer(struct r600_context *rctx,
 			  uint64_t src_offset,
 			  uint64_t size)
 {
-	struct radeon_winsys_cs *cs = rctx->b.dma.cs;
+	struct radeon_cmdbuf *cs = rctx->b.dma.cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = (struct r600_resource*)dst;
 	struct r600_resource *rsrc = (struct r600_resource*)src;

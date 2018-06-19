@@ -260,7 +260,7 @@ static bool amdgpu_fence_wait_rel_timeout(struct radeon_winsys *rws,
 }
 
 static struct pipe_fence_handle *
-amdgpu_cs_get_next_fence(struct radeon_winsys_cs *rcs)
+amdgpu_cs_get_next_fence(struct radeon_cmdbuf *rcs)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct pipe_fence_handle *fence = NULL;
@@ -608,7 +608,7 @@ static int amdgpu_lookup_or_add_sparse_buffer(struct amdgpu_cs *acs,
    return idx;
 }
 
-static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
+static unsigned amdgpu_cs_add_buffer(struct radeon_cmdbuf *rcs,
                                     struct pb_buffer *buf,
                                     enum radeon_bo_usage usage,
                                     enum radeon_bo_domain domains,
@@ -912,7 +912,7 @@ static void amdgpu_destroy_cs_context(struct amdgpu_cs_context *cs)
 }
 
 
-static struct radeon_winsys_cs *
+static struct radeon_cmdbuf *
 amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
                  enum ring_type ring_type,
                  void (*flush)(void *ctx, unsigned flags,
@@ -967,12 +967,12 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
    return &cs->main.base;
 }
 
-static bool amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
+static bool amdgpu_cs_validate(struct radeon_cmdbuf *rcs)
 {
    return true;
 }
 
-static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
+static bool amdgpu_cs_check_space(struct radeon_cmdbuf *rcs, unsigned dw)
 {
    struct amdgpu_ib *ib = amdgpu_ib(rcs);
    struct amdgpu_cs *cs = amdgpu_cs_from_ib(ib);
@@ -996,7 +996,7 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    /* Allocate a new chunk */
    if (rcs->num_prev >= rcs->max_prev) {
       unsigned new_max_prev = MAX2(1, 2 * rcs->max_prev);
-      struct radeon_winsys_cs_chunk *new_prev;
+      struct radeon_cmdbuf_chunk *new_prev;
 
       new_prev = REALLOC(rcs->prev,
                          sizeof(*new_prev) * rcs->max_prev,
@@ -1053,7 +1053,7 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
    return true;
 }
 
-static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
+static unsigned amdgpu_cs_get_buffer_list(struct radeon_cmdbuf *rcs,
                                           struct radeon_bo_list_item *list)
 {
     struct amdgpu_cs_context *cs = amdgpu_cs(rcs)->csc;
@@ -1102,7 +1102,7 @@ static bool is_noop_fence_dependency(struct amdgpu_cs *acs,
    return amdgpu_fence_wait((void *)fence, 0, false);
 }
 
-static void amdgpu_cs_add_fence_dependency(struct radeon_winsys_cs *rws,
+static void amdgpu_cs_add_fence_dependency(struct radeon_cmdbuf *rws,
                                            struct pipe_fence_handle *pfence)
 {
    struct amdgpu_cs *acs = amdgpu_cs(rws);
@@ -1236,7 +1236,7 @@ static unsigned add_syncobj_to_signal_entry(struct amdgpu_cs_context *cs)
    return idx;
 }
 
-static void amdgpu_cs_add_syncobj_signal(struct radeon_winsys_cs *rws,
+static void amdgpu_cs_add_syncobj_signal(struct radeon_cmdbuf *rws,
                                          struct pipe_fence_handle *fence)
 {
    struct amdgpu_cs *acs = amdgpu_cs(rws);
@@ -1514,7 +1514,7 @@ cleanup:
 }
 
 /* Make sure the previous submission is completed. */
-void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
+void amdgpu_cs_sync_flush(struct radeon_cmdbuf *rcs)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
 
@@ -1522,7 +1522,7 @@ void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
    util_queue_fence_wait(&cs->flush_completed);
 }
 
-static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
+static int amdgpu_cs_flush(struct radeon_cmdbuf *rcs,
                            unsigned flags,
                            struct pipe_fence_handle **fence)
 {
@@ -1639,7 +1639,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    return error_code;
 }
 
-static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
+static void amdgpu_cs_destroy(struct radeon_cmdbuf *rcs)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
 
@@ -1654,7 +1654,7 @@ static void amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
    FREE(cs);
 }
 
-static bool amdgpu_bo_is_referenced(struct radeon_winsys_cs *rcs,
+static bool amdgpu_bo_is_referenced(struct radeon_cmdbuf *rcs,
                                     struct pb_buffer *_buf,
                                     enum radeon_bo_usage usage)
 {

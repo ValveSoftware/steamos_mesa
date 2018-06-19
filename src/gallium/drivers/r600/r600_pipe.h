@@ -616,7 +616,7 @@ struct r600_context {
 	uint32_t append_fence_id;
 };
 
-static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
+static inline void r600_emit_command_buffer(struct radeon_cmdbuf *cs,
 					    struct r600_command_buffer *cb)
 {
 	assert(cs->current.cdw + cb->num_dw <= cs->current.max_dw);
@@ -804,10 +804,10 @@ uint32_t evergreen_get_ls_hs_config(struct r600_context *rctx,
 				    const struct pipe_draw_info *info,
 				    unsigned num_patches);
 void evergreen_set_ls_hs_config(struct r600_context *rctx,
-				struct radeon_winsys_cs *cs,
+				struct radeon_cmdbuf *cs,
 				uint32_t ls_hs_config);
 void evergreen_set_lds_alloc(struct r600_context *rctx,
-			     struct radeon_winsys_cs *cs,
+			     struct radeon_cmdbuf *cs,
 			     uint32_t lds_alloc);
 
 /* r600_state_common.c */
@@ -980,14 +980,14 @@ static inline void eg_store_loop_const(struct r600_command_buffer *cb, unsigned 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw);
 void r600_release_command_buffer(struct r600_command_buffer *cb);
 
-static inline void radeon_compute_set_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_compute_set_context_reg_seq(struct radeon_cmdbuf *cs, unsigned reg, unsigned num)
 {
 	radeon_set_context_reg_seq(cs, reg, num);
 	/* Set the compute bit on the packet header */
 	cs->current.buf[cs->current.cdw - 2] |= RADEON_CP_PACKET3_COMPUTE_MODE;
 }
 
-static inline void radeon_set_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_ctl_const_seq(struct radeon_cmdbuf *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
 	assert(cs->current.cdw + 2 + num <= cs->current.max_dw);
@@ -995,13 +995,13 @@ static inline void radeon_set_ctl_const_seq(struct radeon_winsys_cs *cs, unsigne
 	radeon_emit(cs, (reg - R600_CTL_CONST_OFFSET) >> 2);
 }
 
-static inline void radeon_compute_set_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_compute_set_context_reg(struct radeon_cmdbuf *cs, unsigned reg, unsigned value)
 {
 	radeon_compute_set_context_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static inline void radeon_set_context_reg_flag(struct radeon_winsys_cs *cs, unsigned reg, unsigned value, unsigned flag)
+static inline void radeon_set_context_reg_flag(struct radeon_cmdbuf *cs, unsigned reg, unsigned value, unsigned flag)
 {
 	if (flag & RADEON_CP_PACKET3_COMPUTE_MODE) {
 		radeon_compute_set_context_reg(cs, reg, value);
@@ -1010,7 +1010,7 @@ static inline void radeon_set_context_reg_flag(struct radeon_winsys_cs *cs, unsi
 	}
 }
 
-static inline void radeon_set_ctl_const(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_ctl_const(struct radeon_cmdbuf *cs, unsigned reg, unsigned value)
 {
 	radeon_set_ctl_const_seq(cs, reg, 1);
 	radeon_emit(cs, value);

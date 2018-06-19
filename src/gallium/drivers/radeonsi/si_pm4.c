@@ -123,7 +123,7 @@ void si_pm4_free_state(struct si_context *sctx,
 
 void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	for (int i = 0; i < state->nbo; ++i) {
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs, state->bo[i],

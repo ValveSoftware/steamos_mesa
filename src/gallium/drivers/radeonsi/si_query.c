@@ -731,7 +731,7 @@ static unsigned event_type_for_stream(unsigned stream)
 	}
 }
 
-static void emit_sample_streamout(struct radeon_winsys_cs *cs, uint64_t va,
+static void emit_sample_streamout(struct radeon_cmdbuf *cs, uint64_t va,
 				  unsigned stream)
 {
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
@@ -745,7 +745,7 @@ static void si_query_hw_do_emit_start(struct si_context *sctx,
 					struct r600_resource *buffer,
 					uint64_t va)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
@@ -829,7 +829,7 @@ static void si_query_hw_do_emit_stop(struct si_context *sctx,
 				       struct r600_resource *buffer,
 				       uint64_t va)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint64_t fence_va = 0;
 
 	switch (query->b.type) {
@@ -920,7 +920,7 @@ static void emit_set_predicate(struct si_context *ctx,
 			       struct r600_resource *buf, uint64_t va,
 			       uint32_t op)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 
 	if (ctx->chip_class >= GFX9) {
 		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));

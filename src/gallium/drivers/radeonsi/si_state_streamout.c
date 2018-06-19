@@ -230,7 +230,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 
 static void si_flush_vgt_streamout(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned reg_strmout_cntl;
 
 	/* The register is at different places on different ASICs. */
@@ -256,7 +256,7 @@ static void si_flush_vgt_streamout(struct si_context *sctx)
 
 static void si_emit_streamout_begin(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_streamout_target **t = sctx->streamout.targets;
 	uint16_t *stride_in_dw = sctx->streamout.stride_in_dw;
 	unsigned i;
@@ -311,7 +311,7 @@ static void si_emit_streamout_begin(struct si_context *sctx)
 
 void si_emit_streamout_end(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_streamout_target **t = sctx->streamout.targets;
 	unsigned i;
 	uint64_t va;

@@ -132,7 +132,7 @@ static void si_get_sample_position(struct pipe_context *ctx, unsigned sample_cou
 	out_value[1] = (GET_SY(sample_locs, sample_index) + 8) / 16.0f;
 }
 
-static void si_emit_max_4_sample_locs(struct radeon_winsys_cs *cs,
+static void si_emit_max_4_sample_locs(struct radeon_cmdbuf *cs,
 				      uint64_t centroid_priority,
 				      uint32_t sample_locs)
 {
@@ -145,7 +145,7 @@ static void si_emit_max_4_sample_locs(struct radeon_winsys_cs *cs,
 	radeon_set_context_reg(cs, R_028C28_PA_SC_AA_SAMPLE_LOCS_PIXEL_X1Y1_0, sample_locs);
 }
 
-static void si_emit_max_16_sample_locs(struct radeon_winsys_cs *cs,
+static void si_emit_max_16_sample_locs(struct radeon_cmdbuf *cs,
 				       uint64_t centroid_priority,
 				       const uint32_t *sample_locs,
 				       unsigned num_samples)
@@ -161,7 +161,7 @@ static void si_emit_max_16_sample_locs(struct radeon_winsys_cs *cs,
 	radeon_emit_array(cs, sample_locs, num_samples == 8 ? 2 : 4);
 }
 
-void si_emit_sample_locations(struct radeon_winsys_cs *cs, int nr_samples)
+void si_emit_sample_locations(struct radeon_cmdbuf *cs, int nr_samples)
 {
 	switch (nr_samples) {
 	default:

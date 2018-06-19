@@ -213,7 +213,7 @@ static void amdgpu_bo_destroy_or_cache(struct pb_buffer *_buf)
 }
 
 static void *amdgpu_bo_map(struct pb_buffer *buf,
-                           struct radeon_winsys_cs *rcs,
+                           struct radeon_cmdbuf *rcs,
                            enum pipe_transfer_usage usage)
 {
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;

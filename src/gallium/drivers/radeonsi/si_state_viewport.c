@@ -110,7 +110,7 @@ static void si_scissor_make_union(struct si_signed_scissor *out,
 }
 
 static void si_emit_one_scissor(struct si_context *ctx,
-				struct radeon_winsys_cs *cs,
+				struct radeon_cmdbuf *cs,
 				struct si_signed_scissor *vp_scissor,
 				struct pipe_scissor_state *scissor)
 {
@@ -140,7 +140,7 @@ static void si_emit_guardband(struct si_context *ctx)
 {
 	const struct si_signed_scissor *vp_as_scissor;
 	struct si_signed_scissor max_vp_scissor;
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct pipe_viewport_state vp;
 	float left, top, right, bottom, max_range, guardband_x, guardband_y;
 	float discard_x, discard_y;
@@ -225,7 +225,7 @@ static void si_emit_guardband(struct si_context *ctx)
 
 static void si_emit_scissors(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct pipe_scissor_state *states = ctx->scissors.states;
 	unsigned mask = ctx->scissors.dirty_mask;
 	bool scissor_enabled = ctx->queued.named.rasterizer->scissor_enable;
@@ -287,7 +287,7 @@ static void si_set_viewport_states(struct pipe_context *pctx,
 static void si_emit_one_viewport(struct si_context *ctx,
 				 struct pipe_viewport_state *state)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 
 	radeon_emit(cs, fui(state->scale[0]));
 	radeon_emit(cs, fui(state->translate[0]));
@@ -299,7 +299,7 @@ static void si_emit_one_viewport(struct si_context *ctx,
 
 static void si_emit_viewports(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct pipe_viewport_state *states = ctx->viewports.states;
 	unsigned mask = ctx->viewports.dirty_mask;
 
@@ -341,7 +341,7 @@ si_viewport_zmin_zmax(const struct pipe_viewport_state *vp, bool halfz,
 
 static void si_emit_depth_ranges(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct pipe_viewport_state *states = ctx->viewports.states;
 	unsigned mask = ctx->viewports.depth_range_dirty_mask;
 	bool clip_halfz = ctx->queued.named.rasterizer->clip_halfz;

@@ -62,7 +62,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   uint64_t src_va, unsigned size, unsigned flags,
 			   enum si_coherency coher)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint32_t header = 0, command = 0;
 
 	assert(size <= cp_dma_max_byte_count(sctx));

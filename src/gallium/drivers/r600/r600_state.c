@@ -245,7 +245,7 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 
 static void r600_emit_polygon_offset(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_poly_offset_state *state = (struct r600_poly_offset_state*)a;
 	float offset_units = state->offset_units;
 	float offset_scale = state->offset_scale;
@@ -791,7 +791,7 @@ r600_create_sampler_view(struct pipe_context *ctx,
 
 static void r600_emit_clip_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct pipe_clip_state *state = &rctx->clip_state.state;
 
 	radeon_set_context_reg_seq(cs, R_028E20_PA_CL_UCP0_X, 6*4);
@@ -1283,7 +1283,7 @@ static void r600_get_sample_position(struct pipe_context *ctx,
 
 static void r600_emit_msaa_state(struct r600_context *rctx, int nr_samples)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	unsigned max_dist = 0;
 
 	if (rctx->b.family == CHIP_R600) {
@@ -1350,7 +1350,7 @@ static void r600_emit_msaa_state(struct r600_context *rctx, int nr_samples)
 
 static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct pipe_framebuffer_state *state = &rctx->framebuffer.state;
 	unsigned nr_cbufs = state->nr_cbufs;
 	struct r600_surface **cb = (struct r600_surface**)&state->cbufs[0];
@@ -1516,7 +1516,7 @@ static void r600_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 
 static void r600_emit_cb_misc_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_cb_misc_state *a = (struct r600_cb_misc_state*)atom;
 
 	if (G_028808_SPECIAL_OP(a->cb_color_control) == V_028808_SPECIAL_RESOLVE_BOX) {
@@ -1546,7 +1546,7 @@ static void r600_emit_cb_misc_state(struct r600_context *rctx, struct r600_atom 
 
 static void r600_emit_db_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_db_state *a = (struct r600_db_state*)atom;
 
 	if (a->rsurf && a->rsurf->db_htile_surface) {
@@ -1567,7 +1567,7 @@ static void r600_emit_db_state(struct r600_context *rctx, struct r600_atom *atom
 
 static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_db_misc_state *a = (struct r600_db_misc_state*)atom;
 	unsigned db_render_control = 0;
 	unsigned db_render_override =
@@ -1652,7 +1652,7 @@ static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom 
 
 static void r600_emit_config_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_config_state *a = (struct r600_config_state*)atom;
 
 	radeon_set_config_reg(cs, R_008C04_SQ_GPR_RESOURCE_MGMT_1, a->sq_gpr_resource_mgmt_1);
@@ -1661,7 +1661,7 @@ static void r600_emit_config_state(struct r600_context *rctx, struct r600_atom *
 
 static void r600_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = rctx->vertex_buffer_state.dirty_mask;
 
 	while (dirty_mask) {
@@ -1701,7 +1701,7 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 				       unsigned reg_alu_constbuf_size,
 				       unsigned reg_alu_const_cache)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
 
 	while (dirty_mask) {
@@ -1775,7 +1775,7 @@ static void r600_emit_sampler_views(struct r600_context *rctx,
 				    struct r600_samplerview_state *state,
 				    unsigned resource_id_base)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
 
 	while (dirty_mask) {
@@ -1822,7 +1822,7 @@ static void r600_emit_sampler_states(struct r600_context *rctx,
 				unsigned resource_id_base,
 				unsigned border_color_reg)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = texinfo->states.dirty_mask;
 
 	while (dirty_mask) {
@@ -1883,7 +1883,7 @@ static void r600_emit_ps_sampler_states(struct r600_context *rctx, struct r600_a
 
 static void r600_emit_seamless_cube_map(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	unsigned tmp;
 
 	tmp = S_009508_DISABLE_CUBE_ANISO(1) |
@@ -1907,7 +1907,7 @@ static void r600_emit_sample_mask(struct r600_context *rctx, struct r600_atom *a
 
 static void r600_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_cso_state *state = (struct r600_cso_state*)a;
 	struct r600_fetch_shader *shader = (struct r600_fetch_shader*)state->cso;
 
@@ -1923,7 +1923,7 @@ static void r600_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600
 
 static void r600_emit_shader_stages(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_shader_stages_state *state = (struct r600_shader_stages_state*)a;
 
 	uint32_t v2 = 0, primid = 0;
@@ -1958,7 +1958,7 @@ static void r600_emit_shader_stages(struct r600_context *rctx, struct r600_atom 
 
 static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	struct r600_gs_rings_state *state = (struct r600_gs_rings_state*)a;
 	struct r600_resource *rbuffer;
 
@@ -2855,7 +2855,7 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 				unsigned pitch,
 				unsigned bpp)
 {
-	struct radeon_winsys_cs *cs = rctx->b.dma.cs;
+	struct radeon_cmdbuf *cs = rctx->b.dma.cs;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned array_mode, lbpp, pitch_tile_max, slice_tile_max, size;

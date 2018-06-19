@@ -101,7 +101,7 @@ static void amdgpu_winsys_query_info(struct radeon_winsys *rws,
    *info = ((struct amdgpu_winsys *)rws)->info;
 }
 
-static bool amdgpu_cs_request_feature(struct radeon_winsys_cs *rcs,
+static bool amdgpu_cs_request_feature(struct radeon_cmdbuf *rcs,
                                       enum radeon_feature_id fid,
                                       bool enable)
 {

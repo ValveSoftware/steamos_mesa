@@ -61,7 +61,7 @@ enum ib_type {
 };
 
 struct amdgpu_ib {
-   struct radeon_winsys_cs base;
+   struct radeon_cmdbuf base;
 
    /* A buffer out of which new IBs are allocated. */
    struct pb_buffer        *big_ib_buffer;
@@ -193,13 +193,13 @@ static inline void amdgpu_fence_reference(struct pipe_fence_handle **dst,
 int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo);
 
 static inline struct amdgpu_ib *
-amdgpu_ib(struct radeon_winsys_cs *base)
+amdgpu_ib(struct radeon_cmdbuf *base)
 {
    return (struct amdgpu_ib *)base;
 }
 
 static inline struct amdgpu_cs *
-amdgpu_cs(struct radeon_winsys_cs *base)
+amdgpu_cs(struct radeon_cmdbuf *base)
 {
    assert(amdgpu_ib(base)->ib_type == IB_MAIN);
    return (struct amdgpu_cs*)base;
@@ -261,7 +261,7 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
 void amdgpu_add_fences(struct amdgpu_winsys_bo *bo,
                        unsigned num_fences,
                        struct pipe_fence_handle **fences);
-void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs);
+void amdgpu_cs_sync_flush(struct radeon_cmdbuf *rcs);
 void amdgpu_cs_init_functions(struct amdgpu_winsys *ws);
 void amdgpu_cs_submit_ib(void *job, int thread_index);
 

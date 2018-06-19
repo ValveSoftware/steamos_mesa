@@ -33,7 +33,7 @@ static void cik_sdma_copy_buffer(struct si_context *ctx,
 				 uint64_t src_offset,
 				 uint64_t size)
 {
-	struct radeon_winsys_cs *cs = ctx->dma_cs;
+	struct radeon_cmdbuf *cs = ctx->dma_cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 	struct r600_resource *rsrc = r600_resource(src);
@@ -73,7 +73,7 @@ static void cik_sdma_clear_buffer(struct si_context *sctx,
 				  uint64_t size,
 				  unsigned clear_value)
 {
-	struct radeon_winsys_cs *cs = sctx->dma_cs;
+	struct radeon_cmdbuf *cs = sctx->dma_cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
@@ -230,7 +230,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	      sctx->family != CHIP_KAVERI) ||
 	     (srcx + copy_width != (1 << 14) &&
 	      srcy + copy_height != (1 << 14)))) {
-		struct radeon_winsys_cs *cs = sctx->dma_cs;
+		struct radeon_cmdbuf *cs = sctx->dma_cs;
 
 		si_need_dma_space(sctx, 13, &rdst->buffer, &rsrc->buffer);
 
@@ -392,7 +392,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 		    copy_width_aligned <= (1 << 14) &&
 		    copy_height <= (1 << 14) &&
 		    copy_depth <= (1 << 11)) {
-			struct radeon_winsys_cs *cs = sctx->dma_cs;
+			struct radeon_cmdbuf *cs = sctx->dma_cs;
 			uint32_t direction = linear == rdst ? 1u << 31 : 0;
 
 			si_need_dma_space(sctx, 14, &rdst->buffer, &rsrc->buffer);
@@ -487,7 +487,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 		     (srcx + copy_width_aligned != (1 << 14) &&
 		      srcy + copy_height_aligned != (1 << 14) &&
 		      dstx + copy_width != (1 << 14)))) {
-			struct radeon_winsys_cs *cs = sctx->dma_cs;
+			struct radeon_cmdbuf *cs = sctx->dma_cs;
 
 			si_need_dma_space(sctx, 15, &rdst->buffer, &rsrc->buffer);
 

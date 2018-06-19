@@ -30,7 +30,7 @@
 /* initialize */
 void si_need_gfx_cs_space(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 
 	/* There is no need to flush the DMA IB here, because
 	 * r600_need_dma_space always flushes the GFX IB if there is
@@ -67,7 +67,7 @@ void si_need_gfx_cs_space(struct si_context *ctx)
 void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 		     struct pipe_fence_handle **fence)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct radeon_winsys *ws = ctx->ws;
 	unsigned wait_flags = 0;
 

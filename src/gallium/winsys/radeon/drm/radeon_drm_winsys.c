@@ -621,7 +621,7 @@ static void radeon_query_info(struct radeon_winsys *rws,
     *info = ((struct radeon_drm_winsys *)rws)->info;
 }
 
-static bool radeon_cs_request_feature(struct radeon_winsys_cs *rcs,
+static bool radeon_cs_request_feature(struct radeon_cmdbuf *rcs,
                                       enum radeon_feature_id fid,
                                       bool enable)
 {

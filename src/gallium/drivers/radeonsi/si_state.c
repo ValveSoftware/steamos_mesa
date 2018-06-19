@@ -66,7 +66,7 @@ static unsigned si_pack_float_12p4(float x)
  */
 static void si_emit_cb_render_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_state_blend *blend = sctx->queued.named.blend;
 	/* CB_COLORn_INFO.FORMAT=INVALID should disable unbound colorbuffers,
 	 * but you never know. */
@@ -703,7 +703,7 @@ static void si_set_blend_color(struct pipe_context *ctx,
 
 static void si_emit_blend_color(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	radeon_set_context_reg_seq(cs, R_028414_CB_BLEND_RED, 4);
 	radeon_emit_array(cs, (uint32_t*)sctx->blend_color.state.color, 4);
@@ -737,7 +737,7 @@ static void si_set_clip_state(struct pipe_context *ctx,
 
 static void si_emit_clip_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	radeon_set_context_reg_seq(cs, R_0285BC_PA_CL_UCP_0_X, 6*4);
 	radeon_emit_array(cs, (uint32_t*)sctx->clip_state.state.ucp, 6*4);
@@ -1063,7 +1063,7 @@ static void si_delete_rs_state(struct pipe_context *ctx, void *state)
  */
 static void si_emit_stencil_ref(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct pipe_stencil_ref *ref = &sctx->stencil_ref.state;
 	struct si_dsa_stencil_ref_part *dsa = &sctx->stencil_ref.dsa_part;
 
@@ -2960,7 +2960,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 static void si_emit_framebuffer_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct pipe_framebuffer_state *state = &sctx->framebuffer.state;
 	unsigned i, nr_cbufs = state->nr_cbufs;
 	struct r600_texture *tex = NULL;
@@ -3217,7 +3217,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 
 static void si_emit_msaa_sample_locs(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned nr_samples = sctx->framebuffer.nr_samples;
 	bool has_msaa_sample_loc_bug = sctx->screen->has_msaa_sample_loc_bug;
 
@@ -3330,7 +3330,7 @@ static bool si_out_of_order_rasterization(struct si_context *sctx)
 
 static void si_emit_msaa_config(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned num_tile_pipes = sctx->screen->info.num_tile_pipes;
 	/* 33% faster rendering to linear color buffers */
 	bool dst_is_linear = sctx->framebuffer.any_dst_linear;
@@ -4302,7 +4302,7 @@ static void si_set_sample_mask(struct pipe_context *ctx, unsigned sample_mask)
 
 static void si_emit_sample_mask(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned mask = sctx->sample_mask;
 
 	/* Needed for line and polygon smoothing as well as for the Polaris

@@ -536,7 +536,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 			goto fail;
 
 		/* Initialize the memory. */
-		struct radeon_winsys_cs *cs = sctx->gfx_cs;
+		struct radeon_cmdbuf *cs = sctx->gfx_cs;
 		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 		radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
 			    S_370_WR_CONFIRM(1) |

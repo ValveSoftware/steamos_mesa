@@ -292,7 +292,7 @@ static void si_set_global_binding(
 
 static void si_initialize_compute(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint64_t bc_va;
 
 	radeon_set_sh_reg_seq(cs, R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0, 2);
@@ -385,7 +385,7 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 				     const amd_kernel_code_t *code_object,
 				     unsigned offset)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_shader_config inline_config = {0};
 	struct si_shader_config *config;
 	uint64_t shader_va;
@@ -489,7 +489,7 @@ static void setup_scratch_rsrc_user_sgprs(struct si_context *sctx,
 					  const amd_kernel_code_t *code_object,
 					  unsigned user_sgpr)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint64_t scratch_va = sctx->compute_scratch_buffer->gpu_address;
 
 	unsigned max_private_element_size = AMD_HSA_BITS_GET(
@@ -534,7 +534,7 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 				      uint64_t kernel_args_va)
 {
 	struct si_compute *program = sctx->cs_shader_state.program;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 
 	static const enum amd_code_property_mask_t workgroup_count_masks [] = {
 		AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X,
@@ -623,7 +623,7 @@ static bool si_upload_compute_input(struct si_context *sctx,
 				    const amd_kernel_code_t *code_object,
 				    const struct pipe_grid_info *info)
 {
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct r600_resource *input_buffer = NULL;
 	unsigned kernel_args_size;
@@ -687,7 +687,7 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
                                 const struct pipe_grid_info *info)
 {
 	struct si_compute *program = sctx->cs_shader_state.program;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	unsigned grid_size_reg = R_00B900_COMPUTE_USER_DATA_0 +
 				 4 * SI_NUM_RESOURCE_SGPRS;
 	unsigned block_size_reg = grid_size_reg +
@@ -734,7 +734,7 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
                                      const struct pipe_grid_info *info)
 {
 	struct si_screen *sscreen = sctx->screen;
-	struct radeon_winsys_cs *cs = sctx->gfx_cs;
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	bool render_cond_bit = sctx->render_cond && !sctx->render_cond_force_off;
 	unsigned waves_per_threadgroup =
 		DIV_ROUND_UP(info->block[0] * info->block[1] * info->block[2], 64);

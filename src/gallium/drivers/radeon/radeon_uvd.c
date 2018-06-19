@@ -67,7 +67,7 @@ struct ruvd_decoder {
 
 	struct pipe_screen		*screen;
 	struct radeon_winsys*		ws;
-	struct radeon_winsys_cs*	cs;
+	struct radeon_cmdbuf*	cs;
 
 	unsigned			cur_buffer;
 
