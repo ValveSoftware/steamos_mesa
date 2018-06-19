@@ -70,7 +70,7 @@ v3d_fence_finish(struct pipe_screen *pscreen,
         struct v3d_screen *screen = v3d_screen(pscreen);
         struct v3d_fence *f = (struct v3d_fence *)pf;
 
-        return drmSyncobjWait(screen->fd, &f->sync, 1, timeout_ns, 0, NULL);
+        return drmSyncobjWait(screen->fd, &f->sync, 1, timeout_ns, 0, NULL) == 0;
 }
 
 struct v3d_fence *
