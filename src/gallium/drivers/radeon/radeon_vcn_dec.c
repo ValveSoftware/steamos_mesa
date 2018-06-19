@@ -808,10 +808,10 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 					struct pipe_video_buffer *target,
 					struct pipe_picture_desc *picture)
 {
-	struct r600_texture *luma = (struct r600_texture *)
-				((struct vl_video_buffer *)target)->resources[0];
-	struct r600_texture *chroma = (struct r600_texture *)
-				((struct vl_video_buffer *)target)->resources[1];
+	struct si_texture *luma = (struct si_texture *)
+				  ((struct vl_video_buffer *)target)->resources[0];
+	struct si_texture *chroma = (struct si_texture *)
+				    ((struct vl_video_buffer *)target)->resources[1];
 	rvcn_dec_message_header_t *header;
 	rvcn_dec_message_index_t *index;
 	rvcn_dec_message_decode_t *decode;

@@ -74,9 +74,9 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 		if (!(cb_target_enabled_4bit & (0xf << (i * 4))))
 			continue;
 
-		struct r600_texture *rtex =
-			(struct r600_texture*)sctx->framebuffer.state.cbufs[i]->texture;
-		sum += rtex->surface.bpe;
+		struct si_texture *tex =
+			(struct si_texture*)sctx->framebuffer.state.cbufs[i]->texture;
+		sum += tex->surface.bpe;
 	}
 
 	/* Multiply the sum by some function of the number of samples. */
@@ -190,13 +190,13 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 		return size;
 	}
 
-	struct r600_texture *rtex =
-		(struct r600_texture*)sctx->framebuffer.state.zsbuf->texture;
+	struct si_texture *tex =
+		(struct si_texture*)sctx->framebuffer.state.zsbuf->texture;
 	unsigned depth_coeff = dsa->depth_enabled ? 5 : 0;
-	unsigned stencil_coeff = rtex->surface.has_stencil &&
+	unsigned stencil_coeff = tex->surface.has_stencil &&
 				 dsa->stencil_enabled ? 1 : 0;
 	unsigned sum = 4 * (depth_coeff + stencil_coeff) *
-		       rtex->buffer.b.b.nr_samples;
+		       tex->buffer.b.b.nr_samples;
 
 	static const si_bin_size_subtable table[] = {
 		{

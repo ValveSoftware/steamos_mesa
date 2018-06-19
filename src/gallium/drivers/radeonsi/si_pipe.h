@@ -238,12 +238,12 @@ struct r600_cmask_info {
 	uint64_t base_address_reg;
 };
 
-struct r600_texture {
+struct si_texture {
 	struct r600_resource		buffer;
 
 	struct radeon_surf		surface;
 	uint64_t			size;
-	struct r600_texture		*flushed_depth_texture;
+	struct si_texture		*flushed_depth_texture;
 
 	/* Colorbuffer compression and fast clear. */
 	uint64_t			fmask_offset;
@@ -1004,7 +1004,7 @@ struct si_context {
 	bool				render_cond_force_off; /* for u_blitter */
 
 	/* Statistics gathering for the DCC enablement heuristic. It can't be
-	 * in r600_texture because r600_texture can be shared by multiple
+	 * in si_texture because si_texture can be shared by multiple
 	 * contexts. This is for back buffers only. We shouldn't get too many
 	 * of those.
 	 *
@@ -1013,7 +1013,7 @@ struct si_context {
 	 * enabled by DCC stat gathering.
 	 */
 	struct {
-		struct r600_texture		*tex;
+		struct si_texture		*tex;
 		/* Query queue: 0 = usually active, 1 = waiting, 2 = readback. */
 		struct pipe_query		*ps_stats[3];
 		/* If all slots are used and another slot is needed,
@@ -1060,10 +1060,10 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
-void si_decompress_dcc(struct si_context *sctx, struct r600_texture *rtex);
+void si_decompress_dcc(struct si_context *sctx, struct si_texture *tex);
 void si_blit_decompress_depth(struct pipe_context *ctx,
-			      struct r600_texture *texture,
-			      struct r600_texture *staging,
+			      struct si_texture *texture,
+			      struct si_texture *staging,
 			      unsigned first_level, unsigned last_level,
 			      unsigned first_layer, unsigned last_layer,
 			      unsigned first_sample, unsigned last_sample);
@@ -1096,7 +1096,7 @@ void si_init_buffer_functions(struct si_context *sctx);
 enum pipe_format si_simplify_cb_format(enum pipe_format format);
 bool vi_alpha_is_on_msb(enum pipe_format format);
 void vi_dcc_clear_level(struct si_context *sctx,
-			struct r600_texture *rtex,
+			struct si_texture *tex,
 			unsigned level, unsigned clear_value);
 void si_init_clear_functions(struct si_context *sctx);
 
@@ -1218,26 +1218,26 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 void si_update_vs_viewport_state(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
 
-/* r600_texture.c */
+/* si_texture.c */
 bool si_prepare_for_dma_blit(struct si_context *sctx,
-			     struct r600_texture *rdst,
+			     struct si_texture *dst,
 			     unsigned dst_level, unsigned dstx,
 			     unsigned dsty, unsigned dstz,
-			     struct r600_texture *rsrc,
+			     struct si_texture *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
 void si_texture_get_cmask_info(struct si_screen *sscreen,
-			       struct r600_texture *rtex,
+			       struct si_texture *tex,
 			       struct r600_cmask_info *out);
 void si_eliminate_fast_color_clear(struct si_context *sctx,
-				   struct r600_texture *rtex);
+				   struct si_texture *tex);
 void si_texture_discard_cmask(struct si_screen *sscreen,
-			      struct r600_texture *rtex);
+			      struct si_texture *tex);
 bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 				   struct pipe_resource *texture,
-				   struct r600_texture **staging);
+				   struct si_texture **staging);
 void si_print_texture_info(struct si_screen *sscreen,
-			   struct r600_texture *rtex, struct u_log_context *log);
+			   struct si_texture *tex, struct u_log_context *log);
 struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
 bool vi_dcc_formats_compatible(enum pipe_format format1,
@@ -1256,15 +1256,15 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 					      unsigned width, unsigned height);
 unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
 void vi_separate_dcc_try_enable(struct si_context *sctx,
-				struct r600_texture *tex);
+				struct si_texture *tex);
 void vi_separate_dcc_start_query(struct si_context *sctx,
-				 struct r600_texture *tex);
+				 struct si_texture *tex);
 void vi_separate_dcc_stop_query(struct si_context *sctx,
-				struct r600_texture *tex);
+				struct si_texture *tex);
 void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
-					     struct r600_texture *tex);
+					     struct si_texture *tex);
 bool si_texture_disable_dcc(struct si_context *sctx,
-			    struct r600_texture *rtex);
+			    struct si_texture *tex);
 void si_init_screen_texture_functions(struct si_screen *sscreen);
 void si_init_context_texture_functions(struct si_context *sctx);
 
@@ -1286,24 +1286,24 @@ r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 }
 
 static inline void
-r600_texture_reference(struct r600_texture **ptr, struct r600_texture *res)
+si_texture_reference(struct si_texture **ptr, struct si_texture *res)
 {
 	pipe_resource_reference((struct pipe_resource **)ptr, &res->buffer.b.b);
 }
 
 static inline bool
-vi_dcc_enabled(struct r600_texture *tex, unsigned level)
+vi_dcc_enabled(struct si_texture *tex, unsigned level)
 {
 	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
 }
 
 static inline unsigned
-si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
+si_tile_mode_index(struct si_texture *tex, unsigned level, bool stencil)
 {
 	if (stencil)
-		return rtex->surface.u.legacy.stencil_tiling_index[level];
+		return tex->surface.u.legacy.stencil_tiling_index[level];
 	else
-		return rtex->surface.u.legacy.tiling_index[level];
+		return tex->surface.u.legacy.tiling_index[level];
 }
 
 static inline void
@@ -1458,20 +1458,20 @@ si_make_DB_shader_coherent(struct si_context *sctx, unsigned num_samples,
 }
 
 static inline bool
-si_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
+si_can_sample_zs(struct si_texture *tex, bool stencil_sampler)
 {
 	return (stencil_sampler && tex->can_sample_s) ||
 	       (!stencil_sampler && tex->can_sample_z);
 }
 
 static inline bool
-si_htile_enabled(struct r600_texture *tex, unsigned level)
+si_htile_enabled(struct si_texture *tex, unsigned level)
 {
 	return tex->htile_offset && level == 0;
 }
 
 static inline bool
-vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
+vi_tc_compat_htile_enabled(struct si_texture *tex, unsigned level)
 {
 	assert(!tex->tc_compatible_htile || tex->htile_offset);
 	return tex->tc_compatible_htile && level == 0;

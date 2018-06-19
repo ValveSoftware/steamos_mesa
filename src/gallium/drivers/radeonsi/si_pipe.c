@@ -241,7 +241,7 @@ static void si_destroy_context(struct pipe_context *context)
 				sctx->b.destroy_query(&sctx->b,
 							sctx->dcc_stats[i].ps_stats[j]);
 
-		r600_texture_reference(&sctx->dcc_stats[i].tex, NULL);
+		si_texture_reference(&sctx->dcc_stats[i].tex, NULL);
 	}
 
 	if (sctx->query_result_shader)

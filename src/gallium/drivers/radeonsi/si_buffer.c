@@ -104,7 +104,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 			     struct r600_resource *res,
 			     uint64_t size, unsigned alignment)
 {
-	struct r600_texture *rtex = (struct r600_texture*)res;
+	struct si_texture *tex = (struct si_texture*)res;
 
 	res->bo_size = size;
 	res->bo_alignment = alignment;
@@ -160,7 +160,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 	}
 
 	/* Tiled textures are unmappable. Always put them in VRAM. */
-	if ((res->b.b.target != PIPE_BUFFER && !rtex->surface.is_linear) ||
+	if ((res->b.b.target != PIPE_BUFFER && !tex->surface.is_linear) ||
 	    res->b.b.flags & SI_RESOURCE_FLAG_UNMAPPABLE) {
 		res->domains = RADEON_DOMAIN_VRAM;
 		res->flags |= RADEON_FLAG_NO_CPU_ACCESS |

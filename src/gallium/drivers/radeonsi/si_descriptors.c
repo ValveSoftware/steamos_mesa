@@ -248,33 +248,27 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 				       bool is_stencil_sampler,
 				       bool check_mem)
 {
-	struct r600_resource *rres;
-	struct r600_texture *rtex;
+	struct si_texture *tex = (struct si_texture*)resource;
 	enum radeon_bo_priority priority;
 
 	if (!resource)
 		return;
 
-	if (resource->target != PIPE_BUFFER) {
-		struct r600_texture *tex = (struct r600_texture*)resource;
+	/* Use the flushed depth texture if direct sampling is unsupported. */
+	if (resource->target != PIPE_BUFFER &&
+	    tex->is_depth && !si_can_sample_zs(tex, is_stencil_sampler))
+		tex = tex->flushed_depth_texture;
 
-		if (tex->is_depth && !si_can_sample_zs(tex, is_stencil_sampler))
-			resource = &tex->flushed_depth_texture->buffer.b.b;
-	}
-
-	rres = r600_resource(resource);
-	priority = si_get_sampler_view_priority(rres);
-
-	radeon_add_to_gfx_buffer_list_check_mem(sctx, rres, usage, priority,
+	priority = si_get_sampler_view_priority(&tex->buffer);
+	radeon_add_to_gfx_buffer_list_check_mem(sctx, &tex->buffer, usage, priority,
 						check_mem);
 
 	if (resource->target == PIPE_BUFFER)
 		return;
 
-	/* Now add separate DCC or HTILE. */
-	rtex = (struct r600_texture*)resource;
-	if (rtex->dcc_separate_buffer) {
-		radeon_add_to_gfx_buffer_list_check_mem(sctx, rtex->dcc_separate_buffer,
+	/* Add separate DCC. */
+	if (tex->dcc_separate_buffer) {
+		radeon_add_to_gfx_buffer_list_check_mem(sctx, tex->dcc_separate_buffer,
 							usage, RADEON_PRIO_DCC, check_mem);
 	}
 }
@@ -317,7 +311,7 @@ static void si_set_buf_desc_address(struct r600_resource *buf,
  * \param state			descriptor to update
  */
 void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
-				    struct r600_texture *tex,
+				    struct si_texture *tex,
 				    const struct legacy_surf_level *base_level_info,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
@@ -418,7 +412,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 
 static void si_set_sampler_state_desc(struct si_sampler_state *sstate,
 				      struct si_sampler_view *sview,
-				      struct r600_texture *tex,
+				      struct si_texture *tex,
 				      uint32_t *desc)
 {
 	if (sview && sview->is_integer)
@@ -436,29 +430,29 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 				     uint32_t *desc)
 {
 	struct pipe_sampler_view *view = &sview->base;
-	struct r600_texture *rtex = (struct r600_texture *)view->texture;
-	bool is_buffer = rtex->buffer.b.b.target == PIPE_BUFFER;
+	struct si_texture *tex = (struct si_texture *)view->texture;
+	bool is_buffer = tex->buffer.b.b.target == PIPE_BUFFER;
 
 	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
-		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
-			if (!si_texture_disable_dcc(sctx, rtex))
-				si_decompress_dcc(sctx, rtex);
+		if (vi_dcc_enabled(tex, view->u.tex.first_level))
+			if (!si_texture_disable_dcc(sctx, tex))
+				si_decompress_dcc(sctx, tex);
 
 		sview->dcc_incompatible = false;
 	}
 
-	assert(rtex); /* views with texture == NULL aren't supported */
+	assert(tex); /* views with texture == NULL aren't supported */
 	memcpy(desc, sview->state, 8*4);
 
 	if (is_buffer) {
-		si_set_buf_desc_address(&rtex->buffer,
+		si_set_buf_desc_address(&tex->buffer,
 					sview->base.u.buf.offset,
 					desc + 4);
 	} else {
-		bool is_separate_stencil = rtex->db_compatible &&
+		bool is_separate_stencil = tex->db_compatible &&
 					   sview->is_stencil_sampler;
 
-		si_set_mutable_tex_desc_fields(sctx->screen, rtex,
+		si_set_mutable_tex_desc_fields(sctx->screen, tex,
 					       sview->base_level_info,
 					       sview->base_level,
 					       sview->base.u.tex.first_level,
@@ -467,7 +461,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 					       desc);
 	}
 
-	if (!is_buffer && rtex->surface.fmask_size) {
+	if (!is_buffer && tex->surface.fmask_size) {
 		memcpy(desc + 8, sview->fmask_state, 8*4);
 	} else {
 		/* Disable FMASK and bind sampler state in [12:15]. */
@@ -475,26 +469,26 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 
 		if (sstate)
 			si_set_sampler_state_desc(sstate, sview,
-						  is_buffer ? NULL : rtex,
+						  is_buffer ? NULL : tex,
 						  desc + 12);
 	}
 }
 
-static bool color_needs_decompression(struct r600_texture *rtex)
+static bool color_needs_decompression(struct si_texture *tex)
 {
-	return rtex->surface.fmask_size ||
-	       (rtex->dirty_level_mask &&
-		(rtex->cmask.size || rtex->dcc_offset));
+	return tex->surface.fmask_size ||
+	       (tex->dirty_level_mask &&
+		(tex->cmask.size || tex->dcc_offset));
 }
 
-static bool depth_needs_decompression(struct r600_texture *rtex)
+static bool depth_needs_decompression(struct si_texture *tex)
 {
 	/* If the depth/stencil texture is TC-compatible, no decompression
 	 * will be done. The decompression function will only flush DB caches
 	 * to make it coherent with shaders. That's necessary because the driver
 	 * doesn't flush DB caches in any other case.
 	 */
-	return rtex->db_compatible;
+	return tex->db_compatible;
 }
 
 static void si_set_sampler_view(struct si_context *sctx,
@@ -512,29 +506,29 @@ static void si_set_sampler_view(struct si_context *sctx,
 		return;
 
 	if (view) {
-		struct r600_texture *rtex = (struct r600_texture *)view->texture;
+		struct si_texture *tex = (struct si_texture *)view->texture;
 
 		si_set_sampler_view_desc(sctx, rview,
 					 samplers->sampler_states[slot], desc);
 
-		if (rtex->buffer.b.b.target == PIPE_BUFFER) {
-			rtex->buffer.bind_history |= PIPE_BIND_SAMPLER_VIEW;
+		if (tex->buffer.b.b.target == PIPE_BUFFER) {
+			tex->buffer.bind_history |= PIPE_BIND_SAMPLER_VIEW;
 			samplers->needs_depth_decompress_mask &= ~(1u << slot);
 			samplers->needs_color_decompress_mask &= ~(1u << slot);
 		} else {
-			if (depth_needs_decompression(rtex)) {
+			if (depth_needs_decompression(tex)) {
 				samplers->needs_depth_decompress_mask |= 1u << slot;
 			} else {
 				samplers->needs_depth_decompress_mask &= ~(1u << slot);
 			}
-			if (color_needs_decompression(rtex)) {
+			if (color_needs_decompression(tex)) {
 				samplers->needs_color_decompress_mask |= 1u << slot;
 			} else {
 				samplers->needs_color_decompress_mask &= ~(1u << slot);
 			}
 
-			if (rtex->dcc_offset &&
-			    p_atomic_read(&rtex->framebuffers_bound))
+			if (tex->dcc_offset &&
+			    p_atomic_read(&tex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 		}
 
@@ -610,9 +604,9 @@ si_samplers_update_needs_color_decompress_mask(struct si_samplers *samplers)
 		struct pipe_resource *res = samplers->views[i]->texture;
 
 		if (res && res->target != PIPE_BUFFER) {
-			struct r600_texture *rtex = (struct r600_texture *)res;
+			struct si_texture *tex = (struct si_texture *)res;
 
-			if (color_needs_decompression(rtex)) {
+			if (color_needs_decompression(tex)) {
 				samplers->needs_color_decompress_mask |= 1u << i;
 			} else {
 				samplers->needs_color_decompress_mask &= ~(1u << i);
@@ -703,7 +697,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 		si_set_buf_desc_address(res, view->u.buf.offset, desc + 4);
 	} else {
 		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
-		struct r600_texture *tex = (struct r600_texture *)res;
+		struct si_texture *tex = (struct si_texture *)res;
 		unsigned level = view->u.tex.level;
 		unsigned width, height, depth, hw_level;
 		bool uses_dcc = vi_dcc_enabled(tex, level);
@@ -797,7 +791,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		images->needs_color_decompress_mask &= ~(1 << slot);
 		res->bind_history |= PIPE_BIND_SHADER_IMAGE;
 	} else {
-		struct r600_texture *tex = (struct r600_texture *)res;
+		struct si_texture *tex = (struct si_texture *)res;
 		unsigned level = view->u.tex.level;
 
 		if (color_needs_decompression(tex)) {
@@ -858,9 +852,9 @@ si_images_update_needs_color_decompress_mask(struct si_images *images)
 		struct pipe_resource *res = images->views[i].resource;
 
 		if (res && res->target != PIPE_BUFFER) {
-			struct r600_texture *rtex = (struct r600_texture *)res;
+			struct si_texture *tex = (struct si_texture *)res;
 
-			if (color_needs_decompression(rtex)) {
+			if (color_needs_decompression(tex)) {
 				images->needs_color_decompress_mask |= 1 << i;
 			} else {
 				images->needs_color_decompress_mask &= ~(1 << i);
@@ -895,7 +889,7 @@ void si_update_ps_colorbuf0_slot(struct si_context *sctx)
 	si_update_ps_iter_samples(sctx);
 
 	if (surf) {
-		struct r600_texture *tex = (struct r600_texture*)surf->texture;
+		struct si_texture *tex = (struct si_texture*)surf->texture;
 		struct pipe_image_view view;
 
 		assert(tex);
@@ -974,11 +968,11 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 		struct si_sampler_view *sview =
 			(struct si_sampler_view *)samplers->views[slot];
 
-		struct r600_texture *tex = NULL;
+		struct si_texture *tex = NULL;
 
 		if (sview && sview->base.texture &&
 		    sview->base.texture->target != PIPE_BUFFER)
-			tex = (struct r600_texture *)sview->base.texture;
+			tex = (struct si_texture *)sview->base.texture;
 
 		if (tex && tex->surface.fmask_size)
 			continue;
@@ -1530,13 +1524,13 @@ si_resident_handles_update_needs_color_decompress(struct si_context *sctx)
 	util_dynarray_foreach(&sctx->resident_tex_handles,
 			      struct si_texture_handle *, tex_handle) {
 		struct pipe_resource *res = (*tex_handle)->view->texture;
-		struct r600_texture *rtex;
+		struct si_texture *tex;
 
 		if (!res || res->target == PIPE_BUFFER)
 			continue;
 
-		rtex = (struct r600_texture *)res;
-		if (!color_needs_decompression(rtex))
+		tex = (struct si_texture *)res;
+		if (!color_needs_decompression(tex))
 			continue;
 
 		util_dynarray_append(&sctx->resident_tex_needs_color_decompress,
@@ -1547,13 +1541,13 @@ si_resident_handles_update_needs_color_decompress(struct si_context *sctx)
 			      struct si_image_handle *, img_handle) {
 		struct pipe_image_view *view = &(*img_handle)->view;
 		struct pipe_resource *res = view->resource;
-		struct r600_texture *rtex;
+		struct si_texture *tex;
 
 		if (!res || res->target == PIPE_BUFFER)
 			continue;
 
-		rtex = (struct r600_texture *)res;
-		if (!color_needs_decompression(rtex))
+		tex = (struct si_texture *)res;
+		if (!color_needs_decompression(tex))
 			continue;
 
 		util_dynarray_append(&sctx->resident_img_needs_color_decompress,
@@ -2427,25 +2421,25 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 
 	if (resident) {
 		if (sview->base.texture->target != PIPE_BUFFER) {
-			struct r600_texture *rtex =
-				(struct r600_texture *)sview->base.texture;
+			struct si_texture *tex =
+				(struct si_texture *)sview->base.texture;
 
-			if (depth_needs_decompression(rtex)) {
+			if (depth_needs_decompression(tex)) {
 				util_dynarray_append(
 					&sctx->resident_tex_needs_depth_decompress,
 					struct si_texture_handle *,
 					tex_handle);
 			}
 
-			if (color_needs_decompression(rtex)) {
+			if (color_needs_decompression(tex)) {
 				util_dynarray_append(
 					&sctx->resident_tex_needs_color_decompress,
 					struct si_texture_handle *,
 					tex_handle);
 			}
 
-			if (rtex->dcc_offset &&
-			    p_atomic_read(&rtex->framebuffers_bound))
+			if (tex->dcc_offset &&
+			    p_atomic_read(&tex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
 			si_update_bindless_texture_descriptor(sctx, tex_handle);
@@ -2573,18 +2567,18 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 
 	if (resident) {
 		if (res->b.b.target != PIPE_BUFFER) {
-			struct r600_texture *rtex = (struct r600_texture *)res;
+			struct si_texture *tex = (struct si_texture *)res;
 			unsigned level = view->u.tex.level;
 
-			if (color_needs_decompression(rtex)) {
+			if (color_needs_decompression(tex)) {
 				util_dynarray_append(
 					&sctx->resident_img_needs_color_decompress,
 					struct si_image_handle *,
 					img_handle);
 			}
 
-			if (vi_dcc_enabled(rtex, level) &&
-			    p_atomic_read(&rtex->framebuffers_bound))
+			if (vi_dcc_enabled(tex, level) &&
+			    p_atomic_read(&tex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
 			si_update_bindless_image_descriptor(sctx, img_handle);

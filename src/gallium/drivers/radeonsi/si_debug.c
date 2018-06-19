@@ -590,23 +590,23 @@ static void si_dump_bo_list(struct si_context *sctx,
 static void si_dump_framebuffer(struct si_context *sctx, struct u_log_context *log)
 {
 	struct pipe_framebuffer_state *state = &sctx->framebuffer.state;
-	struct r600_texture *rtex;
+	struct si_texture *tex;
 	int i;
 
 	for (i = 0; i < state->nr_cbufs; i++) {
 		if (!state->cbufs[i])
 			continue;
 
-		rtex = (struct r600_texture*)state->cbufs[i]->texture;
+		tex = (struct si_texture*)state->cbufs[i]->texture;
 		u_log_printf(log, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
-		si_print_texture_info(sctx->screen, rtex, log);
+		si_print_texture_info(sctx->screen, tex, log);
 		u_log_printf(log, "\n");
 	}
 
 	if (state->zsbuf) {
-		rtex = (struct r600_texture*)state->zsbuf->texture;
+		tex = (struct si_texture*)state->zsbuf->texture;
 		u_log_printf(log, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
-		si_print_texture_info(sctx->screen, rtex, log);
+		si_print_texture_info(sctx->screen, tex, log);
 		u_log_printf(log, "\n");
 	}
 }

@@ -42,7 +42,7 @@
 struct si_screen;
 struct si_shader;
 struct si_shader_selector;
-struct r600_texture;
+struct si_texture;
 struct si_qbo_state;
 
 /* State atoms are callbacks which write a sequence of packets into a GPU
@@ -407,7 +407,7 @@ struct si_buffer_resources {
 
 /* si_descriptors.c */
 void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
-				    struct r600_texture *tex,
+				    struct si_texture *tex,
 				    const struct legacy_surf_level *base_level_info,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
@@ -462,7 +462,7 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 			  uint32_t *state);
 void
 si_make_texture_descriptor(struct si_screen *screen,
-			   struct r600_texture *tex,
+			   struct si_texture *tex,
 			   bool sampler,
 			   enum pipe_texture_target target,
 			   enum pipe_format pipe_format,
