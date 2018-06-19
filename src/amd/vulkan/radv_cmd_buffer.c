@@ -4058,6 +4058,8 @@ static void radv_init_color_image_metadata(struct radv_cmd_buffer *cmd_buffer,
 		}
 
 		radv_initialize_dcc(cmd_buffer, image, value);
+
+		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, image, false);
 	}
 }
 
