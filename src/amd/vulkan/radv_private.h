@@ -1112,10 +1112,10 @@ void radv_cayman_emit_msaa_sample_locs(struct radeon_cmdbuf *cs, int nr_samples)
 unsigned radv_cayman_get_maxdist(int log_samples);
 void radv_device_init_msaa(struct radv_device *device);
 
-void radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
-				struct radv_image *image,
-				VkClearDepthStencilValue ds_clear_value,
-				VkImageAspectFlags aspects);
+void radv_update_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+				   struct radv_image *image,
+				   VkClearDepthStencilValue ds_clear_value,
+				   VkImageAspectFlags aspects);
 
 void radv_update_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 				      struct radv_image *image,

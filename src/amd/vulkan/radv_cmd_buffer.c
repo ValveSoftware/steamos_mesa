@@ -1217,7 +1217,7 @@ radv_update_bound_fast_clear_ds(struct radv_cmd_buffer *cmd_buffer,
 /**
  * Set the clear depth/stencil values to the image's metadata.
  */
-void
+static void
 radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 			   struct radv_image *image,
 			   VkClearDepthStencilValue ds_clear_value,
@@ -1228,8 +1228,6 @@ radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 	unsigned reg_offset = 0, reg_count = 0;
 
 	va += image->offset + image->clear_value_offset;
-
-	assert(radv_image_has_htile(image));
 
 	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
 		++reg_count;
@@ -1250,6 +1248,20 @@ radv_set_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cs, ds_clear_value.stencil);
 	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
 		radeon_emit(cs, fui(ds_clear_value.depth));
+}
+
+/**
+ * Update the clear depth/stencil values for this image.
+ */
+void
+radv_update_ds_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+			      struct radv_image *image,
+			      VkClearDepthStencilValue ds_clear_value,
+			      VkImageAspectFlags aspects)
+{
+	assert(radv_image_has_htile(image));
+
+	radv_set_ds_clear_metadata(cmd_buffer, image, ds_clear_value, aspects);
 
 	radv_update_bound_fast_clear_ds(cmd_buffer, image, ds_clear_value,
 				        aspects);
@@ -3943,9 +3955,11 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 	assert(range->levelCount == 1 || range->levelCount == VK_REMAINING_ARRAY_LAYERS);
 	unsigned layer_count = radv_get_layerCount(image, range);
 	uint64_t size = image->surface.htile_slice_size * layer_count;
+	VkImageAspectFlags aspects = VK_IMAGE_ASPECT_DEPTH_BIT;
 	uint64_t offset = image->offset + image->htile_offset +
 	                  image->surface.htile_slice_size * range->baseArrayLayer;
 	struct radv_cmd_state *state = &cmd_buffer->state;
+	VkClearDepthStencilValue value = {};
 
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
 			     RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
@@ -3955,19 +3969,10 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 
 	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 
-	/* Initialize the depth clear registers and update the ZRANGE_PRECISION
-	 * value for the TC-compat bug (because ZRANGE_PRECISION is 1 by
-	 * default). This is only needed whean clearing Z to 0.0f.
-	 */
-	if (radv_image_is_tc_compat_htile(image) && clear_word == 0) {
-		VkImageAspectFlags aspects = VK_IMAGE_ASPECT_DEPTH_BIT;
-		VkClearDepthStencilValue value = {};
+	if (vk_format_is_stencil(image->vk_format))
+		aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
-		if (vk_format_is_stencil(image->vk_format))
-			aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
-
-		radv_set_ds_clear_metadata(cmd_buffer, image, value, aspects);
-	}
+	radv_set_ds_clear_metadata(cmd_buffer, image, value, aspects);
 }
 
 static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffer,
