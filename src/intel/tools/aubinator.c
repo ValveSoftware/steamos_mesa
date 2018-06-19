@@ -78,23 +78,7 @@ uint64_t instruction_bound;
 
 FILE *outfile;
 
-static inline uint32_t
-field(uint32_t value, int start, int end)
-{
-   uint32_t mask;
-
-   mask = ~0U >> (31 - end + start);
-
-   return (value >> start) & mask;
-}
-
 struct brw_instruction;
-
-static inline int
-valid_offset(uint32_t offset)
-{
-   return offset < gtt_end;
-}
 
 #define GEN_ENGINE_RENDER 1
 #define GEN_ENGINE_BLITTER 2
