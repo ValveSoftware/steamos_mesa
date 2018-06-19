@@ -994,7 +994,7 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 	const struct radv_framebuffer *fb = cmd_buffer->state.framebuffer;
 	const struct radv_image_view *iview = fb->attachments[pass_att].attachment;
 	VkClearColorValue clear_value = clear_att->clearValue.color;
-	uint32_t clear_color[2], flush_bits;
+	uint32_t clear_color[2], flush_bits = 0;
 	uint32_t cmask_clear_value;
 	bool ret;
 
