@@ -563,21 +563,23 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         for (int i = 0; i < v3d->streamout.num_targets; i++)
                 v3d->streamout.offsets[i] += info->count;
 
-        if (v3d->zsa && job->zsbuf &&
-            (v3d->zsa->base.depth.enabled ||
-             v3d->zsa->base.stencil[0].enabled)) {
+        if (v3d->zsa && job->zsbuf && v3d->zsa->base.depth.enabled) {
                 struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
                 v3d_job_add_bo(job, rsc->bo);
 
-                if (v3d->zsa->base.depth.enabled) {
-                        job->resolve |= PIPE_CLEAR_DEPTH;
-                        rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
-                }
+                job->resolve |= PIPE_CLEAR_DEPTH;
+                rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
+        }
 
-                if (v3d->zsa->base.stencil[0].enabled) {
-                        job->resolve |= PIPE_CLEAR_STENCIL;
-                        rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
-                }
+        if (v3d->zsa && job->zsbuf && v3d->zsa->base.stencil[0].enabled) {
+                struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
+                if (rsc->separate_stencil)
+                        rsc = rsc->separate_stencil;
+
+                v3d_job_add_bo(job, rsc->bo);
+
+                job->resolve |= PIPE_CLEAR_STENCIL;
+                rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
         }
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
