@@ -4829,7 +4829,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    /* In desktop GLSL, different shader versions may be linked together.  In
     * GLSL ES, all shader versions must be the same.
     */
-   if (!ctx->Const.AllowGLSLRelaxedES && min_version != max_version) {
+   if (!ctx->Const.AllowGLSLRelaxedES && prog->Shaders[0]->IsES &&
+       min_version != max_version) {
       linker_error(prog, "all shaders must use same shading "
                    "language version\n");
       goto done;
