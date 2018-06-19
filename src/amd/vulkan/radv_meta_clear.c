@@ -1104,8 +1104,8 @@ emit_fast_color_clear(struct radv_cmd_buffer *cmd_buffer,
 		cmd_buffer->state.flush_bits |= flush_bits;
 	}
 
-	radv_set_color_clear_metadata(cmd_buffer, iview->image, subpass_att,
-				      clear_color);
+	radv_update_color_clear_metadata(cmd_buffer, iview->image, subpass_att,
+					 clear_color);
 
 	return true;
 fail:

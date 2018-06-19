@@ -1354,10 +1354,9 @@ radv_update_bound_fast_clear_color(struct radv_cmd_buffer *cmd_buffer,
 /**
  * Set the clear color values to the image's metadata.
  */
-void
+static void
 radv_set_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 			      struct radv_image *image,
-			      int cb_idx,
 			      uint32_t color_values[2])
 {
 	struct radeon_cmdbuf *cs = cmd_buffer->cs;
@@ -1375,6 +1374,20 @@ radv_set_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, va >> 32);
 	radeon_emit(cs, color_values[0]);
 	radeon_emit(cs, color_values[1]);
+}
+
+/**
+ * Update the clear color values for this image.
+ */
+void
+radv_update_color_clear_metadata(struct radv_cmd_buffer *cmd_buffer,
+				 struct radv_image *image,
+				 int cb_idx,
+				 uint32_t color_values[2])
+{
+	assert(radv_image_has_cmask(image) || radv_image_has_dcc(image));
+
+	radv_set_color_clear_metadata(cmd_buffer, image, color_values);
 
 	radv_update_bound_fast_clear_color(cmd_buffer, image, cb_idx,
 					   color_values);
@@ -4060,6 +4073,11 @@ static void radv_init_color_image_metadata(struct radv_cmd_buffer *cmd_buffer,
 		radv_initialize_dcc(cmd_buffer, image, value);
 
 		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, image, false);
+	}
+
+	if (radv_image_has_cmask(image) || radv_image_has_dcc(image)) {
+		uint32_t color_values[2] = {};
+		radv_set_color_clear_metadata(cmd_buffer, image, color_values);
 	}
 }
 
