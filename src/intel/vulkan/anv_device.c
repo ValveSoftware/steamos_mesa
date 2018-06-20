@@ -37,6 +37,7 @@
 #include "util/build_id.h"
 #include "util/disk_cache.h"
 #include "util/mesa-sha1.h"
+#include "git_sha1.h"
 #include "vk_util.h"
 #include "common/gen_defines.h"
 
@@ -1111,6 +1112,28 @@ void anv_GetPhysicalDeviceProperties2(
             (VkPhysicalDevicePushDescriptorPropertiesKHR *) ext;
 
          properties->maxPushDescriptors = MAX_PUSH_DESCRIPTORS;
+         break;
+      }
+
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR: {
+         VkPhysicalDeviceDriverPropertiesKHR *driver_props =
+            (VkPhysicalDeviceDriverPropertiesKHR *) ext;
+
+         driver_props->driverID = VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR;
+         memset(driver_props->driverName, 0, VK_MAX_DRIVER_NAME_SIZE_KHR);
+         strcpy(driver_props->driverName,
+                "Intel open-source Mesa driver");
+
+         memset(driver_props->driverInfo, 0, VK_MAX_DRIVER_INFO_SIZE_KHR);
+         strcpy(driver_props->driverInfo,
+                "Mesa " PACKAGE_VERSION MESA_GIT_SHA1);
+
+         driver_props->conformanceVersion = (VkConformanceVersionKHR) {
+            .major = 1,
+            .minor = 1,
+            .subminor = 2,
+            .patch = 0,
+         };
          break;
       }
 
