@@ -428,6 +428,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    if (flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
        ws->info.has_local_buffers)
       request.flags |= AMDGPU_GEM_CREATE_VM_ALWAYS_VALID;
+   if (ws->zero_all_vram_allocs &&
+       (request.preferred_heap & AMDGPU_GEM_DOMAIN_VRAM))
+      request.flags |= AMDGPU_GEM_CREATE_VRAM_CLEARED;
 
    r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
    if (r) {

@@ -62,6 +62,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
    ws->debug_all_bos = debug_get_option_all_bos();
    ws->reserve_vmid = strstr(debug_get_option("R600_DEBUG", ""), "reserve_vmid") != NULL;
+   ws->zero_all_vram_allocs = strstr(debug_get_option("R600_DEBUG", ""), "zerovram") != NULL;
 
    return true;
 

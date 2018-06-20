@@ -79,6 +79,7 @@ struct amdgpu_winsys {
    bool check_vm;
    bool debug_all_bos;
    bool reserve_vmid;
+   bool zero_all_vram_allocs;
 
    /* List of all allocated buffers */
    simple_mtx_t global_bo_list_lock;

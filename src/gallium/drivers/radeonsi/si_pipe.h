@@ -141,6 +141,7 @@ enum {
 	DBG_NO_WC,
 	DBG_CHECK_VM,
 	DBG_RESERVE_VMID,
+	DBG_ZERO_VRAM,
 
 	/* 3D engine options: */
 	DBG_SWITCH_ON_EOP,
