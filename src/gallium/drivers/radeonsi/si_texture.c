@@ -273,6 +273,11 @@ static int si_init_surface(struct si_screen *sscreen,
 	     (ptex->nr_samples >= 2 && !sscreen->dcc_msaa_allowed)))
 		flags |= RADEON_SURF_DISABLE_DCC;
 
+	/* Stoney: 128bpp MSAA textures randomly fail piglit tests with DCC. */
+	if (sscreen->info.family == CHIP_STONEY &&
+	    bpe == 16 && ptex->nr_samples >= 2)
+		flags |= RADEON_SURF_DISABLE_DCC;
+
 	/* VI: DCC clear for 4x and 8x MSAA array textures unimplemented. */
 	if (sscreen->info.chip_class == VI &&
 	    num_color_samples >= 4 &&
