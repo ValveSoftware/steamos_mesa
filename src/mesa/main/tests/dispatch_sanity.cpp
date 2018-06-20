@@ -603,6 +603,18 @@ const struct function common_desktop_functions_possible[] = {
    { "glUniformMatrix4x3dv", 40, -1 },
    { "glGetUniformdv", 43, -1 },
 
+   /* GL 4.1 */
+   { "glVertexAttribL1d", 41, -1 },
+   { "glVertexAttribL2d", 41, -1 },
+   { "glVertexAttribL3d", 41, -1 },
+   { "glVertexAttribL4d", 41, -1 },
+   { "glVertexAttribL1dv", 41, -1 },
+   { "glVertexAttribL2dv", 41, -1 },
+   { "glVertexAttribL3dv", 41, -1 },
+   { "glVertexAttribL4dv", 41, -1 },
+   { "glVertexAttribLPointer", 41, -1 },
+   { "glGetVertexAttribLdv", 41, -1 },
+
    /* GL 4.3 */
    { "glIsRenderbuffer", 43, -1 },
    { "glBindRenderbuffer", 43, -1 },
@@ -1764,17 +1776,6 @@ const struct function gl_core_functions_possible[] = {
    { "glProgramUniformMatrix4x3dv", 40, -1 },
    { "glValidateProgramPipeline", 43, -1 },
    { "glGetProgramPipelineInfoLog", 43, -1 },
-
-   { "glVertexAttribL1d", 41, -1 },
-   { "glVertexAttribL2d", 41, -1 },
-   { "glVertexAttribL3d", 41, -1 },
-   { "glVertexAttribL4d", 41, -1 },
-   { "glVertexAttribL1dv", 41, -1 },
-   { "glVertexAttribL2dv", 41, -1 },
-   { "glVertexAttribL3dv", 41, -1 },
-   { "glVertexAttribL4dv", 41, -1 },
-   { "glVertexAttribLPointer", 41, -1 },
-   { "glGetVertexAttribLdv", 41, -1 },
 
 // { "glCreateSyncFromCLeventARB", 43, -1 },            // XXX: Add to xml
 

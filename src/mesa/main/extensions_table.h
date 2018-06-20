@@ -175,7 +175,7 @@ EXT(ARB_transpose_matrix                    , dummy_true                        
 EXT(ARB_uniform_buffer_object               , ARB_uniform_buffer_object              , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_vertex_array_bgra                   , EXT_vertex_array_bgra                  , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_vertex_array_object                 , dummy_true                             , GLL, GLC,  x ,  x , 2006)
-EXT(ARB_vertex_attrib_64bit                 , ARB_vertex_attrib_64bit                ,  x , GLC,  x ,  x , 2010)
+EXT(ARB_vertex_attrib_64bit                 , ARB_vertex_attrib_64bit                ,  32, GLC,  x ,  x , 2010)
 EXT(ARB_vertex_attrib_binding               , dummy_true                             , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_vertex_buffer_object                , dummy_true                             , GLL,  x ,  x ,  x , 2003)
 EXT(ARB_vertex_program                      , ARB_vertex_program                     , GLL,  x ,  x ,  x , 2002)

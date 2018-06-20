@@ -113,16 +113,16 @@ functions = {
     # For Mesa this effectively means OpenGL 3.2 is required.  It seems
     # unlikely that Mesa will ever get support for any of the NV extensions
     # that add "equivalent functionality."
-    "VertexAttribL1d": exec_info(core=32),
-    "VertexAttribL2d": exec_info(core=32),
-    "VertexAttribL3d": exec_info(core=32),
-    "VertexAttribL4d": exec_info(core=32),
-    "VertexAttribL1dv": exec_info(core=32),
-    "VertexAttribL2dv": exec_info(core=32),
-    "VertexAttribL3dv": exec_info(core=32),
-    "VertexAttribL4dv": exec_info(core=32),
-    "VertexAttribLPointer": exec_info(core=32),
-    "GetVertexAttribLdv": exec_info(core=32),
+    "VertexAttribL1d": exec_info(compatibility=32, core=32),
+    "VertexAttribL2d": exec_info(compatibility=32, core=32),
+    "VertexAttribL3d": exec_info(compatibility=32, core=32),
+    "VertexAttribL4d": exec_info(compatibility=32, core=32),
+    "VertexAttribL1dv": exec_info(compatibility=32, core=32),
+    "VertexAttribL2dv": exec_info(compatibility=32, core=32),
+    "VertexAttribL3dv": exec_info(compatibility=32, core=32),
+    "VertexAttribL4dv": exec_info(compatibility=32, core=32),
+    "VertexAttribLPointer": exec_info(compatibility=32, core=32),
+    "GetVertexAttribLdv": exec_info(compatibility=32, core=32),
 
     # OpenGL 4.1 / GL_ARB_viewport_array.  The extension spec says:
     #
