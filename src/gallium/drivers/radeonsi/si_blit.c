@@ -1161,6 +1161,11 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 			    info->dst.resource->last_level != 0)
 				goto resolve_to_temp;
 
+			/* This can happen with mipmapping. */
+			if (sctx->chip_class == VI &&
+			    !dst->surface.u.legacy.level[info->dst.level].dcc_fast_clear_size)
+				goto resolve_to_temp;
+
 			vi_dcc_clear_level(sctx, dst, info->dst.level,
 					   0xFFFFFFFF);
 			dst->dirty_level_mask &= ~(1 << info->dst.level);

@@ -479,7 +479,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			if (sctx->screen->debug_flags & DBG(NO_DCC_CLEAR))
 				continue;
 
-			/* This can only occur with MSAA. */
+			/* This can happen with mipmapping or MSAA. */
 			if (sctx->chip_class == VI &&
 			    !tex->surface.u.legacy.level[level].dcc_fast_clear_size)
 				continue;
