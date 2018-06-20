@@ -523,6 +523,9 @@ typedef enum
    /* ARB_uniform_buffer_object */
    OPCODE_UNIFORM_BLOCK_BINDING,
 
+   /* ARB_shader_subroutines */
+   OPCODE_UNIFORM_SUBROUTINES,
+
    /* EXT_polygon_offset_clamp */
    OPCODE_POLYGON_OFFSET_CLAMP,
 
@@ -1161,6 +1164,7 @@ _mesa_delete_list(struct gl_context *ctx, struct gl_display_list *dlist)
          case OPCODE_PIXEL_MAP:
             free(get_pointer(&n[3]));
             break;
+         case OPCODE_UNIFORM_SUBROUTINES:
          case OPCODE_WINDOW_RECTANGLES:
             free(get_pointer(&n[3]));
             break;
@@ -8712,6 +8716,28 @@ save_UniformBlockBinding(GLuint prog, GLuint index, GLuint binding)
    }
 }
 
+static void GLAPIENTRY
+save_UniformSubroutinesuiv(GLenum shadertype, GLsizei count,
+                           const GLuint *indices)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_UNIFORM_SUBROUTINES, 2 + POINTER_DWORDS);
+   if (n) {
+      GLint *indices_copy = NULL;
+
+      if (count > 0)
+         indices_copy = memdup(indices, sizeof(GLuint) * 4 * count);
+      n[1].e = shadertype;
+      n[2].si = count;
+      save_pointer(&n[3], indices_copy);
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_UniformSubroutinesuiv(ctx->Exec, (shadertype, count, indices));
+   }
+}
+
 /** GL_EXT_window_rectangles */
 static void GLAPIENTRY
 save_WindowRectanglesEXT(GLenum mode, GLsizei count, const GLint *box)
@@ -10225,6 +10251,11 @@ execute_list(struct gl_context *ctx, GLuint list)
             CALL_UniformBlockBinding(ctx->Exec, (n[1].ui, n[2].ui, n[3].ui));
             break;
 
+         case OPCODE_UNIFORM_SUBROUTINES:
+            CALL_UniformSubroutinesuiv(ctx->Exec, (n[1].e, n[2].si,
+                                                   get_pointer(&n[3])));
+            break;
+
          /* GL_EXT_window_rectangles */
          case OPCODE_WINDOW_RECTANGLES:
             CALL_WindowRectanglesEXT(
@@ -11113,6 +11144,9 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
 
    /* GL_ARB_uniform_buffer_object */
    SET_UniformBlockBinding(table, save_UniformBlockBinding);
+
+   /* GL_ARB_shader_subroutines */
+   SET_UniformSubroutinesuiv(table, save_UniformSubroutinesuiv);
 
    /* GL_ARB_draw_instanced */
    SET_DrawArraysInstancedARB(table, save_DrawArraysInstancedARB);
