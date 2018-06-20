@@ -799,7 +799,9 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 							   chip_class,
 							   is_mec,
 							   V_028A90_FLUSH_AND_INV_CB_DATA_TS,
-							   0, 0, 0, 0, 0);
+							   0,
+							   EOP_DATA_SEL_DISCARD,
+							   0, 0, 0);
 			}
 		}
 		if (flush_bits & RADV_CMD_FLAG_FLUSH_AND_INV_DB) {
@@ -867,7 +869,8 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 		assert(flush_cnt);
 		uint32_t old_fence = (*flush_cnt)++;
 
-		si_cs_emit_write_event_eop(cs, false, chip_class, false, cb_db_event, tc_flags, 1,
+		si_cs_emit_write_event_eop(cs, false, chip_class, false, cb_db_event, tc_flags,
+					   EOP_DATA_SEL_VALUE_32BIT,
 					   flush_va, old_fence, *flush_cnt);
 		si_emit_wait_fence(cs, false, flush_va, *flush_cnt, 0xffffffff);
 	}
