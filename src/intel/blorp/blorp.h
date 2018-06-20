@@ -119,6 +119,14 @@ struct blorp_surf
    uint32_t tile_x_sa, tile_y_sa;
 };
 
+enum blorp_filter {
+   BLORP_FILTER_NONE,
+   BLORP_FILTER_NEAREST,
+   BLORP_FILTER_BILINEAR,
+   BLORP_FILTER_SAMPLE_0,
+   BLORP_FILTER_AVERAGE,
+};
+
 void
 blorp_blit(struct blorp_batch *batch,
            const struct blorp_surf *src_surf,
