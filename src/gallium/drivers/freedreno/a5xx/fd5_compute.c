@@ -76,6 +76,13 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v,
 	const unsigned *local_size = info->block;
 	const struct ir3_info *i = &v->info;
 	enum a3xx_threadsize thrsz;
+	unsigned instrlen = v->instrlen;
+
+	/* if shader is more than 32*16 instructions, don't preload it.  Similar
+	 * to the combined restriction of 64*16 for VS+FS
+	 */
+	if (instrlen > 32)
+		instrlen = 0;
 
 	/* maybe the limit should be 1024.. basically if we can't have full
 	 * occupancy, use TWO_QUAD mode to reduce divergence penalty.
@@ -107,7 +114,7 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v,
 		A5XX_HLSQ_CS_CONFIG_ENABLED);
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CS_CNTL, 1);
-	OUT_RING(ring, A5XX_HLSQ_CS_CNTL_INSTRLEN(v->instrlen) |
+	OUT_RING(ring, A5XX_HLSQ_CS_CNTL_INSTRLEN(instrlen) |
 		COND(v->has_ssbo, A5XX_HLSQ_CS_CNTL_SSBO_ENABLE));
 
 	OUT_PKT4(ring, REG_A5XX_SP_CS_CONFIG, 1);
@@ -118,7 +125,7 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v,
 	unsigned constlen = align(v->constlen, 4) / 4;
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CS_CONSTLEN, 2);
 	OUT_RING(ring, constlen);          /* HLSQ_CS_CONSTLEN */
-	OUT_RING(ring, v->instrlen);       /* HLSQ_CS_INSTRLEN */
+	OUT_RING(ring, instrlen);          /* HLSQ_CS_INSTRLEN */
 
 	OUT_PKT4(ring, REG_A5XX_SP_CS_OBJ_START_LO, 2);
 	OUT_RELOC(ring, v->bo, 0, 0, 0);   /* SP_CS_OBJ_START_LO/HI */
@@ -137,7 +144,8 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v,
 		A5XX_HLSQ_CS_CNTL_0_LOCALIDREGID(local_invocation_id));
 	OUT_RING(ring, 0x1);               /* HLSQ_CS_CNTL_1 */
 
-	fd5_emit_shader(ring, v);
+	if (instrlen > 0)
+		fd5_emit_shader(ring, v);
 }
 
 static void
