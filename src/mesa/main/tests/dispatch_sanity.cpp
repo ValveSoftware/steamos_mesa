@@ -575,6 +575,15 @@ const struct function common_desktop_functions_possible[] = {
    { "glBlendFunci", 40, -1 },
    { "glBlendFuncSeparatei", 40, -1 },
 
+   { "glGetSubroutineUniformLocation", 40, -1 },
+   { "glGetSubroutineIndex", 40, -1 },
+   { "glGetActiveSubroutineUniformiv", 40, -1 },
+   { "glGetActiveSubroutineUniformName", 40, -1 },
+   { "glGetActiveSubroutineName", 40, -1 },
+   { "glUniformSubroutinesuiv", 40, -1 },
+   { "glGetUniformSubroutineuiv", 40, -1 },
+   { "glGetProgramStageiv", 40, -1 },
+
    { "glUniform1d", 40, -1 },
    { "glUniform2d", 40, -1 },
    { "glUniform3d", 40, -1 },
@@ -1546,16 +1555,6 @@ const struct function gl_compatibility_functions_possible[] = {
 const struct function gl_core_functions_possible[] = {
    /* GL 3.2 */
    { "glFramebufferTexture", 32, -1 },
-
-   /* GL 4.0 */
-   { "glGetSubroutineUniformLocation", 40, -1 },
-   { "glGetSubroutineIndex", 40, -1 },
-   { "glGetActiveSubroutineUniformiv", 40, -1 },
-   { "glGetActiveSubroutineUniformName", 40, -1 },
-   { "glGetActiveSubroutineName", 40, -1 },
-   { "glUniformSubroutinesuiv", 40, -1 },
-   { "glGetUniformSubroutineuiv", 40, -1 },
-   { "glGetProgramStageiv", 40, -1 },
 
    /* GL 4.3 */
    { "glIsRenderbuffer", 43, -1 },
