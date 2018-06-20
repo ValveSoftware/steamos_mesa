@@ -745,7 +745,15 @@ st_link_nir(struct gl_context *ctx,
       shader->Program->info = nir->info;
 
       if (prev != -1) {
-         nir_compact_varyings(shader_program->_LinkedShaders[prev]->Program->nir,
+         struct gl_program *prev_shader =
+            shader_program->_LinkedShaders[prev]->Program;
+
+         /* We can't use nir_compact_varyings with transform feedback, since
+          * the pipe_stream_output->output_register field is based on the
+          * pre-compacted driver_locations.
+          */
+         if (!prev_shader->sh.LinkedTransformFeedback)
+            nir_compact_varyings(shader_program->_LinkedShaders[prev]->Program->nir,
                               nir, ctx->API != API_OPENGL_COMPAT);
       }
       prev = i;
