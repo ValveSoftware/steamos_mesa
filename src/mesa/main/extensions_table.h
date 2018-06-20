@@ -182,7 +182,7 @@ EXT(ARB_vertex_program                      , ARB_vertex_program                
 EXT(ARB_vertex_shader                       , ARB_vertex_shader                      , GLL, GLC,  x ,  x , 2002)
 EXT(ARB_vertex_type_10f_11f_11f_rev         , ARB_vertex_type_10f_11f_11f_rev        , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_vertex_type_2_10_10_10_rev          , ARB_vertex_type_2_10_10_10_rev         , GLL, GLC,  x ,  x , 2009)
-EXT(ARB_viewport_array                      , ARB_viewport_array                     ,  x , GLC,  x ,  x , 2010)
+EXT(ARB_viewport_array                      , ARB_viewport_array                     , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_window_pos                          , dummy_true                             , GLL,  x ,  x ,  x , 2001)
 
 EXT(ATI_blend_equation_separate             , EXT_blend_equation_separate            , GLL, GLC,  x ,  x , 2003)

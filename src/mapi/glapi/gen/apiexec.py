@@ -131,14 +131,14 @@ functions = {
     #
     # Mesa does not support either of the geometry shader extensions, so
     # OpenGL 3.2 is required.
-    "ViewportArrayv": exec_info(core=32, es2=31),
-    "ViewportIndexedf": exec_info(core=32, es2=31),
-    "ViewportIndexedfv": exec_info(core=32, es2=31),
-    "ScissorArrayv": exec_info(core=32, es2=31),
-    "ScissorIndexed": exec_info(core=32, es2=31),
-    "ScissorIndexedv": exec_info(core=32, es2=31),
-    "DepthRangeArrayv": exec_info(core=32),
-    "DepthRangeIndexed": exec_info(core=32),
+    "ViewportArrayv": exec_info(compatibility=32, core=32, es2=31),
+    "ViewportIndexedf": exec_info(compatibility=32, core=32, es2=31),
+    "ViewportIndexedfv": exec_info(compatibility=32, core=32, es2=31),
+    "ScissorArrayv": exec_info(compatibility=32, core=32, es2=31),
+    "ScissorIndexed": exec_info(compatibility=32, core=32, es2=31),
+    "ScissorIndexedv": exec_info(compatibility=32, core=32, es2=31),
+    "DepthRangeArrayv": exec_info(compatibility=32, core=32),
+    "DepthRangeIndexed": exec_info(compatibility=32, core=32),
     # GetFloati_v also GL_ARB_shader_atomic_counters
     # GetDoublei_v also GL_ARB_shader_atomic_counters
 
