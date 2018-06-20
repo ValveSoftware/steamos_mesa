@@ -1378,9 +1378,17 @@ static void si_emit_db_render_state(struct si_context *sctx)
 		bool perfect = sctx->num_perfect_occlusion_queries > 0;
 
 		if (sctx->chip_class >= CIK) {
+			unsigned log_sample_rate = sctx->framebuffer.log_samples;
+
+			/* Stoney doesn't increment occlusion query counters
+			 * if the sample rate is 16x. Use 8x sample rate instead.
+			 */
+			if (sctx->family == CHIP_STONEY)
+				log_sample_rate = MIN2(log_sample_rate, 3);
+
 			db_count_control =
 				S_028004_PERFECT_ZPASS_COUNTS(perfect) |
-				S_028004_SAMPLE_RATE(sctx->framebuffer.log_samples) |
+				S_028004_SAMPLE_RATE(log_sample_rate) |
 				S_028004_ZPASS_ENABLE(1) |
 				S_028004_SLICE_EVEN_ENABLE(1) |
 				S_028004_SLICE_ODD_ENABLE(1);
