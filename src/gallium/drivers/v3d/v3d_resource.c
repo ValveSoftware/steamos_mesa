@@ -316,6 +316,7 @@ v3d_resource_get_handle(struct pipe_screen *pscreen,
         struct v3d_bo *bo = rsc->bo;
 
         whandle->stride = rsc->slices[0].stride;
+        whandle->offset = 0;
 
         /* If we're passing some reference to our BO out to some other part of
          * the system, then we can't do any optimizations about only us being
