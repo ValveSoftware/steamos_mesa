@@ -625,9 +625,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				 ctx->addrs[idx][chan] = lp_build_alloca_undef(
-					&ctx->gallivm,
-					ctx->i32, "");
+				 ctx->addrs[idx][chan] = ac_build_alloca_undef(
+					&ctx->ac, ctx->i32, "");
 			}
 		}
 		break;
@@ -672,7 +671,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			 */
 			if (array_size > 16 ||
 			    !ctx->screen->llvm_has_working_vgpr_indexing) {
-				array_alloca = lp_build_alloca_undef(&ctx->gallivm,
+				array_alloca = ac_build_alloca_undef(&ctx->ac,
 					LLVMArrayType(ctx->f32,
 						      array_size), "array");
 				ctx->temp_array_allocas[id] = array_alloca;
@@ -690,7 +689,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 					 first + i / 4, "xyzw"[i % 4]);
 #endif
 				ctx->temps[first * TGSI_NUM_CHANNELS + i] =
-					lp_build_alloca_undef(&ctx->gallivm,
+					ac_build_alloca_undef(&ctx->ac,
 							      ctx->f32,
 							      name);
 			}
@@ -708,9 +707,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				 * a shader ever reads from a channel that
 				 * it never writes to.
 				 */
-				ctx->undef_alloca = lp_build_alloca_undef(
-					&ctx->gallivm,
-					ctx->f32, "undef");
+				ctx->undef_alloca = ac_build_alloca_undef(
+					&ctx->ac, ctx->f32, "undef");
 			}
 
 			for (i = 0; i < decl_size; ++i) {
@@ -774,9 +772,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				snprintf(name, sizeof(name), "OUT%d.%c",
 					 idx, "xyzw"[chan % 4]);
 #endif
-				ctx->outputs[idx][chan] = lp_build_alloca_undef(
-					&ctx->gallivm,
-					ctx->f32, name);
+				ctx->outputs[idx][chan] = ac_build_alloca_undef(
+					&ctx->ac, ctx->f32, name);
 			}
 		}
 		break;

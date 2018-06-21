@@ -6158,7 +6158,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx)
 	    sel->tcs_info.tessfactors_are_def_in_all_invocs) {
 		for (unsigned i = 0; i < 6; i++) {
 			ctx->invoc0_tess_factors[i] =
-				lp_build_alloca_undef(&ctx->gallivm, ctx->i32, "");
+				ac_build_alloca_undef(&ctx->ac, ctx->i32, "");
 		}
 	}
 
@@ -6166,13 +6166,12 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx)
 		int i;
 		for (i = 0; i < 4; i++) {
 			ctx->gs_next_vertex[i] =
-				lp_build_alloca(&ctx->gallivm,
-						ctx->i32, "");
+				ac_build_alloca(&ctx->ac, ctx->i32, "");
 		}
 	}
 
 	if (sel->force_correct_derivs_after_kill) {
-		ctx->postponed_kill = lp_build_alloca_undef(&ctx->gallivm, ctx->i1, "");
+		ctx->postponed_kill = ac_build_alloca_undef(&ctx->ac, ctx->i1, "");
 		/* true = don't kill. */
 		LLVMBuildStore(ctx->ac.builder, LLVMConstInt(ctx->i1, 1, 0),
 			       ctx->postponed_kill);
