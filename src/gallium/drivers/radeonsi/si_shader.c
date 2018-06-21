@@ -1885,7 +1885,6 @@ void si_llvm_load_input_fs(
 	unsigned input_index,
 	LLVMValueRef out[4])
 {
-	struct lp_build_context *base = &ctx->bld_base.base;
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMValueRef main_fn = ctx->main_fn;
@@ -1902,11 +1901,12 @@ void si_llvm_load_input_fs(
 		unsigned mask = colors_read >> (semantic_index * 4);
 		unsigned offset = SI_PARAM_POS_FIXED_PT + 1 +
 				  (semantic_index ? util_bitcount(colors_read & 0xf) : 0);
+		LLVMValueRef undef = LLVMGetUndef(ctx->f32);
 
-		out[0] = mask & 0x1 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		out[1] = mask & 0x2 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		out[2] = mask & 0x4 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		out[3] = mask & 0x8 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		out[0] = mask & 0x1 ? LLVMGetParam(main_fn, offset++) : undef;
+		out[1] = mask & 0x2 ? LLVMGetParam(main_fn, offset++) : undef;
+		out[2] = mask & 0x4 ? LLVMGetParam(main_fn, offset++) : undef;
+		out[3] = mask & 0x8 ? LLVMGetParam(main_fn, offset++) : undef;
 		return;
 	}
 
@@ -5808,7 +5808,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 			for (unsigned chan = 0; chan < 4; chan++) {
 				if (!(gsinfo->output_usagemask[i] & (1 << chan)) ||
 				    outputs[i].vertex_stream[chan] != stream) {
-					outputs[i].values[chan] = ctx.bld_base.base.undef;
+					outputs[i].values[chan] = LLVMGetUndef(ctx.f32);
 					continue;
 				}
 
