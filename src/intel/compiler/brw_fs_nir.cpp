@@ -3926,6 +3926,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_group_memory_barrier:
+   case nir_intrinsic_memory_barrier_shared:
    case nir_intrinsic_memory_barrier_atomic_counter:
    case nir_intrinsic_memory_barrier_buffer:
    case nir_intrinsic_memory_barrier_image:
@@ -3936,29 +3938,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          ->size_written = 2 * REG_SIZE;
       break;
    }
-
-   case nir_intrinsic_group_memory_barrier:
-   case nir_intrinsic_memory_barrier_shared:
-      /* We treat these workgroup-level barriers as no-ops.  This should be
-       * safe at present and as long as:
-       *
-       *  - Memory access instructions are not subsequently reordered by the
-       *    compiler back-end.
-       *
-       *  - All threads from a given compute shader workgroup fit within a
-       *    single subslice and therefore talk to the same HDC shared unit
-       *    what supposedly guarantees ordering and coherency between threads
-       *    from the same workgroup.  This may change in the future when we
-       *    start splitting workgroups across multiple subslices.
-       *
-       *  - The context is not in fault-and-stream mode, which could cause
-       *    memory transactions (including to SLM) prior to the barrier to be
-       *    replayed after the barrier if a pagefault occurs.  This shouldn't
-       *    be a problem up to and including SKL because fault-and-stream is
-       *    not usable due to hardware issues, but that's likely to change in
-       *    the future.
-       */
-      break;
 
    case nir_intrinsic_shader_clock: {
       /* We cannot do anything if there is an event, so ignore it for now */
