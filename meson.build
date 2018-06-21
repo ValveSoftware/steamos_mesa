@@ -559,13 +559,16 @@ elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
 elif _va == 'auto'
   _va = 'true'
 endif
-with_gallium_va = _va == 'true'
+with_gallium_va = false
 dep_va = null_dep
-if with_gallium_va
-  dep_va = dependency('libva', version : '>= 0.39.0')
-  dep_va_headers = declare_dependency(
-    compile_args : run_command(prog_pkgconfig, ['libva', '--cflags']).stdout().split()
-  )
+if _va != 'false'
+  dep_va = dependency('libva', version : '>= 0.38.0', required : _va == 'true')
+  if dep_va.found()
+    dep_va_headers = declare_dependency(
+      compile_args : run_command(prog_pkgconfig, ['libva', '--cflags']).stdout().split()
+    )
+    with_gallium_va = true
+  endif
 endif
 
 va_drivers_path = get_option('va-libs-path')
