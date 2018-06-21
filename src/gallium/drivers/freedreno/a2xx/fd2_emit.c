@@ -332,6 +332,16 @@ fd2_emit_state(struct fd_context *ctx, const enum fd_dirty_3d_state dirty)
 void
 fd2_emit_restore(struct fd_context *ctx, struct fd_ringbuffer *ring)
 {
+	if (is_a20x(ctx->screen)) {
+		OUT_PKT0(ring, REG_A2XX_RB_BC_CONTROL, 1);
+		OUT_RING(ring,
+			A2XX_RB_BC_CONTROL_ACCUM_TIMEOUT_SELECT(3) |
+			A2XX_RB_BC_CONTROL_DISABLE_LZ_NULL_ZCMD_DROP |
+			A2XX_RB_BC_CONTROL_ENABLE_CRC_UPDATE |
+			A2XX_RB_BC_CONTROL_ACCUM_DATA_FIFO_LIMIT(8) |
+			A2XX_RB_BC_CONTROL_MEM_EXPORT_TIMEOUT_SELECT(3));
+	}
+
 	OUT_PKT0(ring, REG_A2XX_TP0_CHICKEN, 1);
 	OUT_RING(ring, 0x00000002);
 

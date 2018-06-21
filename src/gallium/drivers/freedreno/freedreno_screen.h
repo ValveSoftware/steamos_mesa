@@ -106,6 +106,12 @@ struct fd_bo * fd_screen_bo_from_handle(struct pipe_screen *pscreen,
 
 struct pipe_screen * fd_screen_create(struct fd_device *dev);
 
+static inline boolean
+is_a20x(struct fd_screen *screen)
+{
+	return (screen->gpu_id >= 200) && (screen->gpu_id < 210);
+}
+
 /* is a3xx patch revision 0? */
 /* TODO a306.0 probably doesn't need this.. be more clever?? */
 static inline boolean

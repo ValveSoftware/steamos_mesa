@@ -875,6 +875,7 @@ fd_screen_create(struct fd_device *dev)
 	 * send a patch ;-)
 	 */
 	switch (screen->gpu_id) {
+	case 205:
 	case 220:
 		fd2_screen_init(pscreen);
 		break;
