@@ -24,21 +24,9 @@
 
 #include "si_shader_internal.h"
 #include "si_pipe.h"
-
-#include "gallivm/lp_bld_const.h"
+#include "ac_llvm_util.h"
 #include "gallivm/lp_bld_gather.h"
-#include "gallivm/lp_bld_flow.h"
-#include "gallivm/lp_bld_init.h"
-#include "gallivm/lp_bld_intr.h"
-#include "gallivm/lp_bld_misc.h"
-#include "gallivm/lp_bld_swizzle.h"
-#include "tgsi/tgsi_info.h"
-#include "tgsi/tgsi_parse.h"
-#include "util/u_math.h"
 #include "util/u_memory.h"
-#include "util/u_debug.h"
-
-#include <stdio.h>
 
 enum si_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_VS = 87,

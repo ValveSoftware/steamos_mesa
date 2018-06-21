@@ -31,8 +31,6 @@
 #include "gallivm/lp_bld_tgsi.h"
 #include "tgsi/tgsi_parse.h"
 #include "ac_shader_abi.h"
-#include "ac_llvm_util.h"
-#include "ac_llvm_build.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/TargetMachine.h>

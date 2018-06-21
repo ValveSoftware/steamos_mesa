@@ -29,8 +29,8 @@
 #include "gallivm/lp_bld_gather.h"
 #include "gallivm/lp_bld_intr.h"
 #include "tgsi/tgsi_build.h"
-#include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_util.h"
+#include "ac_llvm_util.h"
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,

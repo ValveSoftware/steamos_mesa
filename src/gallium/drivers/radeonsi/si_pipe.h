@@ -30,7 +30,6 @@
 
 #include "util/u_dynarray.h"
 #include "util/u_idalloc.h"
-#include "util/u_range.h"
 #include "util/u_threaded_context.h"
 
 #ifdef PIPE_ARCH_BIG_ENDIAN
