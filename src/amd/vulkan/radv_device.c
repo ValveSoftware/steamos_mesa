@@ -2470,9 +2470,8 @@ static VkResult radv_signal_fence(struct radv_queue *queue,
 	                                   false, fence->fence);
 	radv_free_sem_info(&sem_info);
 
-	/* TODO: find a better error */
 	if (ret)
-		return vk_error(queue->device->instance, VK_ERROR_OUT_OF_DEVICE_MEMORY);
+		return vk_error(queue->device->instance, VK_ERROR_DEVICE_LOST);
 
 	return VK_SUCCESS;
 }
