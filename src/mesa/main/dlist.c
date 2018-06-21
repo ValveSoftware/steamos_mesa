@@ -290,6 +290,15 @@ typedef enum
    OPCODE_TRANSLATE,
    OPCODE_VIEWPORT,
    OPCODE_WINDOW_POS,
+   /* ARB_viewport_array */
+   OPCODE_VIEWPORT_ARRAY_V,
+   OPCODE_VIEWPORT_INDEXED_F,
+   OPCODE_VIEWPORT_INDEXED_FV,
+   OPCODE_SCISSOR_ARRAY_V,
+   OPCODE_SCISSOR_INDEXED,
+   OPCODE_SCISSOR_INDEXED_V,
+   OPCODE_DEPTH_ARRAY_V,
+   OPCODE_DEPTH_INDEXED,
    /* GL_ARB_multitexture */
    OPCODE_ACTIVE_TEXTURE,
    /* GL_ARB_texture_compression */
@@ -1164,6 +1173,9 @@ _mesa_delete_list(struct gl_context *ctx, struct gl_display_list *dlist)
          case OPCODE_PIXEL_MAP:
             free(get_pointer(&n[3]));
             break;
+         case OPCODE_VIEWPORT_ARRAY_V:
+         case OPCODE_SCISSOR_ARRAY_V:
+         case OPCODE_DEPTH_ARRAY_V:
          case OPCODE_UNIFORM_SUBROUTINES:
          case OPCODE_WINDOW_RECTANGLES:
             free(get_pointer(&n[3]));
@@ -4612,6 +4624,154 @@ save_Viewport(GLint x, GLint y, GLsizei width, GLsizei height)
    }
 }
 
+static void GLAPIENTRY
+save_ViewportIndexedf(GLuint index, GLfloat x, GLfloat y, GLfloat width,
+                      GLfloat height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_VIEWPORT_INDEXED_F, 5);
+   if (n) {
+      n[1].ui = index;
+      n[2].f = x;
+      n[3].f = y;
+      n[4].f = width;
+      n[5].f = height;
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ViewportIndexedf(ctx->Exec, (index, x, y, width, height));
+   }
+}
+
+static void GLAPIENTRY
+save_ViewportIndexedfv(GLuint index, const GLfloat *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_VIEWPORT_INDEXED_FV, 5);
+   if (n) {
+      n[1].ui = index;
+      n[2].f = v[0];
+      n[3].f = v[1];
+      n[4].f = v[2];
+      n[5].f = v[3];
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ViewportIndexedfv(ctx->Exec, (index, v));
+   }
+}
+
+static void GLAPIENTRY
+save_ViewportArrayv(GLuint first, GLsizei count, const GLfloat *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_VIEWPORT_ARRAY_V, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].ui = first;
+      n[2].si = count;
+      save_pointer(&n[3], memdup(v, count * 4 * sizeof(GLfloat)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ViewportArrayv(ctx->Exec, (first, count, v));
+   }
+}
+
+static void GLAPIENTRY
+save_ScissorIndexed(GLuint index, GLint left, GLint bottom, GLsizei width,
+                    GLsizei height)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_SCISSOR_INDEXED, 5);
+   if (n) {
+      n[1].ui = index;
+      n[2].i = left;
+      n[3].i = bottom;
+      n[4].si = width;
+      n[5].si = height;
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ScissorIndexed(ctx->Exec, (index, left, bottom, width, height));
+   }
+}
+
+static void GLAPIENTRY
+save_ScissorIndexedv(GLuint index, const GLint *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_SCISSOR_INDEXED_V, 5);
+   if (n) {
+      n[1].ui = index;
+      n[2].i = v[0];
+      n[3].i = v[1];
+      n[4].si = v[2];
+      n[5].si = v[3];
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ScissorIndexedv(ctx->Exec, (index, v));
+   }
+}
+
+static void GLAPIENTRY
+save_ScissorArrayv(GLuint first, GLsizei count, const GLint *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_SCISSOR_ARRAY_V, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].ui = first;
+      n[2].si = count;
+      save_pointer(&n[3], memdup(v, count * 4 * sizeof(GLint)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_ScissorArrayv(ctx->Exec, (first, count, v));
+   }
+}
+
+static void GLAPIENTRY
+save_DepthRangeIndexed(GLuint index, GLclampd n, GLclampd f)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *node;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   node = alloc_instruction(ctx, OPCODE_DEPTH_INDEXED, 3);
+   if (node) {
+      node[1].ui = index;
+      /* Mesa stores these as floats internally so we deliberately convert
+       * them to a float here.
+       */
+      node[2].f = n;
+      node[3].f = f;
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_DepthRangeIndexed(ctx->Exec, (index, n, f));
+   }
+}
+
+static void GLAPIENTRY
+save_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_DEPTH_ARRAY_V, 2 + POINTER_DWORDS);
+   if (n) {
+      n[1].ui = first;
+      n[2].si = count;
+      save_pointer(&n[3], memdup(v, count * 2 * sizeof(GLclampd)));
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_DepthRangeArrayv(ctx->Exec, (first, count, v));
+   }
+}
 
 static void GLAPIENTRY
 save_WindowPos4fMESA(GLfloat x, GLfloat y, GLfloat z, GLfloat w)
@@ -9474,6 +9634,47 @@ execute_list(struct gl_context *ctx, GLuint list)
          case OPCODE_WINDOW_POS:
             CALL_WindowPos4fMESA(ctx->Exec, (n[1].f, n[2].f, n[3].f, n[4].f));
             break;
+         case OPCODE_VIEWPORT_ARRAY_V:
+            CALL_ViewportArrayv(ctx->Exec, (n[1].ui, n[2].si,
+                                            get_pointer(&n[3])));
+            break;
+         case OPCODE_VIEWPORT_INDEXED_F:
+            CALL_ViewportIndexedf(ctx->Exec, (n[1].ui, n[2].f, n[3].f, n[4].f,
+                                              n[5].f));
+            break;
+         case OPCODE_VIEWPORT_INDEXED_FV: {
+            GLfloat v[4];
+            v[0] = n[2].f;
+            v[1] = n[3].f;
+            v[2] = n[4].f;
+            v[3] = n[5].f;
+            CALL_ViewportIndexedfv(ctx->Exec, (n[1].ui, v));
+            break;
+         }
+         case OPCODE_SCISSOR_ARRAY_V:
+            CALL_ScissorArrayv(ctx->Exec, (n[1].ui, n[2].si,
+                                           get_pointer(&n[3])));
+            break;
+         case OPCODE_SCISSOR_INDEXED:
+            CALL_ScissorIndexed(ctx->Exec, (n[1].ui, n[2].i, n[3].i, n[4].si,
+                                            n[5].si));
+            break;
+         case OPCODE_SCISSOR_INDEXED_V: {
+            GLint v[4];
+            v[0] = n[2].i;
+            v[1] = n[3].i;
+            v[2] = n[4].si;
+            v[3] = n[5].si;
+            CALL_ScissorIndexedv(ctx->Exec, (n[1].ui, v));
+            break;
+         }
+         case OPCODE_DEPTH_ARRAY_V:
+            CALL_DepthRangeArrayv(ctx->Exec, (n[1].ui, n[2].si,
+                                              get_pointer(&n[3])));
+            break;
+         case OPCODE_DEPTH_INDEXED:
+            CALL_DepthRangeIndexed(ctx->Exec, (n[1].ui, n[2].f, n[3].f));
+            break;
          case OPCODE_ACTIVE_TEXTURE:   /* GL_ARB_multitexture */
             CALL_ActiveTexture(ctx->Exec, (n[1].e));
             break;
@@ -10926,6 +11127,16 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
    /* 91. GL_ARB_tessellation_shader */
    SET_PatchParameteri(table, save_PatchParameteri);
    SET_PatchParameterfv(table, save_PatchParameterfv);
+
+   /* 100. ARB_viewport_array */
+   SET_ViewportArrayv(table, save_ViewportArrayv);
+   SET_ViewportIndexedf(table, save_ViewportIndexedf);
+   SET_ViewportIndexedfv(table, save_ViewportIndexedfv);
+   SET_ScissorArrayv(table, save_ScissorArrayv);
+   SET_ScissorIndexed(table, save_ScissorIndexed);
+   SET_ScissorIndexedv(table, save_ScissorIndexedv);
+   SET_DepthRangeArrayv(table, save_DepthRangeArrayv);
+   SET_DepthRangeIndexed(table, save_DepthRangeIndexed);
 
    /* 173. GL_EXT_blend_func_separate */
    SET_BlendFuncSeparate(table, save_BlendFuncSeparateEXT);
