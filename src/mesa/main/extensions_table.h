@@ -16,7 +16,7 @@ EXT(AMD_seamless_cubemap_per_texture        , AMD_seamless_cubemap_per_texture  
 EXT(AMD_shader_stencil_export               , ARB_shader_stencil_export              , GLL, GLC,  x ,  x , 2009)
 EXT(AMD_shader_trinary_minmax               , dummy_true                             , GLL, GLC,  x ,  x , 2012)
 EXT(AMD_vertex_shader_layer                 , AMD_vertex_shader_layer                , GLL, GLC,  x ,  x , 2012)
-EXT(AMD_vertex_shader_viewport_index        , AMD_vertex_shader_viewport_index       ,  x , GLC,  x ,  x , 2012)
+EXT(AMD_vertex_shader_viewport_index        , AMD_vertex_shader_viewport_index       , GLL, GLC,  x ,  x , 2012)
 
 EXT(ANDROID_extension_pack_es31a            , ANDROID_extension_pack_es31a           ,  x ,  x ,  x ,  31, 2014)
 
@@ -64,7 +64,7 @@ EXT(ARB_enhanced_layouts                    , ARB_enhanced_layouts              
 EXT(ARB_explicit_attrib_location            , ARB_explicit_attrib_location           , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_explicit_uniform_location           , ARB_explicit_uniform_location          , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_fragment_coord_conventions          , ARB_fragment_coord_conventions         , GLL, GLC,  x ,  x , 2009)
-EXT(ARB_fragment_layer_viewport             , ARB_fragment_layer_viewport            ,  x , GLC,  x ,  x , 2012)
+EXT(ARB_fragment_layer_viewport             , ARB_fragment_layer_viewport            , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_fragment_program                    , ARB_fragment_program                   , GLL,  x ,  x ,  x , 2002)
 EXT(ARB_fragment_program_shadow             , ARB_fragment_program_shadow            , GLL,  x ,  x ,  x , 2003)
 EXT(ARB_fragment_shader                     , ARB_fragment_shader                    , GLL, GLC,  x ,  x , 2002)
