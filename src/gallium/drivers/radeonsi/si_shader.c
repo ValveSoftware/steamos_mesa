@@ -5053,8 +5053,7 @@ static void create_function(struct si_shader_context *ctx)
 			   si_get_max_workgroup_size(shader));
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
-	if (ctx->type == PIPE_SHADER_FRAGMENT &&
-	    ctx->separate_prolog) {
+	if (ctx->type == PIPE_SHADER_FRAGMENT && !ctx->shader->is_monolithic) {
 		ac_llvm_add_target_dep_function_attr(ctx->main_fn,
 						     "InitialPSInputAddr",
 						     S_0286D0_PERSP_SAMPLE_ENA(1) |
@@ -6055,8 +6054,7 @@ static bool si_vs_needs_prolog(const struct si_shader_selector *sel,
 	return sel->vs_needs_prolog || key->ls_vgpr_fix;
 }
 
-static bool si_compile_tgsi_main(struct si_shader_context *ctx,
-				 bool is_monolithic)
+static bool si_compile_tgsi_main(struct si_shader_context *ctx)
 {
 	struct si_shader *shader = ctx->shader;
 	struct si_shader_selector *sel = shader->selector;
@@ -6141,7 +6139,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	 * if-block together with its prolog in si_build_wrapper_function.
 	 */
 	if (ctx->screen->info.chip_class >= GFX9) {
-		if (!is_monolithic &&
+		if (!shader->is_monolithic &&
 		    sel->info.num_instructions > 1 && /* not empty shader */
 		    (shader->key.as_es || shader->key.as_ls) &&
 		    (ctx->type == PIPE_SHADER_TESS_EVAL ||
@@ -6151,7 +6149,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 						ctx->param_merged_wave_info, 0);
 		} else if (ctx->type == PIPE_SHADER_TESS_CTRL ||
 			   ctx->type == PIPE_SHADER_GEOMETRY) {
-			if (!is_monolithic)
+			if (!shader->is_monolithic)
 				ac_init_exec_full_mask(&ctx->ac);
 
 			/* The barrier must execute for all shaders in a
@@ -6764,7 +6762,6 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 int si_compile_tgsi_shader(struct si_screen *sscreen,
 			   struct si_compiler *compiler,
 			   struct si_shader *shader,
-			   bool is_monolithic,
 			   struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
@@ -6784,19 +6781,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	si_init_shader_ctx(&ctx, sscreen, compiler);
 	si_llvm_context_set_tgsi(&ctx, shader);
-	ctx.separate_prolog = !is_monolithic;
 
 	memset(shader->info.vs_output_param_offset, AC_EXP_PARAM_UNDEFINED,
 	       sizeof(shader->info.vs_output_param_offset));
 
 	shader->info.uses_instanceid = sel->info.uses_instanceid;
 
-	if (!si_compile_tgsi_main(&ctx, is_monolithic)) {
+	if (!si_compile_tgsi_main(&ctx)) {
 		si_llvm_dispose(&ctx);
 		return -1;
 	}
 
-	if (is_monolithic && ctx.type == PIPE_SHADER_VERTEX) {
+	if (shader->is_monolithic && ctx.type == PIPE_SHADER_VERTEX) {
 		LLVMValueRef parts[2];
 		bool need_prolog = sel->vs_needs_prolog;
 
@@ -6814,7 +6810,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		si_build_wrapper_function(&ctx, parts + !need_prolog,
 					  1 + need_prolog, need_prolog, 0);
-	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
+	} else if (shader->is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
 		if (sscreen->info.chip_class >= GFX9) {
 			struct si_shader_selector *ls = shader->key.part.tcs.ls;
 			LLVMValueRef parts[4];
@@ -6837,9 +6833,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			shader_ls.key.as_ls = 1;
 			shader_ls.key.mono = shader->key.mono;
 			shader_ls.key.opt = shader->key.opt;
+			shader_ls.is_monolithic = true;
 			si_llvm_context_set_tgsi(&ctx, &shader_ls);
 
-			if (!si_compile_tgsi_main(&ctx, true)) {
+			if (!si_compile_tgsi_main(&ctx)) {
 				si_llvm_dispose(&ctx);
 				return -1;
 			}
@@ -6879,7 +6876,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 			si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 		}
-	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
+	} else if (shader->is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
 		if (ctx.screen->info.chip_class >= GFX9) {
 			struct si_shader_selector *es = shader->key.part.gs.es;
 			LLVMValueRef es_prolog = NULL;
@@ -6901,9 +6898,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			shader_es.key.as_es = 1;
 			shader_es.key.mono = shader->key.mono;
 			shader_es.key.opt = shader->key.opt;
+			shader_es.is_monolithic = true;
 			si_llvm_context_set_tgsi(&ctx, &shader_es);
 
-			if (!si_compile_tgsi_main(&ctx, true)) {
+			if (!si_compile_tgsi_main(&ctx)) {
 				si_llvm_dispose(&ctx);
 				return -1;
 			}
@@ -6952,7 +6950,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 			si_build_wrapper_function(&ctx, parts, 2, 1, 0);
 		}
-	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
+	} else if (shader->is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
 		union si_shader_part_key epilog_key;
@@ -8060,7 +8058,7 @@ int si_shader_create(struct si_screen *sscreen, struct si_compiler *compiler,
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).
 		 */
-		r = si_compile_tgsi_shader(sscreen, compiler, shader, true, debug);
+		r = si_compile_tgsi_shader(sscreen, compiler, shader, debug);
 		if (r)
 			return r;
 	} else {

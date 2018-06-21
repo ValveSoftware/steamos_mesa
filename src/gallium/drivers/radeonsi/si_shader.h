@@ -662,7 +662,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 int si_compile_tgsi_shader(struct si_screen *sscreen,
 			   struct si_compiler *compiler,
 			   struct si_shader *shader,
-			   bool is_monolithic,
 			   struct pipe_debug_callback *debug);
 int si_shader_create(struct si_screen *sscreen, struct si_compiler *compiler,
 		     struct si_shader *shader,

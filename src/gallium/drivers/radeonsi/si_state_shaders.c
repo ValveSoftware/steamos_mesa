@@ -1582,10 +1582,10 @@ static bool si_check_missing_main_part(struct si_screen *sscreen,
 		main_part->selector = sel;
 		main_part->key.as_es = key->as_es;
 		main_part->key.as_ls = key->as_ls;
+		main_part->is_monolithic = false;
 
 		if (si_compile_tgsi_shader(sscreen, compiler_state->compiler,
-					   main_part, false,
-					   &compiler_state->debug) != 0) {
+					   main_part, &compiler_state->debug) != 0) {
 			FREE(main_part);
 			return false;
 		}
@@ -1884,6 +1884,7 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 		util_queue_fence_init(&shader->ready);
 
 		shader->selector = sel;
+		shader->is_monolithic = false;
 		si_parse_next_shader_property(&sel->info,
 					      sel->so.num_outputs != 0,
 					      &shader->key);
@@ -1902,7 +1903,7 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 			mtx_unlock(&sscreen->shader_cache_mutex);
 
 			/* Compile the shader if it hasn't been loaded from the cache. */
-			if (si_compile_tgsi_shader(sscreen, compiler, shader, false,
+			if (si_compile_tgsi_shader(sscreen, compiler, shader,
 						   debug) != 0) {
 				FREE(shader);
 				FREE(ir_binary);

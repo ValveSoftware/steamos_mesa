@@ -62,9 +62,6 @@ struct si_shader_context {
 	unsigned num_images;
 	unsigned num_samplers;
 
-	/* Whether the prolog will be compiled separately. */
-	bool separate_prolog;
-
 	struct ac_shader_abi abi;
 
 	/** This function is responsible for initilizing the inputs array and will be
