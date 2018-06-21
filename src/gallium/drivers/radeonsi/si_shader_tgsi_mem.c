@@ -26,7 +26,6 @@
 #include "si_pipe.h"
 #include "sid.h"
 #include "gallivm/lp_bld_arit.h"
-#include "gallivm/lp_bld_gather.h"
 #include "gallivm/lp_bld_intr.h"
 #include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
@@ -459,7 +458,7 @@ static void load_emit_memory(
 		derived_ptr = LLVMBuildGEP(ctx->ac.builder, ptr, &index, 1, "");
 		channels[chan] = LLVMBuildLoad(ctx->ac.builder, derived_ptr, "");
 	}
-	emit_data->output[emit_data->chan] = lp_build_gather_values(&ctx->gallivm, channels, 4);
+	emit_data->output[emit_data->chan] = ac_build_gather_values(&ctx->ac, channels, 4);
 }
 
 /**
@@ -605,7 +604,7 @@ static void store_fetch_args(
 	for (chan = 0; chan < 4; ++chan) {
 		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);
 	}
-	data = lp_build_gather_values(&ctx->gallivm, chans, 4);
+	data = ac_build_gather_values(&ctx->ac, chans, 4);
 
 	emit_data->args[emit_data->arg_count++] = data;
 

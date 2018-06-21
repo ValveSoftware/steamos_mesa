@@ -25,7 +25,6 @@
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "ac_llvm_util.h"
-#include "gallivm/lp_bld_gather.h"
 #include "util/u_memory.h"
 
 enum si_llvm_calling_convention {
@@ -496,7 +495,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			values[chan] = si_llvm_emit_fetch(bld_base, reg, type, chan);
 		}
-		return lp_build_gather_values(&ctx->gallivm, values,
+		return ac_build_gather_values(&ctx->ac, values,
 					      TGSI_NUM_CHANNELS);
 	}
 

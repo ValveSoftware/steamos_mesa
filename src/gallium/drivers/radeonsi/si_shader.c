@@ -23,7 +23,6 @@
  */
 
 #include "gallivm/lp_bld_const.h"
-#include "gallivm/lp_bld_gather.h"
 #include "gallivm/lp_bld_intr.h"
 #include "gallivm/lp_bld_arit.h"
 #include "util/u_memory.h"
@@ -1144,7 +1143,7 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 		for (unsigned chan = 0; chan < TGSI_NUM_CHANNELS; chan++)
 			values[chan] = lds_load(bld_base, type, chan, dw_addr);
 
-		return lp_build_gather_values(&ctx->gallivm, values,
+		return ac_build_gather_values(&ctx->ac, values,
 					      TGSI_NUM_CHANNELS);
 	}
 
@@ -1488,7 +1487,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	}
 
 	if (reg->Register.WriteMask == 0xF && !is_tess_factor) {
-		LLVMValueRef value = lp_build_gather_values(&ctx->gallivm,
+		LLVMValueRef value = ac_build_gather_values(&ctx->ac,
 		                                            values, 4);
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buf_addr,
 					    base, 0, 1, 0, true, false);
@@ -1604,7 +1603,7 @@ static void si_nir_store_output_tcs(struct ac_shader_abi *abi,
 	}
 
 	if (writemask == 0xF && !is_tess_factor) {
-		LLVMValueRef value = lp_build_gather_values(&ctx->gallivm,
+		LLVMValueRef value = ac_build_gather_values(&ctx->ac,
 		                                            values, 4);
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, addr,
 					    base, 0, 1, 0, true, false);
@@ -1665,7 +1664,7 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 			values[chan] = si_llvm_load_input_gs(abi, input_index, vtx_offset_param,
 							     type, chan);
 		}
-		return lp_build_gather_values(&ctx->gallivm, values,
+		return ac_build_gather_values(&ctx->ac, values,
 					      TGSI_NUM_CHANNELS);
 	}
 
@@ -1979,7 +1978,7 @@ static LLVMValueRef get_block_size(struct ac_shader_abi *abi)
 		for (i = 0; i < 3; ++i)
 			values[i] = LLVMConstInt(ctx->i32, sizes[i], 0);
 
-		result = lp_build_gather_values(&ctx->gallivm, values, 3);
+		result = ac_build_gather_values(&ctx->ac, values, 3);
 	} else {
 		result = LLVMGetParam(ctx->main_fn, ctx->param_block_size);
 	}
@@ -2017,7 +2016,7 @@ static LLVMValueRef load_sample_position(struct ac_shader_abi *abi, LLVMValueRef
 		LLVMConstReal(ctx->f32, 0)
 	};
 
-	return lp_build_gather_values(&ctx->gallivm, pos, 4);
+	return ac_build_gather_values(&ctx->ac, pos, 4);
 }
 
 static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
@@ -2044,7 +2043,7 @@ static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
 		coord[2] = lp_build_sub(bld, ctx->ac.f32_1,
 					lp_build_add(bld, coord[0], coord[1]));
 
-	return lp_build_gather_values(&ctx->gallivm, coord, 4);
+	return ac_build_gather_values(&ctx->ac, coord, 4);
 }
 
 static LLVMValueRef load_tess_level(struct si_shader_context *ctx,
@@ -2151,7 +2150,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 						 LLVMGetParam(ctx->main_fn,
 							      SI_PARAM_POS_W_FLOAT)),
 		};
-		value = lp_build_gather_values(&ctx->gallivm, pos, 4);
+		value = ac_build_gather_values(&ctx->ac, pos, 4);
 		break;
 	}
 
@@ -2174,7 +2173,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 						  TGSI_OPCODE_FRC, pos[0]);
 		pos[1] = lp_build_emit_llvm_unary(&ctx->bld_base,
 						  TGSI_OPCODE_FRC, pos[1]);
-		value = lp_build_gather_values(&ctx->gallivm, pos, 4);
+		value = ac_build_gather_values(&ctx->ac, pos, 4);
 		break;
 	}
 
@@ -2212,7 +2211,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		for (i = 0; i < 4; i++)
 			val[i] = buffer_load_const(ctx, buf,
 						   LLVMConstInt(ctx->i32, (offset + i) * 4, 0));
-		value = lp_build_gather_values(&ctx->gallivm, val, 4);
+		value = ac_build_gather_values(&ctx->ac, val, 4);
 		break;
 	}
 
@@ -2238,7 +2237,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 				values[i] = ctx->abi.workgroup_ids[i];
 			}
 		}
-		value = lp_build_gather_values(&ctx->gallivm, values, 3);
+		value = ac_build_gather_values(&ctx->ac, values, 3);
 		break;
 	}
 
@@ -2435,7 +2434,7 @@ static LLVMValueRef fetch_constant(
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; ++chan)
 			values[chan] = fetch_constant(bld_base, reg, type, chan);
 
-		return lp_build_gather_values(&ctx->gallivm, values, 4);
+		return ac_build_gather_values(&ctx->ac, values, 4);
 	}
 
 	/* Split 64-bit loads. */
@@ -3221,11 +3220,11 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	}
 
 	/* Convert the outputs to vectors for stores. */
-	vec0 = lp_build_gather_values(&ctx->gallivm, out, MIN2(stride, 4));
+	vec0 = ac_build_gather_values(&ctx->ac, out, MIN2(stride, 4));
 	vec1 = NULL;
 
 	if (stride > 4)
-		vec1 = lp_build_gather_values(&ctx->gallivm, out+4, stride - 4);
+		vec1 = ac_build_gather_values(&ctx->ac, out+4, stride - 4);
 
 	/* Get the buffer. */
 	buffer = get_tess_ring_descriptor(ctx, TCS_FACTOR_RING);
@@ -3276,7 +3275,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		tf_outer_offset = get_tcs_tes_buffer_address(ctx, rel_patch_id, NULL,
 					LLVMConstInt(ctx->i32, param_outer, 0));
 
-		outer_vec = lp_build_gather_values(&ctx->gallivm, outer,
+		outer_vec = ac_build_gather_values(&ctx->ac, outer,
 						   util_next_power_of_two(outer_comps));
 
 		ac_build_buffer_store_dword(&ctx->ac, buf, outer_vec,
@@ -3289,7 +3288,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 					LLVMConstInt(ctx->i32, param_inner, 0));
 
 			inner_vec = inner_comps == 1 ? inner[0] :
-				    lp_build_gather_values(&ctx->gallivm, inner, inner_comps);
+				    ac_build_gather_values(&ctx->ac, inner, inner_comps);
 			ac_build_buffer_store_dword(&ctx->ac, buf, inner_vec,
 						    inner_comps, tf_inner_offset,
 						    base, 0, 1, 0, true, false);
@@ -4031,7 +4030,7 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 		result[2+i] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_DDY, a);
 	}
 
-	return lp_build_gather_values(&ctx->gallivm, result, 4);
+	return ac_build_gather_values(&ctx->ac, result, 4);
 }
 
 static void interp_fetch_args(
@@ -4084,7 +4083,7 @@ static void interp_fetch_args(
 				ctx->ac.f32_0,
 			};
 
-			sample_position = lp_build_gather_values(&ctx->gallivm, center, 4);
+			sample_position = ac_build_gather_values(&ctx->ac, center, 4);
 		} else {
 			sample_position = load_sample_position(&ctx->abi, sample_id);
 		}
@@ -4192,7 +4191,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 
 			ij_out[i] = LLVMBuildFAdd(ctx->ac.builder, temp2, temp1, "");
 		}
-		interp_param = lp_build_gather_values(&ctx->gallivm, ij_out, 2);
+		interp_param = ac_build_gather_values(&ctx->ac, ij_out, 2);
 	}
 
 	if (interp_param)
@@ -6686,7 +6685,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			if (param_size == 1)
 				arg = out[out_idx];
 			else
-				arg = lp_build_gather_values(&ctx->gallivm, &out[out_idx], param_size);
+				arg = ac_build_gather_values(&ctx->ac, &out[out_idx], param_size);
 
 			if (LLVMTypeOf(arg) != param_type) {
 				if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
@@ -7188,7 +7187,7 @@ static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
 	/* Get the pointer to rw buffers. */
 	ptr[0] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
 	ptr[1] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS + 1);
-	list = lp_build_gather_values(&ctx->gallivm, ptr, 2);
+	list = ac_build_gather_values(&ctx->ac, ptr, 2);
 	list = LLVMBuildBitCast(ctx->ac.builder, list, ctx->i64, "");
 	list = LLVMBuildIntToPtr(ctx->ac.builder, list,
 				 ac_array_in_const_addr_space(ctx->v4i32), "");
@@ -7720,7 +7719,7 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 							  interp_vgpr, "");
 			interp[1] = LLVMBuildExtractValue(ctx->ac.builder, ret,
 							  interp_vgpr + 1, "");
-			interp_ij = lp_build_gather_values(&ctx->gallivm, interp, 2);
+			interp_ij = ac_build_gather_values(&ctx->ac, interp, 2);
 		}
 
 		/* Use the absolute location of the input. */
