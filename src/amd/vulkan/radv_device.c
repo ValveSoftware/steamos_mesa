@@ -3175,6 +3175,7 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 	struct radeon_winsys_fence *base_fence = fence ? fence->fence : NULL;
 	bool fence_emitted = false;
 	VkResult result;
+	int ret;
 
 	for (uint32_t i = 0; i < bindInfoCount; ++i) {
 		struct radv_winsys_sem_info sem_info;
@@ -3200,11 +3201,16 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 			return result;
 
 		if (pBindInfo[i].waitSemaphoreCount || pBindInfo[i].signalSemaphoreCount) {
-			queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
-			                             &queue->device->empty_cs[queue->queue_family_index],
-			                             1, NULL, NULL,
-						     &sem_info, NULL,
-			                             false, base_fence);
+			ret = queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
+							  &queue->device->empty_cs[queue->queue_family_index],
+							  1, NULL, NULL,
+							  &sem_info, NULL,
+							  false, base_fence);
+			if (ret) {
+				radv_loge("failed to submit CS %d\n", i);
+				abort();
+			}
+
 			fence_emitted = true;
 			if (fence)
 				fence->submitted = true;
