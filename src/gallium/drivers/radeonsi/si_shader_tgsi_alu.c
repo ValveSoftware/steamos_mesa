@@ -244,7 +244,9 @@ static void emit_arl(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef floor_index =  lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_FLR, emit_data->args[0]);
+	LLVMValueRef floor_index =
+		ac_build_intrinsic(&ctx->ac, "llvm.floor.f32", ctx->f32,
+				   &emit_data->args[0], 1, AC_FUNC_ATTR_READNONE);
 	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(ctx->ac.builder,
 			floor_index, ctx->i32, "");
 }
@@ -556,10 +558,8 @@ static void emit_iabs(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
-		lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_IMAX,
-					  emit_data->args[0],
-					  LLVMBuildNeg(ctx->ac.builder,
-						       emit_data->args[0], ""));
+		ac_build_imax(&ctx->ac,  emit_data->args[0],
+			      LLVMBuildNeg(ctx->ac.builder, emit_data->args[0], ""));
 }
 
 static void emit_minmax_int(const struct lp_build_tgsi_action *action,
@@ -668,12 +668,11 @@ static void emit_rsq(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	LLVMValueRef sqrt =
-		lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_SQRT,
-					 emit_data->args[0]);
+		ac_build_intrinsic(&ctx->ac, "llvm.sqrt.f32", ctx->f32,
+				   &emit_data->args[0], 1, AC_FUNC_ATTR_READNONE);
 
 	emit_data->output[emit_data->chan] =
-		lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_DIV,
-					  ctx->ac.f32_1, sqrt);
+		ac_build_fdiv(&ctx->ac, ctx->ac.f32_1, sqrt);
 }
 
 static void dfracexp_fetch_args(struct lp_build_tgsi_context *bld_base,

@@ -2141,9 +2141,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_X_FLOAT),
 			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Y_FLOAT),
 			LLVMGetParam(ctx->main_fn, SI_PARAM_POS_Z_FLOAT),
-			lp_build_emit_llvm_unary(&ctx->bld_base, TGSI_OPCODE_RCP,
-						 LLVMGetParam(ctx->main_fn,
-							      SI_PARAM_POS_W_FLOAT)),
+			ac_build_fdiv(&ctx->ac, ctx->ac.f32_1,
+				      LLVMGetParam(ctx->main_fn, SI_PARAM_POS_W_FLOAT)),
 		};
 		value = ac_build_gather_values(&ctx->ac, pos, 4);
 		break;
@@ -2164,10 +2163,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 			LLVMConstReal(ctx->f32, 0),
 			LLVMConstReal(ctx->f32, 0)
 		};
-		pos[0] = lp_build_emit_llvm_unary(&ctx->bld_base,
-						  TGSI_OPCODE_FRC, pos[0]);
-		pos[1] = lp_build_emit_llvm_unary(&ctx->bld_base,
-						  TGSI_OPCODE_FRC, pos[1]);
+		pos[0] = ac_build_fract(&ctx->ac, pos[0], 32);
+		pos[1] = ac_build_fract(&ctx->ac, pos[1], 32);
 		value = ac_build_gather_values(&ctx->ac, pos, 4);
 		break;
 	}
@@ -4021,8 +4018,10 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 	for (i = 0; i < 2; i++) {
 		a = LLVMBuildExtractElement(ctx->ac.builder, interp_ij,
 					    LLVMConstInt(ctx->i32, i, 0), "");
-		result[i] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_DDX, a);
-		result[2+i] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_DDY, a);
+		result[i] = ac_build_ddxy(&ctx->ac, AC_TID_MASK_TOP_LEFT, 1,
+					  ac_to_integer(&ctx->ac, a)); /* DDX */
+		result[2+i] = ac_build_ddxy(&ctx->ac, AC_TID_MASK_TOP_LEFT, 2,
+					    ac_to_integer(&ctx->ac, a)); /* DDY */
 	}
 
 	return ac_build_gather_values(&ctx->ac, result, 4);

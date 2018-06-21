@@ -1286,8 +1286,7 @@ static void tex_fetch_args(
 						   emit_data->inst, 0,
 						   chan);
 		if (opcode == TGSI_OPCODE_TXP)
-			args.coords[chan] = lp_build_emit_llvm_binary(
-				bld_base, TGSI_OPCODE_DIV,
+			args.coords[chan] = ac_build_fdiv(&ctx->ac,
 				args.coords[chan], args.coords[3]);
 	}
 
@@ -1640,9 +1639,7 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 				LLVMBuildExtractElement(builder, txq_emit_data.output[0],
 							LLVMConstInt(ctx->i32, c, 0), "");
 			half_texel[c] = LLVMBuildUIToFP(builder, half_texel[c], ctx->f32, "");
-			half_texel[c] =
-				lp_build_emit_llvm_unary(&ctx->bld_base,
-							 TGSI_OPCODE_RCP, half_texel[c]);
+			half_texel[c] = ac_build_fdiv(&ctx->ac, ctx->ac.f32_1, half_texel[c]);
 			half_texel[c] = LLVMBuildFMul(builder, half_texel[c],
 						      LLVMConstReal(ctx->f32, -0.5), "");
 		}
