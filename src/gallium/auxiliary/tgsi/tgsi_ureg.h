@@ -79,6 +79,7 @@ struct ureg_dst
    unsigned DimIndirect     : 1;  /* BOOL */
    unsigned Dimension       : 1;  /* BOOL */
    unsigned Saturate        : 1;  /* BOOL */
+   unsigned Invariant       : 1;  /* BOOL */
    int      Index           : 16; /* SINT */
    int      IndirectIndex   : 16; /* SINT */
    unsigned IndirectFile    : 4;  /* TGSI_FILE_ */
@@ -250,7 +251,8 @@ ureg_DECL_output_layout(struct ureg_program *,
                         unsigned index,
                         unsigned usage_mask,
                         unsigned array_id,
-                        unsigned array_size);
+                        unsigned array_size,
+                        boolean invariant);
 
 struct ureg_dst
 ureg_DECL_output_masked(struct ureg_program *,

@@ -140,6 +140,7 @@ struct ureg_program
       unsigned first;
       unsigned last;
       unsigned array_id;
+      boolean invariant;
    } output[UREG_MAX_OUTPUT];
    unsigned nr_outputs, nr_output_regs;
 
@@ -427,7 +428,8 @@ ureg_DECL_output_layout(struct ureg_program *ureg,
                         unsigned index,
                         unsigned usage_mask,
                         unsigned array_id,
-                        unsigned array_size)
+                        unsigned array_size,
+                        boolean invariant)
 {
    unsigned i;
 
@@ -455,6 +457,7 @@ ureg_DECL_output_layout(struct ureg_program *ureg,
       ureg->output[i].first = index;
       ureg->output[i].last = index + array_size - 1;
       ureg->output[i].array_id = array_id;
+      ureg->output[i].invariant = invariant;
       ureg->nr_output_regs = MAX2(ureg->nr_output_regs, index + array_size);
       ureg->nr_outputs++;
    }
@@ -480,7 +483,8 @@ ureg_DECL_output_masked(struct ureg_program *ureg,
                         unsigned array_size)
 {
    return ureg_DECL_output_layout(ureg, name, index, 0,
-                                  ureg->nr_output_regs, usage_mask, array_id, array_size);
+                                  ureg->nr_output_regs, usage_mask, array_id,
+                                  array_size, FALSE);
 }
 
 
@@ -1511,7 +1515,8 @@ emit_decl_semantic(struct ureg_program *ureg,
                    unsigned semantic_index,
                    unsigned streams,
                    unsigned usage_mask,
-                   unsigned array_id)
+                   unsigned array_id,
+                   boolean invariant)
 {
    union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, array_id ? 4 : 3);
 
@@ -1522,6 +1527,7 @@ emit_decl_semantic(struct ureg_program *ureg,
    out[0].decl.UsageMask = usage_mask;
    out[0].decl.Semantic = 1;
    out[0].decl.Array = array_id != 0;
+   out[0].decl.Invariant = invariant;
 
    out[1].value = 0;
    out[1].decl_range.First = first;
@@ -1869,7 +1875,8 @@ static void emit_decls( struct ureg_program *ureg )
                                ureg->input[i].semantic_index,
                                0,
                                TGSI_WRITEMASK_XYZW,
-                               ureg->input[i].array_id);
+                               ureg->input[i].array_id,
+                               FALSE);
          }
       }
       else {
@@ -1882,7 +1889,7 @@ static void emit_decls( struct ureg_program *ureg )
                                   ureg->input[i].semantic_index +
                                   (j - ureg->input[i].first),
                                   0,
-                                  TGSI_WRITEMASK_XYZW, 0);
+                                  TGSI_WRITEMASK_XYZW, 0, FALSE);
             }
          }
       }
@@ -1896,7 +1903,7 @@ static void emit_decls( struct ureg_program *ureg )
                          ureg->system_value[i].semantic_name,
                          ureg->system_value[i].semantic_index,
                          0,
-                         TGSI_WRITEMASK_XYZW, 0);
+                         TGSI_WRITEMASK_XYZW, 0, FALSE);
    }
 
    if (ureg->supports_any_inout_decl_range) {
@@ -1909,7 +1916,8 @@ static void emit_decls( struct ureg_program *ureg )
                             ureg->output[i].semantic_index,
                             ureg->output[i].streams,
                             ureg->output[i].usage_mask,
-                            ureg->output[i].array_id);
+                            ureg->output[i].array_id,
+                            ureg->output[i].invariant);
       }
    }
    else {
@@ -1922,7 +1930,9 @@ static void emit_decls( struct ureg_program *ureg )
                                ureg->output[i].semantic_index +
                                (j - ureg->output[i].first),
                                ureg->output[i].streams,
-                               ureg->output[i].usage_mask, 0);
+                               ureg->output[i].usage_mask,
+                               0,
+                               ureg->output[i].invariant);
          }
       }
    }

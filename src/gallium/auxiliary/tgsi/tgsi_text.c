@@ -1586,10 +1586,6 @@ static boolean parse_declaration( struct translate_ctx *ctx )
             break;
          }
       }
-      if (i == TGSI_INTERPOLATE_COUNT) {
-         report_error( ctx, "Expected semantic or interpolate attribute" );
-         return FALSE;
-      }
    }
 
    cur = ctx->cur;
@@ -1606,6 +1602,20 @@ static boolean parse_declaration( struct translate_ctx *ctx )
             ctx->cur = cur;
             break;
          }
+      }
+   }
+
+   cur = ctx->cur;
+   eat_opt_white( &cur );
+   if (*cur == ',' && !is_vs_input) {
+      cur++;
+      eat_opt_white( &cur );
+      if (str_match_nocase_whole( &cur, tgsi_invariant_name )) {
+         decl.Declaration.Invariant = 1;
+         ctx->cur = cur;
+      } else {
+         report_error( ctx, "Expected semantic, interpolate attribute, or invariant ");
+         return FALSE;
       }
    }
 
