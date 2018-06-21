@@ -5847,7 +5847,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	r = si_compile_llvm(sscreen, &ctx.shader->binary,
 			    &ctx.shader->config, ctx.compiler,
-			    ctx.gallivm.module,
+			    ctx.ac.module,
 			    debug, PIPE_SHADER_GEOMETRY,
 			    "GS Copy Shader");
 	if (!r) {
@@ -6982,7 +6982,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, compiler,
-			    ctx.gallivm.module, debug, ctx.type, "TGSI shader");
+			    ctx.ac.module, debug, ctx.type, "TGSI shader");
 	si_llvm_dispose(&ctx);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");

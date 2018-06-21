@@ -920,7 +920,7 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 		if (dynamic_index)
 			index = si_llvm_bound_index(ctx, index, ctx->num_images);
 
-		index = LLVMBuildSub(ctx->gallivm.builder,
+		index = LLVMBuildSub(ctx->ac.builder,
 				     LLVMConstInt(ctx->i32, SI_NUM_IMAGES - 1, 0),
 				     index, "");
 
@@ -933,7 +933,7 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 	if (dynamic_index)
 		index = si_llvm_bound_index(ctx, index, ctx->num_samplers);
 
-	index = LLVMBuildAdd(ctx->gallivm.builder, index,
+	index = LLVMBuildAdd(ctx->ac.builder, index,
 			     LLVMConstInt(ctx->i32, SI_NUM_IMAGES / 2, 0), "");
 
 	return si_load_sampler_desc(ctx, list, index, desc_type);
