@@ -24,7 +24,6 @@
 
 #include "gallivm/lp_bld_const.h"
 #include "gallivm/lp_bld_intr.h"
-#include "gallivm/lp_bld_arit.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
 #include "tgsi/tgsi_build.h"
@@ -348,21 +347,21 @@ static LLVMValueRef get_tcs_out_patch_stride(struct si_shader_context *ctx)
 static LLVMValueRef
 get_tcs_out_patch0_offset(struct si_shader_context *ctx)
 {
-	return lp_build_mul_imm(&ctx->bld_base.uint_bld,
-				si_unpack_param(ctx,
-					     ctx->param_tcs_out_lds_offsets,
-					     0, 16),
-				4);
+	return LLVMBuildMul(ctx->ac.builder,
+			    si_unpack_param(ctx,
+					    ctx->param_tcs_out_lds_offsets,
+					    0, 16),
+			    LLVMConstInt(ctx->i32, 4, 0), "");
 }
 
 static LLVMValueRef
 get_tcs_out_patch0_patch_data_offset(struct si_shader_context *ctx)
 {
-	return lp_build_mul_imm(&ctx->bld_base.uint_bld,
-				si_unpack_param(ctx,
-					     ctx->param_tcs_out_lds_offsets,
-					     16, 16),
-				4);
+	return LLVMBuildMul(ctx->ac.builder,
+			    si_unpack_param(ctx,
+					    ctx->param_tcs_out_lds_offsets,
+					    16, 16),
+			    LLVMConstInt(ctx->i32, 4, 0), "");
 }
 
 static LLVMValueRef
@@ -1156,8 +1155,8 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
 	}
 
-	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
-			    LLVMConstInt(ctx->i32, swizzle, 0));
+	dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
+			       LLVMConstInt(ctx->i32, swizzle, 0), "");
 
 	value = ac_lds_load(&ctx->ac, dw_addr);
 
@@ -1175,8 +1174,8 @@ static void lds_store(struct si_shader_context *ctx,
 		      unsigned dw_offset_imm, LLVMValueRef dw_addr,
 		      LLVMValueRef value)
 {
-	dw_addr = lp_build_add(&ctx->bld_base.uint_bld, dw_addr,
-			    LLVMConstInt(ctx->i32, dw_offset_imm, 0));
+	dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
+			       LLVMConstInt(ctx->i32, dw_offset_imm, 0), "");
 
 	ac_lds_store(&ctx->ac, dw_addr, value);
 }
@@ -1619,7 +1618,6 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 	struct si_shader *shader = ctx->shader;
-	struct lp_build_context *uint =	&ctx->bld_base.uint_bld;
 	LLVMValueRef vtx_offset, soffset;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	unsigned semantic_name = info->input_semantic_name[input_index];
@@ -1671,7 +1669,8 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 	/* Get the vertex offset parameter on GFX6. */
 	LLVMValueRef gs_vtx_offset = ctx->gs_vtx_offset[vtx_offset_param];
 
-	vtx_offset = lp_build_mul_imm(uint, gs_vtx_offset, 4);
+	vtx_offset = LLVMBuildMul(ctx->ac.builder, gs_vtx_offset,
+				  LLVMConstInt(ctx->i32, 4, 0), "");
 
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
@@ -2000,13 +1999,12 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 static LLVMValueRef load_sample_position(struct ac_shader_abi *abi, LLVMValueRef sample_id)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
-	struct lp_build_context *uint_bld = &ctx->bld_base.uint_bld;
 	LLVMValueRef desc = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
 	LLVMValueRef buf_index = LLVMConstInt(ctx->i32, SI_PS_CONST_SAMPLE_POSITIONS, 0);
 	LLVMValueRef resource = ac_build_load_to_sgpr(&ctx->ac, desc, buf_index);
 
 	/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
-	LLVMValueRef offset0 = lp_build_mul_imm(uint_bld, sample_id, 8);
+	LLVMValueRef offset0 = LLVMBuildMul(ctx->ac.builder, sample_id, LLVMConstInt(ctx->i32, 8, 0), "");
 	LLVMValueRef offset1 = LLVMBuildAdd(ctx->ac.builder, offset0, LLVMConstInt(ctx->i32, 4, 0), "");
 
 	LLVMValueRef pos[4] = {
@@ -2028,8 +2026,6 @@ static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
-	struct lp_build_context *bld = &ctx->bld_base.base;
-
 	LLVMValueRef coord[4] = {
 		LLVMGetParam(ctx->main_fn, ctx->param_tes_u),
 		LLVMGetParam(ctx->main_fn, ctx->param_tes_v),
@@ -2039,10 +2035,11 @@ static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
 
 	/* For triangles, the vector should be (u, v, 1-u-v). */
 	if (ctx->shader->selector->info.properties[TGSI_PROPERTY_TES_PRIM_MODE] ==
-	    PIPE_PRIM_TRIANGLES)
-		coord[2] = lp_build_sub(bld, ctx->ac.f32_1,
-					lp_build_add(bld, coord[0], coord[1]));
-
+	    PIPE_PRIM_TRIANGLES) {
+		coord[2] = LLVMBuildFSub(ctx->ac.builder, ctx->ac.f32_1,
+					 LLVMBuildFAdd(ctx->ac.builder,
+						       coord[0], coord[1], ""), "");
+	}
 	return ac_build_gather_values(&ctx->ac, coord, 4);
 }
 
@@ -2710,9 +2707,9 @@ static void si_llvm_emit_clipvertex(struct si_shader_context *ctx,
 				base_elt = buffer_load_const(ctx, const_resource,
 							     addr);
 				args->out[chan] =
-					lp_build_add(&ctx->bld_base.base, args->out[chan],
-						     lp_build_mul(&ctx->bld_base.base, base_elt,
-								  out_elts[const_chan]));
+					LLVMBuildFAdd(ctx->ac.builder, args->out[chan],
+						      LLVMBuildFMul(ctx->ac.builder, base_elt,
+								    out_elts[const_chan], ""), "");
 			}
 		}
 
@@ -4332,7 +4329,6 @@ static void si_llvm_emit_vertex(struct ac_shader_abi *abi,
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
-	struct lp_build_context *uint = &ctx->bld_base.uint_bld;
 	struct si_shader *shader = ctx->shader;
 	struct lp_build_if_state if_state;
 	LLVMValueRef soffset = LLVMGetParam(ctx->main_fn,
@@ -4379,8 +4375,9 @@ static void si_llvm_emit_vertex(struct ac_shader_abi *abi,
 					     shader->selector->gs_max_out_vertices, 0);
 			offset++;
 
-			voffset = lp_build_add(uint, voffset, gs_next_vertex);
-			voffset = lp_build_mul_imm(uint, voffset, 4);
+			voffset = LLVMBuildAdd(ctx->ac.builder, voffset, gs_next_vertex, "");
+			voffset = LLVMBuildMul(ctx->ac.builder, voffset,
+					       LLVMConstInt(ctx->i32, 4, 0), "");
 
 			out_val = ac_to_integer(&ctx->ac, out_val);
 
@@ -4392,9 +4389,7 @@ static void si_llvm_emit_vertex(struct ac_shader_abi *abi,
 		}
 	}
 
-	gs_next_vertex = lp_build_add(uint, gs_next_vertex,
-				      ctx->i32_1);
-
+	gs_next_vertex = LLVMBuildAdd(ctx->ac.builder, gs_next_vertex, ctx->i32_1, "");
 	LLVMBuildStore(ctx->ac.builder, gs_next_vertex, ctx->gs_next_vertex[stream]);
 
 	/* Signal vertex emission */
@@ -5733,8 +5728,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	struct si_shader_context ctx;
 	struct si_shader *shader;
 	LLVMBuilderRef builder;
-	struct lp_build_tgsi_context *bld_base = &ctx.bld_base;
-	struct lp_build_context *uint = &bld_base->uint_bld;
 	struct si_shader_output_values *outputs;
 	struct tgsi_shader_info *gsinfo = &gs_selector->info;
 	int i, r;
@@ -5767,7 +5760,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	preload_ring_buffers(&ctx);
 
 	LLVMValueRef voffset =
-		lp_build_mul_imm(uint, ctx.abi.vertex_id, 4);
+		LLVMBuildMul(ctx.ac.builder, ctx.abi.vertex_id,
+			     LLVMConstInt(ctx.i32, 4, 0), "");
 
 	/* Fetch the vertex stream ID.*/
 	LLVMValueRef stream_id;

@@ -25,7 +25,6 @@
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
-#include "gallivm/lp_bld_arit.h"
 #include "gallivm/lp_bld_intr.h"
 #include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
@@ -1488,15 +1487,15 @@ static void tex_fetch_args(
 	    opcode == TGSI_OPCODE_TXF_LZ) {
 		/* add tex offsets */
 		if (inst->Texture.NumOffsets) {
-			struct lp_build_context *uint_bld = &bld_base->uint_bld;
 			const struct tgsi_texture_offset *off = inst->TexOffsets;
 
 			assert(inst->Texture.NumOffsets == 1);
 
 			switch (target) {
 			case TGSI_TEXTURE_3D:
-				args.coords[2] = lp_build_add(uint_bld, args.coords[2],
-						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleZ]);
+				args.coords[2] =
+					LLVMBuildAdd(ctx->ac.builder, args.coords[2],
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleZ], "");
 				/* fall through */
 			case TGSI_TEXTURE_2D:
 			case TGSI_TEXTURE_SHADOW2D:
@@ -1505,16 +1504,16 @@ static void tex_fetch_args(
 			case TGSI_TEXTURE_2D_ARRAY:
 			case TGSI_TEXTURE_SHADOW2D_ARRAY:
 				args.coords[1] =
-					lp_build_add(uint_bld, args.coords[1],
-						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleY]);
+					LLVMBuildAdd(ctx->ac.builder, args.coords[1],
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleY], "");
 				/* fall through */
 			case TGSI_TEXTURE_1D:
 			case TGSI_TEXTURE_SHADOW1D:
 			case TGSI_TEXTURE_1D_ARRAY:
 			case TGSI_TEXTURE_SHADOW1D_ARRAY:
 				args.coords[0] =
-					lp_build_add(uint_bld, args.coords[0],
-						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleX]);
+					LLVMBuildAdd(ctx->ac.builder, args.coords[0],
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleX], "");
 				break;
 				/* texture offsets do not apply to other texture targets */
 			}
