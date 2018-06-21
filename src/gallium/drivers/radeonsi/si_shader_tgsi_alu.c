@@ -23,7 +23,7 @@
  */
 
 #include "si_shader_internal.h"
-#include "gallivm/lp_bld_intr.h"
+#include "ac_llvm_util.h"
 
 static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 			       struct lp_build_emit_data *emit_data)
@@ -449,9 +449,9 @@ build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] =
-		lp_build_intrinsic(ctx->ac.builder, action->intr_name,
+		ac_build_intrinsic(&ctx->ac, action->intr_name,
 				   emit_data->dst_type, emit_data->args,
-				   emit_data->arg_count, LP_FUNC_ATTR_READNONE);
+				   emit_data->arg_count, AC_FUNC_ATTR_READNONE);
 }
 
 static void emit_bfi(const struct lp_build_tgsi_action *action,
@@ -690,10 +690,10 @@ static void dfracexp_emit(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
-		lp_build_intrinsic(ctx->ac.builder, "llvm.amdgcn.frexp.mant.f64",
+		ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.frexp.mant.f64",
 				   ctx->ac.f64, &emit_data->args[0], 1, 0);
 	emit_data->output1[emit_data->chan] =
-		lp_build_intrinsic(ctx->ac.builder, "llvm.amdgcn.frexp.exp.i32.f64",
+		ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.frexp.exp.i32.f64",
 				   ctx->ac.i32, &emit_data->args[0], 1, 0);
 }
 

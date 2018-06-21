@@ -22,8 +22,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "gallivm/lp_bld_const.h"
-#include "gallivm/lp_bld_intr.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
 #include "tgsi/tgsi_build.h"
@@ -2243,10 +2241,10 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_HELPER_INVOCATION:
-		value = lp_build_intrinsic(ctx->ac.builder,
+		value = ac_build_intrinsic(&ctx->ac,
 					   "llvm.amdgcn.ps.live",
 					   ctx->i1, NULL, 0,
-					   LP_FUNC_ATTR_READNONE);
+					   AC_FUNC_ATTR_READNONE);
 		value = LLVMBuildNot(ctx->ac.builder, value, "");
 		value = LLVMBuildSExt(ctx->ac.builder, value, ctx->i32, "");
 		break;
@@ -2664,9 +2662,9 @@ static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *
 				samplemask_param);
 	coverage = ac_to_integer(&ctx->ac, coverage);
 
-	coverage = lp_build_intrinsic(ctx->ac.builder, "llvm.ctpop.i32",
+	coverage = ac_build_intrinsic(&ctx->ac, "llvm.ctpop.i32",
 				   ctx->i32,
-				   &coverage, 1, LP_FUNC_ATTR_READNONE);
+				   &coverage, 1, AC_FUNC_ATTR_READNONE);
 
 	coverage = LLVMBuildUIToFP(ctx->ac.builder, coverage,
 				   ctx->f32, "");
@@ -4449,9 +4447,9 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 		return;
 	}
 
-	lp_build_intrinsic(ctx->ac.builder,
+	ac_build_intrinsic(&ctx->ac,
 			   "llvm.amdgcn.s.barrier",
-			   ctx->voidt, NULL, 0, LP_FUNC_ATTR_CONVERGENT);
+			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
 static const struct lp_build_tgsi_action interp_action = {
@@ -4481,10 +4479,12 @@ static void si_create_function(struct si_shader_context *ctx,
 		 * allows the optimization passes to move loads and reduces
 		 * SGPR spilling significantly.
 		 */
-		lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
+		ac_add_function_attr(ctx->ac.context, ctx->main_fn, i + 1,
+				     AC_FUNC_ATTR_INREG);
 
 		if (LLVMGetTypeKind(LLVMTypeOf(P)) == LLVMPointerTypeKind) {
-			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_NOALIAS);
+			ac_add_function_attr(ctx->ac.context, ctx->main_fn, i + 1,
+					     AC_FUNC_ATTR_NOALIAS);
 			ac_add_attr_dereferenceable(P, UINT64_MAX);
 		}
 	}
@@ -6030,9 +6030,9 @@ static void si_init_exec_from_input(struct si_shader_context *ctx,
 		LLVMGetParam(ctx->main_fn, param),
 		LLVMConstInt(ctx->i32, bitoffset, 0),
 	};
-	lp_build_intrinsic(ctx->ac.builder,
+	ac_build_intrinsic(&ctx->ac,
 			   "llvm.amdgcn.init.exec.from.input",
-			   ctx->voidt, args, 2, LP_FUNC_ATTR_CONVERGENT);
+			   ctx->voidt, args, 2, AC_FUNC_ATTR_CONVERGENT);
 }
 
 static bool si_vs_needs_prolog(const struct si_shader_selector *sel,
@@ -6539,7 +6539,8 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 	si_init_function_info(&fninfo);
 
 	for (unsigned i = 0; i < num_parts; ++i) {
-		lp_add_function_attr(parts[i], -1, LP_FUNC_ATTR_ALWAYSINLINE);
+		ac_add_function_attr(ctx->ac.context, parts[i], -1,
+				     AC_FUNC_ATTR_ALWAYSINLINE);
 		LLVMSetLinkage(parts[i], LLVMPrivateLinkage);
 	}
 
@@ -6666,9 +6667,10 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			param_size = ac_get_type_size(param_type) / 4;
 			is_sgpr = ac_is_sgpr_param(param);
 
-			if (is_sgpr)
-				lp_add_function_attr(parts[part], param_idx + 1, LP_FUNC_ATTR_INREG);
-			else if (out_idx < num_out_sgpr) {
+			if (is_sgpr) {
+				ac_add_function_attr(ctx->ac.context, parts[part],
+						     param_idx + 1, AC_FUNC_ATTR_INREG);
+			} else if (out_idx < num_out_sgpr) {
 				/* Skip returned SGPRs the current part doesn't
 				 * declare on the input. */
 				out_idx = num_out_sgpr;

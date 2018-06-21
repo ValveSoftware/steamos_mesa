@@ -25,7 +25,6 @@
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
-#include "gallivm/lp_bld_intr.h"
 #include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
 #include "ac_llvm_util.h"
@@ -709,8 +708,8 @@ static void store_emit_buffer(
 		emit_data->args[0] = data;
 		emit_data->args[3] = offset;
 
-		lp_build_intrinsic(
-			builder, intrinsic_name, emit_data->dst_type,
+		ac_build_intrinsic(
+			&ctx->ac, intrinsic_name, emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
 			ac_get_store_intr_attribs(writeonly_memory));
 	}
@@ -745,7 +744,6 @@ static void store_emit(
 		struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = ctx->ac.builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	unsigned target = inst->Memory.Texture;
@@ -771,8 +769,8 @@ static void store_emit(
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		emit_data->output[emit_data->chan] = lp_build_intrinsic(
-			builder, "llvm.amdgcn.buffer.store.format.v4f32",
+		emit_data->output[emit_data->chan] = ac_build_intrinsic(
+			&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32",
 			emit_data->dst_type, emit_data->args,
 			emit_data->arg_count,
 			ac_get_store_intr_attribs(writeonly_memory));
@@ -926,7 +924,6 @@ static void atomic_emit(
 		struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = ctx->ac.builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	LLVMValueRef tmp;
 
@@ -940,8 +937,8 @@ static void atomic_emit(
 		char intrinsic_name[40];
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.buffer.atomic.%s", action->intr_name);
-		tmp = lp_build_intrinsic(
-			builder, intrinsic_name, ctx->i32,
+		tmp = ac_build_intrinsic(
+			&ctx->ac, intrinsic_name, ctx->i32,
 			emit_data->args, emit_data->arg_count, 0);
 		emit_data->output[emit_data->chan] = ac_to_float(&ctx->ac, tmp);
 	} else {
