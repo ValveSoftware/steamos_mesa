@@ -2615,7 +2615,9 @@ VkResult radv_QueueSubmit(
 
 	if (fence) {
 		if (!fence_emitted) {
-			radv_signal_fence(queue, fence);
+			result = radv_signal_fence(queue, fence);
+			if (result != VK_SUCCESS)
+				return result;
 		}
 		fence->submitted = true;
 	}
@@ -3172,6 +3174,7 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 	RADV_FROM_HANDLE(radv_queue, queue, _queue);
 	struct radeon_winsys_fence *base_fence = fence ? fence->fence : NULL;
 	bool fence_emitted = false;
+	VkResult result;
 
 	for (uint32_t i = 0; i < bindInfoCount; ++i) {
 		struct radv_winsys_sem_info sem_info;
@@ -3213,7 +3216,9 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 
 	if (fence) {
 		if (!fence_emitted) {
-			radv_signal_fence(queue, fence);
+			result = radv_signal_fence(queue, fence);
+			if (result != VK_SUCCESS)
+				return result;
 		}
 		fence->submitted = true;
 	}
