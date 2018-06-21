@@ -135,7 +135,7 @@ fd2_clear(struct fd_context *ctx, unsigned buffers,
 	uint32_t reg, colr = 0;
 
 	if ((buffers & PIPE_CLEAR_COLOR) && fb->nr_cbufs)
-		colr  = pack_rgba(fb->cbufs[0]->format, color->f);
+		colr = pack_rgba(PIPE_FORMAT_R8G8B8A8_UNORM, color->f);
 
 	/* emit generic state now: */
 	fd2_emit_state(ctx, ctx->dirty &
