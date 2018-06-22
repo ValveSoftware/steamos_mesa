@@ -241,7 +241,6 @@ struct si_texture {
 	uint64_t			fmask_offset;
 	uint64_t			cmask_offset;
 	uint64_t			cmask_base_address_reg;
-	uint32_t			cmask_size;
 	struct r600_resource		*cmask_buffer;
 	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */

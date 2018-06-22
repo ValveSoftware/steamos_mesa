@@ -478,7 +478,7 @@ static bool color_needs_decompression(struct si_texture *tex)
 {
 	return tex->surface.fmask_size ||
 	       (tex->dirty_level_mask &&
-		(tex->cmask_size || tex->dcc_offset));
+		(tex->cmask_buffer || tex->dcc_offset));
 }
 
 static bool depth_needs_decompression(struct si_texture *tex)

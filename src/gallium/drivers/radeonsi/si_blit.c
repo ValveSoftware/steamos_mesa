@@ -538,7 +538,7 @@ si_decompress_color_texture(struct si_context *sctx, struct si_texture *tex,
 			    unsigned first_level, unsigned last_level)
 {
 	/* CMASK or DCC can be discarded and we can still end up here. */
-	if (!tex->cmask_size && !tex->surface.fmask_size && !tex->dcc_offset)
+	if (!tex->cmask_buffer && !tex->surface.fmask_size && !tex->dcc_offset)
 		return;
 
 	si_blit_decompress_color(sctx, tex, first_level, last_level, 0,
@@ -859,7 +859,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 		si_decompress_depth(sctx, stex, planes,
 				    level, level,
 				    first_layer, last_layer);
-	} else if (stex->surface.fmask_size || stex->cmask_size || stex->dcc_offset) {
+	} else if (stex->surface.fmask_size || stex->cmask_buffer || stex->dcc_offset) {
 		/* If we've rendered into the framebuffer and it's a blitting
 		 * source, make sure the decompression pass is invoked
 		 * by dirtying the framebuffer.
@@ -1139,7 +1139,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
 	    !dst->surface.is_linear &&
-	    (!dst->cmask_size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
+	    (!dst->cmask_buffer || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
 		/* Check the last constraint. */
 		if (src->surface.micro_tile_mode != dst->surface.micro_tile_mode) {
 			/* The next fast clear will switch to this mode to
@@ -1325,7 +1325,7 @@ static void si_flush_resource(struct pipe_context *ctx,
 	if (tex->dcc_separate_buffer && !tex->separate_dcc_dirty)
 		return;
 
-	if (!tex->is_depth && (tex->cmask_size || tex->dcc_offset)) {
+	if (!tex->is_depth && (tex->cmask_buffer || tex->dcc_offset)) {
 		si_blit_decompress_color(sctx, tex, 0, res->last_level,
 					 0, util_max_layer(res, 0),
 					 tex->dcc_separate_buffer != NULL);
