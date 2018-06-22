@@ -605,12 +605,12 @@ static void si_check_render_feedback_texture(struct si_context *sctx,
 		return;
 
 	for (unsigned j = 0; j < sctx->framebuffer.state.nr_cbufs; ++j) {
-		struct r600_surface * surf;
+		struct si_surface * surf;
 
 		if (!sctx->framebuffer.state.cbufs[j])
 			continue;
 
-		surf = (struct r600_surface*)sctx->framebuffer.state.cbufs[j];
+		surf = (struct si_surface*)sctx->framebuffer.state.cbufs[j];
 
 		if (tex == (struct si_texture *)surf->base.texture &&
 		    surf->base.u.tex.level >= first_level &&

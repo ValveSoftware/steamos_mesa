@@ -130,8 +130,8 @@ static void si_emit_cb_render_state(struct si_context *sctx)
 		unsigned sx_blend_opt_control = 0;
 
 		for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++) {
-			struct r600_surface *surf =
-				(struct r600_surface*)sctx->framebuffer.state.cbufs[i];
+			struct si_surface *surf =
+				(struct si_surface*)sctx->framebuffer.state.cbufs[i];
 			unsigned format, swap, spi_format, colormask;
 			bool has_alpha, has_rgb;
 
@@ -2222,7 +2222,7 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
  * framebuffer handling
  */
 
-static void si_choose_spi_color_formats(struct r600_surface *surf,
+static void si_choose_spi_color_formats(struct si_surface *surf,
 					unsigned format, unsigned swap,
 					unsigned ntype, bool is_depth)
 {
@@ -2340,7 +2340,7 @@ static void si_choose_spi_color_formats(struct r600_surface *surf,
 }
 
 static void si_initialize_color_surface(struct si_context *sctx,
-					struct r600_surface *surf)
+					struct si_surface *surf)
 {
 	struct si_texture *tex = (struct si_texture*)surf->base.texture;
 	unsigned color_info, color_attrib;
@@ -2500,7 +2500,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 }
 
 static void si_init_depth_surface(struct si_context *sctx,
-				  struct r600_surface *surf)
+				  struct si_surface *surf)
 {
 	struct si_texture *tex = (struct si_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
@@ -2696,12 +2696,12 @@ void si_update_fb_dirtiness_after_rendering(struct si_context *sctx)
 static void si_dec_framebuffer_counters(const struct pipe_framebuffer_state *state)
 {
 	for (int i = 0; i < state->nr_cbufs; ++i) {
-		struct r600_surface *surf = NULL;
+		struct si_surface *surf = NULL;
 		struct si_texture *tex;
 
 		if (!state->cbufs[i])
 			continue;
-		surf = (struct r600_surface*)state->cbufs[i];
+		surf = (struct si_surface*)state->cbufs[i];
 		tex = (struct si_texture*)surf->base.texture;
 
 		p_atomic_dec(&tex->framebuffers_bound);
@@ -2713,7 +2713,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_constant_buffer constbuf = {0};
-	struct r600_surface *surf = NULL;
+	struct si_surface *surf = NULL;
 	struct si_texture *tex;
 	bool old_any_dst_linear = sctx->framebuffer.any_dst_linear;
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
@@ -2741,7 +2741,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (!state->cbufs[i])
 			continue;
 
-		surf = (struct r600_surface*)state->cbufs[i];
+		surf = (struct si_surface*)state->cbufs[i];
 		tex = (struct si_texture*)surf->base.texture;
 
 		if (!surf->dcc_incompatible)
@@ -2837,7 +2837,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (!state->cbufs[i])
 			continue;
 
-		surf = (struct r600_surface*)state->cbufs[i];
+		surf = (struct si_surface*)state->cbufs[i];
 		tex = (struct si_texture*)surf->base.texture;
 
 		if (!surf->color_initialized) {
@@ -2894,7 +2894,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	struct si_texture *zstex = NULL;
 
 	if (state->zsbuf) {
-		surf = (struct r600_surface*)state->zsbuf;
+		surf = (struct si_surface*)state->zsbuf;
 		zstex = (struct si_texture*)surf->base.texture;
 
 		if (!surf->depth_initialized) {
@@ -2972,7 +2972,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 	struct pipe_framebuffer_state *state = &sctx->framebuffer.state;
 	unsigned i, nr_cbufs = state->nr_cbufs;
 	struct si_texture *tex = NULL;
-	struct r600_surface *cb = NULL;
+	struct si_surface *cb = NULL;
 	unsigned cb_color_info = 0;
 
 	/* Colorbuffers. */
@@ -2983,7 +2983,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 		if (!(sctx->framebuffer.dirty_cbufs & (1 << i)))
 			continue;
 
-		cb = (struct r600_surface*)state->cbufs[i];
+		cb = (struct si_surface*)state->cbufs[i];
 		if (!cb) {
 			radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
 					       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
@@ -3146,7 +3146,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 
 	/* ZS buffer. */
 	if (state->zsbuf && sctx->framebuffer.dirty_zsbuf) {
-		struct r600_surface *zb = (struct r600_surface*)state->zsbuf;
+		struct si_surface *zb = (struct si_surface*)state->zsbuf;
 		struct si_texture *tex = (struct si_texture*)zb->base.texture;
 
 		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,

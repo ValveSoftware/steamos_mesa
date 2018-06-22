@@ -305,7 +305,7 @@ struct si_texture {
 	unsigned			num_slow_clears;
 };
 
-struct r600_surface {
+struct si_surface {
 	struct pipe_surface		base;
 
 	/* These can vary with block-compressed textures. */

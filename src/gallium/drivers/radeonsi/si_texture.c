@@ -2019,7 +2019,7 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 					      unsigned width0, unsigned height0,
 					      unsigned width, unsigned height)
 {
-	struct r600_surface *surface = CALLOC_STRUCT(r600_surface);
+	struct si_surface *surface = CALLOC_STRUCT(si_surface);
 
 	if (!surface)
 		return NULL;
