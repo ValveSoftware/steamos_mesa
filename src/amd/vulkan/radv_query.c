@@ -1118,6 +1118,12 @@ static void emit_begin_query(struct radv_cmd_buffer *cmd_buffer,
 	case VK_QUERY_TYPE_PIPELINE_STATISTICS:
 		radeon_check_space(cmd_buffer->device->ws, cs, 4);
 
+		++cmd_buffer->state.active_pipeline_queries;
+		if (cmd_buffer->state.active_pipeline_queries == 1) {
+			cmd_buffer->state.flush_bits &= ~RADV_CMD_FLAG_STOP_PIPELINE_STATS;
+			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_START_PIPELINE_STATS;
+		}
+
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
 		radeon_emit(cs, va);
@@ -1157,6 +1163,11 @@ static void emit_end_query(struct radv_cmd_buffer *cmd_buffer,
 	case VK_QUERY_TYPE_PIPELINE_STATISTICS:
 		radeon_check_space(cmd_buffer->device->ws, cs, 16);
 
+		cmd_buffer->state.active_pipeline_queries--;
+		if (cmd_buffer->state.active_pipeline_queries == 0) {
+			cmd_buffer->state.flush_bits &= ~RADV_CMD_FLAG_START_PIPELINE_STATS;
+			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_STOP_PIPELINE_STATS;
+		}
 		va += pipelinestat_block_size;
 
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));

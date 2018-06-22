@@ -937,6 +937,16 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 	 */
 	if (cp_coher_cntl)
 		si_emit_acquire_mem(cs, is_mec, false, chip_class >= GFX9, cp_coher_cntl);
+
+	if (flush_bits & RADV_CMD_FLAG_START_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
+			        EVENT_INDEX(0));
+	} else if (flush_bits & RADV_CMD_FLAG_STOP_PIPELINE_STATS) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_STOP) |
+			        EVENT_INDEX(0));
+	}
 }
 
 void

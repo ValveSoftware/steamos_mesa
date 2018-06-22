@@ -833,6 +833,9 @@ enum radv_cmd_flush_bits {
 	RADV_CMD_FLAG_PS_PARTIAL_FLUSH = 1 << 10,
 	RADV_CMD_FLAG_CS_PARTIAL_FLUSH = 1 << 11,
 	RADV_CMD_FLAG_VGT_FLUSH        = 1 << 12,
+	/* Pipeline query controls. */
+	RADV_CMD_FLAG_START_PIPELINE_STATS = 1 << 13,
+	RADV_CMD_FLAG_STOP_PIPELINE_STATS  = 1 << 14,
 
 	RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER = (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 					      RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
@@ -966,6 +969,7 @@ struct radv_cmd_state {
 	enum radv_cmd_flush_bits                     flush_bits;
 	unsigned                                     active_occlusion_queries;
 	bool                                         perfect_occlusion_queries_enabled;
+	unsigned                                     active_pipeline_queries;
 	float					     offset_scale;
 	uint32_t                                      trace_id;
 	uint32_t                                      last_ia_multi_vgt_param;
