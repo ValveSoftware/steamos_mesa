@@ -574,7 +574,17 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 	tex->fmask_offset = new_tex->fmask_offset;
 	tex->cmask_offset = new_tex->cmask_offset;
 	tex->cmask_base_address_reg = new_tex->cmask_base_address_reg;
-	r600_resource_reference(&tex->cmask_buffer, new_tex->cmask_buffer);
+
+	if (tex->cmask_buffer == &tex->buffer)
+		tex->cmask_buffer = NULL;
+	else
+		r600_resource_reference(&tex->cmask_buffer, NULL);
+
+	if (new_tex->cmask_buffer == &new_tex->buffer)
+		tex->cmask_buffer = &tex->buffer;
+	else
+		r600_resource_reference(&tex->cmask_buffer, new_tex->cmask_buffer);
+
 	tex->dcc_offset = new_tex->dcc_offset;
 	tex->cb_color_info = new_tex->cb_color_info;
 	memcpy(tex->color_clear_value, new_tex->color_clear_value,
