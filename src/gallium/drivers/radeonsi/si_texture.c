@@ -2392,7 +2392,7 @@ si_memobj_from_handle(struct pipe_screen *screen,
 		      bool dedicated)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
-	struct r600_memory_object *memobj = CALLOC_STRUCT(r600_memory_object);
+	struct si_memory_object *memobj = CALLOC_STRUCT(si_memory_object);
 	struct pb_buffer *buf = NULL;
 	uint32_t stride, offset;
 
@@ -2418,7 +2418,7 @@ static void
 si_memobj_destroy(struct pipe_screen *screen,
 		  struct pipe_memory_object *_memobj)
 {
-	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
+	struct si_memory_object *memobj = (struct si_memory_object *)_memobj;
 
 	pb_reference(&memobj->buf, NULL);
 	free(memobj);
@@ -2431,7 +2431,7 @@ si_texture_from_memobj(struct pipe_screen *screen,
 		       uint64_t offset)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
-	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
+	struct si_memory_object *memobj = (struct si_memory_object *)_memobj;
 	struct pipe_resource *tex =
 		si_texture_from_winsys_buffer(sscreen, templ, memobj->buf,
 					      memobj->stride, offset,

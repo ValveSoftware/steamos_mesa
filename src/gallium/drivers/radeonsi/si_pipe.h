@@ -386,7 +386,7 @@ union si_mmio_counters {
 	unsigned array[0];
 };
 
-struct r600_memory_object {
+struct si_memory_object {
 	struct pipe_memory_object	b;
 	struct pb_buffer		*buf;
 	uint32_t			stride;
