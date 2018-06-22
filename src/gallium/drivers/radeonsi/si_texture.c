@@ -2409,7 +2409,6 @@ si_memobj_from_handle(struct pipe_screen *screen,
 	memobj->b.dedicated = dedicated;
 	memobj->buf = buf;
 	memobj->stride = stride;
-	memobj->offset = offset;
 
 	return (struct pipe_memory_object *)memobj;
 

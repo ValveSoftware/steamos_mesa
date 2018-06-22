@@ -390,7 +390,6 @@ struct r600_memory_object {
 	struct pipe_memory_object	b;
 	struct pb_buffer		*buf;
 	uint32_t			stride;
-	uint32_t			offset;
 };
 
 /* Saved CS data for debugging features. */
