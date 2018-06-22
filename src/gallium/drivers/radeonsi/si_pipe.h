@@ -232,10 +232,8 @@ struct r600_transfer {
 
 struct r600_cmask_info {
 	uint64_t offset;
-	uint64_t size;
-	unsigned alignment;
-	unsigned slice_tile_max;
 	uint64_t base_address_reg;
+	uint32_t size;
 };
 
 struct si_texture {
@@ -1225,9 +1223,6 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 			     struct si_texture *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
-void si_texture_get_cmask_info(struct si_screen *sscreen,
-			       struct si_texture *tex,
-			       struct r600_cmask_info *out);
 void si_eliminate_fast_color_clear(struct si_context *sctx,
 				   struct si_texture *tex);
 void si_texture_discard_cmask(struct si_screen *sscreen,

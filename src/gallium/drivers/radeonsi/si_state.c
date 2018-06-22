@@ -3130,7 +3130,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 			radeon_emit(cs, cb_color_attrib);	/* CB_COLOR0_ATTRIB */
 			radeon_emit(cs, cb->cb_dcc_control);	/* CB_COLOR0_DCC_CONTROL */
 			radeon_emit(cs, cb_color_cmask);	/* CB_COLOR0_CMASK */
-			radeon_emit(cs, tex->cmask.slice_tile_max);	/* CB_COLOR0_CMASK_SLICE */
+			radeon_emit(cs, tex->surface.u.legacy.cmask_slice_tile_max); /* CB_COLOR0_CMASK_SLICE */
 			radeon_emit(cs, cb_color_fmask);		/* CB_COLOR0_FMASK */
 			radeon_emit(cs, cb_color_fmask_slice);		/* CB_COLOR0_FMASK_SLICE */
 			radeon_emit(cs, tex->color_clear_value[0]);	/* CB_COLOR0_CLEAR_WORD0 */

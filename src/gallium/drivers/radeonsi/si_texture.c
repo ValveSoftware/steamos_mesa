@@ -869,71 +869,6 @@ static void si_texture_destroy(struct pipe_screen *screen,
 
 static const struct u_resource_vtbl si_texture_vtbl;
 
-void si_texture_get_cmask_info(struct si_screen *sscreen,
-			       struct si_texture *tex,
-			       struct r600_cmask_info *out)
-{
-	unsigned pipe_interleave_bytes = sscreen->info.pipe_interleave_bytes;
-	unsigned num_pipes = sscreen->info.num_tile_pipes;
-	unsigned cl_width, cl_height;
-
-	if (sscreen->info.chip_class >= GFX9) {
-		out->alignment = tex->surface.u.gfx9.cmask_alignment;
-		out->size = tex->surface.u.gfx9.cmask_size;
-		return;
-	}
-
-	switch (num_pipes) {
-	case 2:
-		cl_width = 32;
-		cl_height = 16;
-		break;
-	case 4:
-		cl_width = 32;
-		cl_height = 32;
-		break;
-	case 8:
-		cl_width = 64;
-		cl_height = 32;
-		break;
-	case 16: /* Hawaii */
-		cl_width = 64;
-		cl_height = 64;
-		break;
-	default:
-		assert(0);
-		return;
-	}
-
-	unsigned base_align = num_pipes * pipe_interleave_bytes;
-
-	unsigned width = align(tex->buffer.b.b.width0, cl_width*8);
-	unsigned height = align(tex->buffer.b.b.height0, cl_height*8);
-	unsigned slice_elements = (width * height) / (8*8);
-
-	/* Each element of CMASK is a nibble. */
-	unsigned slice_bytes = slice_elements / 2;
-
-	out->slice_tile_max = (width * height) / (128*128);
-	if (out->slice_tile_max)
-		out->slice_tile_max -= 1;
-
-	out->alignment = MAX2(256, base_align);
-	out->size = util_num_layers(&tex->buffer.b.b, 0) *
-		    align(slice_bytes, base_align);
-}
-
-static void si_texture_allocate_cmask(struct si_screen *sscreen,
-				      struct si_texture *tex)
-{
-	si_texture_get_cmask_info(sscreen, tex, &tex->cmask);
-
-	tex->cmask.offset = align64(tex->size, tex->cmask.alignment);
-	tex->size = tex->cmask.offset + tex->cmask.size;
-
-	tex->cb_color_info |= S_028C70_FAST_CLEAR(1);
-}
-
 static void si_texture_get_htile_size(struct si_screen *sscreen,
 				      struct si_texture *tex)
 {
@@ -1104,10 +1039,10 @@ void si_print_texture_info(struct si_screen *sscreen,
 			tex->surface.u.legacy.fmask.tiling_index);
 
 	if (tex->cmask.size)
-		u_log_printf(log, "  CMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, "
+		u_log_printf(log, "  CMask: offset=%"PRIu64", size=%u, alignment=%u, "
 			"slice_tile_max=%u\n",
-			tex->cmask.offset, tex->cmask.size, tex->cmask.alignment,
-			tex->cmask.slice_tile_max);
+			tex->cmask.offset, tex->cmask.size, tex->surface.cmask_alignment,
+			tex->surface.u.legacy.cmask_slice_tile_max);
 
 	if (tex->htile_offset)
 		u_log_printf(log, "  HTile: offset=%"PRIu64", size=%u, "
@@ -1247,7 +1182,11 @@ si_texture_create_object(struct pipe_screen *screen,
 						     tex->surface.fmask_alignment);
 			tex->size = tex->fmask_offset + tex->surface.fmask_size;
 
-			si_texture_allocate_cmask(sscreen, tex);
+			/* Allocate CMASK. */
+			tex->cmask.size = tex->surface.cmask_size;
+			tex->cmask.offset = align64(tex->size, tex->surface.cmask_alignment);
+			tex->size = tex->cmask.offset + tex->cmask.size;
+			tex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 			tex->cmask_buffer = &tex->buffer;
 
 			if (!tex->surface.fmask_size || !tex->cmask.size) {

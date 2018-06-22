@@ -293,6 +293,19 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
         surf_ws->u.legacy.fmask.pitch_in_pixels = fmask.u.legacy.level[0].nblk_x;
     }
 
+    if (ws->gen == DRV_SI) {
+	    struct ac_surf_config config;
+
+	    /* Only these fields need to be set for the CMASK computation. */
+	    config.info.width = tex->width0;
+	    config.info.height = tex->height0;
+	    config.info.depth = tex->depth0;
+	    config.info.array_size = tex->array_size;
+	    config.is_3d = !!(tex->target == PIPE_TEXTURE_3D);
+	    config.is_cube = !!(tex->target == PIPE_TEXTURE_CUBE);
+
+	    ac_compute_cmask(&ws->info, &config, surf_ws);
+    }
     return 0;
 }
 

@@ -42,24 +42,20 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 
 	assert(tex->cmask.size == 0);
 
-	si_texture_get_cmask_info(sscreen, tex, &tex->cmask);
-	if (!tex->cmask.size)
+	if (!tex->surface.cmask_size)
 		return;
 
 	tex->cmask_buffer =
 		si_aligned_buffer_create(&sscreen->b,
 					 SI_RESOURCE_FLAG_UNMAPPABLE,
 					 PIPE_USAGE_DEFAULT,
-					 tex->cmask.size,
-					 tex->cmask.alignment);
-	if (tex->cmask_buffer == NULL) {
-		tex->cmask.size = 0;
+					 tex->surface.cmask_size,
+					 tex->surface.cmask_alignment);
+	if (tex->cmask_buffer == NULL)
 		return;
-	}
 
-	/* update colorbuffer state bits */
+	tex->cmask.size = tex->surface.cmask_size;
 	tex->cmask.base_address_reg = tex->cmask_buffer->gpu_address >> 8;
-
 	tex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
 	p_atomic_inc(&sscreen->compressed_colortex_counter);

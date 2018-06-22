@@ -109,6 +109,7 @@ struct legacy_surf_layout {
     uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
     uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
     struct legacy_surf_fmask    fmask;
+    unsigned                    cmask_slice_tile_max;
 };
 
 /* Same as addrlib - AddrResourceType. */
@@ -247,6 +248,10 @@ int ac_compute_surface(ADDR_HANDLE addrlib, const struct radeon_info *info,
 		       const struct ac_surf_config * config,
 		       enum radeon_surf_mode mode,
 		       struct radeon_surf *surf);
+
+void ac_compute_cmask(const struct radeon_info *info,
+		      const struct ac_surf_config *config,
+		      struct radeon_surf *surf);
 
 #ifdef __cplusplus
 }
