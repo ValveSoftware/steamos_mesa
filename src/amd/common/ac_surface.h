@@ -150,9 +150,6 @@ struct gfx9_surf_layout {
     uint16_t                    dcc_pitch_max;  /* (mip chain pitch - 1) */
 
     uint64_t                    stencil_offset; /* separate stencil */
-    uint64_t                    cmask_size;
-
-    uint32_t                    cmask_alignment;
 };
 
 struct radeon_surf {
@@ -196,16 +193,19 @@ struct radeon_surf {
 
     uint64_t                    surf_size;
     uint64_t                    fmask_size;
-    /* DCC and HTILE are very small. */
-    uint32_t                    dcc_size;
-    uint32_t                    htile_size;
-
-    uint32_t                    htile_slice_size;
-
     uint32_t                    surf_alignment;
     uint32_t                    fmask_alignment;
+
+    /* DCC and HTILE are very small. */
+    uint32_t                    dcc_size;
     uint32_t                    dcc_alignment;
+
+    uint32_t                    htile_size;
+    uint32_t                    htile_slice_size;
     uint32_t                    htile_alignment;
+
+    uint32_t                    cmask_size;
+    uint32_t                    cmask_alignment;
 
     union {
         /* R600-VI return values.

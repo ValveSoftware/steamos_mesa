@@ -1286,8 +1286,8 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 
 			surf->u.gfx9.cmask.rb_aligned = cin.cMaskFlags.rbAligned;
 			surf->u.gfx9.cmask.pipe_aligned = cin.cMaskFlags.pipeAligned;
-			surf->u.gfx9.cmask_size = cout.cmaskBytes;
-			surf->u.gfx9.cmask_alignment = cout.baseAlign;
+			surf->cmask_size = cout.cmaskBytes;
+			surf->cmask_alignment = cout.baseAlign;
 		}
 	}
 
@@ -1428,7 +1428,7 @@ static int gfx9_compute_surface(ADDR_HANDLE addrlib,
 	surf->htile_slice_size = 0;
 	surf->u.gfx9.surf_offset = 0;
 	surf->u.gfx9.stencil_offset = 0;
-	surf->u.gfx9.cmask_size = 0;
+	surf->cmask_size = 0;
 
 	/* Calculate texture layout information. */
 	r = gfx9_compute_miptree(addrlib, config, surf, compressed,
