@@ -3356,7 +3356,7 @@ intel_miptree_unmap_etc(struct brw_context *brw,
    else
       _mesa_unpack_etc2_format(dst, mt->surf.row_pitch,
                                map->ptr, map->stride,
-                               map->w, map->h, mt->etc_format);
+			       map->w, map->h, mt->etc_format, true);
 
    intel_miptree_unmap_raw(mt);
    free(map->buffer);
