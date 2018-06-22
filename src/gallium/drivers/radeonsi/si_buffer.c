@@ -341,7 +341,7 @@ static void *si_buffer_get_transfer(struct pipe_context *ctx,
 				    unsigned offset)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct r600_transfer *transfer;
+	struct si_transfer *transfer;
 
 	if (usage & TC_TRANSFER_MAP_THREADED_UNSYNC)
 		transfer = slab_alloc(&sctx->pool_transfers_unsync);
@@ -517,17 +517,17 @@ static void si_buffer_do_flush_region(struct pipe_context *ctx,
 				      struct pipe_transfer *transfer,
 				      const struct pipe_box *box)
 {
-	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
+	struct si_transfer *stransfer = (struct si_transfer*)transfer;
 	struct r600_resource *rbuffer = r600_resource(transfer->resource);
 
-	if (rtransfer->staging) {
+	if (stransfer->staging) {
 		struct pipe_resource *dst, *src;
 		unsigned soffset;
 		struct pipe_box dma_box;
 
 		dst = transfer->resource;
-		src = &rtransfer->staging->b.b;
-		soffset = rtransfer->offset + box->x % SI_MAP_BUFFER_ALIGNMENT;
+		src = &stransfer->staging->b.b;
+		soffset = stransfer->offset + box->x % SI_MAP_BUFFER_ALIGNMENT;
 
 		u_box_1d(soffset, box->width, &dma_box);
 
@@ -558,14 +558,14 @@ static void si_buffer_transfer_unmap(struct pipe_context *ctx,
 				     struct pipe_transfer *transfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
+	struct si_transfer *stransfer = (struct si_transfer*)transfer;
 
 	if (transfer->usage & PIPE_TRANSFER_WRITE &&
 	    !(transfer->usage & PIPE_TRANSFER_FLUSH_EXPLICIT))
 		si_buffer_do_flush_region(ctx, transfer, &transfer->box);
 
-	r600_resource_reference(&rtransfer->staging, NULL);
-	assert(rtransfer->b.staging == NULL); /* for threaded context only */
+	r600_resource_reference(&stransfer->staging, NULL);
+	assert(stransfer->b.staging == NULL); /* for threaded context only */
 	pipe_resource_reference(&transfer->resource, NULL);
 
 	/* Don't use pool_transfers_unsync. We are always in the driver

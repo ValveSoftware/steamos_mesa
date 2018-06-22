@@ -866,7 +866,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		ac_print_gpu_info(&sscreen->info);
 
 	slab_create_parent(&sscreen->pool_transfers,
-			   sizeof(struct r600_transfer), 64);
+			   sizeof(struct si_transfer), 64);
 
 	sscreen->force_aniso = MIN2(16, debug_get_num_option("R600_TEX_ANISO", -1));
 	if (sscreen->force_aniso >= 0) {

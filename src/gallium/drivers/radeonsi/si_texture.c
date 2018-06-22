@@ -138,11 +138,11 @@ static void si_copy_region_with_blit(struct pipe_context *pipe,
 }
 
 /* Copy from a full GPU texture to a transfer's staging one. */
-static void si_copy_to_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
+static void si_copy_to_staging_texture(struct pipe_context *ctx, struct si_transfer *stransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct pipe_transfer *transfer = (struct pipe_transfer*)rtransfer;
-	struct pipe_resource *dst = &rtransfer->staging->b.b;
+	struct pipe_transfer *transfer = (struct pipe_transfer*)stransfer;
+	struct pipe_resource *dst = &stransfer->staging->b.b;
 	struct pipe_resource *src = transfer->resource;
 
 	if (src->nr_samples > 1) {
@@ -156,12 +156,12 @@ static void si_copy_to_staging_texture(struct pipe_context *ctx, struct r600_tra
 }
 
 /* Copy from a transfer's staging texture to a full GPU one. */
-static void si_copy_from_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
+static void si_copy_from_staging_texture(struct pipe_context *ctx, struct si_transfer *stransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct pipe_transfer *transfer = (struct pipe_transfer*)rtransfer;
+	struct pipe_transfer *transfer = (struct pipe_transfer*)stransfer;
 	struct pipe_resource *dst = transfer->resource;
-	struct pipe_resource *src = &rtransfer->staging->b.b;
+	struct pipe_resource *src = &stransfer->staging->b.b;
 	struct pipe_box sbox;
 
 	u_box_3d(0, 0, 0, transfer->box.width, transfer->box.height, transfer->box.depth, &sbox);
@@ -1650,7 +1650,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_texture *tex = (struct si_texture*)texture;
-	struct r600_transfer *trans;
+	struct si_transfer *trans;
 	struct r600_resource *buf;
 	unsigned offset = 0;
 	char *map;
@@ -1707,7 +1707,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		}
 	}
 
-	trans = CALLOC_STRUCT(r600_transfer);
+	trans = CALLOC_STRUCT(si_transfer);
 	if (!trans)
 		return NULL;
 	pipe_resource_reference(&trans->b.b.resource, texture);
@@ -1829,24 +1829,24 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx,
 				      struct pipe_transfer* transfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
+	struct si_transfer *stransfer = (struct si_transfer*)transfer;
 	struct pipe_resource *texture = transfer->resource;
 	struct si_texture *tex = (struct si_texture*)texture;
 
-	if ((transfer->usage & PIPE_TRANSFER_WRITE) && rtransfer->staging) {
+	if ((transfer->usage & PIPE_TRANSFER_WRITE) && stransfer->staging) {
 		if (tex->is_depth && tex->buffer.b.b.nr_samples <= 1) {
 			ctx->resource_copy_region(ctx, texture, transfer->level,
 						  transfer->box.x, transfer->box.y, transfer->box.z,
-						  &rtransfer->staging->b.b, transfer->level,
+						  &stransfer->staging->b.b, transfer->level,
 						  &transfer->box);
 		} else {
-			si_copy_from_staging_texture(ctx, rtransfer);
+			si_copy_from_staging_texture(ctx, stransfer);
 		}
 	}
 
-	if (rtransfer->staging) {
-		sctx->num_alloc_tex_transfer_bytes += rtransfer->staging->buf->size;
-		r600_resource_reference(&rtransfer->staging, NULL);
+	if (stransfer->staging) {
+		sctx->num_alloc_tex_transfer_bytes += stransfer->staging->buf->size;
+		r600_resource_reference(&stransfer->staging, NULL);
 	}
 
 	/* Heuristic for {upload, draw, upload, draw, ..}:

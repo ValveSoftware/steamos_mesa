@@ -224,7 +224,7 @@ struct r600_resource {
 	unsigned			external_usage; /* PIPE_HANDLE_USAGE_* */
 };
 
-struct r600_transfer {
+struct si_transfer {
 	struct threaded_transfer	b;
 	struct r600_resource		*staging;
 	unsigned			offset;
