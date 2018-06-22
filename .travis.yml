@@ -9,9 +9,9 @@ cache:
 
 env:
   global:
-    - XORG_RELEASES=http://xorg.freedesktop.org/releases/individual
-    - XCB_RELEASES=http://xcb.freedesktop.org/dist
-    - WAYLAND_RELEASES=http://wayland.freedesktop.org/releases
+    - XORG_RELEASES=https://xorg.freedesktop.org/releases/individual
+    - XCB_RELEASES=https://xcb.freedesktop.org/dist
+    - WAYLAND_RELEASES=https://wayland.freedesktop.org/releases
     - XORGMACROS_VERSION=util-macros-1.19.0
     - GLPROTO_VERSION=glproto-1.4.17
     - DRI2PROTO_VERSION=dri2proto-2.8
@@ -543,7 +543,7 @@ install:
       tar -jxvf $LIBPCIACCESS_VERSION.tar.bz2
       (cd $LIBPCIACCESS_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
-      wget http://dri.freedesktop.org/libdrm/$LIBDRM_VERSION.tar.bz2
+      wget https://dri.freedesktop.org/libdrm/$LIBDRM_VERSION.tar.bz2
       tar -jxvf $LIBDRM_VERSION.tar.bz2
       (cd $LIBDRM_VERSION && ./configure --prefix=$HOME/prefix --enable-vc4 --enable-freedreno --enable-etnaviv-experimental-api && make install)
 
@@ -559,11 +559,11 @@ install:
       tar -jxvf $LIBXSHMFENCE_VERSION.tar.bz2
       (cd $LIBXSHMFENCE_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
-      wget http://people.freedesktop.org/~aplattner/vdpau/$LIBVDPAU_VERSION.tar.bz2
+      wget https://people.freedesktop.org/~aplattner/vdpau/$LIBVDPAU_VERSION.tar.bz2
       tar -jxvf $LIBVDPAU_VERSION.tar.bz2
       (cd $LIBVDPAU_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
-      wget http://www.freedesktop.org/software/vaapi/releases/libva/$LIBVA_VERSION.tar.bz2
+      wget https://www.freedesktop.org/software/vaapi/releases/libva/$LIBVA_VERSION.tar.bz2
       tar -jxvf $LIBVA_VERSION.tar.bz2
       (cd $LIBVA_VERSION && ./configure --prefix=$HOME/prefix --disable-wayland --disable-dummy-driver && make install)
 
