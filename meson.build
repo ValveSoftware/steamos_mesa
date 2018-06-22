@@ -441,7 +441,7 @@ elif not (with_gallium_r600 or with_gallium_nouveau)
 endif
 dep_xvmc = null_dep
 with_gallium_xvmc = false
-if _xmvc != 'false'
+if _xvmc != 'false'
   dep_xvmc = dependency('xvmc', version : '>= 1.0.6', required : _xvmc == 'true')
   with_gallium_xvmc = dep_xvmc.found()
 endif
