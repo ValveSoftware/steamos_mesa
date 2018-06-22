@@ -755,7 +755,7 @@ nve4_set_tex_handles(struct nvc0_context *nvc0)
          dirty &= ~(1 << i);
 
          BEGIN_NVC0(push, NVC0_3D(CB_POS), 2);
-         PUSH_DATA (push, (8 + i) * 4);
+         PUSH_DATA (push, NVC0_CB_AUX_TEX_INFO(i));
          PUSH_DATA (push, nvc0->tex_handles[s][i]);
       } while (dirty);
 
