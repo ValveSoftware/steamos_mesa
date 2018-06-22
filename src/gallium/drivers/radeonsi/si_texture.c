@@ -1471,45 +1471,62 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 					NULL, &surface);
 }
 
-static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
-						    const struct pipe_resource *templ,
-						    struct winsys_handle *whandle,
-						    unsigned usage)
+static struct pipe_resource *si_texture_from_winsys_buffer(struct si_screen *sscreen,
+							   const struct pipe_resource *templ,
+							   struct pb_buffer *buf,
+							   unsigned stride,
+							   unsigned offset,
+							   unsigned usage,
+							   bool dedicated)
 {
-	struct si_screen *sscreen = (struct si_screen*)screen;
-	struct pb_buffer *buf = NULL;
-	unsigned stride = 0, offset = 0;
 	enum radeon_surf_mode array_mode;
 	struct radeon_surf surface = {};
-	int r;
 	struct radeon_bo_metadata metadata = {};
 	struct si_texture *tex;
 	bool is_scanout;
+	int r;
 
-	/* Support only 2D textures without mipmaps */
-	if ((templ->target != PIPE_TEXTURE_2D && templ->target != PIPE_TEXTURE_RECT) ||
-	      templ->depth0 != 1 || templ->last_level != 0)
-		return NULL;
-
-	buf = sscreen->ws->buffer_from_handle(sscreen->ws, whandle, &stride, &offset);
-	if (!buf)
-		return NULL;
-
-	sscreen->ws->buffer_get_metadata(buf, &metadata);
-	si_surface_import_metadata(sscreen, &surface, &metadata,
-				     &array_mode, &is_scanout);
+	if (dedicated) {
+		sscreen->ws->buffer_get_metadata(buf, &metadata);
+		si_surface_import_metadata(sscreen, &surface, &metadata,
+					   &array_mode, &is_scanout);
+	} else {
+		/**
+		 * The bo metadata is unset for un-dedicated images. So we fall
+		 * back to linear. See answer to question 5 of the
+		 * VK_KHX_external_memory spec for some details.
+		 *
+		 * It is possible that this case isn't going to work if the
+		 * surface pitch isn't correctly aligned by default.
+		 *
+		 * In order to support it correctly we require multi-image
+		 * metadata to be syncrhonized between radv and radeonsi. The
+		 * semantics of associating multiple image metadata to a memory
+		 * object on the vulkan export side are not concretely defined
+		 * either.
+		 *
+		 * All the use cases we are aware of at the moment for memory
+		 * objects use dedicated allocations. So lets keep the initial
+		 * implementation simple.
+		 *
+		 * A possible alternative is to attempt to reconstruct the
+		 * tiling information when the TexParameter TEXTURE_TILING_EXT
+		 * is set.
+		 */
+		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+		is_scanout = false;
+	}
 
 	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, true);
 
 	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
 			    array_mode, stride, offset, true, is_scanout,
 			    false, false);
-	if (r) {
+	if (r)
 		return NULL;
-	}
 
-	tex = si_texture_create_object(screen, templ, num_color_samples,
-					buf, &surface);
+	tex = si_texture_create_object(&sscreen->b, templ, num_color_samples,
+				       buf, &surface);
 	if (!tex)
 		return NULL;
 
@@ -1520,6 +1537,28 @@ static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
 
 	assert(tex->surface.tile_swizzle == 0);
 	return &tex->buffer.b.b;
+}
+
+static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
+						    const struct pipe_resource *templ,
+						    struct winsys_handle *whandle,
+						    unsigned usage)
+{
+	struct si_screen *sscreen = (struct si_screen*)screen;
+	struct pb_buffer *buf = NULL;
+	unsigned stride = 0, offset = 0;
+
+	/* Support only 2D textures without mipmaps */
+	if ((templ->target != PIPE_TEXTURE_2D && templ->target != PIPE_TEXTURE_RECT) ||
+	      templ->depth0 != 1 || templ->last_level != 0)
+		return NULL;
+
+	buf = sscreen->ws->buffer_from_handle(sscreen->ws, whandle, &stride, &offset);
+	if (!buf)
+		return NULL;
+
+	return si_texture_from_winsys_buffer(sscreen, templ, buf, stride,
+					     offset, usage, true);
 }
 
 bool si_init_flushed_depth_texture(struct pipe_context *ctx,
@@ -2392,71 +2431,22 @@ si_texture_from_memobj(struct pipe_screen *screen,
 		       struct pipe_memory_object *_memobj,
 		       uint64_t offset)
 {
-	int r;
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
-	struct si_texture *tex;
-	struct radeon_surf surface = {};
-	struct radeon_bo_metadata metadata = {};
-	enum radeon_surf_mode array_mode;
-	bool is_scanout;
-	struct pb_buffer *buf = NULL;
-
-	if (memobj->b.dedicated) {
-		sscreen->ws->buffer_get_metadata(memobj->buf, &metadata);
-		si_surface_import_metadata(sscreen, &surface, &metadata,
-				     &array_mode, &is_scanout);
-	} else {
-		/**
-		 * The bo metadata is unset for un-dedicated images. So we fall
-		 * back to linear. See answer to question 5 of the
-		 * VK_KHX_external_memory spec for some details.
-		 *
-		 * It is possible that this case isn't going to work if the
-		 * surface pitch isn't correctly aligned by default.
-		 *
-		 * In order to support it correctly we require multi-image
-		 * metadata to be syncrhonized between radv and radeonsi. The
-		 * semantics of associating multiple image metadata to a memory
-		 * object on the vulkan export side are not concretely defined
-		 * either.
-		 *
-		 * All the use cases we are aware of at the moment for memory
-		 * objects use dedicated allocations. So lets keep the initial
-		 * implementation simple.
-		 *
-		 * A possible alternative is to attempt to reconstruct the
-		 * tiling information when the TexParameter TEXTURE_TILING_EXT
-		 * is set.
-		 */
-		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
-		is_scanout = false;
-	}
-
-	unsigned num_color_samples = si_get_num_color_samples(sscreen, templ, true);
-
-	r = si_init_surface(sscreen, &surface, templ, num_color_samples,
-			    array_mode, memobj->stride, offset, true,
-			    is_scanout, false, false);
-	if (r)
-		return NULL;
-
-	tex = si_texture_create_object(screen, templ, num_color_samples,
-					memobj->buf, &surface);
+	struct pipe_resource *tex =
+		si_texture_from_winsys_buffer(sscreen, templ, memobj->buf,
+					      memobj->stride, offset,
+					      PIPE_HANDLE_USAGE_READ_WRITE,
+					      memobj->b.dedicated);
 	if (!tex)
 		return NULL;
 
-	/* si_texture_create_object doesn't increment refcount of
+	/* si_texture_from_winsys_buffer doesn't increment refcount of
 	 * memobj->buf, so increment it here.
 	 */
+	struct pb_buffer *buf = NULL;
 	pb_reference(&buf, memobj->buf);
-
-	tex->buffer.b.is_shared = true;
-	tex->buffer.external_usage = PIPE_HANDLE_USAGE_READ_WRITE;
-
-	si_apply_opaque_metadata(sscreen, tex, &metadata);
-
-	return &tex->buffer.b.b;
+	return tex;
 }
 
 static bool si_check_resource_capability(struct pipe_screen *screen,
