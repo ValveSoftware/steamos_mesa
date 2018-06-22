@@ -3012,7 +3012,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 		/* Compute mutable surface parameters. */
 		cb_color_base = tex->buffer.gpu_address >> 8;
 		cb_color_fmask = 0;
-		cb_color_cmask = tex->cmask.base_address_reg;
+		cb_color_cmask = tex->cmask_base_address_reg;
 		cb_dcc_base = 0;
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
 		cb_color_attrib = cb->cb_color_attrib;

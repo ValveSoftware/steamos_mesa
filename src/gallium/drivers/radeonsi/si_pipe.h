@@ -230,12 +230,6 @@ struct r600_transfer {
 	unsigned			offset;
 };
 
-struct r600_cmask_info {
-	uint64_t offset;
-	uint64_t base_address_reg;
-	uint32_t size;
-};
-
 struct si_texture {
 	struct r600_resource		buffer;
 
@@ -245,7 +239,9 @@ struct si_texture {
 
 	/* Colorbuffer compression and fast clear. */
 	uint64_t			fmask_offset;
-	struct r600_cmask_info		cmask;
+	uint64_t			cmask_offset;
+	uint64_t			cmask_base_address_reg;
+	uint32_t			cmask_size;
 	struct r600_resource		*cmask_buffer;
 	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */

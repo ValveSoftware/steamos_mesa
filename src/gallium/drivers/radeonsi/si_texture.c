@@ -82,7 +82,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 	 *   dst: If overwriting the whole texture, discard CMASK and use
 	 *        SDMA. Otherwise, use the 3D path.
 	 */
-	if (dst->cmask.size && dst->dirty_level_mask & (1 << dst_level)) {
+	if (dst->cmask_size && dst->dirty_level_mask & (1 << dst_level)) {
 		/* The CMASK clear is only enabled for the first level. */
 		assert(dst_level == 0);
 		if (!util_texrange_covers_whole_level(&dst->buffer.b.b, dst_level,
@@ -94,7 +94,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 	}
 
 	/* All requirements are met. Prepare textures for SDMA. */
-	if (src->cmask.size && src->dirty_level_mask & (1 << src_level))
+	if (src->cmask_size && src->dirty_level_mask & (1 << src_level))
 		sctx->b.flush_resource(&sctx->b, &src->buffer.b.b);
 
 	assert(!(src->dirty_level_mask & (1 << src_level)));
@@ -420,14 +420,14 @@ void si_eliminate_fast_color_clear(struct si_context *sctx,
 void si_texture_discard_cmask(struct si_screen *sscreen,
 			      struct si_texture *tex)
 {
-	if (!tex->cmask.size)
+	if (!tex->cmask_size)
 		return;
 
 	assert(tex->buffer.b.b.nr_samples <= 1);
 
 	/* Disable CMASK. */
-	memset(&tex->cmask, 0, sizeof(tex->cmask));
-	tex->cmask.base_address_reg = tex->buffer.gpu_address >> 8;
+	tex->cmask_size = 0;
+	tex->cmask_base_address_reg = tex->buffer.gpu_address >> 8;
 	tex->dirty_level_mask = 0;
 
 	tex->cb_color_info &= ~S_028C70_FAST_CLEAR(1);
@@ -571,7 +571,9 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 			     new_tex->flushed_depth_texture);
 
 	tex->fmask_offset = new_tex->fmask_offset;
-	tex->cmask = new_tex->cmask;
+	tex->cmask_offset = new_tex->cmask_offset;
+	tex->cmask_size = new_tex->cmask_size;
+	tex->cmask_base_address_reg = new_tex->cmask_base_address_reg;
 	r600_resource_reference(&tex->cmask_buffer, new_tex->cmask_buffer);
 	tex->dcc_offset = new_tex->dcc_offset;
 	tex->cb_color_info = new_tex->cb_color_info;
@@ -602,7 +604,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
 		assert(!tex->htile_offset);
-		assert(!tex->cmask.size);
+		assert(!tex->cmask_size);
 		assert(!tex->surface.fmask_size);
 		assert(!tex->dcc_offset);
 		assert(!tex->is_depth);
@@ -761,7 +763,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 		}
 
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
-		    (tex->cmask.size || tex->dcc_offset)) {
+		    (tex->cmask_size || tex->dcc_offset)) {
 			/* Eliminate fast clear (both CMASK and DCC) */
 			si_eliminate_fast_color_clear(sctx, tex);
 			/* eliminate_fast_color_clear flushes the context */
@@ -770,7 +772,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 			/* Disable CMASK if flush_resource isn't going
 			 * to be called.
 			 */
-			if (tex->cmask.size)
+			if (tex->cmask_size)
 				si_texture_discard_cmask(sscreen, tex);
 		}
 
@@ -984,10 +986,10 @@ void si_print_texture_info(struct si_screen *sscreen,
 				tex->surface.u.gfx9.fmask.epitch);
 		}
 
-		if (tex->cmask.size) {
+		if (tex->cmask_size) {
 			u_log_printf(log, "  CMask: offset=%"PRIu64", size=%u, "
 				"alignment=%u, rb_aligned=%u, pipe_aligned=%u\n",
-				tex->cmask.offset,
+				tex->cmask_offset,
 				tex->surface.cmask_size,
 				tex->surface.cmask_alignment,
 				tex->surface.u.gfx9.cmask.rb_aligned,
@@ -1038,10 +1040,10 @@ void si_print_texture_info(struct si_screen *sscreen,
 			tex->surface.u.legacy.fmask.slice_tile_max,
 			tex->surface.u.legacy.fmask.tiling_index);
 
-	if (tex->cmask.size)
+	if (tex->cmask_size)
 		u_log_printf(log, "  CMask: offset=%"PRIu64", size=%u, alignment=%u, "
 			"slice_tile_max=%u\n",
-			tex->cmask.offset, tex->cmask.size, tex->surface.cmask_alignment,
+			tex->cmask_offset, tex->cmask_size, tex->surface.cmask_alignment,
 			tex->surface.u.legacy.cmask_slice_tile_max);
 
 	if (tex->htile_offset)
@@ -1183,13 +1185,13 @@ si_texture_create_object(struct pipe_screen *screen,
 			tex->size = tex->fmask_offset + tex->surface.fmask_size;
 
 			/* Allocate CMASK. */
-			tex->cmask.size = tex->surface.cmask_size;
-			tex->cmask.offset = align64(tex->size, tex->surface.cmask_alignment);
-			tex->size = tex->cmask.offset + tex->cmask.size;
+			tex->cmask_size = tex->surface.cmask_size;
+			tex->cmask_offset = align64(tex->size, tex->surface.cmask_alignment);
+			tex->size = tex->cmask_offset + tex->cmask_size;
 			tex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 			tex->cmask_buffer = &tex->buffer;
 
-			if (!tex->surface.fmask_size || !tex->cmask.size) {
+			if (!tex->surface.fmask_size || !tex->cmask_size) {
 				FREE(tex);
 				return NULL;
 			}
@@ -1229,10 +1231,10 @@ si_texture_create_object(struct pipe_screen *screen,
 			resource->gart_usage = buf->size;
 	}
 
-	if (tex->cmask.size) {
+	if (tex->cmask_size) {
 		/* Initialize the cmask to 0xCC (= compressed state). */
 		si_screen_clear_buffer(sscreen, &tex->cmask_buffer->b.b,
-					 tex->cmask.offset, tex->cmask.size,
+					 tex->cmask_offset, tex->cmask_size,
 					 0xCCCCCCCC);
 	}
 	if (tex->htile_offset) {
@@ -1256,8 +1258,8 @@ si_texture_create_object(struct pipe_screen *screen,
 	}
 
 	/* Initialize the CMASK base register value. */
-	tex->cmask.base_address_reg =
-		(tex->buffer.gpu_address + tex->cmask.offset) >> 8;
+	tex->cmask_base_address_reg =
+		(tex->buffer.gpu_address + tex->cmask_offset) >> 8;
 
 	if (sscreen->debug_flags & DBG(VM)) {
 		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Texture %ix%ix%i, %i levels, %i samples, %s\n",
@@ -1622,8 +1624,8 @@ static void si_texture_invalidate_storage(struct si_context *sctx,
 	si_alloc_resource(sscreen, &tex->buffer);
 
 	/* Initialize the CMASK base address (needed even without CMASK). */
-	tex->cmask.base_address_reg =
-		(tex->buffer.gpu_address + tex->cmask.offset) >> 8;
+	tex->cmask_base_address_reg =
+		(tex->buffer.gpu_address + tex->cmask_offset) >> 8;
 
 	p_atomic_inc(&sscreen->dirty_tex_counter);
 

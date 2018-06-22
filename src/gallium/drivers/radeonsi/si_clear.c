@@ -40,7 +40,7 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 	if (tex->cmask_buffer)
                 return;
 
-	assert(tex->cmask.size == 0);
+	assert(tex->cmask_size == 0);
 
 	if (!tex->surface.cmask_size)
 		return;
@@ -54,8 +54,8 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 	if (tex->cmask_buffer == NULL)
 		return;
 
-	tex->cmask.size = tex->surface.cmask_size;
-	tex->cmask.base_address_reg = tex->cmask_buffer->gpu_address >> 8;
+	tex->cmask_size = tex->surface.cmask_size;
+	tex->cmask_base_address_reg = tex->cmask_buffer->gpu_address >> 8;
 	tex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
 	p_atomic_inc(&sscreen->compressed_colortex_counter);
@@ -490,13 +490,13 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 				continue;
 
 			/* DCC fast clear with MSAA should clear CMASK to 0xC. */
-			if (tex->buffer.b.b.nr_samples >= 2 && tex->cmask.size) {
+			if (tex->buffer.b.b.nr_samples >= 2 && tex->cmask_size) {
 				/* TODO: This doesn't work with MSAA. */
 				if (eliminate_needed)
 					continue;
 
 				si_clear_buffer(sctx, &tex->cmask_buffer->b.b,
-						tex->cmask.offset, tex->cmask.size,
+						tex->cmask_offset, tex->cmask_size,
 						0xCCCCCCCC, SI_COHERENCY_CB_META);
 				need_decompress_pass = true;
 			}
@@ -522,13 +522,13 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 			/* ensure CMASK is enabled */
 			si_alloc_separate_cmask(sctx->screen, tex);
-			if (tex->cmask.size == 0) {
+			if (tex->cmask_size == 0) {
 				continue;
 			}
 
 			/* Do the fast clear. */
 			si_clear_buffer(sctx, &tex->cmask_buffer->b.b,
-					tex->cmask.offset, tex->cmask.size, 0,
+					tex->cmask_offset, tex->cmask_size, 0,
 					SI_COHERENCY_CB_META);
 			need_decompress_pass = true;
 		}
