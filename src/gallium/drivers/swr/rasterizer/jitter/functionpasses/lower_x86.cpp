@@ -37,7 +37,7 @@
 namespace llvm
 {
     // foward declare the initializer
-    void initializeLowerX86Pass(PassRegistry &);
+    void initializeLowerX86Pass(PassRegistry&);
 } // namespace llvm
 
 namespace SwrJit
@@ -60,7 +60,7 @@ namespace SwrJit
 
     struct LowerX86;
 
-    typedef std::function<Instruction *(LowerX86 *, TargetArch, TargetWidth, CallInst *)> EmuFunc;
+    typedef std::function<Instruction*(LowerX86*, TargetArch, TargetWidth, CallInst*)> EmuFunc;
 
     struct X86Intrinsic
     {
@@ -83,22 +83,22 @@ namespace SwrJit
     };
 
     // Forward decls
-    Instruction *NO_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
-    Instruction *
-    VPERM_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
-    Instruction *
-    VGATHER_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
-    Instruction *
-    VROUND_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
-    Instruction *
-    VHSUB_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
-    Instruction *
-    VCONVERT_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
+    Instruction* NO_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction*
+    VPERM_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction*
+    VGATHER_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction*
+    VROUND_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction*
+    VHSUB_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
+    Instruction*
+    VCONVERT_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst);
 
-    Instruction *DOUBLE_EMU(LowerX86 *    pThis,
+    Instruction* DOUBLE_EMU(LowerX86*     pThis,
                             TargetArch    arch,
                             TargetWidth   width,
-                            CallInst *    pCallInst,
+                            CallInst*     pCallInst,
                             Intrinsic::ID intrin);
 
     static Intrinsic::ID DOUBLE = (Intrinsic::ID)-1;
@@ -188,7 +188,7 @@ namespace SwrJit
 
     struct LowerX86 : public FunctionPass
     {
-        LowerX86(Builder *b = nullptr) : FunctionPass(ID), B(b)
+        LowerX86(Builder* b = nullptr) : FunctionPass(ID), B(b)
         {
             initializeLowerX86Pass(*PassRegistry::getPassRegistry());
 
@@ -216,12 +216,12 @@ namespace SwrJit
         // across all intrinsics, and will have to be rethought. Probably need something
         // similar to llvm's getDeclaration() utility to map a set of inputs to a specific typed
         // intrinsic.
-        void GetRequestedWidthAndType(CallInst *      pCallInst,
+        void GetRequestedWidthAndType(CallInst*       pCallInst,
                                       const StringRef intrinName,
-                                      TargetWidth *   pWidth,
-                                      Type **         pTy)
+                                      TargetWidth*    pWidth,
+                                      Type**          pTy)
         {
-            Type *pVecTy = pCallInst->getType();
+            Type* pVecTy = pCallInst->getType();
 
             // Check for intrinsic specific types
             // VCVTPD2PS type comes from src, not dst
@@ -232,7 +232,7 @@ namespace SwrJit
 
             if (!pVecTy->isVectorTy())
             {
-                for (auto &op : pCallInst->arg_operands())
+                for (auto& op : pCallInst->arg_operands())
                 {
                     if (op.get()->getType()->isVectorTy())
                     {
@@ -260,7 +260,7 @@ namespace SwrJit
             *pTy = pVecTy->getScalarType();
         }
 
-        Value *GetZeroVec(TargetWidth width, Type *pTy)
+        Value* GetZeroVec(TargetWidth width, Type* pTy)
         {
             uint32_t numElem = 0;
             switch (width)
@@ -278,9 +278,9 @@ namespace SwrJit
             return ConstantVector::getNullValue(VectorType::get(pTy, numElem));
         }
 
-        Value *GetMask(TargetWidth width)
+        Value* GetMask(TargetWidth width)
         {
-            Value *mask;
+            Value* mask;
             switch (width)
             {
             case W256:
@@ -296,18 +296,18 @@ namespace SwrJit
         }
 
         // Convert <N x i1> mask to <N x i32> x86 mask
-        Value *VectorMask(Value *vi1Mask)
+        Value* VectorMask(Value* vi1Mask)
         {
             uint32_t numElem = vi1Mask->getType()->getVectorNumElements();
             return B->S_EXT(vi1Mask, VectorType::get(B->mInt32Ty, numElem));
         }
 
-        Instruction *ProcessIntrinsicAdvanced(CallInst *pCallInst)
+        Instruction* ProcessIntrinsicAdvanced(CallInst* pCallInst)
         {
-            Function *  pFunc     = pCallInst->getCalledFunction();
-            auto &      intrinsic = intrinsicMap2[mTarget][pFunc->getName()];
+            Function*   pFunc     = pCallInst->getCalledFunction();
+            auto&       intrinsic = intrinsicMap2[mTarget][pFunc->getName()];
             TargetWidth vecWidth;
-            Type *      pElemTy;
+            Type*       pElemTy;
             GetRequestedWidthAndType(pCallInst, pFunc->getName(), &vecWidth, &pElemTy);
 
             // Check if there is a native intrinsic for this instruction
@@ -323,9 +323,9 @@ namespace SwrJit
             }
             else if (id != Intrinsic::not_intrinsic)
             {
-                Function *pIntrin = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, id);
-                SmallVector<Value *, 8> args;
-                for (auto &arg : pCallInst->arg_operands())
+                Function* pIntrin = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, id);
+                SmallVector<Value*, 8> args;
+                for (auto& arg : pCallInst->arg_operands())
                 {
                     args.push_back(arg.get());
                 }
@@ -361,9 +361,9 @@ namespace SwrJit
             return nullptr;
         }
 
-        Instruction *ProcessIntrinsic(CallInst *pCallInst)
+        Instruction* ProcessIntrinsic(CallInst* pCallInst)
         {
-            Function *pFunc = pCallInst->getCalledFunction();
+            Function* pFunc = pCallInst->getCalledFunction();
 
             // Forward to the advanced support if found
             if (intrinsicMap2[mTarget].find(pFunc->getName()) != intrinsicMap2[mTarget].end())
@@ -376,11 +376,11 @@ namespace SwrJit
                        pFunc->getName());
 
             Intrinsic::ID x86Intrinsic = intrinsicMap[pFunc->getName()];
-            Function *    pX86IntrinFunc =
+            Function*     pX86IntrinFunc =
                 Intrinsic::getDeclaration(B->JM()->mpCurrentModule, x86Intrinsic);
 
-            SmallVector<Value *, 8> args;
-            for (auto &arg : pCallInst->arg_operands())
+            SmallVector<Value*, 8> args;
+            for (auto& arg : pCallInst->arg_operands())
             {
                 args.push_back(arg.get());
             }
@@ -390,23 +390,23 @@ namespace SwrJit
         //////////////////////////////////////////////////////////////////////////
         /// @brief LLVM funtion pass run method.
         /// @param f- The function we're working on with this pass.
-        virtual bool runOnFunction(Function &F)
+        virtual bool runOnFunction(Function& F)
         {
-            std::vector<Instruction *> toRemove;
+            std::vector<Instruction*> toRemove;
 
-            for (auto &BB : F.getBasicBlockList())
+            for (auto& BB : F.getBasicBlockList())
             {
-                for (auto &I : BB.getInstList())
+                for (auto& I : BB.getInstList())
                 {
-                    if (CallInst *pCallInst = dyn_cast<CallInst>(&I))
+                    if (CallInst* pCallInst = dyn_cast<CallInst>(&I))
                     {
-                        Function *pFunc = pCallInst->getCalledFunction();
+                        Function* pFunc = pCallInst->getCalledFunction();
                         if (pFunc)
                         {
                             if (pFunc->getName().startswith("meta.intrinsic"))
                             {
                                 B->IRB()->SetInsertPoint(&I);
-                                Instruction *pReplace = ProcessIntrinsic(pCallInst);
+                                Instruction* pReplace = ProcessIntrinsic(pCallInst);
                                 SWR_ASSERT(pReplace);
                                 toRemove.push_back(pCallInst);
                                 pCallInst->replaceAllUsesWith(pReplace);
@@ -416,7 +416,7 @@ namespace SwrJit
                 }
             }
 
-            for (auto *pInst : toRemove)
+            for (auto* pInst : toRemove)
             {
                 pInst->eraseFromParent();
             }
@@ -426,11 +426,11 @@ namespace SwrJit
             return true;
         }
 
-        virtual void getAnalysisUsage(AnalysisUsage &AU) const {}
+        virtual void getAnalysisUsage(AnalysisUsage& AU) const {}
 
-        JitManager *JM() { return B->JM(); }
+        JitManager* JM() { return B->JM(); }
 
-        Builder *B;
+        Builder* B;
 
         TargetArch mTarget;
 
@@ -439,24 +439,24 @@ namespace SwrJit
 
     char LowerX86::ID = 0; // LLVM uses address of ID as the actual ID.
 
-    FunctionPass *createLowerX86Pass(Builder *b) { return new LowerX86(b); }
+    FunctionPass* createLowerX86Pass(Builder* b) { return new LowerX86(b); }
 
-    Instruction *NO_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst)
+    Instruction* NO_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
         SWR_ASSERT(false, "Unimplemented intrinsic emulation.");
         return nullptr;
     }
 
-    Instruction *VPERM_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst)
+    Instruction* VPERM_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
         // Only need vperm emulation for AVX
         SWR_ASSERT(arch == AVX);
 
-        Builder *B         = pThis->B;
+        Builder* B         = pThis->B;
         auto     v32A      = pCallInst->getArgOperand(0);
         auto     vi32Index = pCallInst->getArgOperand(1);
 
-        Value *v32Result;
+        Value* v32Result;
         if (isa<Constant>(vi32Index))
         {
             // Can use llvm shuffle vector directly with constant shuffle indices
@@ -475,10 +475,10 @@ namespace SwrJit
         return cast<Instruction>(v32Result);
     }
 
-    Instruction *
-    VGATHER_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst)
+    Instruction*
+    VGATHER_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
-        Builder *B           = pThis->B;
+        Builder* B           = pThis->B;
         auto     vSrc        = pCallInst->getArgOperand(0);
         auto     pBase       = pCallInst->getArgOperand(1);
         auto     vi32Indices = pCallInst->getArgOperand(2);
@@ -489,7 +489,7 @@ namespace SwrJit
         uint32_t numElem  = vSrc->getType()->getVectorNumElements();
         auto     i32Scale = B->Z_EXT(i8Scale, B->mInt32Ty);
         auto     srcTy    = vSrc->getType()->getVectorElementType();
-        Value *  v32Gather;
+        Value*   v32Gather;
         if (arch == AVX)
         {
             // Full emulation for AVX
@@ -518,7 +518,7 @@ namespace SwrJit
         }
         else if (arch == AVX2 || (arch == AVX512 && width == W256))
         {
-            Function *pX86IntrinFunc;
+            Function* pX86IntrinFunc;
             if (srcTy == B->mFP32Ty)
             {
                 pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule,
@@ -555,14 +555,14 @@ namespace SwrJit
                         VectorType::get(B->mInt64Ty, v64Mask->getType()->getVectorNumElements()));
                     v64Mask = B->BITCAST(v64Mask, vSrc->getType());
 
-                    Value *src0 = B->VSHUFFLE(vSrc, vSrc, B->C({0, 1, 2, 3}));
-                    Value *src1 = B->VSHUFFLE(vSrc, vSrc, B->C({4, 5, 6, 7}));
+                    Value* src0 = B->VSHUFFLE(vSrc, vSrc, B->C({0, 1, 2, 3}));
+                    Value* src1 = B->VSHUFFLE(vSrc, vSrc, B->C({4, 5, 6, 7}));
 
-                    Value *indices0 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({0, 1, 2, 3}));
-                    Value *indices1 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({4, 5, 6, 7}));
+                    Value* indices0 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({0, 1, 2, 3}));
+                    Value* indices1 = B->VSHUFFLE(vi32Indices, vi32Indices, B->C({4, 5, 6, 7}));
 
-                    Value *mask0 = B->VSHUFFLE(v64Mask, v64Mask, B->C({0, 1, 2, 3}));
-                    Value *mask1 = B->VSHUFFLE(v64Mask, v64Mask, B->C({4, 5, 6, 7}));
+                    Value* mask0 = B->VSHUFFLE(v64Mask, v64Mask, B->C({0, 1, 2, 3}));
+                    Value* mask1 = B->VSHUFFLE(v64Mask, v64Mask, B->C({4, 5, 6, 7}));
 
                     src0 = B->BITCAST(
                         src0,
@@ -570,7 +570,7 @@ namespace SwrJit
                     mask0 = B->BITCAST(
                         mask0,
                         VectorType::get(B->mInt64Ty, mask0->getType()->getVectorNumElements()));
-                    Value *gather0 =
+                    Value* gather0 =
                         B->CALL(pX86IntrinFunc, {src0, pBase, indices0, mask0, i8Scale});
                     src1 = B->BITCAST(
                         src1,
@@ -578,7 +578,7 @@ namespace SwrJit
                     mask1 = B->BITCAST(
                         mask1,
                         VectorType::get(B->mInt64Ty, mask1->getType()->getVectorNumElements()));
-                    Value *gather1 =
+                    Value* gather1 =
                         B->CALL(pX86IntrinFunc, {src1, pBase, indices1, mask1, i8Scale});
 
                     v32Gather = B->VSHUFFLE(gather0, gather1, B->C({0, 1, 2, 3, 4, 5, 6, 7}));
@@ -589,18 +589,18 @@ namespace SwrJit
                     // Double pump 8-wide for 32bit elements
                     auto v32Mask = pThis->VectorMask(vi1Mask);
                     v32Mask      = B->BITCAST(v32Mask, vSrc->getType());
-                    Value *src0  = B->EXTRACT_16(vSrc, 0);
-                    Value *src1  = B->EXTRACT_16(vSrc, 1);
+                    Value* src0  = B->EXTRACT_16(vSrc, 0);
+                    Value* src1  = B->EXTRACT_16(vSrc, 1);
 
-                    Value *indices0 = B->EXTRACT_16(vi32Indices, 0);
-                    Value *indices1 = B->EXTRACT_16(vi32Indices, 1);
+                    Value* indices0 = B->EXTRACT_16(vi32Indices, 0);
+                    Value* indices1 = B->EXTRACT_16(vi32Indices, 1);
 
-                    Value *mask0 = B->EXTRACT_16(v32Mask, 0);
-                    Value *mask1 = B->EXTRACT_16(v32Mask, 1);
+                    Value* mask0 = B->EXTRACT_16(v32Mask, 0);
+                    Value* mask1 = B->EXTRACT_16(v32Mask, 1);
 
-                    Value *gather0 =
+                    Value* gather0 =
                         B->CALL(pX86IntrinFunc, {src0, pBase, indices0, mask0, i8Scale});
-                    Value *gather1 =
+                    Value* gather1 =
                         B->CALL(pX86IntrinFunc, {src1, pBase, indices1, mask1, i8Scale});
 
                     v32Gather = B->JOIN_16(gather0, gather1);
@@ -609,8 +609,8 @@ namespace SwrJit
         }
         else if (arch == AVX512)
         {
-            Value *   iMask;
-            Function *pX86IntrinFunc;
+            Value*    iMask;
+            Function* pX86IntrinFunc;
             if (srcTy == B->mFP32Ty)
             {
                 pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule,
@@ -643,8 +643,8 @@ namespace SwrJit
 
     // No support for vroundps in avx512 (it is available in kncni), so emulate with avx
     // instructions
-    Instruction *
-    VROUND_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst)
+    Instruction*
+    VROUND_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
         SWR_ASSERT(arch == AVX512);
 
@@ -676,22 +676,25 @@ namespace SwrJit
         return nullptr;
     }
 
-    Instruction *VCONVERT_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    Instruction*
+    VCONVERT_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
         SWR_ASSERT(arch == AVX512);
 
-        auto B = pThis->B;
+        auto B       = pThis->B;
         auto vf32Src = pCallInst->getOperand(0);
 
         if (width == W256)
         {
-            auto vf32SrcRound = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx_round_ps_256);
+            auto vf32SrcRound = Intrinsic::getDeclaration(B->JM()->mpCurrentModule,
+                                                          Intrinsic::x86_avx_round_ps_256);
             return cast<Instruction>(B->FP_TRUNC(vf32SrcRound, B->mFP32Ty));
         }
         else if (width == W512)
         {
             // 512 can use intrinsic
-            auto pfnFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_mask_cvtpd2ps_512);
+            auto pfnFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule,
+                                                     Intrinsic::x86_avx512_mask_cvtpd2ps_512);
             return cast<Instruction>(B->CALL(pfnFunc, vf32Src));
         }
         else
@@ -703,7 +706,7 @@ namespace SwrJit
     }
 
     // No support for hsub in AVX512
-    Instruction *VHSUB_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst)
+    Instruction* VHSUB_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
     {
         SWR_ASSERT(arch == AVX512);
 
@@ -734,27 +737,27 @@ namespace SwrJit
 
     // Double pump input using Intrin template arg. This blindly extracts lower and upper 256 from
     // each vector argument and calls the 256 wide intrinsic, then merges the results to 512 wide
-    Instruction *DOUBLE_EMU(LowerX86 *    pThis,
+    Instruction* DOUBLE_EMU(LowerX86*     pThis,
                             TargetArch    arch,
                             TargetWidth   width,
-                            CallInst *    pCallInst,
+                            CallInst*     pCallInst,
                             Intrinsic::ID intrin)
     {
         auto B = pThis->B;
         SWR_ASSERT(width == W512);
-        Value *   result[2];
-        Function *pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, intrin);
+        Value*    result[2];
+        Function* pX86IntrinFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, intrin);
         for (uint32_t i = 0; i < 2; ++i)
         {
-            SmallVector<Value *, 8> args;
-            for (auto &arg : pCallInst->arg_operands())
+            SmallVector<Value*, 8> args;
+            for (auto& arg : pCallInst->arg_operands())
             {
                 auto argType = arg.get()->getType();
                 if (argType->isVectorTy())
                 {
                     uint32_t vecWidth  = argType->getVectorNumElements();
-                    Value *  lanes     = B->CInc<int>(i * vecWidth / 2, vecWidth / 2);
-                    Value *  argToPush = B->VSHUFFLE(
+                    Value*   lanes     = B->CInc<int>(i * vecWidth / 2, vecWidth / 2);
+                    Value*   argToPush = B->VSHUFFLE(
                         arg.get(), B->VUNDEF(argType->getVectorElementType(), vecWidth), lanes);
                     args.push_back(argToPush);
                 }
@@ -776,7 +779,7 @@ namespace SwrJit
         {
             vecWidth = 2;
         }
-        Value *lanes = B->CInc<int>(0, vecWidth);
+        Value* lanes = B->CInc<int>(0, vecWidth);
         return cast<Instruction>(B->VSHUFFLE(result[0], result[1], lanes));
     }
 
