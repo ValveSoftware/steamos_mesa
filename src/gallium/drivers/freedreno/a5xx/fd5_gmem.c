@@ -642,7 +642,6 @@ emit_gmem2mem_surf(struct fd_batch *batch, uint32_t base,
 	OUT_PKT4(ring, REG_A5XX_RB_BLIT_CNTL, 1);
 	OUT_RING(ring, A5XX_RB_BLIT_CNTL_BUF(buf));
 
-	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 //	bool msaa_resolve = pfb->samples > 1;
 	bool msaa_resolve = false;
 	OUT_PKT4(ring, REG_A5XX_RB_CLEAR_CNTL, 1);
