@@ -89,6 +89,120 @@ public:
    acp_ref rhs_node;
 };
 
+class copy_propagation_state {
+public:
+   DECLARE_RZALLOC_CXX_OPERATORS(copy_propagation_state);
+
+   copy_propagation_state(void *mem_ctx, void *lin_ctx)
+   {
+      /* Use 'this' as context for the tables, no explicit destruction
+       * needed later.
+       */
+      lhs_ht = _mesa_hash_table_create(this, _mesa_hash_pointer,
+                                       _mesa_key_pointer_equal);
+      rhs_ht = _mesa_hash_table_create(this, _mesa_hash_pointer,
+                                       _mesa_key_pointer_equal);
+      this->mem_ctx = mem_ctx;
+      this->lin_ctx = lin_ctx;
+   }
+
+   copy_propagation_state* clone()
+   {
+      return new (ralloc_parent(this)) copy_propagation_state(this);
+   }
+
+   void erase_all()
+   {
+      _mesa_hash_table_clear(lhs_ht, NULL);
+      _mesa_hash_table_clear(rhs_ht, NULL);
+   }
+
+   void erase(ir_variable *var, unsigned write_mask)
+   {
+      /* removal of lhs entries */
+      hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, var);
+      if (ht_entry) {
+         exec_list *lhs_list = (exec_list *) ht_entry->data;
+         foreach_in_list_safe(acp_entry, entry, lhs_list) {
+            entry->write_mask = entry->write_mask & ~write_mask;
+            if (entry->write_mask == 0) {
+               entry->remove();
+               continue;
+            }
+         }
+      }
+
+      /* removal of rhs entries */
+      ht_entry = _mesa_hash_table_search(rhs_ht, var);
+      if (ht_entry) {
+         exec_list *rhs_list = (exec_list *) ht_entry->data;
+         acp_ref *ref;
+
+         while ((ref = (acp_ref *) rhs_list->pop_head()) != NULL) {
+            acp_entry *entry = ref->entry;
+
+            /* If entry is still in a list (not already removed by lhs entry
+             * removal above), remove it.
+             */
+            if (entry->prev || entry->next)
+               entry->remove();
+         }
+      }
+   }
+
+   exec_list *read(ir_variable *var)
+   {
+      hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, var);
+      if (ht_entry)
+         return (exec_list *) ht_entry->data;
+      return NULL;
+   }
+
+   void write(ir_variable *lhs, ir_variable *rhs, unsigned write_mask, int swizzle[4])
+   {
+      acp_entry *entry = new(this->lin_ctx) acp_entry(lhs, rhs, write_mask, swizzle);
+
+      /* lhs hash, hash of lhs -> acp_entry lists */
+      hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, lhs);
+      if (ht_entry) {
+         exec_list *lhs_list = (exec_list *) ht_entry->data;
+         lhs_list->push_tail(entry);
+      } else {
+         exec_list *lhs_list = new(mem_ctx) exec_list;
+         lhs_list->push_tail(entry);
+         _mesa_hash_table_insert(lhs_ht, lhs, lhs_list);
+      }
+
+      /* rhs hash, hash of rhs -> acp_entry pointers to lhs lists */
+      ht_entry = _mesa_hash_table_search(rhs_ht, rhs);
+      if (ht_entry) {
+         exec_list *rhs_list = (exec_list *) ht_entry->data;
+         rhs_list->push_tail(&entry->rhs_node);
+      } else {
+         exec_list *rhs_list = new(mem_ctx) exec_list;
+         rhs_list->push_tail(&entry->rhs_node);
+         _mesa_hash_table_insert(rhs_ht, rhs, rhs_list);
+      }
+   }
+
+private:
+   explicit copy_propagation_state(copy_propagation_state *original)
+   {
+      lhs_ht = _mesa_hash_table_clone(original->lhs_ht, this);
+      rhs_ht = _mesa_hash_table_clone(original->rhs_ht, this);
+      lin_ctx = original->lin_ctx;
+      mem_ctx = original->mem_ctx;
+   }
+
+   /** Hash of acp_entry: The available copies to propagate */
+   hash_table *lhs_ht;
+
+   /** Reverse index of the lhs_ht, to optimize finding uses of a certain variable. */
+   hash_table *rhs_ht;
+
+   void *mem_ctx;
+   void *lin_ctx;
+};
 
 class kill_entry : public exec_node
 {
@@ -116,32 +230,11 @@ public:
       this->lin_ctx = linear_alloc_parent(this->mem_ctx, 0);
       this->shader_mem_ctx = NULL;
       this->kills = new(mem_ctx) exec_list;
-
-      create_acp();
+      this->state = new(mem_ctx) copy_propagation_state(mem_ctx, lin_ctx);
    }
    ~ir_copy_propagation_elements_visitor()
    {
       ralloc_free(mem_ctx);
-   }
-
-   void clone_acp(hash_table *lhs, hash_table *rhs)
-   {
-      lhs_ht = _mesa_hash_table_clone(lhs, mem_ctx);
-      rhs_ht = _mesa_hash_table_clone(rhs, mem_ctx);
-   }
-
-   void create_acp()
-   {
-      lhs_ht = _mesa_hash_table_create(mem_ctx, _mesa_hash_pointer,
-                                       _mesa_key_pointer_equal);
-      rhs_ht = _mesa_hash_table_create(mem_ctx, _mesa_hash_pointer,
-                                       _mesa_key_pointer_equal);
-   }
-
-   void destroy_acp()
-   {
-      _mesa_hash_table_destroy(lhs_ht, NULL);
-      _mesa_hash_table_destroy(rhs_ht, NULL);
    }
 
    void handle_loop(ir_loop *, bool keep_acp);
@@ -158,9 +251,7 @@ public:
    void kill(kill_entry *k);
    void handle_if_block(exec_list *instructions);
 
-   /** Hash of acp_entry: The available copies to propagate */
-   hash_table *lhs_ht;
-   hash_table *rhs_ht;
+   copy_propagation_state *state;
 
    /**
     * List of kill_entry: The variables whose values were killed in this
@@ -191,25 +282,20 @@ ir_copy_propagation_elements_visitor::visit_enter(ir_function_signature *ir)
    exec_list *orig_kills = this->kills;
    bool orig_killed_all = this->killed_all;
 
-   hash_table *orig_lhs_ht = lhs_ht;
-   hash_table *orig_rhs_ht = rhs_ht;
-
    this->kills = new(mem_ctx) exec_list;
    this->killed_all = false;
 
-   create_acp();
+   copy_propagation_state *orig_state = state;
+   this->state = new(mem_ctx) copy_propagation_state(mem_ctx, lin_ctx);
 
    visit_list_elements(this, &ir->body);
 
+   delete this->state;
+   this->state = orig_state;
+
    ralloc_free(this->kills);
-
-   destroy_acp();
-
    this->kills = orig_kills;
    this->killed_all = orig_killed_all;
-
-   lhs_ht = orig_lhs_ht;
-   rhs_ht = orig_rhs_ht;
 
    return visit_continue_with_parent;
 }
@@ -296,9 +382,8 @@ ir_copy_propagation_elements_visitor::handle_rvalue(ir_rvalue **ir)
    /* Try to find ACP entries covering swizzle_chan[], hoping they're
     * the same source variable.
     */
-   hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, var);
-   if (ht_entry) {
-      exec_list *ht_list = (exec_list *) ht_entry->data;
+   exec_list *ht_list = state->read(var);
+   if (ht_list) {
       foreach_in_list(acp_entry, entry, ht_list) {
          for (int c = 0; c < chans; c++) {
             if (entry->write_mask & (1 << swizzle_chan[c])) {
@@ -368,9 +453,7 @@ ir_copy_propagation_elements_visitor::visit_enter(ir_call *ir)
    /* Since we're unlinked, we don't (necessarily) know the side effects of
     * this call.  So kill all copies.
     */
-   _mesa_hash_table_clear(lhs_ht, NULL);
-   _mesa_hash_table_clear(rhs_ht, NULL);
-
+   this->state->erase_all();
    this->killed_all = true;
 
    return visit_continue_with_parent;
@@ -382,30 +465,24 @@ ir_copy_propagation_elements_visitor::handle_if_block(exec_list *instructions)
    exec_list *orig_kills = this->kills;
    bool orig_killed_all = this->killed_all;
 
-   hash_table *orig_lhs_ht = lhs_ht;
-   hash_table *orig_rhs_ht = rhs_ht;
-
    this->kills = new(mem_ctx) exec_list;
    this->killed_all = false;
 
    /* Populate the initial acp with a copy of the original */
-   clone_acp(orig_lhs_ht, orig_rhs_ht);
+   copy_propagation_state *orig_state = state;
+   this->state = orig_state->clone();
 
    visit_list_elements(this, instructions);
 
-   if (this->killed_all) {
-      _mesa_hash_table_clear(orig_lhs_ht, NULL);
-      _mesa_hash_table_clear(orig_rhs_ht, NULL);
-   }
+   delete this->state;
+   this->state = orig_state;
+
+   if (this->killed_all)
+      this->state->erase_all();
 
    exec_list *new_kills = this->kills;
    this->kills = orig_kills;
    this->killed_all = this->killed_all || orig_killed_all;
-
-   destroy_acp();
-
-   lhs_ht = orig_lhs_ht;
-   rhs_ht = orig_rhs_ht;
 
    /* Move the new kills into the parent block's list, removing them
     * from the parent's ACP list in the process.
@@ -435,38 +512,29 @@ ir_copy_propagation_elements_visitor::handle_loop(ir_loop *ir, bool keep_acp)
    exec_list *orig_kills = this->kills;
    bool orig_killed_all = this->killed_all;
 
-   hash_table *orig_lhs_ht = lhs_ht;
-   hash_table *orig_rhs_ht = rhs_ht;
-
-   /* FINISHME: For now, the initial acp for loops is totally empty.
-    * We could go through once, then go through again with the acp
-    * cloned minus the killed entries after the first run through.
-    */
    this->kills = new(mem_ctx) exec_list;
    this->killed_all = false;
 
+   copy_propagation_state *orig_state = state;
+
    if (keep_acp) {
       /* Populate the initial acp with a copy of the original */
-      clone_acp(orig_lhs_ht, orig_rhs_ht);
+      this->state = orig_state->clone();
    } else {
-      create_acp();
+      this->state = new(mem_ctx) copy_propagation_state(mem_ctx, lin_ctx);
    }
 
    visit_list_elements(this, &ir->body_instructions);
 
-   if (this->killed_all) {
-      _mesa_hash_table_clear(orig_lhs_ht, NULL);
-      _mesa_hash_table_clear(orig_rhs_ht, NULL);
-   }
+   delete this->state;
+   this->state = orig_state;
+
+   if (this->killed_all)
+      this->state->erase_all();
 
    exec_list *new_kills = this->kills;
    this->kills = orig_kills;
    this->killed_all = this->killed_all || orig_killed_all;
-
-   destroy_acp();
-
-   lhs_ht = orig_lhs_ht;
-   rhs_ht = orig_rhs_ht;
 
    foreach_in_list_safe(kill_entry, k, new_kills) {
       kill(k);
@@ -489,35 +557,7 @@ ir_copy_propagation_elements_visitor::visit_enter(ir_loop *ir)
 void
 ir_copy_propagation_elements_visitor::kill(kill_entry *k)
 {
-   /* removal of lhs entries */
-   hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, k->var);
-   if (ht_entry) {
-      exec_list *lhs_list = (exec_list *) ht_entry->data;
-      foreach_in_list_safe(acp_entry, entry, lhs_list) {
-         entry->write_mask = entry->write_mask & ~k->write_mask;
-         if (entry->write_mask == 0) {
-            entry->remove();
-            continue;
-         }
-      }
-   }
-
-   /* removal of rhs entries */
-   ht_entry = _mesa_hash_table_search(rhs_ht, k->var);
-   if (ht_entry) {
-      exec_list *rhs_list = (exec_list *) ht_entry->data;
-      acp_ref *ref;
-
-      while ((ref = (acp_ref *) rhs_list->pop_head()) != NULL) {
-         acp_entry *entry = ref->entry;
-
-         /* If entry is still in a list (not already removed by lhs entry
-          * removal above), remove it.
-          */
-         if (entry->prev || entry->next)
-            entry->remove();
-      }
-   }
+   state->erase(k->var, k->write_mask);
 
    /* If we were on a list, remove ourselves before inserting */
    if (k->next)
@@ -533,7 +573,6 @@ ir_copy_propagation_elements_visitor::kill(kill_entry *k)
 void
 ir_copy_propagation_elements_visitor::add_copy(ir_assignment *ir)
 {
-   acp_entry *entry;
    int orig_swizzle[4] = {0, 1, 2, 3};
    int swizzle[4];
 
@@ -594,30 +633,7 @@ ir_copy_propagation_elements_visitor::add_copy(ir_assignment *ir)
    if (lhs->var->data.precise != rhs->var->data.precise)
       return;
 
-   entry = new(this->lin_ctx) acp_entry(lhs->var, rhs->var, write_mask,
-					swizzle);
-
-   /* lhs hash, hash of lhs -> acp_entry lists */
-   hash_entry *ht_entry = _mesa_hash_table_search(lhs_ht, lhs->var);
-   if (ht_entry) {
-      exec_list *lhs_list = (exec_list *) ht_entry->data;
-      lhs_list->push_tail(entry);
-   } else {
-      exec_list *lhs_list = new(mem_ctx) exec_list;
-      lhs_list->push_tail(entry);
-      _mesa_hash_table_insert(lhs_ht, lhs->var, lhs_list);
-   }
-
-   /* rhs hash, hash of rhs -> acp_entry pointers to lhs lists */
-   ht_entry = _mesa_hash_table_search(rhs_ht, rhs->var);
-   if (ht_entry) {
-      exec_list *rhs_list = (exec_list *) ht_entry->data;
-      rhs_list->push_tail(&entry->rhs_node);
-   } else {
-      exec_list *rhs_list = new(mem_ctx) exec_list;
-      rhs_list->push_tail(&entry->rhs_node);
-      _mesa_hash_table_insert(rhs_ht, rhs->var, rhs_list);
-   }
+   state->write(lhs->var, rhs->var, write_mask, swizzle);
 }
 
 bool
