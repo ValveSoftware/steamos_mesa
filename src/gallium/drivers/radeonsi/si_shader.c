@@ -3449,7 +3449,7 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 				  8 + SI_SGPR_VS_STATE_BITS);
 
 #if !HAVE_32BIT_POINTERS
-	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 1,
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 4,
 				  8 + GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES);
 #endif
 
@@ -3489,7 +3489,7 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 				  8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
 
 #if !HAVE_32BIT_POINTERS
-	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 1,
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 4,
 				  8 + GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES);
 #endif
 
@@ -4635,10 +4635,10 @@ static void declare_global_desc_pointers(struct si_shader_context *ctx,
 static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 					    struct si_function_info *fninfo)
 {
+	ctx->param_vs_state_bits = add_arg(fninfo, ARG_SGPR, ctx->i32);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.base_vertex);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.start_instance);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.draw_id);
-	ctx->param_vs_state_bits = add_arg(fninfo, ARG_SGPR, ctx->i32);
 }
 
 static void declare_vs_input_vgprs(struct si_shader_context *ctx,
@@ -4866,13 +4866,12 @@ static void create_function(struct si_shader_context *ctx)
 		if (ctx->type == PIPE_SHADER_VERTEX) {
 			declare_vs_specific_input_sgprs(ctx, &fninfo);
 		} else {
+			ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			ctx->param_tes_offchip_addr = add_arg(&fninfo, ARG_SGPR, ctx->i32);
-			if (!HAVE_32BIT_POINTERS) {
-				/* Declare as many input SGPRs as the VS has. */
+			/* Declare as many input SGPRs as the VS has. */
+			if (!HAVE_32BIT_POINTERS)
 				add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-				ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-			}
 		}
 
 		if (!HAVE_32BIT_POINTERS) {
@@ -4918,6 +4917,7 @@ static void create_function(struct si_shader_context *ctx)
 	case PIPE_SHADER_TESS_EVAL:
 		declare_global_desc_pointers(ctx, &fninfo);
 		declare_per_stage_desc_pointers(ctx, &fninfo, true);
+		ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tes_offchip_addr = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 
