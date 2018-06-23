@@ -3676,37 +3676,35 @@ static void si_llvm_emit_vs_epilogue(struct ac_shader_abi *abi,
 	 * an IF statement is added that clamps all colors if the constant
 	 * is true.
 	 */
-	if (ctx->type == PIPE_SHADER_VERTEX) {
-		struct lp_build_if_state if_ctx;
-		LLVMValueRef cond = NULL;
-		LLVMValueRef addr, val;
+	struct lp_build_if_state if_ctx;
+	LLVMValueRef cond = NULL;
+	LLVMValueRef addr, val;
 
-		for (i = 0; i < info->num_outputs; i++) {
-			if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR &&
-			    info->output_semantic_name[i] != TGSI_SEMANTIC_BCOLOR)
-				continue;
+	for (i = 0; i < info->num_outputs; i++) {
+		if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR &&
+		    info->output_semantic_name[i] != TGSI_SEMANTIC_BCOLOR)
+			continue;
 
-			/* We've found a color. */
-			if (!cond) {
-				/* The state is in the first bit of the user SGPR. */
-				cond = LLVMGetParam(ctx->main_fn,
-						    ctx->param_vs_state_bits);
-				cond = LLVMBuildTrunc(ctx->ac.builder, cond,
-						      ctx->i1, "");
-				lp_build_if(&if_ctx, &ctx->gallivm, cond);
-			}
-
-			for (j = 0; j < 4; j++) {
-				addr = addrs[4 * i + j];
-				val = LLVMBuildLoad(ctx->ac.builder, addr, "");
-				val = ac_build_clamp(&ctx->ac, val);
-				LLVMBuildStore(ctx->ac.builder, val, addr);
-			}
+		/* We've found a color. */
+		if (!cond) {
+			/* The state is in the first bit of the user SGPR. */
+			cond = LLVMGetParam(ctx->main_fn,
+					    ctx->param_vs_state_bits);
+			cond = LLVMBuildTrunc(ctx->ac.builder, cond,
+					      ctx->i1, "");
+			lp_build_if(&if_ctx, &ctx->gallivm, cond);
 		}
 
-		if (cond)
-			lp_build_endif(&if_ctx);
+		for (j = 0; j < 4; j++) {
+			addr = addrs[4 * i + j];
+			val = LLVMBuildLoad(ctx->ac.builder, addr, "");
+			val = ac_build_clamp(&ctx->ac, val);
+			LLVMBuildStore(ctx->ac.builder, val, addr);
+		}
 	}
+
+	if (cond)
+		lp_build_endif(&if_ctx);
 
 	for (i = 0; i < info->num_outputs; i++) {
 		outputs[i].semantic_name = info->output_semantic_name[i];
@@ -4745,7 +4743,7 @@ static void create_function(struct si_shader_context *ctx)
 			/* no extra parameters */
 		} else {
 			if (shader->is_gs_copy_shader) {
-				fninfo.num_params = ctx->param_rw_buffers + 1;
+				fninfo.num_params = ctx->param_vs_state_bits + 1;
 				fninfo.num_sgpr_params = fninfo.num_params;
 			}
 
@@ -5826,8 +5824,51 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 					       stream);
 		}
 
-		if (stream == 0)
+		if (stream == 0) {
+			/* Vertex color clamping.
+			 *
+			 * This uses a state constant loaded in a user data SGPR and
+			 * an IF statement is added that clamps all colors if the constant
+			 * is true.
+			 */
+			struct lp_build_if_state if_ctx;
+			LLVMValueRef v[2], cond = NULL;
+			LLVMBasicBlockRef blocks[2];
+
+			for (unsigned i = 0; i < gsinfo->num_outputs; i++) {
+				if (gsinfo->output_semantic_name[i] != TGSI_SEMANTIC_COLOR &&
+				    gsinfo->output_semantic_name[i] != TGSI_SEMANTIC_BCOLOR)
+					continue;
+
+				/* We've found a color. */
+				if (!cond) {
+					/* The state is in the first bit of the user SGPR. */
+					cond = LLVMGetParam(ctx.main_fn,
+							    ctx.param_vs_state_bits);
+					cond = LLVMBuildTrunc(ctx.ac.builder, cond,
+							      ctx.i1, "");
+					lp_build_if(&if_ctx, &ctx.gallivm, cond);
+					/* Remember blocks for Phi. */
+					blocks[0] = if_ctx.true_block;
+					blocks[1] = if_ctx.entry_block;
+				}
+
+				for (unsigned j = 0; j < 4; j++) {
+					/* Insert clamp into the true block. */
+					v[0] = ac_build_clamp(&ctx.ac, outputs[i].values[j]);
+					v[1] = outputs[i].values[j];
+
+					/* Insert Phi into the endif block. */
+					LLVMPositionBuilderAtEnd(ctx.ac.builder, if_ctx.merge_block);
+					outputs[i].values[j] = ac_build_phi(&ctx.ac, ctx.f32, 2, v, blocks);
+					LLVMPositionBuilderAtEnd(ctx.ac.builder, if_ctx.true_block);
+				}
+			}
+			if (cond)
+				lp_build_endif(&if_ctx);
+
 			si_llvm_export_vs(&ctx, outputs, gsinfo->num_outputs);
+		}
 
 		LLVMBuildBr(builder, end_bb);
 	}
