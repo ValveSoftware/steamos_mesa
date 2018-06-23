@@ -39,6 +39,21 @@
 #include "main/macros.h"
 #include "main/transformfeedback.h"
 
+typedef struct {
+   GLuint count;
+   GLuint primCount;
+   GLuint first;
+   GLuint baseInstance;
+} DrawArraysIndirectCommand;
+
+typedef struct {
+   GLuint count;
+   GLuint primCount;
+   GLuint firstIndex;
+   GLint  baseVertex;
+   GLuint baseInstance;
+} DrawElementsIndirectCommand;
+
 
 /**
  * Check that element 'j' of the array has reasonable data.
@@ -1616,6 +1631,23 @@ vbo_exec_DrawArraysIndirect(GLenum mode, const GLvoid *indirect)
       _mesa_debug(ctx, "glDrawArraysIndirect(%s, %p)\n",
                   _mesa_enum_to_string(mode), indirect);
 
+   /* From the ARB_draw_indirect spec:
+    *
+    *    "Initially zero is bound to DRAW_INDIRECT_BUFFER. In the
+    *    compatibility profile, this indicates that DrawArraysIndirect and
+    *    DrawElementsIndirect are to source their arguments directly from the
+    *    pointer passed as their <indirect> parameters."
+    */
+   if (ctx->API == API_OPENGL_COMPAT &&
+       !_mesa_is_bufferobj(ctx->DrawIndirectBuffer)) {
+      DrawArraysIndirectCommand *cmd = (DrawArraysIndirectCommand *) indirect;
+
+      vbo_exec_DrawArraysInstancedBaseInstance(mode, cmd->first, cmd->count,
+                                               cmd->primCount,
+                                               cmd->baseInstance);
+      return;
+   }
+
    FLUSH_FOR_DRAW(ctx);
 
    if (_mesa_is_no_error_enabled(ctx)) {
@@ -1646,6 +1678,43 @@ vbo_exec_DrawElementsIndirect(GLenum mode, GLenum type, const GLvoid *indirect)
       _mesa_debug(ctx, "glDrawElementsIndirect(%s, %s, %p)\n",
                   _mesa_enum_to_string(mode),
                   _mesa_enum_to_string(type), indirect);
+
+   /* From the ARB_draw_indirect spec:
+    *
+    *    "Initially zero is bound to DRAW_INDIRECT_BUFFER. In the
+    *    compatibility profile, this indicates that DrawArraysIndirect and
+    *    DrawElementsIndirect are to source their arguments directly from the
+    *    pointer passed as their <indirect> parameters."
+    */
+   if (ctx->API == API_OPENGL_COMPAT &&
+       !_mesa_is_bufferobj(ctx->DrawIndirectBuffer)) {
+      /*
+       * Unlike regular DrawElementsInstancedBaseVertex commands, the indices
+       * may not come from a client array and must come from an index buffer.
+       * If no element array buffer is bound, an INVALID_OPERATION error is
+       * generated.
+       */
+      if (!_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glDrawElementsIndirect(no buffer bound "
+                     "to GL_ELEMENT_ARRAY_BUFFER)");
+      } else {
+         DrawElementsIndirectCommand *cmd =
+            (DrawElementsIndirectCommand *) indirect;
+
+         /* Convert offset to pointer */
+         void *offset = (void *)
+            ((cmd->firstIndex * _mesa_sizeof_type(type)) & 0xffffffffUL);
+
+         vbo_exec_DrawElementsInstancedBaseVertexBaseInstance(mode, cmd->count,
+                                                              type, offset,
+                                                              cmd->primCount,
+                                                              cmd->baseVertex,
+                                                              cmd->baseInstance);
+      }
+
+      return;
+   }
 
    FLUSH_FOR_DRAW(ctx);
 
@@ -1933,7 +2002,7 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
                                                       vbo_exec_DrawElementsInstancedBaseVertexBaseInstance);
    }
 
-   if (ctx->API == API_OPENGL_CORE || _mesa_is_gles31(ctx)) {
+   if (_mesa_is_desktop_gl(ctx) || _mesa_is_gles31(ctx)) {
       SET_DrawArraysIndirect(exec, vbo_exec_DrawArraysIndirect);
       SET_DrawElementsIndirect(exec, vbo_exec_DrawElementsIndirect);
    }

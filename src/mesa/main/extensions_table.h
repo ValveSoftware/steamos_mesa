@@ -58,7 +58,7 @@ EXT(ARB_direct_state_access                 , dummy_true                        
 EXT(ARB_draw_buffers                        , dummy_true                             , GLL, GLC,  x ,  x , 2002)
 EXT(ARB_draw_buffers_blend                  , ARB_draw_buffers_blend                 , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_draw_elements_base_vertex           , ARB_draw_elements_base_vertex          , GLL, GLC,  x ,  x , 2009)
-EXT(ARB_draw_indirect                       , ARB_draw_indirect                      ,  x , GLC,  x ,  x , 2010)
+EXT(ARB_draw_indirect                       , ARB_draw_indirect                      , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_draw_instanced                      , ARB_draw_instanced                     , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_enhanced_layouts                    , ARB_enhanced_layouts                   , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_explicit_attrib_location            , ARB_explicit_attrib_location           , GLL, GLC,  x ,  x , 2009)
