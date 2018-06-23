@@ -1913,6 +1913,47 @@ save_DrawElementsInstancedBaseVertexBaseInstance(UNUSED GLenum mode,
                "glDrawElementsInstancedBaseVertexBaseInstance() during display list compile");
 }
 
+static void APIENTRY
+save_DrawArraysIndirect(UNUSED GLenum mode,
+                        UNUSED const void *indirect)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glDrawArraysIndirect() during display list compile");
+}
+
+static void APIENTRY
+save_DrawElementsIndirect(UNUSED GLenum mode,
+                          UNUSED GLenum type,
+                          UNUSED const void *indirect)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glDrawElementsIndirect() during display list compile");
+}
+
+static void APIENTRY
+save_MultiDrawArraysIndirect(UNUSED GLenum mode,
+                             UNUSED const void *indirect,
+                             UNUSED GLsizei primcount,
+                             UNUSED GLsizei stride)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glMultiDrawArraysIndirect() during display list compile");
+}
+
+static void APIENTRY
+save_MultiDrawElementsIndirect(UNUSED GLenum mode,
+                               UNUSED GLenum type,
+                               UNUSED const void *indirect,
+                               UNUSED GLsizei primcount,
+                               UNUSED GLsizei stride)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glMultiDrawElementsIndirect() during display list compile");
+}
 
 /**
  * While building a display list we cache some OpenGL state.
@@ -11409,6 +11450,12 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
    SET_DrawArraysInstancedBaseInstance(table, save_DrawArraysInstancedBaseInstance);
    SET_DrawElementsInstancedBaseInstance(table, save_DrawElementsInstancedBaseInstance);
    SET_DrawElementsInstancedBaseVertexBaseInstance(table, save_DrawElementsInstancedBaseVertexBaseInstance);
+
+   /* GL_ARB_draw_indirect / GL_ARB_multi_draw_indirect */
+   SET_DrawArraysIndirect(table, save_DrawArraysIndirect);
+   SET_DrawElementsIndirect(table, save_DrawElementsIndirect);
+   SET_MultiDrawArraysIndirect(table, save_MultiDrawArraysIndirect);
+   SET_MultiDrawElementsIndirect(table, save_MultiDrawElementsIndirect);
 
    /* OpenGL 4.2 / GL_ARB_separate_shader_objects */
    SET_UseProgramStages(table, save_UseProgramStages);
