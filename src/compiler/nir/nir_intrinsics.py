@@ -290,7 +290,7 @@ atomic3("atomic_counter_comp_swap")
 # and layout qualifiers that influence the semantics of the intrinsic.
 #
 # All image intrinsics take a four-coordinate vector and a sample index as
-# first two sources, determining the location within the image that will be
+# 2nd and 3rd sources, determining the location within the image that will be
 # accessed by the intrinsic.  Components not applicable to the image target
 # in use are undefined.  Image store takes an additional four-component
 # argument with the value to be written, and image atomic operations take
