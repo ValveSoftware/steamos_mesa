@@ -5728,20 +5728,14 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	struct si_shader_context ctx;
 	struct si_shader *shader;
 	LLVMBuilderRef builder;
-	struct si_shader_output_values *outputs;
+	struct si_shader_output_values outputs[SI_MAX_VS_OUTPUTS];
 	struct tgsi_shader_info *gsinfo = &gs_selector->info;
 	int i, r;
 
-	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
-
-	if (!outputs)
-		return NULL;
 
 	shader = CALLOC_STRUCT(si_shader);
-	if (!shader) {
-		FREE(outputs);
+	if (!shader)
 		return NULL;
-	}
 
 	/* We can leave the fence as permanently signaled because the GS copy
 	 * shader only becomes visible globally after it has been compiled. */
@@ -5859,8 +5853,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	}
 
 	si_llvm_dispose(&ctx);
-
-	FREE(outputs);
 
 	if (r != 0) {
 		FREE(shader);
