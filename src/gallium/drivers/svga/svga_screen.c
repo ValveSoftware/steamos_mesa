@@ -343,6 +343,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
 
    /* Unsupported features */
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
+   case PIPE_CAP_TEXTURE_MIRROR_CLAMP_TO_EDGE:
    case PIPE_CAP_SHADER_STENCIL_EXPORT:
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
    case PIPE_CAP_INDEP_BLEND_FUNC:

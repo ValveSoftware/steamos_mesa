@@ -173,6 +173,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
    /* supported caps */
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
+   case PIPE_CAP_TEXTURE_MIRROR_CLAMP_TO_EDGE:
    case PIPE_CAP_TEXTURE_SWIZZLE:
    case PIPE_CAP_NPOT_TEXTURES:
    case PIPE_CAP_MIXED_FRAMEBUFFER_SIZES:

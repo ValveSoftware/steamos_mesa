@@ -40,8 +40,10 @@ The integer capabilities:
   for a 3D texture.
 * ``PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS``: The maximum number of mipmap levels available
   for a cubemap.
-* ``PIPE_CAP_TEXTURE_MIRROR_CLAMP``: Whether mirrored texture coordinates with clamp
-  are supported.
+* ``PIPE_CAP_TEXTURE_MIRROR_CLAMP_TO_EDGE``: Whether mirrored texture coordinates are
+  supported with the clamp-to-edge wrap mode.
+* ``PIPE_CAP_TEXTURE_MIRROR_CLAMP``: Whether mirrored texture coordinates are supported
+  with clamp or clamp-to-border wrap modes.
 * ``PIPE_CAP_BLEND_EQUATION_SEPARATE``: Whether alpha blend equations may be different
   from color blend equations, in :ref:`Blend` state.
 * ``PIPE_CAP_SM3``: Whether the vertex shader and fragment shader support equivalent
