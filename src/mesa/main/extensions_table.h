@@ -88,7 +88,7 @@ EXT(ARB_invalidate_subdata                  , dummy_true                        
 EXT(ARB_map_buffer_alignment                , dummy_true                             , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_map_buffer_range                    , ARB_map_buffer_range                   , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_multi_bind                          , dummy_true                             , GLL, GLC,  x ,  x , 2013)
-EXT(ARB_multi_draw_indirect                 , ARB_draw_indirect                      ,  x , GLC,  x ,  x , 2012)
+EXT(ARB_multi_draw_indirect                 , ARB_draw_indirect                      , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_multisample                         , dummy_true                             , GLL,  x ,  x ,  x , 1994)
 EXT(ARB_multitexture                        , dummy_true                             , GLL,  x ,  x ,  x , 1998)
 EXT(ARB_occlusion_query                     , ARB_occlusion_query                    , GLL,  x ,  x ,  x , 2001)
