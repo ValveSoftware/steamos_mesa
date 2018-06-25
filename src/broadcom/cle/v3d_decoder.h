@@ -58,7 +58,6 @@ struct v3d_field_iterator {
         int group_iter;
 
         struct v3d_field *field;
-        bool print_colors;
 };
 
 struct v3d_group {
@@ -135,14 +134,12 @@ struct v3d_field {
 
 void v3d_field_iterator_init(struct v3d_field_iterator *iter,
                              struct v3d_group *group,
-                             const uint8_t *p,
-                             bool print_colors);
+                             const uint8_t *p);
 
 bool v3d_field_iterator_next(struct v3d_field_iterator *iter);
 
 void v3d_print_group(struct clif_dump *clif,
                      struct v3d_group *group,
-                     uint64_t offset, const uint8_t *p,
-                     bool color);
+                     uint64_t offset, const uint8_t *p);
 
 #endif /* V3D_DECODER_H */

@@ -63,7 +63,7 @@ vc4_dump_cl(void *cl, uint32_t size, bool is_render)
                 fprintf(stderr, "0x%08x 0x%08x: 0x%02x %s\n",
                         offset, hw_offset, header, v3d_group_get_name(inst));
 
-                v3d_print_group(clif, inst, offset, p, "");
+                v3d_print_group(clif, inst, offset, p);
 
                 switch (header) {
                 case VC4_PACKET_HALT:

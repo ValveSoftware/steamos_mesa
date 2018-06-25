@@ -742,14 +742,12 @@ v3d_group_get_length(struct v3d_group *group)
 void
 v3d_field_iterator_init(struct v3d_field_iterator *iter,
                         struct v3d_group *group,
-                        const uint8_t *p,
-                        bool print_colors)
+                        const uint8_t *p)
 {
         memset(iter, 0, sizeof(*iter));
 
         iter->group = group;
         iter->p = p;
-        iter->print_colors = print_colors;
 }
 
 static const char *
@@ -865,14 +863,11 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
                 enum_name = v3d_get_enum_name(&iter->field->inline_enum, value);
                 break;
         }
-        case V3D_TYPE_BOOL: {
-                const char *true_string =
-                        iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
+        case V3D_TYPE_BOOL:
                 snprintf(iter->value, sizeof(iter->value), "%s",
                          __gen_unpack_uint(iter->p, s, e) ?
-                         true_string : "false");
+                         "1 /* true */" : "0 /* false */");
                 break;
-        }
         case V3D_TYPE_FLOAT:
                 snprintf(iter->value, sizeof(iter->value), "%f",
                          __gen_unpack_float(iter->p, s, e));
@@ -926,18 +921,18 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
 
 void
 v3d_print_group(struct clif_dump *clif, struct v3d_group *group,
-                uint64_t offset, const uint8_t *p, bool color)
+                uint64_t offset, const uint8_t *p)
 {
         struct v3d_field_iterator iter;
 
-        v3d_field_iterator_init(&iter, group, p, color);
+        v3d_field_iterator_init(&iter, group, p);
         while (v3d_field_iterator_next(&iter)) {
                 fprintf(clif->out, "    %s: %s\n", iter.name, iter.value);
                 if (iter.struct_desc) {
                         uint64_t struct_offset = offset + iter.offset;
                         v3d_print_group(clif, iter.struct_desc,
                                         struct_offset,
-                                        &p[iter.offset], color);
+                                        &p[iter.offset]);
                 }
         }
 }
