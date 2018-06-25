@@ -558,6 +558,13 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         }
                 }
         }
+
+        /* A flush is required in between a TF draw and any following TF specs
+         * packet, or the GPU may hang.  Just flush each time for now.
+         */
+        if (v3d->streamout.num_targets)
+                cl_emit(&job->bcl, TRANSFORM_FEEDBACK_FLUSH_AND_COUNT, flush);
+
         job->draw_calls_queued++;
 
         /* Increment the TF offsets by how many verts we wrote.  XXX: This
