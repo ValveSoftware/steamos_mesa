@@ -210,12 +210,11 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
-		if (sscreen->info.has_indirect_compute_dispatch)
-			return 450;
-		return 420;
-
 	case PIPE_CAP_GLSL_FEATURE_LEVEL_COMPATIBILITY:
-		return 330;
+		if (sscreen->info.has_indirect_compute_dispatch)
+			return param == PIPE_CAP_GLSL_FEATURE_LEVEL ?
+				450 : 440;
+		return 420;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->info.max_alloc_size, INT_MAX);
