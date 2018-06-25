@@ -96,14 +96,11 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
     * always use consecutive surface indices when FMASK is allocated between
     * them.
     */
-   if (flags & RADEON_SURF_FMASK)
-      config.info.surf_index = &ws->surf_index_fmask;
-   else if (!(flags & RADEON_SURF_Z_OR_SBUFFER))
-      config.info.surf_index = &ws->surf_index_color;
-   else
-      config.info.surf_index = NULL;
-
+   config.info.surf_index = &ws->surf_index_color;
    config.info.fmask_surf_index = &ws->surf_index_fmask;
+
+   if (flags & RADEON_SURF_Z_OR_SBUFFER)
+      config.info.surf_index = NULL;
 
    return ac_compute_surface(ws->addrlib, &ws->info, &config, mode, surf);
 }
