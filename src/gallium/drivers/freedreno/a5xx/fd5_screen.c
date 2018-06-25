@@ -59,8 +59,7 @@ fd5_screen_is_format_supported(struct pipe_screen *pscreen,
 	unsigned retval = 0;
 
 	if ((target >= PIPE_MAX_TEXTURE_TYPES) ||
-			!valid_sample_count(sample_count) ||
-			!util_format_is_supported(format, usage)) {
+			!valid_sample_count(sample_count)) {
 		DBG("not supported: format=%s, target=%d, sample_count=%d, usage=%x",
 				util_format_name(format), target, sample_count, usage);
 		return FALSE;

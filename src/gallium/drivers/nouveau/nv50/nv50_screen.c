@@ -55,9 +55,6 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
    if (sample_count == 8 && util_format_get_blocksizebits(format) >= 128)
       return false;
 
-   if (!util_format_is_supported(format, bindings))
-      return false;
-
    switch (format) {
    case PIPE_FORMAT_Z16_UNORM:
       if (nv50_screen(pscreen)->tesla->oclass < NVA0_3D_CLASS)

@@ -422,10 +422,6 @@ nv30_screen_is_format_supported(struct pipe_screen *pscreen,
    if (!(0x00000017 & (1 << sample_count)))
       return false;
 
-   if (!util_format_is_supported(format, bindings)) {
-      return false;
-   }
-
    /* shared is always supported */
    bindings &= ~PIPE_BIND_SHARED;
 

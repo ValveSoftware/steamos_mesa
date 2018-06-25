@@ -57,9 +57,6 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
    if (format == PIPE_FORMAT_NONE && bindings & PIPE_BIND_RENDER_TARGET)
       return true;
 
-   if (!util_format_is_supported(format, bindings))
-      return false;
-
    if ((bindings & PIPE_BIND_SAMPLER_VIEW) && (target != PIPE_BUFFER))
       if (util_format_get_blocksizebits(format) == 3 * 32)
          return false;

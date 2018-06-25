@@ -172,9 +172,6 @@ boolean r600_is_format_supported(struct pipe_screen *screen,
 		return FALSE;
 	}
 
-	if (!util_format_is_supported(format, usage))
-		return FALSE;
-
 	if (sample_count > 1) {
 		if (!rscreen->has_msaa)
 			return FALSE;

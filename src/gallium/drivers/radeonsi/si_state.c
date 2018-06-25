@@ -2142,9 +2142,6 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		return false;
 	}
 
-	if (!util_format_is_supported(format, usage))
-		return false;
-
 	if (sample_count > 1) {
 		if (!screen->get_param(screen, PIPE_CAP_TEXTURE_MULTISAMPLE))
 			return false;

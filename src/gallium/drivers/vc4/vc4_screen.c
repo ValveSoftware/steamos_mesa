@@ -486,8 +486,7 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
         if (sample_count > 1 && sample_count != VC4_MAX_SAMPLES)
                 return FALSE;
 
-        if ((target >= PIPE_MAX_TEXTURE_TYPES) ||
-            !util_format_is_supported(format, usage)) {
+        if (target >= PIPE_MAX_TEXTURE_TYPES) {
                 return FALSE;
         }
 
