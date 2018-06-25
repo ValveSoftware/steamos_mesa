@@ -50,6 +50,7 @@ struct clif_dump {
 };
 
 enum reloc_worklist_type {
+        reloc_cl,
         reloc_gl_shader_state,
         reloc_generic_tile_list,
 };
@@ -61,6 +62,9 @@ struct reloc_worklist_entry {
         uint32_t addr;
 
         union {
+                struct {
+                        uint32_t end;
+                } cl;
                 struct {
                         uint32_t num_attrs;
                 } shader_state;

@@ -170,6 +170,11 @@ clif_process_worklist(struct clif_dump *clif)
                 }
 
                 switch (reloc->type) {
+                case reloc_cl:
+                        clif_dump_cl(clif, reloc->addr, reloc->cl.end);
+                        out(clif, "\n");
+                        break;
+
                 case reloc_gl_shader_state:
                         clif_dump_gl_shader_state_record(clif,
                                                          reloc,
@@ -184,13 +189,18 @@ clif_process_worklist(struct clif_dump *clif)
         }
 }
 
+void clif_dump(struct clif_dump *clif)
+{
+        clif_process_worklist(clif);
+}
+
 void
 clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
 {
-        clif_dump_cl(clif, start, end);
-        out(clif, "\n");
+        struct reloc_worklist_entry *entry =
+                clif_dump_add_address_to_worklist(clif, reloc_cl, start);
 
-        clif_process_worklist(clif);
+        entry->cl.end = end;
 }
 
 void

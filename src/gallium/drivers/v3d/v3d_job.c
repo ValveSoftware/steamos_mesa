@@ -371,6 +371,8 @@ v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
                 job->submit.rcl_start, job->submit.rcl_end);
         clif_dump_add_cl(clif, job->submit.rcl_start, job->submit.rcl_end);
 
+        clif_dump(clif);
+
         clif_dump_destroy(clif);
 }
 
