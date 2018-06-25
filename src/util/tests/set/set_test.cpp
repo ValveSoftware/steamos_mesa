@@ -85,3 +85,31 @@ TEST(set, clone)
    _mesa_set_destroy(s, NULL);
    _mesa_set_destroy(clone, NULL);
 }
+
+TEST(set, remove_key)
+{
+   struct set *s = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                    _mesa_key_pointer_equal);
+
+   const void *a = (const void *)10;
+   const void *b = (const void *)20;
+   const void *c = (const void *)30;
+
+   _mesa_set_add(s, a);
+   _mesa_set_add(s, b);
+   EXPECT_EQ(s->entries, 2);
+
+   /* Remove existing key. */
+   _mesa_set_remove_key(s, a);
+   EXPECT_EQ(s->entries, 1);
+   EXPECT_FALSE(_mesa_set_search(s, a));
+   EXPECT_TRUE(_mesa_set_search(s, b));
+
+   /* Remove non-existing key. */
+   _mesa_set_remove_key(s, c);
+   EXPECT_EQ(s->entries, 1);
+   EXPECT_FALSE(_mesa_set_search(s, a));
+   EXPECT_TRUE(_mesa_set_search(s, b));
+
+   _mesa_set_destroy(s, NULL);
+}

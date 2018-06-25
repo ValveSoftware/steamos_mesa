@@ -384,6 +384,15 @@ _mesa_set_remove(struct set *ht, struct set_entry *entry)
 }
 
 /**
+ * Removes the entry with the corresponding key, if exists.
+ */
+void
+_mesa_set_remove_key(struct set *set, const void *key)
+{
+   _mesa_set_remove(set, _mesa_set_search(set, key));
+}
+
+/**
  * This function is an iterator over the hash table.
  *
  * Pass in NULL for the first entry, as in the start of a for loop.  Note that
