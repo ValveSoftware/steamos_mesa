@@ -513,13 +513,13 @@ void anv_CmdBlitImage(
 
    struct blorp_surf src, dst;
 
-   uint32_t gl_filter;
+   enum blorp_filter blorp_filter;
    switch (filter) {
    case VK_FILTER_NEAREST:
-      gl_filter = 0x2600; /* GL_NEAREST */
+      blorp_filter = BLORP_FILTER_NEAREST;
       break;
    case VK_FILTER_LINEAR:
-      gl_filter = 0x2601; /* GL_LINEAR */
+      blorp_filter = BLORP_FILTER_BILINEAR;
       break;
    default:
       unreachable("Invalid filter");
@@ -604,7 +604,7 @@ void anv_CmdBlitImage(
                     dst_format.isl_format, dst_format.swizzle,
                     src_x0, src_y0, src_x1, src_y1,
                     dst_x0, dst_y0, dst_x1, dst_y1,
-                    gl_filter, flip_x, flip_y);
+                    blorp_filter, flip_x, flip_y);
       }
 
    }
@@ -1171,7 +1171,8 @@ resolve_surface(struct blorp_batch *batch,
                 struct blorp_surf *dst_surf,
                 uint32_t dst_level, uint32_t dst_layer,
                 uint32_t src_x, uint32_t src_y, uint32_t dst_x, uint32_t dst_y,
-                uint32_t width, uint32_t height)
+                uint32_t width, uint32_t height,
+                enum blorp_filter filter)
 {
    blorp_blit(batch,
               src_surf, src_level, src_layer,
@@ -1180,7 +1181,7 @@ resolve_surface(struct blorp_batch *batch,
               ISL_FORMAT_UNSUPPORTED, ISL_SWIZZLE_IDENTITY,
               src_x, src_y, src_x + width, src_y + height,
               dst_x, dst_y, dst_x + width, dst_y + height,
-              0x2600 /* GL_NEAREST */, false, false);
+              filter, false, false);
 }
 
 static void
@@ -1219,13 +1220,22 @@ resolve_image(struct anv_device *device,
                                         dst_surf.aux_usage,
                                         dst_level, dst_layer, 1);
 
+      enum blorp_filter filter;
+      if ((src_surf.surf->usage & ISL_SURF_USAGE_DEPTH_BIT) ||
+          (src_surf.surf->usage & ISL_SURF_USAGE_STENCIL_BIT) ||
+          isl_format_has_int_channel(src_surf.surf->format)) {
+         filter = BLORP_FILTER_SAMPLE_0;
+      } else {
+         filter = BLORP_FILTER_AVERAGE;
+      }
+
       assert(!src_image->format->can_ycbcr);
       assert(!dst_image->format->can_ycbcr);
 
       resolve_surface(batch,
                       &src_surf, src_level, src_layer,
                       &dst_surf, dst_level, dst_layer,
-                      src_x, src_y, dst_x, dst_y, width, height);
+                      src_x, src_y, dst_x, dst_y, width, height, filter);
    }
 }
 
@@ -1340,6 +1350,13 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
          assert(src_iview->aspect_mask == VK_IMAGE_ASPECT_COLOR_BIT &&
                 dst_iview->aspect_mask == VK_IMAGE_ASPECT_COLOR_BIT);
 
+         enum blorp_filter filter;
+         if (isl_format_has_int_channel(src_iview->planes[0].isl.format)) {
+            filter = BLORP_FILTER_SAMPLE_0;
+         } else {
+            filter = BLORP_FILTER_AVERAGE;
+         }
+
          struct blorp_surf src_surf, dst_surf;
          get_blorp_surf_for_anv_image(cmd_buffer->device, src_iview->image,
                                       VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1381,7 +1398,8 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
                             base_dst_layer + i,
                             render_area.offset.x, render_area.offset.y,
                             render_area.offset.x, render_area.offset.y,
-                            render_area.extent.width, render_area.extent.height);
+                            render_area.extent.width, render_area.extent.height,
+                            filter);
          }
       }
 

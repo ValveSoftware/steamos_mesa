@@ -2211,7 +2211,8 @@ blorp_blit(struct blorp_batch *batch,
            float src_x1, float src_y1,
            float dst_x0, float dst_y0,
            float dst_x1, float dst_y1,
-           GLenum filter, bool mirror_x, bool mirror_y)
+           enum blorp_filter filter,
+           bool mirror_x, bool mirror_y)
 {
    struct blorp_params params;
    blorp_params_init(&params);
@@ -2240,13 +2241,9 @@ blorp_blit(struct blorp_batch *batch,
    params.dst.view.swizzle = dst_swizzle;
 
    struct brw_blorp_blit_prog_key wm_prog_key = {
-      .shader_type = BLORP_SHADER_TYPE_BLIT
+      .shader_type = BLORP_SHADER_TYPE_BLIT,
+      .filter = filter,
    };
-
-   /* Scaled blitting or not. */
-   const bool blit_scaled =
-      ((dst_x1 - dst_x0) == (src_x1 - src_x0) &&
-       (dst_y1 - dst_y0) == (src_y1 - src_y0)) ? false : true;
 
    /* Scaling factors used for bilinear filtering in multisample scaled
     * blits.
@@ -2256,39 +2253,6 @@ blorp_blit(struct blorp_batch *batch,
    else
       wm_prog_key.x_scale = 2.0f;
    wm_prog_key.y_scale = params.src.surf.samples / wm_prog_key.x_scale;
-
-   const bool bilinear_filter = filter == GL_LINEAR &&
-                                params.src.surf.samples <= 1 &&
-                                params.dst.surf.samples <= 1;
-
-   /* If we are downsampling a non-integer color buffer, blend.
-    *
-    * Regarding integer color buffers, the OpenGL ES 3.2 spec says:
-    *
-    *    "If the source formats are integer types or stencil values, a
-    *    single sample's value is selected for each pixel."
-    *
-    * This implies we should not blend in that case.
-    */
-   const bool blend =
-      (params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
-      (params.src.surf.usage & ISL_SURF_USAGE_STENCIL_BIT) == 0 &&
-      !isl_format_has_int_channel(params.src.surf.format) &&
-      params.src.surf.samples > 1 &&
-      params.dst.surf.samples <= 1;
-
-   if (blend && !blit_scaled) {
-      wm_prog_key.filter = BLORP_FILTER_AVERAGE;
-   } else if (blend && blit_scaled) {
-      wm_prog_key.filter = BLORP_FILTER_BILINEAR;
-   } else if (bilinear_filter) {
-      wm_prog_key.filter = BLORP_FILTER_BILINEAR;
-   } else {
-      if (params.src.surf.samples > 1)
-         wm_prog_key.filter = BLORP_FILTER_SAMPLE_0;
-      else
-         wm_prog_key.filter = BLORP_FILTER_NEAREST;
-   }
 
    params.wm_inputs.rect_grid.x1 =
       minify(params.src.surf.logical_level0_px.width, src_level) *

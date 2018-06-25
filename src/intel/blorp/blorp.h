@@ -139,7 +139,8 @@ blorp_blit(struct blorp_batch *batch,
            float src_x1, float src_y1,
            float dst_x0, float dst_y0,
            float dst_x1, float dst_y1,
-           uint32_t filter, bool mirror_x, bool mirror_y);
+           enum blorp_filter filter,
+           bool mirror_x, bool mirror_y);
 
 void
 blorp_copy(struct blorp_batch *batch,

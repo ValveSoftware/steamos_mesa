@@ -283,7 +283,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         float src_x1, float src_y1,
                         float dst_x0, float dst_y0,
                         float dst_x1, float dst_y1,
-                        GLenum filter, bool mirror_x, bool mirror_y,
+                        GLenum gl_filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
@@ -318,6 +318,65 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
        (dst_format == MESA_FORMAT_L_FLOAT32 ||
         dst_format == MESA_FORMAT_I_FLOAT32)) {
       src_format = dst_format = MESA_FORMAT_R_FLOAT32;
+   }
+
+   enum blorp_filter blorp_filter;
+   if (fabsf(dst_x1 - dst_x0) == fabsf(src_x1 - src_x0) &&
+       fabsf(dst_y1 - dst_y0) == fabsf(src_y1 - src_y0)) {
+      if (src_mt->surf.samples > 1 && dst_mt->surf.samples <= 1) {
+         /* From the OpenGL ES 3.2 specification, section 16.2.1:
+          *
+          *    "If the read framebuffer is multisampled (its effective value
+          *    of SAMPLE_BUFFERS is one) and the draw framebuffer is not (its
+          *    value of SAMPLE_BUFFERS is zero), the samples corresponding to
+          *    each pixel location in the source are converted to a single
+          *    sample before being written to the destination.  The filter
+          *    parameter is ignored. If the source formats are integer types
+          *    or stencil values, a single sample’s value is selected for each
+          *    pixel.  If the source formats are floating-point or normalized
+          *    types, the sample values for each pixel are resolved in an
+          *    implementation-dependent manner.  If the source formats are
+          *    depth values, sample values are resolved in an implementation-
+          *    dependent manner where the result will be between the minimum
+          *    and maximum depth values in the pixel."
+          *
+          * For depth and stencil resolves, we choose to always use the value
+          * at sample 0.
+          */
+         GLenum base_format = _mesa_get_format_base_format(src_mt->format);
+         if (base_format == GL_DEPTH_COMPONENT ||
+             base_format == GL_STENCIL_INDEX ||
+             base_format == GL_DEPTH_STENCIL ||
+             _mesa_is_format_integer(src_mt->format)) {
+            /* The OpenGL ES 3.2 spec says:
+             *
+             *    "If the source formats are integer types or stencil values,
+             *    a single sample's value is selected for each pixel."
+             *
+             * Just take sample 0 in this case.
+             */
+            blorp_filter = BLORP_FILTER_SAMPLE_0;
+         } else {
+            blorp_filter = BLORP_FILTER_AVERAGE;
+         }
+      } else {
+         /* From the OpenGL 4.6 specification, section 18.3.1:
+          *
+          *    "If the source and destination dimensions are identical, no
+          *    filtering is applied."
+          *
+          * Using BLORP_FILTER_NONE will also handle the upsample case by
+          * replicating the one value in the source to all values in the
+          * destination.
+          */
+         blorp_filter = BLORP_FILTER_NONE;
+      }
+   } else if (gl_filter == GL_LINEAR ||
+              gl_filter == GL_SCALED_RESOLVE_FASTEST_EXT ||
+              gl_filter == GL_SCALED_RESOLVE_NICEST_EXT) {
+      blorp_filter = BLORP_FILTER_BILINEAR;
+   } else {
+      blorp_filter = BLORP_FILTER_NEAREST;
    }
 
    enum isl_format src_isl_format =
@@ -365,7 +424,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
               dst_isl_format, ISL_SWIZZLE_IDENTITY,
               src_x0, src_y0, src_x1, src_y1,
               dst_x0, dst_y0, dst_x1, dst_y1,
-              filter, mirror_x, mirror_y);
+              blorp_filter, mirror_x, mirror_y);
    blorp_batch_finish(&batch);
 
    intel_miptree_finish_write(brw, dst_mt, dst_level, dst_layer, 1,
