@@ -108,6 +108,19 @@ namespace SwrJit
         return vGather;
     }
 
+    void BuilderGfxMem::SCATTERPS(
+        Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask, JIT_MEM_CLIENT usage)
+    {
+
+        // address may be coming in as 64bit int now so get the pointer
+        if (pDst->getType() == mInt64Ty)
+        {
+            pDst = INT_TO_PTR(pDst, PointerType::get(mInt8Ty, 0));
+        }
+
+        Builder::SCATTERPS(pDst, vSrc, vOffsets, vMask, usage);
+    }
+
 
     Value *BuilderGfxMem::OFFSET_TO_NEXT_COMPONENT(Value *base, Constant *offset)
     {

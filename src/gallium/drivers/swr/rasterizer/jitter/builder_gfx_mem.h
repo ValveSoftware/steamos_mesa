@@ -88,6 +88,12 @@ namespace SwrJit
                                 uint8_t        scale = 1,
                                 JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
+        virtual void SCATTERPS(Value*         pDst,
+                               Value*         vSrc,
+                               Value*         vOffsets,
+                               Value*         vMask,
+                               JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+
 
         Value *TranslateGfxAddressForRead(Value *        xpGfxAddress,
                                           Type *         PtrTy = nullptr,
