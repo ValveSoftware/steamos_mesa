@@ -404,7 +404,7 @@ v3d_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
         so->default_attribute_values = v3d_bo_alloc(v3d->screen,
                                                     VC5_MAX_ATTRIBUTES *
                                                     4 * sizeof(float),
-                                                    "default attributes");
+                                                    "default_attributes");
         uint32_t *attrs = v3d_bo_map(so->default_attribute_values);
         for (int i = 0; i < VC5_MAX_ATTRIBUTES; i++) {
                 attrs[i * 4 + 0] = 0;

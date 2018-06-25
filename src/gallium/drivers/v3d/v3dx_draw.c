@@ -55,7 +55,7 @@ v3d_start_draw(struct v3d_context *v3d)
         job->submit.bcl_start = job->bcl.bo->offset;
         v3d_job_add_bo(job, job->bcl.bo);
 
-        job->tile_alloc = v3d_bo_alloc(v3d->screen, 1024 * 1024, "tile alloc");
+        job->tile_alloc = v3d_bo_alloc(v3d->screen, 1024 * 1024, "tile_alloc");
         uint32_t tsda_per_tile_size = v3d->screen->devinfo.ver >= 40 ? 256 : 64;
         job->tile_state = v3d_bo_alloc(v3d->screen,
                                        job->draw_tiles_y *

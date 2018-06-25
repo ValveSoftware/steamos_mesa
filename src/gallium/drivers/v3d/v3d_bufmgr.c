@@ -131,6 +131,10 @@ v3d_bo_alloc(struct v3d_screen *screen, uint32_t size, const char *name)
         struct v3d_bo *bo;
         int ret;
 
+        /* The CLIF dumping requires that there is no whitespace in the name.
+         */
+        assert(!strchr(name, ' '));
+
         size = align(size, 4096);
 
         bo = v3d_bo_from_cache(screen, size, name);
