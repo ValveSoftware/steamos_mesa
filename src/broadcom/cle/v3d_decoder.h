@@ -136,7 +136,8 @@ void v3d_field_iterator_init(struct v3d_field_iterator *iter,
                              struct v3d_group *group,
                              const uint8_t *p);
 
-bool v3d_field_iterator_next(struct v3d_field_iterator *iter);
+bool v3d_field_iterator_next(struct clif_dump *clif,
+                             struct v3d_field_iterator *iter);
 
 void v3d_print_group(struct clif_dump *clif,
                      struct v3d_group *group,

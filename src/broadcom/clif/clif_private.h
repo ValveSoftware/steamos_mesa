@@ -74,6 +74,9 @@ struct reloc_worklist_entry {
         };
 };
 
+struct clif_bo *
+clif_lookup_bo(struct clif_dump *clif, uint32_t addr);
+
 struct reloc_worklist_entry *
 clif_dump_add_address_to_worklist(struct clif_dump *clif,
                                   enum reloc_worklist_type type,

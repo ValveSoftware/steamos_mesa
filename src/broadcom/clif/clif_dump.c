@@ -70,20 +70,30 @@ clif_dump_destroy(struct clif_dump *clif)
         ralloc_free(clif);
 }
 
-static bool
-clif_lookup_vaddr(struct clif_dump *clif, uint32_t addr, void **vaddr)
+struct clif_bo *
+clif_lookup_bo(struct clif_dump *clif, uint32_t addr)
 {
         for (int i = 0; i < clif->bo_count; i++) {
                 struct clif_bo *bo = &clif->bo[i];
 
                 if (addr >= bo->offset &&
                     addr < bo->offset + bo->size) {
-                        *vaddr = bo->vaddr + addr - bo->offset;
-                        return true;
+                        return bo;
                 }
         }
 
-        return false;
+        return NULL;
+}
+
+static bool
+clif_lookup_vaddr(struct clif_dump *clif, uint32_t addr, void **vaddr)
+{
+        struct clif_bo *bo = clif_lookup_bo(clif, addr);
+        if (!bo)
+                return false;
+
+        *vaddr = bo->vaddr + addr - bo->offset;
+        return true;
 }
 
 #define out_uint(_clif, field) out(_clif, "    /* %s = */ %u\n",        \

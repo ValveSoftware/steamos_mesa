@@ -827,7 +827,7 @@ iter_advance_field(struct v3d_field_iterator *iter)
 }
 
 bool
-v3d_field_iterator_next(struct v3d_field_iterator *iter)
+v3d_field_iterator_next(struct clif_dump *clif, struct v3d_field_iterator *iter)
 {
         if (!iter_advance_field(iter))
                 return false;
@@ -872,7 +872,26 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
                 snprintf(iter->value, sizeof(iter->value), "%f",
                          __gen_unpack_float(iter->p, s, e));
                 break;
-        case V3D_TYPE_ADDRESS:
+
+        case V3D_TYPE_ADDRESS: {
+                uint32_t addr =
+                        __gen_unpack_uint(iter->p, s, e) << (31 - (e - s));
+                struct clif_bo *bo = clif_lookup_bo(clif, addr);
+                if (bo) {
+                        snprintf(iter->value, sizeof(iter->value),
+                                 "[%s+0x%08x] /* 0x%08x */",
+                                 bo->name, addr - bo->offset, addr);
+                } else if (addr) {
+                        snprintf(iter->value, sizeof(iter->value),
+                                 "/* XXX: BO unknown */ 0x%08x", addr);
+                } else {
+                        snprintf(iter->value, sizeof(iter->value),
+                                 "[null]");
+                }
+
+                break;
+        }
+
         case V3D_TYPE_OFFSET:
                 snprintf(iter->value, sizeof(iter->value), "0x%08"PRIx64,
                          __gen_unpack_uint(iter->p, s, e) << (31 - (e - s)));
@@ -926,7 +945,7 @@ v3d_print_group(struct clif_dump *clif, struct v3d_group *group,
         struct v3d_field_iterator iter;
 
         v3d_field_iterator_init(&iter, group, p);
-        while (v3d_field_iterator_next(&iter)) {
+        while (v3d_field_iterator_next(clif, &iter)) {
                 fprintf(clif->out, "    %s: %s\n", iter.name, iter.value);
                 if (iter.struct_desc) {
                         uint64_t struct_offset = offset + iter.offset;
