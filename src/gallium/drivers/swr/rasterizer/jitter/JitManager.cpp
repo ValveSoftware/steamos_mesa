@@ -414,7 +414,11 @@ void JitManager::DumpAsm(Function *pFunction, const char *fileName)
         legacy::PassManager *pMPasses         = new legacy::PassManager();
         auto *               pTarget          = mpExec->getTargetMachine();
         pTarget->Options.MCOptions.AsmVerbose = true;
+#if LLVM_VERSION_MAJOR >= 7
+        pTarget->addPassesToEmitFile(*pMPasses, filestream, nullptr, TargetMachine::CGFT_AssemblyFile);
+#else
         pTarget->addPassesToEmitFile(*pMPasses, filestream, TargetMachine::CGFT_AssemblyFile);
+#endif
         pMPasses->run(*pModule);
         delete pMPasses;
         pTarget->Options.MCOptions.AsmVerbose = false;
