@@ -89,29 +89,14 @@ namespace SwrJit
                                 JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
 
-        Value *TranslateGfxAddress(Value *        xpGfxAddress,
-                                   Type *         PtrTy = nullptr,
-                                   const Twine &  Name  = "",
-                                   JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
-        template <typename T>
-        Value *TranslateGfxAddress(Value *                         xpGfxBaseAddress,
-                                   const std::initializer_list<T> &offset,
-                                   Type *                          PtrTy = nullptr,
-                                   const Twine &                   Name  = "",
-                                   JIT_MEM_CLIENT                  usage = GFX_MEM_CLIENT_SHADER)
-        {
-            AssertGFXMemoryParams(xpGfxBaseAddress, usage);
-            SWR_ASSERT(xpGfxBaseAddress->getType()->isPointerTy() == false);
-
-            if (!PtrTy)
-            {
-                PtrTy = mInt8PtrTy;
-            }
-
-            Value *ptr = INT_TO_PTR(xpGfxBaseAddress, PtrTy);
-            ptr        = GEP(ptr, offset);
-            return TranslateGfxAddress(PTR_TO_INT(ptr, mInt64Ty), PtrTy, Name, usage);
-        }
+        Value *TranslateGfxAddressForRead(Value *        xpGfxAddress,
+                                          Type *         PtrTy = nullptr,
+                                          const Twine &  Name  = "",
+                                          JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
+        Value *TranslateGfxAddressForWrite(Value *        xpGfxAddress,
+                                           Type *         PtrTy = nullptr,
+                                           const Twine &  Name  = "",
+                                           JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
 
     protected:
@@ -124,13 +109,15 @@ namespace SwrJit
         Value *TranslationHelper(Value *Ptr, Type *Ty);
 
         FunctionType *GetTranslationFunctionType() { return mpTranslationFuncTy; }
-        Value *       GetTranslationFunction() { return mpfnTranslateGfxAddress; }
+        Value *       GetTranslationFunctionForRead() { return mpfnTranslateGfxAddressForRead; }
+        Value *       GetTranslationFunctionForWrite() { return mpfnTranslateGfxAddressForWrite; }
         Value *       GetParamSimDC() { return mpParamSimDC; }
 
 
     private:
         FunctionType *mpTranslationFuncTy;
-        Value *       mpfnTranslateGfxAddress;
+        Value *       mpfnTranslateGfxAddressForRead;
+        Value *       mpfnTranslateGfxAddressForWrite;
         Value *       mpParamSimDC;
     };
 } // namespace SwrJit

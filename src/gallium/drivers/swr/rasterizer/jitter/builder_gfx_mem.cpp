@@ -40,7 +40,8 @@ namespace SwrJit
     BuilderGfxMem::BuilderGfxMem(JitManager *pJitMgr) : Builder(pJitMgr)
     {
         mpTranslationFuncTy     = nullptr;
-        mpfnTranslateGfxAddress = nullptr;
+        mpfnTranslateGfxAddressForRead = nullptr;
+        mpfnTranslateGfxAddressForWrite = nullptr;
         mpParamSimDC            = nullptr;
 
     }
@@ -221,7 +222,7 @@ namespace SwrJit
         return Builder::MASKED_LOAD(Ptr, Align, Mask, PassThru, Name, Ty, usage);
     }
 
-    Value *BuilderGfxMem::TranslateGfxAddress(Value *      xpGfxAddress,
+    Value *BuilderGfxMem::TranslateGfxAddressForRead(Value *      xpGfxAddress,
                                               Type *       PtrTy,
                                               const Twine &Name,
                                               JIT_MEM_CLIENT /* usage */)
@@ -232,4 +233,17 @@ namespace SwrJit
         }
         return INT_TO_PTR(xpGfxAddress, PtrTy, Name);
     }
+
+    Value *BuilderGfxMem::TranslateGfxAddressForWrite(Value *      xpGfxAddress,
+                                                     Type *       PtrTy,
+                                                     const Twine &Name,
+                                                     JIT_MEM_CLIENT /* usage */)
+    {
+        if (PtrTy == nullptr)
+        {
+            PtrTy = mInt8PtrTy;
+        }
+        return INT_TO_PTR(xpGfxAddress, PtrTy, Name);
+    }
+
 } // namespace SwrJit
