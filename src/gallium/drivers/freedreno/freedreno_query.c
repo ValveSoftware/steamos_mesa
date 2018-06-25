@@ -118,29 +118,45 @@ fd_render_condition(struct pipe_context *pctx, struct pipe_query *pq,
 	ctx->cond_mode = mode;
 }
 
+#define _Q(_name, _query_type, _type, _result_type) {                \
+	.name        = _name,                                            \
+	.query_type  = _query_type,                                      \
+	.type        = PIPE_DRIVER_QUERY_TYPE_ ## _type,                 \
+	.result_type = PIPE_DRIVER_QUERY_RESULT_TYPE_ ## _result_type,   \
+	.group_id    = ~(unsigned)0,                                     \
+}
+
+#define FQ(_name, _query_type, _type, _result_type) \
+	_Q(_name, FD_QUERY_ ## _query_type, _type, _result_type)
+
+#define PQ(_name, _query_type, _type, _result_type) \
+	_Q(_name, PIPE_QUERY_ ## _query_type, _type, _result_type)
+
+static const struct pipe_driver_query_info sw_query_list[] = {
+	FQ("draw-calls", DRAW_CALLS, UINT64, AVERAGE),
+	FQ("batches", BATCH_TOTAL, UINT64, AVERAGE),
+	FQ("batches-sysmem", BATCH_SYSMEM, UINT64, AVERAGE),
+	FQ("batches-gmem", BATCH_GMEM, UINT64, AVERAGE),
+	FQ("batches-nondraw", BATCH_NONDRAW, UINT64, AVERAGE),
+	FQ("restores", BATCH_RESTORE, UINT64, AVERAGE),
+	PQ("prims-emitted", PRIMITIVES_EMITTED, UINT64, AVERAGE),
+	FQ("staging", STAGING_UPLOADS, UINT64, AVERAGE),
+	FQ("shadow", SHADOW_UPLOADS, UINT64, AVERAGE),
+	FQ("vsregs", VS_REGS, FLOAT, AVERAGE),
+	FQ("fsregs", FS_REGS, FLOAT, AVERAGE),
+};
+
 static int
 fd_get_driver_query_info(struct pipe_screen *pscreen,
 		unsigned index, struct pipe_driver_query_info *info)
 {
-	struct pipe_driver_query_info list[] = {
-			{"draw-calls", FD_QUERY_DRAW_CALLS, {0}},
-			{"batches", FD_QUERY_BATCH_TOTAL, {0}},
-			{"batches-sysmem", FD_QUERY_BATCH_SYSMEM, {0}},
-			{"batches-gmem", FD_QUERY_BATCH_GMEM, {0}},
-			{"batches-nondraw", FD_QUERY_BATCH_NONDRAW, {0}},
-			{"restores", FD_QUERY_BATCH_RESTORE, {0}},
-			{"prims-emitted", PIPE_QUERY_PRIMITIVES_EMITTED, {0}},
-			{"staging", FD_QUERY_STAGING_UPLOADS, {0}},
-			{"shadow", FD_QUERY_SHADOW_UPLOADS, {0}},
-	};
-
 	if (!info)
-		return ARRAY_SIZE(list);
+		return ARRAY_SIZE(sw_query_list);
 
-	if (index >= ARRAY_SIZE(list))
+	if (index >= ARRAY_SIZE(sw_query_list))
 		return 0;
 
-	*info = list[index];
+	*info = sw_query_list[index];
 	return 1;
 }
 

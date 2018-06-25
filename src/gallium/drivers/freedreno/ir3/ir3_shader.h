@@ -527,4 +527,13 @@ ir3_find_sysval_regid(const struct ir3_shader_variant *so, unsigned slot)
 	return regid(63, 0);
 }
 
+/* calculate register footprint in terms of half-regs (ie. one full
+ * reg counts as two half-regs).
+ */
+static inline uint32_t
+ir3_shader_halfregs(const struct ir3_shader_variant *v)
+{
+	return (2 * (v->info.max_reg + 1)) + (v->info.max_half_reg + 1);
+}
+
 #endif /* IR3_SHADER_H_ */

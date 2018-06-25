@@ -134,6 +134,9 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	if (!vp || !fp)
 		return false;
 
+	ctx->stats.vs_regs += ir3_shader_halfregs(vp);
+	ctx->stats.fs_regs += ir3_shader_halfregs(fp);
+
 	/* figure out whether we need to disable LRZ write for binning
 	 * pass using draw pass's fp:
 	 */

@@ -219,6 +219,7 @@ struct fd_context {
 		uint64_t draw_calls;
 		uint64_t batch_total, batch_sysmem, batch_gmem, batch_nondraw, batch_restore;
 		uint64_t staging_uploads, shadow_uploads;
+		uint64_t vs_regs, fs_regs;
 	} stats;
 
 	/* Current batch.. the rule here is that you can deref ctx->batch
