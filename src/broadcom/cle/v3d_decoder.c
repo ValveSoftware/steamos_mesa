@@ -917,7 +917,7 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
         if (enum_name) {
                 int length = strlen(iter->value);
                 snprintf(iter->value + length, sizeof(iter->value) - length,
-                         " (%s)", enum_name);
+                         " /* %s */", enum_name);
         }
 
         return true;
