@@ -51,16 +51,12 @@ clif_dump_add_address_to_worklist(struct clif_dump *clif,
 
 struct clif_dump *
 clif_dump_init(const struct v3d_device_info *devinfo,
-               FILE *out,
-               bool (*lookup_vaddr)(void *data, uint32_t addr, void **vaddr),
-               void *data)
+               FILE *out)
 {
         struct clif_dump *clif = rzalloc(NULL, struct clif_dump);
 
         clif->devinfo = devinfo;
-        clif->lookup_vaddr = lookup_vaddr;
         clif->out = out;
-        clif->data = data;
         clif->spec = v3d_spec_load(devinfo);
 
         list_inithead(&clif->worklist);
@@ -72,6 +68,22 @@ void
 clif_dump_destroy(struct clif_dump *clif)
 {
         ralloc_free(clif);
+}
+
+static bool
+clif_lookup_vaddr(struct clif_dump *clif, uint32_t addr, void **vaddr)
+{
+        for (int i = 0; i < clif->bo_count; i++) {
+                struct clif_bo *bo = &clif->bo[i];
+
+                if (addr >= bo->offset &&
+                    addr < bo->offset + bo->size) {
+                        *vaddr = bo->vaddr + addr - bo->offset;
+                        return true;
+                }
+        }
+
+        return false;
 }
 
 #define out_uint(_clif, field) out(_clif, "    /* %s = */ %u\n",        \
@@ -91,7 +103,7 @@ static void
 clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
 {
         void *start_vaddr;
-        if (!clif->lookup_vaddr(clif->data, start, &start_vaddr)) {
+        if (!clif_lookup_vaddr(clif, start, &start_vaddr)) {
                 out(clif, "Failed to look up address 0x%08x\n",
                     start);
                 return;
@@ -101,7 +113,7 @@ clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
          * won't set an end), but is used for BCL/RCL termination.
          */
         void *end_vaddr = NULL;
-        if (end && !clif->lookup_vaddr(clif->data, end, &end_vaddr)) {
+        if (end && !clif_lookup_vaddr(clif, end, &end_vaddr)) {
                 out(clif, "Failed to look up address 0x%08x\n",
                     end);
                 return;
@@ -151,7 +163,7 @@ clif_process_worklist(struct clif_dump *clif)
                 list_del(&reloc->link);
 
                 void *vaddr;
-                if (!clif->lookup_vaddr(clif->data, reloc->addr, &vaddr)) {
+                if (!clif_lookup_vaddr(clif, reloc->addr, &vaddr)) {
                         out(clif, "Failed to look up address 0x%08x\n",
                             reloc->addr);
                         continue;
@@ -179,4 +191,21 @@ clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
         out(clif, "\n");
 
         clif_process_worklist(clif);
+}
+
+void
+clif_dump_add_bo(struct clif_dump *clif, const char *name,
+                 uint32_t offset, uint32_t size, void *vaddr)
+{
+        if (clif->bo_count >= clif->bo_array_size) {
+                clif->bo_array_size = MAX2(4, clif->bo_array_size * 2);
+                clif->bo = reralloc(clif, clif->bo, struct clif_bo,
+                                    clif->bo_array_size);
+        }
+
+        clif->bo[clif->bo_count].name = ralloc_strdup(clif, name);
+        clif->bo[clif->bo_count].offset = offset;
+        clif->bo[clif->bo_count].size = size;
+        clif->bo[clif->bo_count].vaddr = vaddr;
+        clif->bo_count++;
 }

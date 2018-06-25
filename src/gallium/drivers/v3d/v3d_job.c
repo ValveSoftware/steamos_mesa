@@ -341,26 +341,6 @@ v3d_get_job_for_fbo(struct v3d_context *v3d)
         return job;
 }
 
-static bool
-v3d_clif_dump_lookup(void *data, uint32_t addr, void **vaddr)
-{
-        struct v3d_job *job = data;
-        struct set_entry *entry;
-
-        set_foreach(job->bos, entry) {
-                struct v3d_bo *bo = (void *)entry->key;
-
-                if (addr >= bo->offset &&
-                    addr < bo->offset + bo->size) {
-                        v3d_bo_map(bo);
-                        *vaddr = bo->map + addr - bo->offset;
-                        return true;
-                }
-        }
-
-        return false;
-}
-
 static void
 v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
 {
@@ -368,8 +348,19 @@ v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
                 return;
 
         struct clif_dump *clif = clif_dump_init(&v3d->screen->devinfo,
-                                                stderr, v3d_clif_dump_lookup,
-                                                job);
+                                                stderr);
+
+        struct set_entry *entry;
+        set_foreach(job->bos, entry) {
+                struct v3d_bo *bo = (void *)entry->key;
+                char *name = ralloc_asprintf(NULL, "%s_0x%x",
+                                             bo->name, bo->offset);
+
+                v3d_bo_map(bo);
+                clif_dump_add_bo(clif, name, bo->offset, bo->size, bo->map);
+
+                ralloc_free(name);
+        }
 
         fprintf(stderr, "BCL: 0x%08x..0x%08x\n",
                 job->submit.bcl_start, job->submit.bcl_end);
@@ -379,6 +370,8 @@ v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
         fprintf(stderr, "RCL: 0x%08x..0x%08x\n",
                 job->submit.rcl_start, job->submit.rcl_end);
         clif_dump_add_cl(clif, job->submit.rcl_start, job->submit.rcl_end);
+
+        clif_dump_destroy(clif);
 }
 
 /**
