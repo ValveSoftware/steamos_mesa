@@ -131,12 +131,12 @@ clif_dump_gl_shader_state_record(struct clif_dump *clif,
         assert(attr);
 
         out(clif, "GL Shader State Record at 0x%08x\n", reloc->addr);
-        v3d_print_group(clif->out, state, 0, vaddr, "");
+        v3d_print_group(clif, state, 0, vaddr, "");
         vaddr += v3d_group_get_length(state);
 
         for (int i = 0; i < reloc->shader_state.num_attrs; i++) {
                 out(clif, "  Attribute %d\n", i);
-                v3d_print_group(clif->out, attr, 0, vaddr, "");
+                v3d_print_group(clif, attr, 0, vaddr, "");
                 vaddr += v3d_group_get_length(attr);
         }
 }

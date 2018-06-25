@@ -37,6 +37,7 @@
 #include "v3d_decoder.h"
 #include "v3d_packet_helpers.h"
 #include "v3d_xml.h"
+#include "broadcom/clif/clif_private.h"
 
 struct v3d_spec {
         uint32_t ver;
@@ -924,17 +925,17 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
 }
 
 void
-v3d_print_group(FILE *outfile, struct v3d_group *group,
+v3d_print_group(struct clif_dump *clif, struct v3d_group *group,
                 uint64_t offset, const uint8_t *p, bool color)
 {
         struct v3d_field_iterator iter;
 
         v3d_field_iterator_init(&iter, group, p, color);
         while (v3d_field_iterator_next(&iter)) {
-                fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
+                fprintf(clif->out, "    %s: %s\n", iter.name, iter.value);
                 if (iter.struct_desc) {
                         uint64_t struct_offset = offset + iter.offset;
-                        v3d_print_group(outfile, iter.struct_desc,
+                        v3d_print_group(clif, iter.struct_desc,
                                         struct_offset,
                                         &p[iter.offset], color);
                 }
