@@ -139,7 +139,16 @@ class Constant(Value):
       if isinstance(self.value, (int, long)):
          return hex(self.value)
       elif isinstance(self.value, float):
-         return hex(struct.unpack('Q', struct.pack('d', self.value))[0])
+         i = struct.unpack('Q', struct.pack('d', self.value))[0]
+         h = hex(i)
+
+         # On Python 2 this 'L' suffix is automatically added, but not on Python 3
+         # Adding it explicitly makes the generated file identical, regardless
+         # of the Python version running this script.
+         if h[-1] != 'L' and i > sys.maxsize:
+            h += 'L'
+
+         return h
       else:
          assert False
 
