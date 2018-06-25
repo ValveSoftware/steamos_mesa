@@ -465,10 +465,12 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                 v3d->viewport.scale[2];
                 }
                 cl_emit(&job->bcl, CLIPPER_Z_MIN_MAX_CLIPPING_PLANES, clip) {
-                        clip.minimum_zw = (v3d->viewport.translate[2] -
-                                           v3d->viewport.scale[2]);
-                        clip.maximum_zw = (v3d->viewport.translate[2] +
-                                           v3d->viewport.scale[2]);
+                        float z1 = (v3d->viewport.translate[2] -
+                                    v3d->viewport.scale[2]);
+                        float z2 = (v3d->viewport.translate[2] +
+                                    v3d->viewport.scale[2]);
+                        clip.minimum_zw = MIN2(z1, z2);
+                        clip.maximum_zw = MAX2(z1, z2);
                 }
 
                 cl_emit(&job->bcl, VIEWPORT_OFFSET, vp) {
