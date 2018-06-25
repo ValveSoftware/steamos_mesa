@@ -53,3 +53,35 @@ TEST(set, basic)
 
    _mesa_set_destroy(s, NULL);
 }
+
+TEST(set, clone)
+{
+   struct set *s = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                    _mesa_key_pointer_equal);
+   struct set_entry *entry;
+
+   const void *a = (const void *)10;
+   const void *b = (const void *)20;
+   const void *c = (const void *)30;
+
+   _mesa_set_add(s, a);
+   _mesa_set_add(s, b);
+   _mesa_set_add(s, c);
+
+   entry = _mesa_set_search(s, c);
+   EXPECT_TRUE(entry);
+   EXPECT_EQ(entry->key, c);
+
+   _mesa_set_remove(s, entry);
+   EXPECT_EQ(s->entries, 2);
+
+   struct set *clone = _mesa_set_clone(s, NULL);
+   EXPECT_EQ(clone->entries, 2);
+
+   EXPECT_TRUE(_mesa_set_search(clone, a));
+   EXPECT_TRUE(_mesa_set_search(clone, b));
+   EXPECT_FALSE(_mesa_set_search(clone, c));
+
+   _mesa_set_destroy(s, NULL);
+   _mesa_set_destroy(clone, NULL);
+}
