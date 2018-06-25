@@ -92,6 +92,8 @@ namespace SwrJit
     VROUND_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
     Instruction *
     VHSUB_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
+    Instruction *
+    VCONVERT_EMU(LowerX86 *pThis, TargetArch arch, TargetWidth width, CallInst *pCallInst);
 
     Instruction *DOUBLE_EMU(LowerX86 *    pThis,
                             TargetArch    arch,
@@ -146,6 +148,7 @@ namespace SwrJit
             // AVX512
             {"meta.intrinsic.VRCPPS",
              {{Intrinsic::x86_avx512_rcp14_ps_256, Intrinsic::x86_avx512_rcp14_ps_512}, NO_EMU}},
+#if LLVM_VERSION_MAJOR < 7
             {"meta.intrinsic.VPERMPS",
              {{Intrinsic::x86_avx512_mask_permvar_sf_256,
                Intrinsic::x86_avx512_mask_permvar_sf_512},
@@ -154,15 +157,26 @@ namespace SwrJit
              {{Intrinsic::x86_avx512_mask_permvar_si_256,
                Intrinsic::x86_avx512_mask_permvar_si_512},
               NO_EMU}},
+#else
+            {"meta.intrinsic.VPERMPS",
+             {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VPERM_EMU}},
+            {"meta.intrinsic.VPERMD",
+             {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VPERM_EMU}},
+#endif
             {"meta.intrinsic.VGATHERPD",
              {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VGATHER_EMU}},
             {"meta.intrinsic.VGATHERPS",
              {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VGATHER_EMU}},
             {"meta.intrinsic.VGATHERDD",
              {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VGATHER_EMU}},
+#if LLVM_VERSION_MAJOR < 7
             {"meta.intrinsic.VCVTPD2PS",
              {{Intrinsic::x86_avx512_mask_cvtpd2ps_256, Intrinsic::x86_avx512_mask_cvtpd2ps_512},
               NO_EMU}},
+#else
+            {"meta.intrinsic.VCVTPD2PS",
+             {{Intrinsic::not_intrinsic, Intrinsic::not_intrinsic}, VCONVERT_EMU}},
+#endif
             {"meta.intrinsic.VCVTPH2PS",
              {{Intrinsic::x86_avx512_mask_vcvtph2ps_256, Intrinsic::x86_avx512_mask_vcvtph2ps_512},
               NO_EMU}},
@@ -653,6 +667,32 @@ namespace SwrJit
             auto v8f32ResHi = B->CALL2(pfnFunc, v8f32SrcHi, i8Round);
 
             return cast<Instruction>(B->JOIN_16(v8f32ResLo, v8f32ResHi));
+        }
+        else
+        {
+            SWR_ASSERT(false, "Unimplemented vector width.");
+        }
+
+        return nullptr;
+    }
+
+    Instruction *VCONVERT_EMU(LowerX86* pThis, TargetArch arch, TargetWidth width, CallInst* pCallInst)
+    {
+        SWR_ASSERT(arch == AVX512);
+
+        auto B = pThis->B;
+        auto vf32Src = pCallInst->getOperand(0);
+
+        if (width == W256)
+        {
+            auto vf32SrcRound = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx_round_ps_256);
+            return cast<Instruction>(B->FP_TRUNC(vf32SrcRound, B->mFP32Ty));
+        }
+        else if (width == W512)
+        {
+            // 512 can use intrinsic
+            auto pfnFunc = Intrinsic::getDeclaration(B->JM()->mpCurrentModule, Intrinsic::x86_avx512_mask_cvtpd2ps_512);
+            return cast<Instruction>(B->CALL(pfnFunc, vf32Src));
         }
         else
         {
