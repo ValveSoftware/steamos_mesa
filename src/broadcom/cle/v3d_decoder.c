@@ -975,7 +975,13 @@ v3d_print_group(struct clif_dump *clif, struct v3d_group *group,
                     strcmp(iter.field->name, "Pad") == 0)
                         continue;
 
-                fprintf(clif->out, "    %s: %s\n", iter.name, iter.value);
+                if (clif->pretty) {
+                        fprintf(clif->out, "    %s: %s\n",
+                                iter.name, iter.value);
+                } else {
+                        fprintf(clif->out, "  /* %30s: */ %s\n",
+                                iter.name, iter.value);
+                }
                 if (iter.struct_desc) {
                         uint64_t struct_offset = offset + iter.offset;
                         v3d_print_group(clif, iter.struct_desc,
