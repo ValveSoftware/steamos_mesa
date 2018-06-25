@@ -46,6 +46,13 @@
       fieldval & field ## _MASK;                                        \
    })
 
+#define SET_BITS(value, high, low)                                      \
+   ({                                                                   \
+      const uint32_t fieldval = (value) << (low);                       \
+      assert((fieldval & ~INTEL_MASK(high, low)) == 0);                 \
+      fieldval & INTEL_MASK(high, low);                                 \
+   })
+
 #define GET_BITS(data, high, low) ((data & INTEL_MASK((high), (low))) >> (low))
 #define GET_FIELD(word, field) (((word)  & field ## _MASK) >> field ## _SHIFT)
 
