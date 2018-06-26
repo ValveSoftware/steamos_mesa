@@ -1796,6 +1796,7 @@ struct radv_shader_variant_info;
 struct radv_nir_compiler_options;
 
 void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
+				 LLVMPassManagerRef passmgr,
 				 struct nir_shader *geom_shader,
 				 struct ac_shader_binary *binary,
 				 struct ac_shader_config *config,
@@ -1803,6 +1804,7 @@ void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 				 const struct radv_nir_compiler_options *option);
 
 void radv_compile_nir_shader(LLVMTargetMachineRef tm,
+			     LLVMPassManagerRef passmgr,
 			     struct ac_shader_binary *binary,
 			     struct ac_shader_config *config,
 			     struct radv_shader_variant_info *shader_info,

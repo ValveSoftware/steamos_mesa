@@ -2993,15 +2993,11 @@ handle_shader_outputs_post(struct ac_shader_abi *abi, unsigned max_outputs,
 }
 
 static void ac_llvm_finalize_module(struct radv_shader_context *ctx,
+				    LLVMPassManagerRef passmgr,
 				    const struct radv_nir_compiler_options *options)
 {
-	LLVMPassManagerRef passmgr;
-
-	passmgr = ac_create_passmgr(NULL, options->check_ir);
-
 	LLVMRunPassManager(passmgr, ctx->ac.module);
 	LLVMDisposeBuilder(ctx->ac.builder);
-	LLVMDisposePassManager(passmgr);
 
 	ac_llvm_context_dispose(&ctx->ac);
 }
@@ -3132,6 +3128,7 @@ static void prepare_gs_input_vgprs(struct radv_shader_context *ctx)
 
 static
 LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
+                                       LLVMPassManagerRef passmgr,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
                                        struct radv_shader_variant_info *shader_info,
@@ -3300,7 +3297,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (options->dump_preoptir)
 		ac_dump_module(ctx.ac.module);
 
-	ac_llvm_finalize_module(&ctx, options);
+	ac_llvm_finalize_module(&ctx, passmgr, options);
 
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
@@ -3501,6 +3498,7 @@ ac_fill_shader_info(struct radv_shader_variant_info *shader_info, struct nir_sha
 
 void
 radv_compile_nir_shader(LLVMTargetMachineRef tm,
+			LLVMPassManagerRef passmgr,
 			struct ac_shader_binary *binary,
 			struct ac_shader_config *config,
 			struct radv_shader_variant_info *shader_info,
@@ -3511,7 +3509,7 @@ radv_compile_nir_shader(LLVMTargetMachineRef tm,
 
 	LLVMModuleRef llvm_module;
 
-	llvm_module = ac_translate_nir_to_llvm(tm, nir, nir_count, shader_info,
+	llvm_module = ac_translate_nir_to_llvm(tm, passmgr, nir, nir_count, shader_info,
 	                                       options);
 
 	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info,
@@ -3573,6 +3571,7 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 
 void
 radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
+			    LLVMPassManagerRef passmgr,
 			    struct nir_shader *geom_shader,
 			    struct ac_shader_binary *binary,
 			    struct ac_shader_config *config,
@@ -3617,7 +3616,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	LLVMBuildRetVoid(ctx.ac.builder);
 
-	ac_llvm_finalize_module(&ctx, options);
+	ac_llvm_finalize_module(&ctx, passmgr, options);
 
 	ac_compile_llvm_module(tm, ctx.ac.module, binary, config, shader_info,
 			       MESA_SHADER_VERTEX, options);
