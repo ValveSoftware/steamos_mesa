@@ -539,8 +539,7 @@ v3dX(emit_rcl)(struct v3d_job *job)
                 config.image_width_pixels = job->draw_width;
                 config.image_height_pixels = job->draw_height;
 
-                config.number_of_render_targets_minus_1 =
-                        MAX2(nr_cbufs, 1) - 1;
+                config.number_of_render_targets = MAX2(nr_cbufs, 1);
 
                 config.multisample_mode_4x = job->msaa;
 
@@ -709,8 +708,8 @@ v3dX(emit_rcl)(struct v3d_job *job)
                 config.total_frame_width_in_tiles = job->draw_tiles_x;
                 config.total_frame_height_in_tiles = job->draw_tiles_y;
 
-                config.supertile_width_in_tiles_minus_1 = supertile_w - 1;
-                config.supertile_height_in_tiles_minus_1 = supertile_h - 1;
+                config.supertile_width_in_tiles = supertile_w;
+                config.supertile_height_in_tiles = supertile_h;
 
                 config.total_frame_width_in_supertiles = frame_w_in_supertiles;
                 config.total_frame_height_in_supertiles = frame_h_in_supertiles;

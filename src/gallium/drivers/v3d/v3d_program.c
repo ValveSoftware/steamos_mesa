@@ -121,7 +121,7 @@ v3d_set_transform_feedback_outputs(struct v3d_uncompiled_shader *so,
                                  * values at the start.
                                  */
                                 .first_shaded_vertex_value_to_output = vpm_start_offset,
-                                .number_of_consecutive_vertex_values_to_output_as_32_bit_values_minus_1 = write_size - 1,
+                                .number_of_consecutive_vertex_values_to_output_as_32_bit_values = write_size,
                                 .output_buffer_to_write_to = buffer,
                         };
 

@@ -78,10 +78,10 @@ v3d_start_draw(struct v3d_context *v3d)
 
         cl_emit(&job->bcl, TILE_BINNING_MODE_CONFIGURATION_PART1, config) {
 #if V3D_VERSION >= 40
-                config.width_in_pixels_minus_1 = v3d->framebuffer.width - 1;
-                config.height_in_pixels_minus_1 = v3d->framebuffer.height - 1;
-                config.number_of_render_targets_minus_1 =
-                        MAX2(v3d->framebuffer.nr_cbufs, 1) - 1;
+                config.width_in_pixels = v3d->framebuffer.width;
+                config.height_in_pixels = v3d->framebuffer.height;
+                config.number_of_render_targets =
+                        MAX2(v3d->framebuffer.nr_cbufs, 1);
 #else /* V3D_VERSION < 40 */
                 config.tile_state_data_array_base_address =
                         cl_address(job->tile_state, 0);
@@ -214,6 +214,9 @@ v3d_emit_gl_shader_state(struct v3d_context *v3d,
                 shader.fragment_shader_uniforms_address = fs_uniforms;
 
 #if V3D_VERSION >= 41
+                shader.min_coord_shader_input_segments_required_in_play = 1;
+                shader.min_vertex_shader_input_segments_required_in_play = 1;
+
                 shader.coordinate_shader_4_way_threadable =
                         v3d->prog.cs->prog_data.vs->base.threads == 4;
                 shader.vertex_shader_4_way_threadable =
