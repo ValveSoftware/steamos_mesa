@@ -1764,6 +1764,11 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_pipeline *pipeline = stages & VK_SHADER_STAGE_COMPUTE_BIT
 					 ? cmd_buffer->state.compute_pipeline
 					 : cmd_buffer->state.pipeline;
+	VkPipelineBindPoint bind_point = stages & VK_SHADER_STAGE_COMPUTE_BIT ?
+					 VK_PIPELINE_BIND_POINT_COMPUTE :
+					 VK_PIPELINE_BIND_POINT_GRAPHICS;
+	struct radv_descriptor_state *descriptors_state =
+		radv_get_descriptors_state(cmd_buffer, bind_point);
 	struct radv_pipeline_layout *layout = pipeline->layout;
 	struct radv_shader_variant *shader, *prev_shader;
 	unsigned offset;
@@ -1781,7 +1786,8 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 		return;
 
 	memcpy(ptr, cmd_buffer->push_constants, layout->push_constant_size);
-	memcpy((char*)ptr + layout->push_constant_size, cmd_buffer->dynamic_buffers,
+	memcpy((char*)ptr + layout->push_constant_size,
+	       descriptors_state->dynamic_buffers,
 	       16 * layout->dynamic_offset_count);
 
 	va = radv_buffer_get_va(cmd_buffer->upload.upload_bo);
@@ -2415,6 +2421,8 @@ void radv_CmdBindDescriptorSets(
 	unsigned dyn_idx = 0;
 
 	const bool no_dynamic_bounds = cmd_buffer->device->instance->debug_flags & RADV_DEBUG_NO_DYNAMIC_BOUNDS;
+	struct radv_descriptor_state *descriptors_state =
+		radv_get_descriptors_state(cmd_buffer, pipelineBindPoint);
 
 	for (unsigned i = 0; i < descriptorSetCount; ++i) {
 		unsigned idx = i + firstSet;
@@ -2423,7 +2431,7 @@ void radv_CmdBindDescriptorSets(
 
 		for(unsigned j = 0; j < set->layout->dynamic_offset_count; ++j, ++dyn_idx) {
 			unsigned idx = j + layout->set[i + firstSet].dynamic_offset_start;
-			uint32_t *dst = cmd_buffer->dynamic_buffers + idx * 4;
+			uint32_t *dst = descriptors_state->dynamic_buffers + idx * 4;
 			assert(dyn_idx < dynamicOffsetCount);
 
 			struct radv_descriptor_range *range = set->dynamic_descriptors + j;
