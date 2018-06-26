@@ -129,6 +129,8 @@ clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
                 return;
         }
 
+        out(clif, "@format ctrllist\n");
+
         uint32_t size;
         uint8_t *cl = start_vaddr;
         while (clif_dump_packet(clif, start, cl, &size)) {
@@ -152,12 +154,12 @@ clif_dump_gl_shader_state_record(struct clif_dump *clif,
         assert(state);
         assert(attr);
 
-        out(clif, "GL Shader State Record at 0x%08x\n", reloc->addr);
+        out(clif, "@format shadrec_gl_main\n");
         v3d_print_group(clif, state, 0, vaddr);
         vaddr += v3d_group_get_length(state);
 
         for (int i = 0; i < reloc->shader_state.num_attrs; i++) {
-                out(clif, "  Attribute %d\n", i);
+                out(clif, "@format shadrec_gl_attr /* %d */\n", i);
                 v3d_print_group(clif, attr, 0, vaddr);
                 vaddr += v3d_group_get_length(attr);
         }

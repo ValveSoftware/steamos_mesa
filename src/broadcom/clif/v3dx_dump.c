@@ -91,6 +91,7 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
                         cl += v3d_group_get_length(spec);
                         *size += v3d_group_get_length(spec);
                 }
+                out(clif, "@format ctrllist\n");
                 break;
         }
 #else /* V3D_VERSION < 40 */
