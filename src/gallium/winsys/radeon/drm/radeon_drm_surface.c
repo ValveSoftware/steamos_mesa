@@ -220,6 +220,66 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
 			      surf_ws->micro_tile_mode == RADEON_MICRO_MODE_ROTATED;
 }
 
+static void si_compute_cmask(const struct radeon_info *info,
+		      const struct ac_surf_config *config,
+		      struct radeon_surf *surf)
+{
+	unsigned pipe_interleave_bytes = info->pipe_interleave_bytes;
+	unsigned num_pipes = info->num_tile_pipes;
+	unsigned cl_width, cl_height;
+
+	if (surf->flags & RADEON_SURF_Z_OR_SBUFFER)
+		return;
+
+	assert(info->chip_class <= VI);
+
+	switch (num_pipes) {
+	case 2:
+		cl_width = 32;
+		cl_height = 16;
+		break;
+	case 4:
+		cl_width = 32;
+		cl_height = 32;
+		break;
+	case 8:
+		cl_width = 64;
+		cl_height = 32;
+		break;
+	case 16: /* Hawaii */
+		cl_width = 64;
+		cl_height = 64;
+		break;
+	default:
+		assert(0);
+		return;
+	}
+
+	unsigned base_align = num_pipes * pipe_interleave_bytes;
+
+	unsigned width = align(config->info.width, cl_width*8);
+	unsigned height = align(config->info.height, cl_height*8);
+	unsigned slice_elements = (width * height) / (8*8);
+
+	/* Each element of CMASK is a nibble. */
+	unsigned slice_bytes = slice_elements / 2;
+
+	surf->u.legacy.cmask_slice_tile_max = (width * height) / (128*128);
+	if (surf->u.legacy.cmask_slice_tile_max)
+		surf->u.legacy.cmask_slice_tile_max -= 1;
+
+	unsigned num_layers;
+	if (config->is_3d)
+		num_layers = config->info.depth;
+	else if (config->is_cube)
+		num_layers = 6;
+	else
+		num_layers = config->info.array_size;
+
+	surf->cmask_alignment = MAX2(256, base_align);
+	surf->cmask_size = align(slice_bytes, base_align) * num_layers;
+}
+
 static int radeon_winsys_surface_init(struct radeon_winsys *rws,
                                       const struct pipe_resource *tex,
                                       unsigned num_color_samples,
@@ -304,7 +364,7 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
 	    config.is_3d = !!(tex->target == PIPE_TEXTURE_3D);
 	    config.is_cube = !!(tex->target == PIPE_TEXTURE_CUBE);
 
-	    ac_compute_cmask(&ws->info, &config, surf_ws);
+	    si_compute_cmask(&ws->info, &config, surf_ws);
     }
     return 0;
 }
