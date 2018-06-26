@@ -282,7 +282,7 @@ class XmlParser(object):
         self.container = None
 
     def parse(self, filename):
-        with open(filename) as f:
+        with open(filename, 'rb') as f:
             self.parser.ParseFile(f)
 
     def start_element(self, name, attrs):
