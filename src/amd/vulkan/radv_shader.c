@@ -526,36 +526,6 @@ static void radv_init_llvm_once(void)
 	call_once(&radv_init_llvm_target_once_flag, radv_init_llvm_target);
 }
 
-static LLVMTargetMachineRef radv_create_target_machine(enum radeon_family family,
-						       enum ac_target_machine_options tm_options,
-						       const char **out_triple)
-{
-	assert(family >= CHIP_TAHITI);
-	char features[256];
-	const char *triple = (tm_options & AC_TM_SUPPORTS_SPILL) ? "amdgcn-mesa-mesa3d" : "amdgcn--";
-	LLVMTargetRef target = ac_get_llvm_target(triple);
-
-	snprintf(features, sizeof(features),
-		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s%s",
-		 tm_options & AC_TM_SISCHED ? ",+si-scheduler" : "",
-		 tm_options & AC_TM_FORCE_ENABLE_XNACK ? ",+xnack" : "",
-		 tm_options & AC_TM_FORCE_DISABLE_XNACK ? ",-xnack" : "",
-		 tm_options & AC_TM_PROMOTE_ALLOCA_TO_SCRATCH ? ",-promote-alloca" : "");
-
-	LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
-	                             target,
-	                             triple,
-	                             ac_get_llvm_processor_name(family),
-				     features,
-	                             LLVMCodeGenLevelDefault,
-	                             LLVMRelocDefault,
-	                             LLVMCodeModelDefault);
-
-	if (out_triple)
-		*out_triple = triple;
-	return tm;
-}
-
 static struct radv_shader_variant *
 shader_variant_create(struct radv_device *device,
 		      struct radv_shader_module *module,
@@ -593,7 +563,7 @@ shader_variant_create(struct radv_device *device,
 		tm_options |= AC_TM_SISCHED;
 
 	radv_init_llvm_once();
-	tm = radv_create_target_machine(chip_family, tm_options, NULL);
+	tm = ac_create_target_machine(chip_family, tm_options, NULL);
 	if (gs_copy_shader) {
 		assert(shader_count == 1);
 		radv_compile_gs_copy_shader(tm, *shaders, &binary,
