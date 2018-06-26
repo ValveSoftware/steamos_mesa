@@ -4231,7 +4231,6 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	 * the stage mask. */
 
 	si_cs_emit_write_event_eop(cs,
-				   cmd_buffer->state.predicating,
 				   cmd_buffer->device->physical_device->rad_info.chip_class,
 				   radv_cmd_buffer_uses_mec(cmd_buffer),
 				   V_028A90_BOTTOM_OF_PIPE_TS, 0,
@@ -4283,7 +4282,7 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 
 		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
 
-		si_emit_wait_fence(cs, false, va, 1, 0xffffffff);
+		si_emit_wait_fence(cs, va, 1, 0xffffffff);
 		assert(cmd_buffer->cs->cdw <= cdw_max);
 	}
 
