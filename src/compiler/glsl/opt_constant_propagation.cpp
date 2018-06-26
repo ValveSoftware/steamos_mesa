@@ -106,6 +106,7 @@ public:
    void constant_propagation(ir_rvalue **rvalue);
    void kill(ir_variable *ir, unsigned write_mask);
    void handle_if_block(exec_list *instructions, hash_table *kills, bool *killed_all);
+   void handle_loop(class ir_loop *, bool keep_acp);
    void handle_rvalue(ir_rvalue **rvalue);
 
    /** List of acp_entry: The available constants to propagate */
@@ -390,21 +391,23 @@ ir_constant_propagation_visitor::visit_enter(ir_if *ir)
    return visit_continue_with_parent;
 }
 
-ir_visitor_status
-ir_constant_propagation_visitor::visit_enter(ir_loop *ir)
+void
+ir_constant_propagation_visitor::handle_loop(ir_loop *ir, bool keep_acp)
 {
    exec_list *orig_acp = this->acp;
    hash_table *orig_kills = this->kills;
    bool orig_killed_all = this->killed_all;
 
-   /* FINISHME: For now, the initial acp for loops is totally empty.
-    * We could go through once, then go through again with the acp
-    * cloned minus the killed entries after the first run through.
-    */
    this->acp = new(mem_ctx) exec_list;
    this->kills = _mesa_hash_table_create(mem_ctx, _mesa_hash_pointer,
                                          _mesa_key_pointer_equal);
    this->killed_all = false;
+
+   if (keep_acp) {
+      foreach_in_list(acp_entry, a, orig_acp) {
+         this->acp->push_tail(new(this->lin_ctx) acp_entry(a));
+      }
+   }
 
    visit_list_elements(this, &ir->body_instructions);
 
@@ -421,6 +424,20 @@ ir_constant_propagation_visitor::visit_enter(ir_loop *ir)
    hash_table_foreach(new_kills, htk) {
       kill((ir_variable *) htk->key, (uintptr_t) htk->data);
    }
+}
+
+ir_visitor_status
+ir_constant_propagation_visitor::visit_enter(ir_loop *ir)
+{
+   /* Make a conservative first pass over the loop with an empty ACP set.
+    * This also removes any killed entries from the original ACP set.
+    */
+   handle_loop(ir, false);
+
+   /* Then, run it again with the real ACP set, minus any killed entries.
+    * This takes care of propagating values from before the loop into it.
+    */
+   handle_loop(ir, true);
 
    /* already descended into the children. */
    return visit_continue_with_parent;
