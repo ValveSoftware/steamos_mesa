@@ -36,6 +36,7 @@
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/CallSite.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 
 void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
 {
@@ -96,4 +97,16 @@ LLVMBuilderRef ac_create_builder(LLVMContextRef ctx,
 	}
 
 	return builder;
+}
+
+LLVMTargetLibraryInfoRef
+ac_create_target_library_info(const char *triple)
+{
+	return reinterpret_cast<LLVMTargetLibraryInfoRef>(new llvm::TargetLibraryInfoImpl(llvm::Triple(triple)));
+}
+
+void
+ac_dispose_target_library_info(LLVMTargetLibraryInfoRef library_info)
+{
+	delete reinterpret_cast<llvm::TargetLibraryInfoImpl *>(library_info);
 }
