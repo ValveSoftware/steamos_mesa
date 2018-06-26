@@ -1372,7 +1372,7 @@ genX(BeginCommandBuffer)(
 
          if (iview) {
             VkImageLayout layout =
-                cmd_buffer->state.subpass->depth_stencil_attachment.layout;
+                cmd_buffer->state.subpass->depth_stencil_attachment->layout;
 
             enum isl_aux_usage aux_usage =
                anv_layout_to_aux_usage(&cmd_buffer->device->info, iview->image,
@@ -3417,7 +3417,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
                               surface->offset);
 
       const uint32_t ds =
-         cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
+         cmd_buffer->state.subpass->depth_stencil_attachment->attachment;
       info.hiz_usage = cmd_buffer->state.attachments[ds].aux_usage;
       if (info.hiz_usage == ISL_AUX_USAGE_HIZ) {
          info.hiz_surf = &image->planes[depth_plane].aux_surface.isl;

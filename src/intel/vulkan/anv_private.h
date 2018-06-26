@@ -3146,7 +3146,7 @@ struct anv_subpass {
    struct anv_subpass_attachment *              color_attachments;
    struct anv_subpass_attachment *              resolve_attachments;
 
-   struct anv_subpass_attachment                depth_stencil_attachment;
+   struct anv_subpass_attachment *              depth_stencil_attachment;
 
    uint32_t                                     view_mask;
 

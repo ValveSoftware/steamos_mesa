@@ -66,6 +66,14 @@ anv_render_pass_compile(struct anv_render_pass *pass)
    for (uint32_t i = 0; i < pass->subpass_count; i++) {
       struct anv_subpass *subpass = &pass->subpasses[i];
 
+      /* We don't allow depth_stencil_attachment to be non-NULL and be
+       * VK_ATTACHMENT_UNUSED.  This way something can just check for NULL
+       * and be guaranteed that they have a valid attachment.
+       */
+      if (subpass->depth_stencil_attachment &&
+          subpass->depth_stencil_attachment->attachment == VK_ATTACHMENT_UNUSED)
+         subpass->depth_stencil_attachment = NULL;
+
       for (uint32_t j = 0; j < subpass->attachment_count; j++) {
          struct anv_subpass_attachment *subpass_att = &subpass->attachments[j];
          if (subpass_att->attachment == VK_ATTACHMENT_UNUSED)
@@ -86,7 +94,8 @@ anv_render_pass_compile(struct anv_render_pass *pass)
          }
 
          if (subpass_att->usage == VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
-             subpass_att->attachment == subpass->depth_stencil_attachment.attachment)
+             subpass->depth_stencil_attachment &&
+             subpass_att->attachment == subpass->depth_stencil_attachment->attachment)
             subpass->has_ds_self_dep = true;
       }
 
@@ -283,17 +292,12 @@ VkResult anv_CreateRenderPass(
       }
 
       if (desc->pDepthStencilAttachment) {
-         subpass->depth_stencil_attachment = (struct anv_subpass_attachment) {
+         subpass->depth_stencil_attachment = subpass_attachments++;
+
+         *subpass->depth_stencil_attachment = (struct anv_subpass_attachment) {
             .usage =       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             .attachment =  desc->pDepthStencilAttachment->attachment,
             .layout =      desc->pDepthStencilAttachment->layout,
-         };
-         *subpass_attachments++ = subpass->depth_stencil_attachment;
-      } else {
-         subpass->depth_stencil_attachment = (struct anv_subpass_attachment) {
-            .usage =       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            .attachment =  VK_ATTACHMENT_UNUSED,
-            .layout =   VK_IMAGE_LAYOUT_UNDEFINED,
          };
       }
    }
@@ -357,8 +361,7 @@ void anv_GetRenderAreaGranularity(
     * for all sample counts.
     */
    for (unsigned i = 0; i < pass->subpass_count; ++i) {
-      if (pass->subpasses[i].depth_stencil_attachment.attachment !=
-          VK_ATTACHMENT_UNUSED) {
+      if (pass->subpasses[i].depth_stencil_attachment) {
          *pGranularity = (VkExtent2D) { .width = 8, .height = 4 };
          return;
       }
