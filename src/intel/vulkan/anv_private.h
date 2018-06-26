@@ -57,6 +57,7 @@
 #include "util/vma.h"
 #include "vk_alloc.h"
 #include "vk_debug_report.h"
+#include "vk_enum_to_str.h"
 
 /* Pre-declarations needed for WSI entrypoints */
 struct wl_surface;
@@ -412,7 +413,8 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
  *    defined by extensions supported by that component.
  */
 #define anv_debug_ignored_stype(sType) \
-   intel_logd("%s: ignored VkStructureType %u\n", __func__, (sType))
+   intel_logd("%s: ignored VkStructureType %s\n", __func__, \
+              vk_StructureType_to_str(sType))
 
 void __anv_perf_warn(struct anv_instance *instance, const void *object,
                      VkDebugReportObjectTypeEXT type, const char *file,
