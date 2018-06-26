@@ -285,6 +285,7 @@ ac_count_scratch_private_memory(LLVMValueRef function)
 
 bool
 ac_init_llvm_compiler(struct ac_llvm_compiler *compiler,
+		      bool okay_to_leak_target_library_info,
 		      enum radeon_family family,
 		      enum ac_target_machine_options tm_options)
 {
@@ -296,10 +297,12 @@ ac_init_llvm_compiler(struct ac_llvm_compiler *compiler,
 	if (!compiler->tm)
 		return false;
 
-	compiler->target_library_info =
-		ac_create_target_library_info(triple);
-	if (!compiler->target_library_info)
-		goto fail;
+	if (okay_to_leak_target_library_info || (HAVE_LLVM >= 0x0700)) {
+		compiler->target_library_info =
+			ac_create_target_library_info(triple);
+		if (!compiler->target_library_info)
+			goto fail;
+	}
 
 	compiler->passmgr = ac_create_passmgr(compiler->target_library_info,
 					      tm_options & AC_TM_CHECK_IR);

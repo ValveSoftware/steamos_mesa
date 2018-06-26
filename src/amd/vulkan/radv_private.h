@@ -58,6 +58,7 @@
 #include "ac_gpu_info.h"
 #include "ac_surface.h"
 #include "ac_llvm_build.h"
+#include "ac_llvm_util.h"
 #include "radv_descriptor_set.h"
 #include "radv_extensions.h"
 #include "radv_cs.h"
@@ -1795,16 +1796,14 @@ struct radv_fence {
 struct radv_shader_variant_info;
 struct radv_nir_compiler_options;
 
-void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
-				 LLVMPassManagerRef passmgr,
+void radv_compile_gs_copy_shader(struct ac_llvm_compiler *ac_llvm,
 				 struct nir_shader *geom_shader,
 				 struct ac_shader_binary *binary,
 				 struct ac_shader_config *config,
 				 struct radv_shader_variant_info *shader_info,
 				 const struct radv_nir_compiler_options *option);
 
-void radv_compile_nir_shader(LLVMTargetMachineRef tm,
-			     LLVMPassManagerRef passmgr,
+void radv_compile_nir_shader(struct ac_llvm_compiler *ac_llvm,
 			     struct ac_shader_binary *binary,
 			     struct ac_shader_config *config,
 			     struct radv_shader_variant_info *shader_info,

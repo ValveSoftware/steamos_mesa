@@ -3127,8 +3127,7 @@ static void prepare_gs_input_vgprs(struct radv_shader_context *ctx)
 
 
 static
-LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
-                                       LLVMPassManagerRef passmgr,
+LLVMModuleRef ac_translate_nir_to_llvm(struct ac_llvm_compiler *ac_llvm,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
                                        struct radv_shader_variant_info *shader_info,
@@ -3142,7 +3141,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = ac_create_module(tm, ctx.context);
+	ctx.ac.module = ac_create_module(ac_llvm->tm, ctx.context);
 
 	enum ac_float_mode float_mode =
 		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
@@ -3297,7 +3296,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (options->dump_preoptir)
 		ac_dump_module(ctx.ac.module);
 
-	ac_llvm_finalize_module(&ctx, passmgr, options);
+	ac_llvm_finalize_module(&ctx, ac_llvm->passmgr, options);
 
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
@@ -3327,7 +3326,7 @@ static void ac_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
 
 static unsigned ac_llvm_compile(LLVMModuleRef M,
                                 struct ac_shader_binary *binary,
-                                LLVMTargetMachineRef tm)
+                                struct ac_llvm_compiler *ac_llvm)
 {
 	unsigned retval = 0;
 	char *err;
@@ -3344,7 +3343,7 @@ static unsigned ac_llvm_compile(LLVMModuleRef M,
 	                                &retval);
 
 	/* Compile IR*/
-	mem_err = LLVMTargetMachineEmitToMemoryBuffer(tm, M, LLVMObjectFile,
+	mem_err = LLVMTargetMachineEmitToMemoryBuffer(ac_llvm->tm, M, LLVMObjectFile,
 	                                              &err, &out_buffer);
 
 	/* Process Errors/Warnings */
@@ -3368,7 +3367,7 @@ out:
 	return retval;
 }
 
-static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
+static void ac_compile_llvm_module(struct ac_llvm_compiler *ac_llvm,
 				   LLVMModuleRef llvm_module,
 				   struct ac_shader_binary *binary,
 				   struct ac_shader_config *config,
@@ -3387,7 +3386,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 		LLVMDisposeMessage(llvm_ir);
 	}
 
-	int v = ac_llvm_compile(llvm_module, binary, tm);
+	int v = ac_llvm_compile(llvm_module, binary, ac_llvm);
 	if (v) {
 		fprintf(stderr, "compile failed\n");
 	}
@@ -3497,8 +3496,7 @@ ac_fill_shader_info(struct radv_shader_variant_info *shader_info, struct nir_sha
 }
 
 void
-radv_compile_nir_shader(LLVMTargetMachineRef tm,
-			LLVMPassManagerRef passmgr,
+radv_compile_nir_shader(struct ac_llvm_compiler *ac_llvm,
 			struct ac_shader_binary *binary,
 			struct ac_shader_config *config,
 			struct radv_shader_variant_info *shader_info,
@@ -3509,10 +3507,10 @@ radv_compile_nir_shader(LLVMTargetMachineRef tm,
 
 	LLVMModuleRef llvm_module;
 
-	llvm_module = ac_translate_nir_to_llvm(tm, passmgr, nir, nir_count, shader_info,
+	llvm_module = ac_translate_nir_to_llvm(ac_llvm, nir, nir_count, shader_info,
 	                                       options);
 
-	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info,
+	ac_compile_llvm_module(ac_llvm, llvm_module, binary, config, shader_info,
 			       nir[0]->info.stage, options);
 
 	for (int i = 0; i < nir_count; ++i)
@@ -3570,8 +3568,7 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 }
 
 void
-radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
-			    LLVMPassManagerRef passmgr,
+radv_compile_gs_copy_shader(struct ac_llvm_compiler *ac_llvm,
 			    struct nir_shader *geom_shader,
 			    struct ac_shader_binary *binary,
 			    struct ac_shader_config *config,
@@ -3585,7 +3582,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = ac_create_module(tm, ctx.context);
+	ctx.ac.module = ac_create_module(ac_llvm->tm, ctx.context);
 
 	ctx.is_gs_copy_shader = true;
 
@@ -3616,8 +3613,8 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	LLVMBuildRetVoid(ctx.ac.builder);
 
-	ac_llvm_finalize_module(&ctx, passmgr, options);
+	ac_llvm_finalize_module(&ctx, ac_llvm->passmgr, options);
 
-	ac_compile_llvm_module(tm, ctx.ac.module, binary, config, shader_info,
+	ac_compile_llvm_module(ac_llvm, ctx.ac.module, binary, config, shader_info,
 			       MESA_SHADER_VERTEX, options);
 }
