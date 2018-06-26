@@ -834,11 +834,20 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_fsign: {
       if (op[0].abs) {
-         /* Straightforward since the source can be assumed to be
-          * non-negative.
+         /* Straightforward since the source can be assumed to be either
+          * strictly >= 0 or strictly <= 0 depending on the setting of the
+          * negate flag.
           */
          set_condmod(BRW_CONDITIONAL_NZ, bld.MOV(result, op[0]));
-         set_predicate(BRW_PREDICATE_NORMAL, bld.MOV(result, brw_imm_f(1.0f)));
+
+         inst = (op[0].negate)
+            ? bld.MOV(result, brw_imm_f(-1.0f))
+            : bld.MOV(result, brw_imm_f(1.0f));
+
+         set_predicate(BRW_PREDICATE_NORMAL, inst);
+
+         if (instr->dest.saturate)
+            inst->saturate = true;
 
       } else if (type_sz(op[0].type) < 8) {
          /* AND(val, 0x80000000) gives the sign bit.
