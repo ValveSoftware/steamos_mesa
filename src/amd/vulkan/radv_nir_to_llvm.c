@@ -2996,30 +2996,10 @@ static void ac_llvm_finalize_module(struct radv_shader_context *ctx,
 				    const struct radv_nir_compiler_options *options)
 {
 	LLVMPassManagerRef passmgr;
-	/* Create the pass manager */
-	passmgr = LLVMCreateFunctionPassManagerForModule(
-							ctx->ac.module);
 
-	if (options->check_ir)
-		LLVMAddVerifierPass(passmgr);
+	passmgr = ac_create_passmgr(NULL, options->check_ir);
 
-	/* This pass should eliminate all the load and store instructions */
-	LLVMAddPromoteMemoryToRegisterPass(passmgr);
-
-	/* Add some optimization passes */
-	LLVMAddScalarReplAggregatesPass(passmgr);
-	LLVMAddLICMPass(passmgr);
-	LLVMAddAggressiveDCEPass(passmgr);
-	LLVMAddCFGSimplificationPass(passmgr);
-	/* This is recommended by the instruction combining pass. */
-	LLVMAddEarlyCSEMemSSAPass(passmgr);
-	LLVMAddInstructionCombiningPass(passmgr);
-
-	/* Run the pass */
-	LLVMInitializeFunctionPassManager(passmgr);
-	LLVMRunFunctionPassManager(passmgr, ctx->main_function);
-	LLVMFinalizeFunctionPassManager(passmgr);
-
+	LLVMRunPassManager(passmgr, ctx->ac.module);
 	LLVMDisposeBuilder(ctx->ac.builder);
 	LLVMDisposePassManager(passmgr);
 
