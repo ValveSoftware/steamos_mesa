@@ -28,6 +28,11 @@
 #include "util/bitscan.h"
 #include <llvm-c/Core.h>
 #include <llvm-c/Support.h>
+#include <llvm-c/Transforms/IPO.h>
+#include <llvm-c/Transforms/Scalar.h>
+#if HAVE_LLVM >= 0x0700
+#include <llvm-c/Transforms/Utils.h>
+#endif
 #include "c11/threads.h"
 #include "util/u_math.h"
 
@@ -158,6 +163,31 @@ LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
 	if (out_triple)
 		*out_triple = triple;
 	return tm;
+}
+
+LLVMPassManagerRef ac_create_passmgr(LLVMTargetLibraryInfoRef target_library_info,
+				     bool check_ir)
+{
+	LLVMPassManagerRef passmgr = LLVMCreatePassManager();
+	if (!passmgr)
+		return NULL;
+
+	LLVMAddTargetLibraryInfo(target_library_info,
+				 passmgr);
+
+	if (check_ir)
+		LLVMAddVerifierPass(passmgr);
+	LLVMAddAlwaysInlinerPass(passmgr);
+	/* This pass should eliminate all the load and store instructions. */
+	LLVMAddPromoteMemoryToRegisterPass(passmgr);
+	LLVMAddScalarReplAggregatesPass(passmgr);
+	LLVMAddLICMPass(passmgr);
+	LLVMAddAggressiveDCEPass(passmgr);
+	LLVMAddCFGSimplificationPass(passmgr);
+	/* This is recommended by the instruction combining pass. */
+	LLVMAddEarlyCSEMemSSAPass(passmgr);
+	LLVMAddInstructionCombiningPass(passmgr);
+	return passmgr;
 }
 
 static const char *attr_to_str(enum ac_func_attr attr)
