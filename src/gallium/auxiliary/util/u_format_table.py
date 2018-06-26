@@ -85,6 +85,7 @@ def write_format_table(formats):
     print CopyRight.strip()
     print
     print '#include "u_format.h"'
+    print '#include "u_format_bptc.h"'
     print '#include "u_format_s3tc.h"'
     print '#include "u_format_rgtc.h"'
     print '#include "u_format_latc.h"'
@@ -138,7 +139,7 @@ def write_format_table(formats):
         u_format_pack.print_channels(format, do_swizzle_array)
         print "   %s," % (colorspace_map(format.colorspace),)
         access = True
-        if format.layout in ('bptc', 'astc'):
+        if format.layout in ('astc'):
             access = False
         if format.layout == 'etc' and format.short_name() != 'etc1_rgb8':
             access = False
