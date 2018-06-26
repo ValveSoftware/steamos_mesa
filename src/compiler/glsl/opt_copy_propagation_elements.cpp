@@ -257,7 +257,7 @@ public:
 
    void add_copy(ir_assignment *ir);
    void kill(kill_entry *k);
-   void handle_if_block(exec_list *instructions);
+   void handle_if_block(exec_list *instructions, exec_list *kills, bool *killed_all);
 
    copy_propagation_state *state;
 
@@ -468,12 +468,12 @@ ir_copy_propagation_elements_visitor::visit_enter(ir_call *ir)
 }
 
 void
-ir_copy_propagation_elements_visitor::handle_if_block(exec_list *instructions)
+ir_copy_propagation_elements_visitor::handle_if_block(exec_list *instructions, exec_list *kills, bool *killed_all)
 {
    exec_list *orig_kills = this->kills;
    bool orig_killed_all = this->killed_all;
 
-   this->kills = new(mem_ctx) exec_list;
+   this->kills = kills;
    this->killed_all = false;
 
    /* Populate the initial acp with a copy of the original */
@@ -485,21 +485,9 @@ ir_copy_propagation_elements_visitor::handle_if_block(exec_list *instructions)
    delete this->state;
    this->state = orig_state;
 
-   if (this->killed_all)
-      this->state->erase_all();
-
-   exec_list *new_kills = this->kills;
+   *killed_all = this->killed_all;
    this->kills = orig_kills;
-   this->killed_all = this->killed_all || orig_killed_all;
-
-   /* Move the new kills into the parent block's list, removing them
-    * from the parent's ACP list in the process.
-    */
-   foreach_in_list_safe(kill_entry, k, new_kills) {
-      kill(k);
-   }
-
-   ralloc_free(new_kills);
+   this->killed_all = orig_killed_all;
 }
 
 ir_visitor_status
@@ -507,8 +495,22 @@ ir_copy_propagation_elements_visitor::visit_enter(ir_if *ir)
 {
    ir->condition->accept(this);
 
-   handle_if_block(&ir->then_instructions);
-   handle_if_block(&ir->else_instructions);
+   exec_list *new_kills = new(mem_ctx) exec_list;
+   bool then_killed_all = false;
+   bool else_killed_all = false;
+
+   handle_if_block(&ir->then_instructions, new_kills, &then_killed_all);
+   handle_if_block(&ir->else_instructions, new_kills, &else_killed_all);
+
+   if (then_killed_all || else_killed_all) {
+      state->erase_all();
+      killed_all = true;
+   } else {
+      foreach_in_list_safe(kill_entry, k, new_kills)
+         kill(k);
+   }
+
+   ralloc_free(new_kills);
 
    /* handle_if_block() already descended into the children. */
    return visit_continue_with_parent;
