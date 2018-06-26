@@ -511,6 +511,13 @@ skip:
         ctx->parse_depth++;
 }
 
+static int
+field_offset_compare(const void *a, const void *b)
+{
+        return ((*(const struct v3d_field **)a)->start -
+                (*(const struct v3d_field **)b)->start);
+}
+
 static void
 end_element(void *data, const char *name)
 {
@@ -548,6 +555,13 @@ end_element(void *data, const char *name)
                         spec->structs[spec->nstructs++] = group;
                 else if (strcmp(name, "register") == 0)
                         spec->registers[spec->nregisters++] = group;
+
+                /* Sort the fields in increasing offset order.  The XML might
+                 * be specified in any order, but we'll want to iterate from
+                 * the bottom.
+                 */
+                qsort(group->fields, group->nfields, sizeof(*group->fields),
+                      field_offset_compare);
 
                 assert(spec->ncommands < ARRAY_SIZE(spec->commands));
                 assert(spec->nstructs < ARRAY_SIZE(spec->structs));
