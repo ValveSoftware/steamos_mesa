@@ -120,6 +120,7 @@ static void si_init_compiler(struct si_screen *sscreen,
 		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
 
 	const char *triple;
+	ac_init_llvm_once();
 	compiler->tm = ac_create_target_machine(sscreen->info.family,
 						tm_options, &triple);
 	if (!compiler->tm)

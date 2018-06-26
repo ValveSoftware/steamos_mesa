@@ -521,22 +521,9 @@ static void radv_init_llvm_target()
 
 static once_flag radv_init_llvm_target_once_flag = ONCE_FLAG_INIT;
 
-static LLVMTargetRef radv_get_llvm_target(const char *triple)
+static void radv_init_llvm_once(void)
 {
-	LLVMTargetRef target = NULL;
-	char *err_message = NULL;
-
 	call_once(&radv_init_llvm_target_once_flag, radv_init_llvm_target);
-
-	if (LLVMGetTargetFromTriple(triple, &target, &err_message)) {
-		fprintf(stderr, "Cannot find target for triple %s ", triple);
-		if (err_message) {
-			fprintf(stderr, "%s\n", err_message);
-		}
-		LLVMDisposeMessage(err_message);
-		return NULL;
-	}
-	return target;
 }
 
 static LLVMTargetMachineRef radv_create_target_machine(enum radeon_family family,
@@ -546,7 +533,7 @@ static LLVMTargetMachineRef radv_create_target_machine(enum radeon_family family
 	assert(family >= CHIP_TAHITI);
 	char features[256];
 	const char *triple = (tm_options & AC_TM_SUPPORTS_SPILL) ? "amdgcn-mesa-mesa3d" : "amdgcn--";
-	LLVMTargetRef target = radv_get_llvm_target(triple);
+	LLVMTargetRef target = ac_get_llvm_target(triple);
 
 	snprintf(features, sizeof(features),
 		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s%s",
@@ -604,8 +591,9 @@ shader_variant_create(struct radv_device *device,
 		tm_options |= AC_TM_SUPPORTS_SPILL;
 	if (device->instance->perftest_flags & RADV_PERFTEST_SISCHED)
 		tm_options |= AC_TM_SISCHED;
-	tm = radv_create_target_machine(chip_family, tm_options, NULL);
 
+	radv_init_llvm_once();
+	tm = radv_create_target_machine(chip_family, tm_options, NULL);
 	if (gs_copy_shader) {
 		assert(shader_count == 1);
 		radv_compile_gs_copy_shader(tm, *shaders, &binary,

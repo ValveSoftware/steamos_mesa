@@ -111,6 +111,8 @@ ac_get_store_intr_attribs(bool writeonly_memory)
 unsigned
 ac_count_scratch_private_memory(LLVMValueRef function);
 
+void ac_init_llvm_once(void);
+
 #ifdef __cplusplus
 }
 #endif

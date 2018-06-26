@@ -57,12 +57,15 @@ static void ac_init_llvm_target()
 
 static once_flag ac_init_llvm_target_once_flag = ONCE_FLAG_INIT;
 
+void ac_init_llvm_once(void)
+{
+	call_once(&ac_init_llvm_target_once_flag, ac_init_llvm_target);
+}
+
 LLVMTargetRef ac_get_llvm_target(const char *triple)
 {
 	LLVMTargetRef target = NULL;
 	char *err_message = NULL;
-
-	call_once(&ac_init_llvm_target_once_flag, ac_init_llvm_target);
 
 	if (LLVMGetTargetFromTriple(triple, &target, &err_message)) {
 		fprintf(stderr, "Cannot find target for triple %s ", triple);
