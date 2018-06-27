@@ -240,6 +240,7 @@
     <value name="A" value="2"/>
     <value name="RGBA" value="3"/>
   </enum>
+
   <packet code="0" name="Halt"/>
   <packet code="1" name="NOP"/>
   <packet code="4" name="Flush"/>
@@ -1071,6 +1072,7 @@
     <field name="Turn off scoreboard" size="1" start="16" type="bool"/>
     <field name="Do scoreboard wait on first thread switch" size="1" start="17" type="bool"/>
     <field name="Disable implicit point/line varyings" size="1" start="18" type="bool"/>
+    <field name="No prim pack" size="1" start="19" type="bool"/>
 
     <field name="Number of varyings in Fragment Shader" size="8" start="3b" type="uint"/>
 
