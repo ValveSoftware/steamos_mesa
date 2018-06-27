@@ -234,6 +234,12 @@
     <value name="depth24_stencil8" value="3"/> <!-- stencil low, depth high -->
   </enum>
 
+  <enum name="Dither Mode" prefix="V3D_DITHER_MODE">
+    <value name="None" value="0"/>
+    <value name="RGB" value="1"/>
+    <value name="A" value="2"/>
+    <value name="RGBA" value="3"/>
+  </enum>
   <packet code="0" name="Halt"/>
   <packet code="1" name="NOP"/>
   <packet code="4" name="Flush"/>
@@ -353,8 +359,7 @@
 
     <field name="Decimate mode" size="2" start="10" type="Decimate Mode"/>
 
-    <field name="A dithered" size="1" start="9" type="bool"/>
-    <field name="BGR dithered" size="1" start="8" type="bool"/>
+    <field name="Dither Mode" size="2" start="9" type="Dither Mode"/>
 
     <field name="Flip Y" size="1" start="7" type="bool"/>
 
@@ -840,8 +845,7 @@
 
     <field name="Memory Format" size="3" start="24" type="Memory Format"/>
 
-    <field name="A dithered" size="1" start="23" type="bool"/>
-    <field name="BGR dithered" size="1" start="22" type="bool"/>
+    <field name="Dither Mode" size="2" start="22" type="Dither Mode"/>
 
     <field name="Output image format" size="6" start="16" type="Output Image Format"/>
 
