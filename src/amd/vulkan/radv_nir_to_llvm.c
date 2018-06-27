@@ -27,6 +27,7 @@
 
 #include "radv_private.h"
 #include "radv_shader.h"
+#include "radv_shader_helper.h"
 #include "nir/nir.h"
 
 #include <llvm-c/Core.h>
@@ -3331,12 +3332,7 @@ static unsigned ac_llvm_compile(LLVMModuleRef M,
                                 struct ac_llvm_compiler *ac_llvm)
 {
 	unsigned retval = 0;
-	char *err;
 	LLVMContextRef llvm_ctx;
-	LLVMMemoryBufferRef out_buffer;
-	unsigned buffer_size;
-	const char *buffer_data;
-	LLVMBool mem_err;
 
 	/* Setup Diagnostic Handler*/
 	llvm_ctx = LLVMGetModuleContext(M);
@@ -3345,27 +3341,8 @@ static unsigned ac_llvm_compile(LLVMModuleRef M,
 	                                &retval);
 
 	/* Compile IR*/
-	mem_err = LLVMTargetMachineEmitToMemoryBuffer(ac_llvm->tm, M, LLVMObjectFile,
-	                                              &err, &out_buffer);
-
-	/* Process Errors/Warnings */
-	if (mem_err) {
-		fprintf(stderr, "%s: %s", __FUNCTION__, err);
-		free(err);
+	if (!radv_compile_to_binary(ac_llvm, M, binary))
 		retval = 1;
-		goto out;
-	}
-
-	/* Extract Shader Code*/
-	buffer_size = LLVMGetBufferSize(out_buffer);
-	buffer_data = LLVMGetBufferStart(out_buffer);
-
-	ac_elf_read(buffer_data, buffer_size, binary);
-
-	/* Clean up */
-	LLVMDisposeMemoryBuffer(out_buffer);
-
-out:
 	return retval;
 }
 

@@ -30,6 +30,7 @@
 #include "radv_debug.h"
 #include "radv_private.h"
 #include "radv_shader.h"
+#include "radv_shader_helper.h"
 #include "nir/nir.h"
 #include "nir/nir_builder.h"
 #include "spirv/nir_spirv.h"
@@ -542,7 +543,7 @@ shader_variant_create(struct radv_device *device,
 	struct radv_shader_variant *variant;
 	struct ac_shader_binary binary;
 	struct ac_llvm_compiler ac_llvm;
-
+	bool thread_compiler;
 	variant = calloc(1, sizeof(struct radv_shader_variant));
 	if (!variant)
 		return NULL;
@@ -564,8 +565,11 @@ shader_variant_create(struct radv_device *device,
 	if (options->check_ir)
 		tm_options |= AC_TM_CHECK_IR;
 
+	thread_compiler = !(device->instance->debug_flags & RADV_DEBUG_NOTHREADLLVM);
 	radv_init_llvm_once();
-	ac_init_llvm_compiler(&ac_llvm, false, chip_family, tm_options);
+	radv_init_llvm_compiler(&ac_llvm, false,
+				thread_compiler,
+				chip_family, tm_options);
 	if (gs_copy_shader) {
 		assert(shader_count == 1);
 		radv_compile_gs_copy_shader(&ac_llvm, *shaders, &binary,
@@ -577,7 +581,7 @@ shader_variant_create(struct radv_device *device,
 					options);
 	}
 
-	ac_destroy_llvm_compiler(&ac_llvm);
+	radv_destroy_llvm_compiler(&ac_llvm, thread_compiler);
 
 	radv_fill_shader_variant(device, variant, &binary, stage);
 
