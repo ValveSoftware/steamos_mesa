@@ -23,6 +23,7 @@
 # Authors:
 #    Jason Ekstrand (jason@jlekstrand.net)
 
+from collections import OrderedDict
 import nir_algebraic
 import itertools
 
@@ -628,7 +629,7 @@ optimizations = [
      'options->lower_unpack_snorm_4x8'),
 ]
 
-invert = {'feq': 'fne', 'fne': 'feq', 'fge': 'flt', 'flt': 'fge' }
+invert = OrderedDict([('feq', 'fne'), ('fne', 'feq'), ('fge', 'flt'), ('flt', 'fge')])
 
 for left, right in list(itertools.combinations(invert.keys(), 2)) + zip(invert.keys(), invert.keys()):
    optimizations.append((('inot', ('ior(is_used_once)', (left, a, b), (right, c, d))),

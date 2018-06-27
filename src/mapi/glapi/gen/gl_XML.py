@@ -24,6 +24,7 @@
 # Authors:
 #    Ian Romanick <idr@us.ibm.com>
 
+from collections import OrderedDict
 from decimal import Decimal
 import xml.etree.ElementTree as ET
 import re, sys, string
@@ -861,7 +862,7 @@ class gl_item_factory(object):
 
 class gl_api(object):
     def __init__(self, factory):
-        self.functions_by_name = {}
+        self.functions_by_name = OrderedDict()
         self.enums_by_name = {}
         self.types_by_name = {}
 

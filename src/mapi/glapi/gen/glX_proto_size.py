@@ -191,7 +191,7 @@ class glx_enum_function(object):
 
         print '    switch( e ) {'
 
-        for c in self.count:
+        for c in sorted(self.count):
             for e in self.count[c]:
                 first = 1
 
