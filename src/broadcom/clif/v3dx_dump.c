@@ -21,7 +21,10 @@
  * IN THE SOFTWARE.
  */
 
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
+#include "util/macros.h"
 #include "broadcom/cle/v3d_decoder.h"
 #include "clif_dump.h"
 #include "clif_private.h"
@@ -33,6 +36,26 @@
 #define __gen_unpack_address(cl, s, e) (__gen_unpack_uint(cl, s, e) << (31 - (e - s)))
 #include "broadcom/cle/v3dx_pack.h"
 #include "broadcom/common/v3d_macros.h"
+
+static char *
+clif_name(const char *xml_name)
+{
+        char *name = malloc(strlen(xml_name) + 1);
+
+        int j = 0;
+        for (int i = 0; i < strlen(xml_name); i++) {
+                if (xml_name[i] == ' ') {
+                        name[j++] = '_';
+                } else if (xml_name[i] == '(' || xml_name[i] == ')') {
+                        /* skip */
+                } else {
+                        name[j++] = toupper(xml_name[i]);
+                }
+        }
+        name[j++] = 0;
+
+        return name;
+}
 
 bool
 v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
@@ -46,7 +69,9 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
 
         *size = v3d_group_get_length(inst);
 
-        out(clif, "%s\n", v3d_group_get_name(inst));
+        char *name = clif_name(v3d_group_get_name(inst));
+        out(clif, "%s\n", name);
+        free(name);
         v3d_print_group(clif, inst, 0, cl);
 
         switch (*cl) {

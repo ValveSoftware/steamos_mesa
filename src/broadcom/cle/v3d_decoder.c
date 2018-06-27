@@ -453,7 +453,9 @@ start_element(void *data, const char *element_name, const char **atts)
         ctx->loc.line_number = XML_GetCurrentLineNumber(ctx->parser);
 
         for (i = 0; atts[i]; i += 2) {
-                if (strcmp(atts[i], "name") == 0)
+                if (strcmp(atts[i], "shortname") == 0)
+                        name = atts[i + 1];
+                else if (strcmp(atts[i], "name") == 0 && !name)
                         name = atts[i + 1];
                 else if (strcmp(atts[i], "gen") == 0)
                         ver = atts[i + 1];
