@@ -858,6 +858,8 @@ v3d_field_iterator_next(struct v3d_field_iterator *iter)
                 uint32_t value = __gen_unpack_uint(iter->p, s, e);
                 if (iter->field->minus_one)
                         value++;
+                if (strcmp(iter->field->name, "Vec size") == 0 && value == 0)
+                        value = 1 << (e - s);
                 snprintf(iter->value, sizeof(iter->value), "%u", value);
                 enum_name = v3d_get_enum_name(&iter->field->inline_enum, value);
                 break;
