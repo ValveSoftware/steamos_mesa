@@ -4170,21 +4170,37 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-void radv_CmdPipelineBarrier(
-	VkCommandBuffer                             commandBuffer,
-	VkPipelineStageFlags                        srcStageMask,
-	VkPipelineStageFlags                        destStageMask,
-	VkBool32                                    byRegion,
-	uint32_t                                    memoryBarrierCount,
-	const VkMemoryBarrier*                      pMemoryBarriers,
-	uint32_t                                    bufferMemoryBarrierCount,
-	const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
-	uint32_t                                    imageMemoryBarrierCount,
-	const VkImageMemoryBarrier*                 pImageMemoryBarriers)
+struct radv_barrier_info {
+	uint32_t eventCount;
+	const VkEvent *pEvents;
+	VkPipelineStageFlags srcStageMask;
+};
+
+static void
+radv_barrier(struct radv_cmd_buffer *cmd_buffer,
+	     uint32_t memoryBarrierCount,
+	     const VkMemoryBarrier *pMemoryBarriers,
+	     uint32_t bufferMemoryBarrierCount,
+	     const VkBufferMemoryBarrier *pBufferMemoryBarriers,
+	     uint32_t imageMemoryBarrierCount,
+	     const VkImageMemoryBarrier *pImageMemoryBarriers,
+	     const struct radv_barrier_info *info)
 {
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radeon_cmdbuf *cs = cmd_buffer->cs;
 	enum radv_cmd_flush_bits src_flush_bits = 0;
 	enum radv_cmd_flush_bits dst_flush_bits = 0;
+
+	for (unsigned i = 0; i < info->eventCount; ++i) {
+		RADV_FROM_HANDLE(radv_event, event, info->pEvents[i]);
+		uint64_t va = radv_buffer_get_va(event->bo);
+
+		radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo, 8);
+
+		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
+
+		si_emit_wait_fence(cs, va, 1, 0xffffffff);
+		assert(cmd_buffer->cs->cdw <= cdw_max);
+	}
 
 	for (uint32_t i = 0; i < memoryBarrierCount; i++) {
 		src_flush_bits |= radv_src_access_flush(cmd_buffer, pMemoryBarriers[i].srcAccessMask);
@@ -4205,7 +4221,7 @@ void radv_CmdPipelineBarrier(
 		                                        image);
 	}
 
-	radv_stage_flush(cmd_buffer, srcStageMask);
+	radv_stage_flush(cmd_buffer, info->srcStageMask);
 	cmd_buffer->state.flush_bits |= src_flush_bits;
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
@@ -4220,6 +4236,30 @@ void radv_CmdPipelineBarrier(
 	}
 
 	cmd_buffer->state.flush_bits |= dst_flush_bits;
+}
+
+void radv_CmdPipelineBarrier(
+	VkCommandBuffer                             commandBuffer,
+	VkPipelineStageFlags                        srcStageMask,
+	VkPipelineStageFlags                        destStageMask,
+	VkBool32                                    byRegion,
+	uint32_t                                    memoryBarrierCount,
+	const VkMemoryBarrier*                      pMemoryBarriers,
+	uint32_t                                    bufferMemoryBarrierCount,
+	const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+	uint32_t                                    imageMemoryBarrierCount,
+	const VkImageMemoryBarrier*                 pImageMemoryBarriers)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radv_barrier_info info;
+
+	info.eventCount = 0;
+	info.pEvents = NULL;
+	info.srcStageMask = srcStageMask;
+
+	radv_barrier(cmd_buffer, memoryBarrierCount, pMemoryBarriers,
+		     bufferMemoryBarrierCount, pBufferMemoryBarriers,
+		     imageMemoryBarrierCount, pImageMemoryBarriers, &info);
 }
 
 
@@ -4280,38 +4320,15 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 			const VkImageMemoryBarrier* pImageMemoryBarriers)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	struct radeon_cmdbuf *cs = cmd_buffer->cs;
+	struct radv_barrier_info info;
 
-	for (unsigned i = 0; i < eventCount; ++i) {
-		RADV_FROM_HANDLE(radv_event, event, pEvents[i]);
-		uint64_t va = radv_buffer_get_va(event->bo);
+	info.eventCount = eventCount;
+	info.pEvents = pEvents;
+	info.srcStageMask = 0;
 
-		radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo, 8);
-
-		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
-
-		si_emit_wait_fence(cs, va, 1, 0xffffffff);
-		assert(cmd_buffer->cs->cdw <= cdw_max);
-	}
-
-
-	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
-		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
-
-		radv_handle_image_transition(cmd_buffer, image,
-					     pImageMemoryBarriers[i].oldLayout,
-					     pImageMemoryBarriers[i].newLayout,
-					     pImageMemoryBarriers[i].srcQueueFamilyIndex,
-					     pImageMemoryBarriers[i].dstQueueFamilyIndex,
-					     &pImageMemoryBarriers[i].subresourceRange,
-					     0);
-	}
-
-	/* TODO: figure out how to do memory barriers without waiting */
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
-					RADV_CMD_FLAG_INV_GLOBAL_L2 |
-					RADV_CMD_FLAG_INV_VMEM_L1 |
-					RADV_CMD_FLAG_INV_SMEM_L1;
+	radv_barrier(cmd_buffer, memoryBarrierCount, pMemoryBarriers,
+		     bufferMemoryBarrierCount, pBufferMemoryBarriers,
+		     imageMemoryBarrierCount, pImageMemoryBarriers, &info);
 }
 
 
