@@ -105,4 +105,18 @@ out(struct clif_dump *clif, const char *fmt, ...)
         va_end(args);
 }
 
+static inline void
+out_address(struct clif_dump *clif, uint32_t addr)
+{
+        struct clif_bo *bo = clif_lookup_bo(clif, addr);
+        if (bo) {
+                out(clif, "[%s+0x%08x] /* 0x%08x */",
+                    bo->name, addr - bo->offset, addr);
+        } else if (addr) {
+                out(clif, "/* XXX: BO unknown */ 0x%08x", addr);
+        } else {
+                out(clif, "[null]");
+        }
+}
+
 #endif /* CLIF_PRIVATE_H */

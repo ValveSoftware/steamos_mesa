@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "drm-uapi/v3d_drm.h"
 #include "clif_dump.h"
 #include "clif_private.h"
 #include "util/list.h"
@@ -202,11 +203,6 @@ clif_process_worklist(struct clif_dump *clif)
         }
 }
 
-void clif_dump(struct clif_dump *clif)
-{
-        clif_process_worklist(clif);
-}
-
 void
 clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
 {
@@ -214,6 +210,35 @@ clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
                 clif_dump_add_address_to_worklist(clif, reloc_cl, start);
 
         entry->cl.end = end;
+}
+
+void
+clif_dump(struct clif_dump *clif, const struct drm_v3d_submit_cl *submit)
+{
+        clif_dump_add_cl(clif, submit->bcl_start, submit->bcl_end);
+        clif_dump_add_cl(clif, submit->rcl_start, submit->rcl_end);
+
+        clif_process_worklist(clif);
+
+        out(clif, "@add_bin 0\n  ");
+        out_address(clif, submit->bcl_start);
+        out(clif, "\n  ");
+        out_address(clif, submit->bcl_end);
+        out(clif, "\n  ");
+        out_address(clif, submit->qma);
+        out(clif, "\n  %d\n  ", submit->qms);
+        out_address(clif, submit->qts);
+        out(clif, "\n");
+        out(clif, "@wait_bin_all_cores\n");
+
+        out(clif, "@add_render 0\n  ");
+        out_address(clif, submit->rcl_start);
+        out(clif, "\n  ");
+        out_address(clif, submit->rcl_end);
+        out(clif, "\n  ");
+        out_address(clif, submit->qma);
+        out(clif, "\n");
+        out(clif, "@wait_render_all_cores\n");
 }
 
 void
