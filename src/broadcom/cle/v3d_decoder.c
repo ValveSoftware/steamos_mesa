@@ -925,14 +925,24 @@ v3d_field_iterator_next(struct clif_dump *clif, struct v3d_field_iterator *iter)
                                              iter->field->type.v3d_struct->name);
                 break;
         case V3D_TYPE_SFIXED:
-                snprintf(iter->value, sizeof(iter->value), "%f",
-                         __gen_unpack_sfixed(iter->p, s, e,
-                                             iter->field->type.f));
+                if (clif->pretty) {
+                        snprintf(iter->value, sizeof(iter->value), "%f",
+                                 __gen_unpack_sfixed(iter->p, s, e,
+                                                     iter->field->type.f));
+                } else {
+                        snprintf(iter->value, sizeof(iter->value), "%u",
+                                 (unsigned)__gen_unpack_uint(iter->p, s, e));
+                }
                 break;
         case V3D_TYPE_UFIXED:
-                snprintf(iter->value, sizeof(iter->value), "%f",
-                         __gen_unpack_ufixed(iter->p, s, e,
-                                             iter->field->type.f));
+                if (clif->pretty) {
+                        snprintf(iter->value, sizeof(iter->value), "%f",
+                                 __gen_unpack_ufixed(iter->p, s, e,
+                                                     iter->field->type.f));
+                } else {
+                        snprintf(iter->value, sizeof(iter->value), "%u",
+                                 (unsigned)__gen_unpack_uint(iter->p, s, e));
+                }
                 break;
         case V3D_TYPE_MBO:
                 break;
