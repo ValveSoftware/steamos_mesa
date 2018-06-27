@@ -705,6 +705,7 @@ v3dX(emit_rcl)(struct v3d_job *job)
                                 supertile_h++;
                 }
 
+                config.number_of_bin_tile_lists = 1;
                 config.total_frame_width_in_tiles = job->draw_tiles_x;
                 config.total_frame_height_in_tiles = job->draw_tiles_y;
 

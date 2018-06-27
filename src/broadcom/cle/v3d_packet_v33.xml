@@ -977,6 +977,7 @@
   </packet>
 
   <packet code="122" name="Multicore Rendering Supertile Configuration" cl="R">
+    <field name="Number of Bin Tile Lists" size="3" start="61" type="uint" minus_one="true"/>
     <field name="Supertile Raster Order" size="1" start="60" type="bool"/>
     <field name="Multicore Enable" size="1" start="56" type="bool"/>
 
