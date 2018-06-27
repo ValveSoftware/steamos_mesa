@@ -514,6 +514,7 @@
   </packet>
 
   <packet code="56" name="Primitive List Format">
+    <field name="tri strip or fan" size="1" start="7" type="bool"/>
     <field name="data type" size="1" start="6" type="uint">
       <value name="List Indexed" value="0"/>
       <value name="List 32-bit X/Y" value="1"/>
