@@ -192,6 +192,8 @@ class Group(object):
         self.count = count
         self.size = 0
         self.fields = []
+        self.min_ver = 0
+        self.max_ver = 0
 
     def emit_template_struct(self, dim):
         if self.count == 0:
@@ -414,6 +416,24 @@ class Parser(object):
     def gen_guard(self):
         return self.gen_prefix("PACK_H")
 
+    def attrs_version_valid(self, attrs):
+        if "min_ver" in attrs and self.ver < attrs["min_ver"]:
+            return False
+
+        if "max_ver" in attrs and self.ver > attrs["max_ver"]:
+            return False
+
+        return True
+
+    def group_enabled(self):
+        if self.group.min_ver != 0 and self.ver < self.group.min_ver:
+            return False
+
+        if self.group.max_ver != 0 and self.ver > self.group.max_ver:
+            return False
+
+        return True
+
     def start_element(self, name, attrs):
         if name == "vcxml":
             self.platform = "V3D {}.{}".format(self.ver[0], self.ver[1])
@@ -449,6 +469,11 @@ class Parser(object):
                 field.values = []
                 self.group.fields.append(field)
 
+            if "min_ver" in attrs:
+                self.group.min_ver = attrs["min_ver"]
+            if "max_ver" in attrs:
+                self.group.max_ver = attrs["max_ver"]
+
         elif name == "field":
             self.group.fields.append(Field(self, attrs))
             self.values = []
@@ -456,12 +481,14 @@ class Parser(object):
             self.values = []
             self.enum = safe_name(attrs["name"])
             self.enums.add(attrs["name"])
+            self.enum_enabled = self.attrs_version_valid(attrs)
             if "prefix" in attrs:
                 self.prefix = attrs["prefix"]
             else:
                 self.prefix= None
         elif name == "value":
-            self.values.append(Value(attrs))
+            if self.attrs_version_valid(attrs):
+                self.values.append(Value(attrs))
 
     def end_element(self, name):
         if name  == "packet":
@@ -480,7 +507,8 @@ class Parser(object):
         elif name  == "field":
             self.group.fields[-1].values = self.values
         elif name  == "enum":
-            self.emit_enum()
+            if self.enum_enabled:
+                self.emit_enum()
             self.enum = None
         elif name == "vcxml":
             print('#endif /* %s */' % self.gen_guard())
@@ -525,6 +553,9 @@ class Parser(object):
         print('')
 
     def emit_packet(self):
+        if not self.group_enabled():
+            return
+
         name = self.packet
 
         assert(self.group.fields[0].name == "opcode")
@@ -539,6 +570,9 @@ class Parser(object):
         print('')
 
     def emit_register(self):
+        if not self.group_enabled():
+            return
+
         name = self.register
         if not self.reg_num == None:
             print('#define %-33s 0x%04x' %
@@ -549,6 +583,9 @@ class Parser(object):
         self.emit_unpack_function(self.register, self.group)
 
     def emit_struct(self):
+        if not self.group_enabled():
+            return
+
         name = self.struct
 
         self.emit_header(name)
