@@ -597,11 +597,7 @@
   </packet>
 
   <packet code="87" name="Colour Write Masks">
-    <field name="Reserved" size="16" start="16" type="uint"/>
-    <field name="Render Target 3 per colour component write masks" size="4" start="12" type="uint"/>
-    <field name="Render Target 2 per colour component write masks" size="4" start="8" type="uint"/>
-    <field name="Render Target 1 per colour component write masks" size="4" start="4" type="uint"/>
-    <field name="Render Target 0 per colour component write masks" size="4" start="0" type="uint"/>
+    <field name="Mask" size="32" start="0" type="uint"/>
   </packet>
 
   <packet code="88" name="Zero All Centroid Flags" min_ver="41"/>

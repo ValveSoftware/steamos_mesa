@@ -496,24 +496,12 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 struct pipe_blend_state *blend = v3d->blend;
 
                 cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {
-                        if (blend->independent_blend_enable) {
-                                mask.render_target_0_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[0].colormask, 0);
-                                mask.render_target_1_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[1].colormask, 1);
-                                mask.render_target_2_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[2].colormask, 2);
-                                mask.render_target_3_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[3].colormask, 3);
-                        } else {
-                                mask.render_target_0_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[0].colormask, 0);
-                                mask.render_target_1_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[0].colormask, 1);
-                                mask.render_target_2_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[0].colormask, 2);
-                                mask.render_target_3_per_colour_component_write_masks =
-                                        translate_colormask(v3d, blend->rt[0].colormask, 3);
+                        for (int i = 0; i < 4; i++) {
+                                int rt = blend->independent_blend_enable ? i : 0;
+                                int rt_mask = blend->rt[rt].colormask;
+
+                                mask.mask |= translate_colormask(v3d, rt_mask,
+                                                                 i) << (4 * i);
                         }
                 }
         }
