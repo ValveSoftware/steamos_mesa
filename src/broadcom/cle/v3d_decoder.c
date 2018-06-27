@@ -960,6 +960,14 @@ v3d_print_group(struct clif_dump *clif, struct v3d_group *group,
 
         v3d_field_iterator_init(&iter, group, p);
         while (v3d_field_iterator_next(clif, &iter)) {
+                /* Clif parsing uses the packet name, and expects no
+                 * sub-id.
+                 */
+                if (strcmp(iter.field->name, "sub-id") == 0 ||
+                    strcmp(iter.field->name, "unused") == 0 ||
+                    strcmp(iter.field->name, "Pad") == 0)
+                        continue;
+
                 fprintf(clif->out, "    %s: %s\n", iter.name, iter.value);
                 if (iter.struct_desc) {
                         uint64_t struct_offset = offset + iter.offset;
