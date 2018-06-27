@@ -58,15 +58,15 @@ $(intermediates)/broadcom/cle/v3d_packet_v33_pack.h: $(LOCAL_PATH)/cle/v3d_packe
 	$(call header-gen)
 
 $(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/cle/gen_pack_header.py
-$(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: PRIVATE_XML := $(LOCAL_PATH)/cle/v3d_packet_v41.xml
+$(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: PRIVATE_XML := $(LOCAL_PATH)/cle/v3d_packet_v33.xml
 $(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: PRIVATE_VER := 41
-$(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: $(LOCAL_PATH)/cle/v3d_packet_v41.xml $(LOCAL_PATH)/cle/gen_pack_header.py
+$(intermediates)/broadcom/cle/v3d_packet_v41_pack.h: $(LOCAL_PATH)/cle/v3d_packet_v33.xml $(LOCAL_PATH)/cle/gen_pack_header.py
 	$(call header-gen)
 
 $(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/cle/gen_pack_header.py
-$(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: PRIVATE_XML := $(LOCAL_PATH)/cle/v3d_packet_v42.xml
+$(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: PRIVATE_XML := $(LOCAL_PATH)/cle/v3d_packet_v33.xml
 $(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: PRIVATE_VER := 42
-$(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: $(LOCAL_PATH)/cle/v3d_packet_v42.xml $(LOCAL_PATH)/cle/gen_pack_header.py
+$(intermediates)/broadcom/cle/v3d_packet_v42_pack.h: $(LOCAL_PATH)/cle/v3d_packet_v33.xml $(LOCAL_PATH)/cle/gen_pack_header.py
 	$(call header-gen)
 
 $(intermediates)/broadcom/cle/v3d_xml.h: $(addprefix $(MESA_TOP)/src/broadcom/,$(BROADCOM_GENXML_XML_FILES)) $(MESA_TOP)/src/intel/genxml/gen_zipped_file.py

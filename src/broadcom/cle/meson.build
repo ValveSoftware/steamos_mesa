@@ -18,19 +18,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# [version, cle XML version]
 v3d_versions = [
-  21,
-  33,
-  41,
-  42,
+  [21, 21],
+  [33, 33],
+  [41, 33],
+  [42, 33]
 ]
 
 v3d_xml_files = []
 v3d_xml_pack = []
-foreach v : v3d_versions
-  f = 'v3d_packet_v@0@.xml'.format(v)
-  _name = '@0@_pack.h'.format(f.split('.')[0])
-  v3d_xml_files += f
+foreach _v : v3d_versions
+  v = _v[0]
+  xmlver = _v[1]
+  f = 'v3d_packet_v@0@.xml'.format(xmlver)
+  _name = 'v3d_packet_v@0@_pack.h'.format(v)
+  if not v3d_xml_files.contains(f)
+    v3d_xml_files += f
+  endif
   v3d_xml_pack += custom_target(
     _name,
     input : ['gen_pack_header.py', f],
