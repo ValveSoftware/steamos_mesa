@@ -720,8 +720,8 @@ brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr, const char *name,
    if (tiling == I915_TILING_NONE)
       stride = 0;
 
-   return bo_alloc_internal(bufmgr, name, size, flags,
-                            memzone, tiling, stride);
+   return bo_alloc_internal(bufmgr, name, size, memzone,
+                            flags, tiling, stride);
 }
 
 /**
