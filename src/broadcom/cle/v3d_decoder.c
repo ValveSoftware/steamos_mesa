@@ -467,6 +467,10 @@ start_element(void *data, const char *element_name, const char **atts)
                 if (ver == NULL)
                         fail(&ctx->loc, "no ver given");
 
+                /* Make sure that we picked an XML that matched our version.
+                 */
+                assert(ver_in_range(ctx->devinfo->ver, min_ver, max_ver));
+
                 int major, minor;
                 int n = sscanf(ver, "%d.%d", &major, &minor);
                 if (n == 0)
@@ -631,10 +635,14 @@ v3d_spec_load(const struct v3d_device_info *devinfo)
         uint32_t text_offset = 0, text_length = 0, total_length;
 
         for (int i = 0; i < ARRAY_SIZE(genxml_files_table); i++) {
-                if (genxml_files_table[i].gen_10 == devinfo->ver) {
+                if (i != 0) {
+                        assert(genxml_files_table[i - 1].gen_10 <
+                               genxml_files_table[i].gen_10);
+                }
+
+                if (genxml_files_table[i].gen_10 <= devinfo->ver) {
                         text_offset = genxml_files_table[i].offset;
                         text_length = genxml_files_table[i].length;
-                        break;
                 }
         }
 

@@ -1,4 +1,4 @@
-<vcxml gen="3.3">
+<vcxml gen="3.3" min_ver="33" max_ver="33">
 
   <enum name="Compare Function" prefix="V3D_COMPARE_FUNC">
     <value name="NEVER" value="0"/>
