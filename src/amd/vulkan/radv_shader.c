@@ -385,6 +385,16 @@ radv_destroy_shader_slabs(struct radv_device *device)
 	mtx_destroy(&device->shader_slab_mutex);
 }
 
+/* For the UMR disassembler. */
+#define DEBUGGER_END_OF_CODE_MARKER    0xbf9f0000 /* invalid instruction */
+#define DEBUGGER_NUM_MARKERS           5
+
+static unsigned
+radv_get_shader_binary_size(struct ac_shader_binary *binary)
+{
+	return binary->code_size + DEBUGGER_NUM_MARKERS * 4;
+}
+
 static void
 radv_fill_shader_variant(struct radv_device *device,
 			 struct radv_shader_variant *variant,
@@ -395,7 +405,7 @@ radv_fill_shader_variant(struct radv_device *device,
 	struct radv_shader_info *info = &variant->info.info;
 	unsigned vgpr_comp_cnt = 0;
 
-	variant->code_size = binary->code_size;
+	variant->code_size = radv_get_shader_binary_size(binary);
 	variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
 			 S_00B12C_SCRATCH_EN(scratch_enabled);
 
@@ -475,6 +485,12 @@ radv_fill_shader_variant(struct radv_device *device,
 
 	void *ptr = radv_alloc_shader_memory(device, variant);
 	memcpy(ptr, binary->code, binary->code_size);
+
+	/* Add end-of-code markers for the UMR disassembler. */
+       uint32_t *ptr32 = (uint32_t *)ptr + binary->code_size / 4;
+       for (unsigned i = 0; i < DEBUGGER_NUM_MARKERS; i++)
+		ptr32[i] = DEBUGGER_END_OF_CODE_MARKER;
+
 }
 
 static void radv_init_llvm_target()
@@ -607,7 +623,7 @@ shader_variant_create(struct radv_device *device,
 
 	if (code_out) {
 		*code_out = binary.code;
-		*code_size_out = binary.code_size;
+		*code_size_out = variant->code_size;
 	} else
 		free(binary.code);
 	free(binary.config);
