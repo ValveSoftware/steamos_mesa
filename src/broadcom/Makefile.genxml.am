@@ -30,7 +30,7 @@ $(BROADCOM_GENXML_GENERATED_FILES): cle/gen_pack_header.py
 
 .xml_pack.h:
 	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/cle/gen_pack_header.py $< > $@ || ($(RM) $@; false)
+	$(PYTHON_GEN) $(srcdir)/cle/gen_pack_header.py $< `echo $@ | sed -r 's|.*_v([0-9][0-9])_pack.h|\1|g'` > $@ || ($(RM) $@; false)
 
 GEN_ZIPPED = $(srcdir)/../intel/genxml/gen_zipped_file.py
 cle/v3d_xml.h: $(GEN_ZIPPED) $(BROADCOM_GENXML_XML_FILES)

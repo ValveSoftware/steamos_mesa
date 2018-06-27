@@ -392,7 +392,7 @@ class Value(object):
         self.value = int(attrs["value"])
 
 class Parser(object):
-    def __init__(self):
+    def __init__(self, ver):
         self.parser = xml.parsers.expat.ParserCreate()
         self.parser.StartElementHandler = self.start_element
         self.parser.EndElementHandler = self.end_element
@@ -403,6 +403,7 @@ class Parser(object):
         # Set of enum names we've seen.
         self.enums = set()
         self.registers = {}
+        self.ver = ver
 
     def gen_prefix(self, name):
         if name[0] == "_":
@@ -415,8 +416,7 @@ class Parser(object):
 
     def start_element(self, name, attrs):
         if name == "vcxml":
-            self.platform = "V3D {}".format(attrs["gen"])
-            self.ver = attrs["gen"].replace('.', '')
+            self.platform = "V3D {}.{}".format(self.ver[0], self.ver[1])
             print(pack_header % {'license': license, 'platform': self.platform, 'guard': self.gen_guard()})
         elif name in ("packet", "struct", "register"):
             default_field = None
@@ -579,5 +579,5 @@ if len(sys.argv) < 2:
 
 input_file = sys.argv[1]
 
-p = Parser()
+p = Parser(sys.argv[2])
 p.parse(input_file)

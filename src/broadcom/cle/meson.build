@@ -26,8 +26,18 @@ v3d_versions = [
 ]
 
 v3d_xml_files = []
-foreach v: v3d_versions
-  v3d_xml_files += 'v3d_packet_v@0@.xml'.format(v)
+v3d_xml_pack = []
+foreach v : v3d_versions
+  f = 'v3d_packet_v@0@.xml'.format(v)
+  _name = '@0@_pack.h'.format(f.split('.')[0])
+  v3d_xml_files += f
+  v3d_xml_pack += custom_target(
+    _name,
+    input : ['gen_pack_header.py', f],
+    output : _name,
+    command : [prog_python2, '@INPUT@', '@0@'.format(v)],
+    capture : true,
+  )
 endforeach
 
 v3d_xml_h = custom_target(
@@ -37,18 +47,6 @@ v3d_xml_h = custom_target(
   command : [prog_python2, '@INPUT@'],
   capture : true,
 )
-
-v3d_xml_pack = []
-foreach f : v3d_xml_files
-  _name = '@0@_pack.h'.format(f.split('.')[0])
-  v3d_xml_pack += custom_target(
-    _name,
-    input : ['gen_pack_header.py', f],
-    output : _name,
-    command : [prog_python2, '@INPUT@'],
-    capture : true,
-  )
-endforeach
 
 libbroadcom_cle = static_library(
   ['broadcom_cle', v3d_xml_h],
