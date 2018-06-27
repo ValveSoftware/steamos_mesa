@@ -67,7 +67,7 @@ void ac_init_llvm_once(void)
 	call_once(&ac_init_llvm_target_once_flag, ac_init_llvm_target);
 }
 
-LLVMTargetRef ac_get_llvm_target(const char *triple)
+static LLVMTargetRef ac_get_llvm_target(const char *triple)
 {
 	LLVMTargetRef target = NULL;
 	char *err_message = NULL;
@@ -133,9 +133,9 @@ const char *ac_get_llvm_processor_name(enum radeon_family family)
 	}
 }
 
-LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
-					      enum ac_target_machine_options tm_options,
-					      const char **out_triple)
+static LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
+						     enum ac_target_machine_options tm_options,
+						     const char **out_triple)
 {
 	assert(family >= CHIP_TAHITI);
 	char features[256];
@@ -165,8 +165,8 @@ LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
 	return tm;
 }
 
-LLVMPassManagerRef ac_create_passmgr(LLVMTargetLibraryInfoRef target_library_info,
-				     bool check_ir)
+static LLVMPassManagerRef ac_create_passmgr(LLVMTargetLibraryInfoRef target_library_info,
+					    bool check_ir)
 {
 	LLVMPassManagerRef passmgr = LLVMCreatePassManager();
 	if (!passmgr)
