@@ -549,10 +549,17 @@
 
   <packet code="75" name="Flush Transform Feedback Data"/>
 
-  <struct name="Transform Feedback Output Data Spec">
+  <struct name="Transform Feedback Output Data Spec" max_ver="33">
     <field name="First Shaded Vertex Value to output" size="8" start="0" type="uint"/>
     <field name="Number of consecutive Vertex Values to output as 32-bit values" size="4" start="8" type="uint" minus_one="true"/>
     <field name="Output Buffer to write to" size="2" start="12" type="uint"/>
+  </struct>
+
+  <struct name="Transform Feedback Output Data Spec" min_ver="41">
+    <field name="First Shaded Vertex Value to output" size="8" start="0" type="uint"/>
+    <field name="Number of consecutive Vertex Values to output as 32-bit values" size="4" start="8" type="uint" minus_one="true"/>
+    <field name="Output Buffer to write to" size="2" start="12" type="uint"/>
+    <field name="Stream number" size="2" start="14" type="uint"/>
   </struct>
 
   <struct name="Transform Feedback Output Address">
