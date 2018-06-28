@@ -471,6 +471,10 @@ typedef enum
    OPCODE_ATTR_2F_ARB,
    OPCODE_ATTR_3F_ARB,
    OPCODE_ATTR_4F_ARB,
+   OPCODE_ATTR_1D,
+   OPCODE_ATTR_2D,
+   OPCODE_ATTR_3D,
+   OPCODE_ATTR_4D,
    OPCODE_MATERIAL,
    OPCODE_BEGIN,
    OPCODE_END,
@@ -6417,6 +6421,152 @@ save_VertexAttrib4fvARB(GLuint index, const GLfloat * v)
 }
 
 static void GLAPIENTRY
+save_VertexAttribL1d(GLuint index, GLdouble x)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS) {
+      Node *n;
+      SAVE_FLUSH_VERTICES(ctx);
+      n = alloc_instruction(ctx, OPCODE_ATTR_1D, 3);
+      if (n) {
+         n[1].ui = index;
+         ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+      }
+
+      ctx->ListState.ActiveAttribSize[index] = 1;
+      memcpy(ctx->ListState.CurrentAttrib[index], &n[2], sizeof(GLdouble));
+
+      if (ctx->ExecuteFlag) {
+         CALL_VertexAttribL1d(ctx->Exec, (index, x));
+      }
+   } else {
+      index_error();
+   }
+}
+
+static void GLAPIENTRY
+save_VertexAttribL1dv(GLuint index, const GLdouble *v)
+{
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS)
+      save_VertexAttribL1d(index, v[0]);
+   else
+      index_error();
+}
+
+static void GLAPIENTRY
+save_VertexAttribL2d(GLuint index, GLdouble x, GLdouble y)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS) {
+      Node *n;
+      SAVE_FLUSH_VERTICES(ctx);
+      n = alloc_instruction(ctx, OPCODE_ATTR_2D, 5);
+      if (n) {
+         n[1].ui = index;
+         ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+         ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+      }
+
+      ctx->ListState.ActiveAttribSize[index] = 2;
+      memcpy(ctx->ListState.CurrentAttrib[index], &n[2],
+             2 * sizeof(GLdouble));
+
+      if (ctx->ExecuteFlag) {
+         CALL_VertexAttribL2d(ctx->Exec, (index, x, y));
+      }
+   } else {
+      index_error();
+   }
+}
+
+static void GLAPIENTRY
+save_VertexAttribL2dv(GLuint index, const GLdouble *v)
+{
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS)
+      save_VertexAttribL2d(index, v[0], v[1]);
+   else
+      index_error();
+}
+
+static void GLAPIENTRY
+save_VertexAttribL3d(GLuint index, GLdouble x, GLdouble y, GLdouble z)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS) {
+      Node *n;
+      SAVE_FLUSH_VERTICES(ctx);
+      n = alloc_instruction(ctx, OPCODE_ATTR_3D, 7);
+      if (n) {
+         n[1].ui = index;
+         ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+         ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+         ASSIGN_DOUBLE_TO_NODES(n, 6, z);
+      }
+
+      ctx->ListState.ActiveAttribSize[index] = 3;
+      memcpy(ctx->ListState.CurrentAttrib[index], &n[2],
+             3 * sizeof(GLdouble));
+
+      if (ctx->ExecuteFlag) {
+         CALL_VertexAttribL3d(ctx->Exec, (index, x, y, z));
+      }
+   } else {
+      index_error();
+   }
+}
+
+static void GLAPIENTRY
+save_VertexAttribL3dv(GLuint index, const GLdouble *v)
+{
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS)
+      save_VertexAttribL3d(index, v[0], v[1], v[2]);
+   else
+      index_error();
+}
+
+static void GLAPIENTRY
+save_VertexAttribL4d(GLuint index, GLdouble x, GLdouble y, GLdouble z,
+                       GLdouble w)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS) {
+      Node *n;
+      SAVE_FLUSH_VERTICES(ctx);
+      n = alloc_instruction(ctx, OPCODE_ATTR_4D, 9);
+      if (n) {
+         n[1].ui = index;
+         ASSIGN_DOUBLE_TO_NODES(n, 2, x);
+         ASSIGN_DOUBLE_TO_NODES(n, 4, y);
+         ASSIGN_DOUBLE_TO_NODES(n, 6, z);
+         ASSIGN_DOUBLE_TO_NODES(n, 8, w);
+      }
+
+      ctx->ListState.ActiveAttribSize[index] = 4;
+      memcpy(ctx->ListState.CurrentAttrib[index], &n[2],
+             4 * sizeof(GLdouble));
+
+      if (ctx->ExecuteFlag) {
+         CALL_VertexAttribL4d(ctx->Exec, (index, x, y, z, w));
+      }
+   } else {
+      index_error();
+   }
+}
+
+static void GLAPIENTRY
+save_VertexAttribL4dv(GLuint index, const GLdouble *v)
+{
+   if (index < MAX_VERTEX_GENERIC_ATTRIBS)
+      save_VertexAttribL4d(index, v[0], v[1], v[2], v[3]);
+   else
+      index_error();
+}
+
+static void GLAPIENTRY
 save_PrimitiveRestartNV(void)
 {
    /* Note: this is used when outside a glBegin/End pair in a display list */
@@ -10360,6 +10510,26 @@ execute_list(struct gl_context *ctx, GLuint list)
          case OPCODE_ATTR_4F_ARB:
             CALL_VertexAttrib4fvARB(ctx->Exec, (n[1].e, &n[2].f));
             break;
+         case OPCODE_ATTR_1D: {
+            GLdouble *d = (GLdouble *) &n[2];
+            CALL_VertexAttribL1d(ctx->Exec, (n[1].ui, *d));
+            break;
+         }
+         case OPCODE_ATTR_2D: {
+            GLdouble *d = (GLdouble *) &n[2];
+            CALL_VertexAttribL2dv(ctx->Exec, (n[1].ui, d));
+            break;
+         }
+         case OPCODE_ATTR_3D: {
+            GLdouble *d = (GLdouble *) &n[2];
+            CALL_VertexAttribL3dv(ctx->Exec, (n[1].ui, d));
+            break;
+         }
+         case OPCODE_ATTR_4D: {
+            GLdouble *d = (GLdouble *) &n[2];
+            CALL_VertexAttribL4dv(ctx->Exec, (n[1].ui, d));
+            break;
+         }
          case OPCODE_MATERIAL:
             CALL_Materialfv(ctx->Exec, (n[1].e, n[2].e, &n[3].f));
             break;
@@ -11936,6 +12106,14 @@ save_vtxfmt_init(GLvertexformat * vfmt)
    vfmt->VertexAttrib3fvARB = save_VertexAttrib3fvARB;
    vfmt->VertexAttrib4fARB = save_VertexAttrib4fARB;
    vfmt->VertexAttrib4fvARB = save_VertexAttrib4fvARB;
+   vfmt->VertexAttribL1d = save_VertexAttribL1d;
+   vfmt->VertexAttribL1dv = save_VertexAttribL1dv;
+   vfmt->VertexAttribL2d = save_VertexAttribL2d;
+   vfmt->VertexAttribL2dv = save_VertexAttribL2dv;
+   vfmt->VertexAttribL3d = save_VertexAttribL3d;
+   vfmt->VertexAttribL3dv = save_VertexAttribL3dv;
+   vfmt->VertexAttribL4d = save_VertexAttribL4d;
+   vfmt->VertexAttribL4dv = save_VertexAttribL4dv;
 
    vfmt->PrimitiveRestartNV = save_PrimitiveRestartNV;
 }
