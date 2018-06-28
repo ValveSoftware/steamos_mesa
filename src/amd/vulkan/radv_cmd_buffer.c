@@ -4275,14 +4275,44 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 18);
 
-	/* TODO: this is overkill. Probably should figure something out from
-	 * the stage mask. */
+	/* Flags that only require a top-of-pipe event. */
+	static const VkPipelineStageFlags top_of_pipe_flags =
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-	si_cs_emit_write_event_eop(cs,
-				   cmd_buffer->device->physical_device->rad_info.chip_class,
-				   radv_cmd_buffer_uses_mec(cmd_buffer),
-				   V_028A90_BOTTOM_OF_PIPE_TS, 0,
-				   EOP_DATA_SEL_VALUE_32BIT, va, 2, value);
+	/* Flags that only require a post-index-fetch event. */
+	static const VkPipelineStageFlags post_index_fetch_flags =
+		top_of_pipe_flags |
+		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	/* TODO: Emit EOS events for syncing PS/CS stages. */
+
+	if (!(stageMask & ~top_of_pipe_flags)) {
+		/* Just need to sync the PFP engine. */
+		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
+		radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+				S_370_WR_CONFIRM(1) |
+				S_370_ENGINE_SEL(V_370_PFP));
+		radeon_emit(cs, va);
+		radeon_emit(cs, va >> 32);
+		radeon_emit(cs, value);
+	} else if (!(stageMask & ~post_index_fetch_flags)) {
+		/* Sync ME because PFP reads index and indirect buffers. */
+		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
+		radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+				S_370_WR_CONFIRM(1) |
+				S_370_ENGINE_SEL(V_370_ME));
+		radeon_emit(cs, va);
+		radeon_emit(cs, va >> 32);
+		radeon_emit(cs, value);
+	} else {
+		/* Otherwise, sync all prior GPU work using an EOP event. */
+		si_cs_emit_write_event_eop(cs,
+					   cmd_buffer->device->physical_device->rad_info.chip_class,
+					   radv_cmd_buffer_uses_mec(cmd_buffer),
+					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
+					   EOP_DATA_SEL_VALUE_32BIT, va, 2, value);
+	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
