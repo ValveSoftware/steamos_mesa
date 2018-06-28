@@ -963,6 +963,11 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          num_rts = 1;
       }
 
+      /* Now that we've determined the actual number of render targets, adjust
+       * the key accordingly.
+       */
+      key.nr_color_regions = num_rts;
+
       assert(num_rts <= max_rt);
       map.surface_to_descriptor -= num_rts;
       map.surface_count += num_rts;
