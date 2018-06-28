@@ -1771,6 +1771,7 @@ void anv_DestroyDevice(
     const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_physical_device *physical_device = &device->instance->physicalDevice;
 
    if (!device)
       return;
@@ -1797,6 +1798,8 @@ void anv_DestroyDevice(
    if (device->info.gen >= 10)
       anv_gem_close(device, device->hiz_clear_bo.gem_handle);
 
+   if (physical_device->use_softpin)
+      anv_state_pool_finish(&device->binding_table_pool);
    anv_state_pool_finish(&device->surface_state_pool);
    anv_state_pool_finish(&device->instruction_state_pool);
    anv_state_pool_finish(&device->dynamic_state_pool);
