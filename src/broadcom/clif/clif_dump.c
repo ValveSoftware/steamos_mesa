@@ -103,16 +103,17 @@ clif_lookup_vaddr(struct clif_dump *clif, uint32_t addr, void **vaddr)
 
 static bool
 clif_dump_packet(struct clif_dump *clif, uint32_t offset, const uint8_t *cl,
-                 uint32_t *size)
+                 uint32_t *size, bool reloc_mode)
 {
         if (clif->devinfo->ver >= 41)
-                return v3d41_clif_dump_packet(clif, offset, cl, size);
+                return v3d41_clif_dump_packet(clif, offset, cl, size, reloc_mode);
         else
-                return v3d33_clif_dump_packet(clif, offset, cl, size);
+                return v3d33_clif_dump_packet(clif, offset, cl, size, reloc_mode);
 }
 
 static void
-clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
+clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end,
+             bool reloc_mode)
 {
         void *start_vaddr;
         if (!clif_lookup_vaddr(clif, start, &start_vaddr)) {
@@ -131,11 +132,12 @@ clif_dump_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
                 return;
         }
 
-        out(clif, "@format ctrllist\n");
+        if (!reloc_mode)
+                out(clif, "@format ctrllist\n");
 
         uint32_t size;
         uint8_t *cl = start_vaddr;
-        while (clif_dump_packet(clif, start, cl, &size)) {
+        while (clif_dump_packet(clif, start, cl, &size, reloc_mode)) {
                 cl += size;
                 start += size;
 
@@ -168,14 +170,10 @@ clif_dump_gl_shader_state_record(struct clif_dump *clif,
 }
 
 static void
-clif_process_worklist(struct clif_dump *clif)
+clif_process_worklist(struct clif_dump *clif, bool reloc_mode)
 {
-        while (!list_empty(&clif->worklist)) {
-                struct reloc_worklist_entry *reloc =
-                        list_first_entry(&clif->worklist,
-                                         struct reloc_worklist_entry, link);
-                list_del(&reloc->link);
-
+        list_for_each_entry_safe(struct reloc_worklist_entry, reloc,
+                                 &clif->worklist, link) {
                 void *vaddr;
                 if (!clif_lookup_vaddr(clif, reloc->addr, &vaddr)) {
                         out(clif, "Failed to look up address 0x%08x\n",
@@ -185,21 +183,26 @@ clif_process_worklist(struct clif_dump *clif)
 
                 switch (reloc->type) {
                 case reloc_cl:
-                        clif_dump_cl(clif, reloc->addr, reloc->cl.end);
-                        out(clif, "\n");
+                        clif_dump_cl(clif, reloc->addr, reloc->cl.end,
+                                     reloc_mode);
+                        if (!reloc_mode)
+                                out(clif, "\n");
                         break;
 
                 case reloc_gl_shader_state:
+                        if (reloc_mode)
+                                continue;
                         clif_dump_gl_shader_state_record(clif,
                                                          reloc,
                                                          vaddr);
                         break;
                 case reloc_generic_tile_list:
                         clif_dump_cl(clif, reloc->addr,
-                                     reloc->generic_tile_list.end);
+                                     reloc->generic_tile_list.end, reloc_mode);
                         break;
                 }
-                out(clif, "\n");
+                if (!reloc_mode)
+                        out(clif, "\n");
         }
 }
 
@@ -218,7 +221,8 @@ clif_dump(struct clif_dump *clif, const struct drm_v3d_submit_cl *submit)
         clif_dump_add_cl(clif, submit->bcl_start, submit->bcl_end);
         clif_dump_add_cl(clif, submit->rcl_start, submit->rcl_end);
 
-        clif_process_worklist(clif);
+        clif_process_worklist(clif, true);
+        clif_process_worklist(clif, false);
 
         out(clif, "@add_bin 0\n  ");
         out_address(clif, submit->bcl_start);
