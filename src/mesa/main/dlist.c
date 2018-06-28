@@ -510,6 +510,9 @@ typedef enum
    OPCODE_SAMPLER_PARAMETERIIV,
    OPCODE_SAMPLER_PARAMETERUIV,
 
+   /* ARB_compute_shader */
+   OPCODE_DISPATCH_COMPUTE,
+
    /* GL_ARB_sync */
    OPCODE_WAIT_SYNC,
 
@@ -6571,6 +6574,33 @@ save_DrawTransformFeedbackStreamInstanced(GLenum mode, GLuint name,
 }
 
 static void GLAPIENTRY
+save_DispatchCompute(GLuint num_groups_x, GLuint num_groups_y,
+                     GLuint num_groups_z)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   Node *n;
+   ASSERT_OUTSIDE_SAVE_BEGIN_END_AND_FLUSH(ctx);
+   n = alloc_instruction(ctx, OPCODE_DISPATCH_COMPUTE, 3);
+   if (n) {
+      n[1].ui = num_groups_x;
+      n[2].ui = num_groups_y;
+      n[3].ui = num_groups_z;
+   }
+   if (ctx->ExecuteFlag) {
+      CALL_DispatchCompute(ctx->Exec, (num_groups_x, num_groups_y,
+                                       num_groups_z));
+   }
+}
+
+static void GLAPIENTRY
+save_DispatchComputeIndirect(GLintptr indirect)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glDispatchComputeIndirect() during display list compile");
+}
+
+static void GLAPIENTRY
 save_UseProgram(GLuint program)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -10429,6 +10459,11 @@ execute_list(struct gl_context *ctx, GLuint list)
             }
             break;
 
+         /* ARB_compute_shader */
+         case OPCODE_DISPATCH_COMPUTE:
+            CALL_DispatchCompute(ctx->Exec, (n[1].ui, n[2].ui, n[3].ui));
+            break;
+
          /* GL_ARB_sync */
          case OPCODE_WAIT_SYNC:
             {
@@ -11137,6 +11172,10 @@ _mesa_initialize_save_table(const struct gl_context *ctx)
    SET_ScissorIndexedv(table, save_ScissorIndexedv);
    SET_DepthRangeArrayv(table, save_DepthRangeArrayv);
    SET_DepthRangeIndexed(table, save_DepthRangeIndexed);
+
+   /* 122. ARB_compute_shader */
+   SET_DispatchCompute(table, save_DispatchCompute);
+   SET_DispatchComputeIndirect(table, save_DispatchComputeIndirect);
 
    /* 173. GL_EXT_blend_func_separate */
    SET_BlendFuncSeparate(table, save_BlendFuncSeparateEXT);
