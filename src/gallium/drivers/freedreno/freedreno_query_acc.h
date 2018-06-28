@@ -67,7 +67,7 @@ struct fd_acc_sample_provider {
 	void (*resume)(struct fd_acc_query *aq, struct fd_batch *batch);
 	void (*pause)(struct fd_acc_query *aq, struct fd_batch *batch);
 
-	void (*result)(struct fd_context *ctx, void *buf,
+	void (*result)(struct fd_acc_query *aq, void *buf,
 			union pipe_query_result *result);
 };
 

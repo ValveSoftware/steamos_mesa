@@ -157,7 +157,7 @@ fd_acc_get_query_result(struct fd_context *ctx, struct fd_query *q,
 	fd_bo_cpu_prep(rsc->bo, ctx->pipe, DRM_FREEDRENO_PREP_READ);
 
 	void *ptr = fd_bo_map(rsc->bo);
-	p->result(ctx, ptr, result);
+	p->result(aq, ptr, result);
 	fd_bo_cpu_fini(rsc->bo);
 
 	return true;

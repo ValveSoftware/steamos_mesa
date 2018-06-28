@@ -111,7 +111,7 @@ occlusion_pause(struct fd_acc_query *aq, struct fd_batch *batch)
 }
 
 static void
-occlusion_counter_result(struct fd_context *ctx, void *buf,
+occlusion_counter_result(struct fd_acc_query *aq, void *buf,
 		union pipe_query_result *result)
 {
 	struct fd5_query_sample *sp = buf;
@@ -119,7 +119,7 @@ occlusion_counter_result(struct fd_context *ctx, void *buf,
 }
 
 static void
-occlusion_predicate_result(struct fd_context *ctx, void *buf,
+occlusion_predicate_result(struct fd_acc_query *aq, void *buf,
 		union pipe_query_result *result)
 {
 	struct fd5_query_sample *sp = buf;
@@ -196,7 +196,7 @@ timestamp_pause(struct fd_acc_query *aq, struct fd_batch *batch)
 }
 
 static uint64_t
-ticks_to_ns(struct fd_context *ctx, uint32_t ts)
+ticks_to_ns(uint32_t ts)
 {
 	/* This is based on the 19.2MHz always-on rbbm timer.
 	 *
@@ -206,19 +206,19 @@ ticks_to_ns(struct fd_context *ctx, uint32_t ts)
 }
 
 static void
-time_elapsed_accumulate_result(struct fd_context *ctx, void *buf,
+time_elapsed_accumulate_result(struct fd_acc_query *aq, void *buf,
 		union pipe_query_result *result)
 {
 	struct fd5_query_sample *sp = buf;
-	result->u64 = ticks_to_ns(ctx, sp->result);
+	result->u64 = ticks_to_ns(sp->result);
 }
 
 static void
-timestamp_accumulate_result(struct fd_context *ctx, void *buf,
+timestamp_accumulate_result(struct fd_acc_query *aq, void *buf,
 		union pipe_query_result *result)
 {
 	struct fd5_query_sample *sp = buf;
-	result->u64 = ticks_to_ns(ctx, sp->result);
+	result->u64 = ticks_to_ns(sp->result);
 }
 
 static const struct fd_acc_sample_provider time_elapsed = {
