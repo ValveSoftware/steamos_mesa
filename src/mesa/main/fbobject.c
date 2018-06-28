@@ -2492,6 +2492,17 @@ _mesa_RenderbufferStorageMultisample(GLenum target, GLsizei samples,
 }
 
 
+void GLAPIENTRY
+_mesa_RenderbufferStorageMultisampleAdvancedAMD(
+      GLenum target, GLsizei samples, GLsizei storageSamples,
+      GLenum internalFormat, GLsizei width, GLsizei height)
+{
+   renderbuffer_storage_target(target, internalFormat, width, height,
+                               samples, storageSamples,
+                               "glRenderbufferStorageMultisampleAdvancedAMD");
+}
+
+
 /**
  * OpenGL ES version of glRenderBufferStorage.
  */
@@ -2533,6 +2544,17 @@ _mesa_NamedRenderbufferStorageMultisample(GLuint renderbuffer, GLsizei samples,
    renderbuffer_storage_named(renderbuffer, internalformat, width, height,
                               samples, samples,
                               "glNamedRenderbufferStorageMultisample");
+}
+
+
+void GLAPIENTRY
+_mesa_NamedRenderbufferStorageMultisampleAdvancedAMD(
+      GLuint renderbuffer, GLsizei samples, GLsizei storageSamples,
+      GLenum internalformat, GLsizei width, GLsizei height)
+{
+   renderbuffer_storage_named(renderbuffer, internalformat, width, height,
+                              samples, storageSamples,
+                              "glNamedRenderbufferStorageMultisampleAdvancedAMD");
 }
 
 
