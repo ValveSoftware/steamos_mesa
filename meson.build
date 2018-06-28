@@ -1277,6 +1277,11 @@ endif
 if with_platform_wayland
   dep_wl_scanner = dependency('wayland-scanner', native: true)
   prog_wl_scanner = find_program(dep_wl_scanner.get_pkgconfig_variable('wayland_scanner'))
+  if dep_wl_scanner.version().version_compare('>= 1.15')
+    wl_scanner_arg = 'private-code'
+  else
+    wl_scanner_arg = 'code'
+  endif
   dep_wl_protocols = dependency('wayland-protocols', version : '>= 1.8')
   dep_wayland_client = dependency('wayland-client', version : '>=1.11')
   dep_wayland_server = dependency('wayland-server', version : '>=1.11')
@@ -1292,6 +1297,7 @@ if with_platform_wayland
   pre_args += ['-DHAVE_WAYLAND_PLATFORM', '-DWL_HIDE_DEPRECATED']
 else
   prog_wl_scanner = []
+  wl_scanner_arg = ''
   dep_wl_protocols = null_dep
   dep_wayland_client = null_dep
   dep_wayland_server = null_dep
