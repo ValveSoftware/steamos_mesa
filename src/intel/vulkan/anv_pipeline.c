@@ -930,6 +930,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          num_rts++;
       }
 
+      bool deleted_output = false;
       nir_foreach_variable_safe(var, &nir->outputs) {
          if (var->data.location < FRAG_RESULT_DATA0)
             continue;
@@ -937,6 +938,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
          if (rt >= key.nr_color_regions) {
             /* Out-of-bounds, throw it away */
+            deleted_output = true;
             var->data.mode = nir_var_local;
             exec_node_remove(&var->node);
             exec_list_push_tail(&impl->locals, &var->node);
@@ -947,6 +949,9 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          assert(rt_to_bindings[rt] != -1);
          var->data.location = rt_to_bindings[rt] + FRAG_RESULT_DATA0;
       }
+
+      if (deleted_output)
+         nir_fixup_deref_modes(nir);
 
       if (num_rts == 0) {
          /* If we have no render targets, we need a null render target */
