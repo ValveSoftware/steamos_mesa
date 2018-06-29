@@ -920,6 +920,42 @@ virgl_context_destroy( struct pipe_context *ctx )
    FREE(vctx);
 }
 
+static void virgl_get_sample_position(struct pipe_context *ctx,
+				      unsigned sample_count,
+				      unsigned index,
+				      float *out_value)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *vs = virgl_screen(vctx->base.screen);
+
+   if (sample_count > vs->caps.caps.v1.max_samples) {
+      debug_printf("VIRGL: requested %d MSAA samples, but only %d supported\n",
+		   sample_count, vs->caps.caps.v1.max_samples);
+      return;
+   }
+
+   /* The following is basically copied from dri/i965gen6_get_sample_position
+    * The only addition is that we hold the msaa positions for all sample
+    * counts in a flat array. */
+   uint32_t bits = 0;
+   if (sample_count == 1) {
+      out_value[0] = out_value[1] = 0.5f;
+      return;
+   } else if (sample_count == 2) {
+      bits = vs->caps.caps.v2.msaa_sample_positions[0] >> (8 * index);
+   } else if (sample_count < 4) {
+      bits = vs->caps.caps.v2.msaa_sample_positions[1] >> (8 * index);
+   } else if (sample_count < 8) {
+      bits = vs->caps.caps.v2.msaa_sample_positions[2 + (index >> 2)] >> (8 * (index & 3));
+   } else if (sample_count < 8) {
+      bits = vs->caps.caps.v2.msaa_sample_positions[4 + (index >> 2)] >> (8 * (index & 3));
+   }
+   out_value[0] = ((bits >> 4) & 0xf) / 16.0f;
+   out_value[1] = (bits & 0xf) / 16.0f;
+   debug_printf("VIRGL: sample postion [%2d/%2d] = (%f, %f)\n",
+		index, sample_count, out_value[0], out_value[1]);
+}
+
 struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
                                           void *priv,
                                           unsigned flags)
@@ -993,6 +1029,8 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.set_clip_state = virgl_set_clip_state;
 
    vctx->base.set_blend_color = virgl_set_blend_color;
+
+   vctx->base.get_sample_position = virgl_get_sample_position;
 
    vctx->base.resource_copy_region = virgl_resource_copy_region;
    vctx->base.flush_resource = virgl_flush_resource;
