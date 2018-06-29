@@ -2031,6 +2031,26 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
          bt_map[bias + s] = surface_state.offset + state_offset;
          continue;
+      } else if (binding->set == ANV_DESCRIPTOR_SET_SHADER_CONSTANTS) {
+         struct anv_state surface_state =
+            anv_cmd_buffer_alloc_surface_state(cmd_buffer);
+
+         struct anv_address constant_data = {
+            .bo = &pipeline->device->dynamic_state_pool.block_pool.bo,
+            .offset = pipeline->shaders[stage]->constant_data.offset,
+         };
+         unsigned constant_data_size =
+            pipeline->shaders[stage]->constant_data_size;
+
+         const enum isl_format format =
+            anv_isl_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+         anv_fill_buffer_surface_state(cmd_buffer->device,
+                                       surface_state, format,
+                                       constant_data, constant_data_size, 1);
+
+         bt_map[bias + s] = surface_state.offset + state_offset;
+         add_surface_reloc(cmd_buffer, surface_state, constant_data);
+         continue;
       }
 
       const struct anv_descriptor *desc =
@@ -2384,30 +2404,44 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
                const struct anv_pipeline_binding *binding =
                   &bind_map->surface_to_descriptor[surface];
 
-               const struct anv_descriptor *desc =
-                  anv_descriptor_for_binding(&gfx_state->base, binding);
-
                struct anv_address read_addr;
                uint32_t read_len;
-               if (desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+               if (binding->set == ANV_DESCRIPTOR_SET_SHADER_CONSTANTS) {
+                  struct anv_address constant_data = {
+                     .bo = &pipeline->device->dynamic_state_pool.block_pool.bo,
+                     .offset = pipeline->shaders[stage]->constant_data.offset,
+                  };
+                  unsigned constant_data_size =
+                     pipeline->shaders[stage]->constant_data_size;
+
                   read_len = MIN2(range->length,
-                     DIV_ROUND_UP(desc->buffer_view->range, 32) - range->start);
-                  read_addr = anv_address_add(desc->buffer_view->address,
+                     DIV_ROUND_UP(constant_data_size, 32) - range->start);
+                  read_addr = anv_address_add(constant_data,
                                               range->start * 32);
                } else {
-                  assert(desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+                  const struct anv_descriptor *desc =
+                     anv_descriptor_for_binding(&gfx_state->base, binding);
 
-                  uint32_t dynamic_offset =
-                     dynamic_offset_for_binding(&gfx_state->base, binding);
-                  uint32_t buf_offset =
-                     MIN2(desc->offset + dynamic_offset, desc->buffer->size);
-                  uint32_t buf_range =
-                     MIN2(desc->range, desc->buffer->size - buf_offset);
+                  if (desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                     read_len = MIN2(range->length,
+                        DIV_ROUND_UP(desc->buffer_view->range, 32) - range->start);
+                     read_addr = anv_address_add(desc->buffer_view->address,
+                                                 range->start * 32);
+                  } else {
+                     assert(desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
-                  read_len = MIN2(range->length,
-                     DIV_ROUND_UP(buf_range, 32) - range->start);
-                  read_addr = anv_address_add(desc->buffer->address,
-                                              buf_offset + range->start * 32);
+                     uint32_t dynamic_offset =
+                        dynamic_offset_for_binding(&gfx_state->base, binding);
+                     uint32_t buf_offset =
+                        MIN2(desc->offset + dynamic_offset, desc->buffer->size);
+                     uint32_t buf_range =
+                        MIN2(desc->range, desc->buffer->size - buf_offset);
+
+                     read_len = MIN2(range->length,
+                        DIV_ROUND_UP(buf_range, 32) - range->start);
+                     read_addr = anv_address_add(desc->buffer->address,
+                                                 buf_offset + range->start * 32);
+                  }
                }
 
                if (read_len > 0) {

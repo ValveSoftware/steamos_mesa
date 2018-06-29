@@ -32,6 +32,8 @@ struct apply_pipeline_layout_state {
    struct anv_pipeline_layout *layout;
    bool add_bounds_checks;
 
+   bool uses_constants;
+   uint8_t constants_offset;
    struct {
       BITSET_WORD *used;
       uint8_t *surface_offsets;
@@ -98,6 +100,10 @@ get_used_bindings_block(nir_block *block,
          case nir_intrinsic_image_deref_size:
          case nir_intrinsic_image_deref_samples:
             add_deref_src_binding(state, intrin->src[0]);
+            break;
+
+         case nir_intrinsic_load_constant:
+            state->uses_constants = true;
             break;
 
          default:
@@ -169,6 +175,33 @@ lower_res_reindex_intrinsic(nir_intrinsic_instr *intrin,
 
    assert(intrin->dest.is_ssa);
    nir_ssa_def_rewrite_uses(&intrin->dest.ssa, nir_src_for_ssa(new_index));
+   nir_instr_remove(&intrin->instr);
+}
+
+static void
+lower_load_constant(nir_intrinsic_instr *intrin,
+                    struct apply_pipeline_layout_state *state)
+{
+   nir_builder *b = &state->builder;
+
+   b->cursor = nir_before_instr(&intrin->instr);
+
+   nir_ssa_def *index = nir_imm_int(b, state->constants_offset);
+   nir_ssa_def *offset = nir_iadd(b, nir_ssa_for_src(b, intrin->src[0], 1),
+                                  nir_imm_int(b, nir_intrinsic_base(intrin)));
+
+   nir_intrinsic_instr *load_ubo =
+      nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_ubo);
+   load_ubo->num_components = intrin->num_components;
+   load_ubo->src[0] = nir_src_for_ssa(index);
+   load_ubo->src[1] = nir_src_for_ssa(offset);
+   nir_ssa_dest_init(&load_ubo->instr, &load_ubo->dest,
+                     intrin->dest.ssa.num_components,
+                     intrin->dest.ssa.bit_size, NULL);
+   nir_builder_instr_insert(b, &load_ubo->instr);
+
+   nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                            nir_src_for_ssa(&load_ubo->dest.ssa));
    nir_instr_remove(&intrin->instr);
 }
 
@@ -285,6 +318,9 @@ apply_pipeline_layout_block(nir_block *block,
          case nir_intrinsic_vulkan_resource_reindex:
             lower_res_reindex_intrinsic(intrin, state);
             break;
+         case nir_intrinsic_load_constant:
+            lower_load_constant(intrin, state);
+            break;
          default:
             break;
          }
@@ -343,6 +379,9 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          get_used_bindings_block(block, &state);
    }
 
+   if (state.uses_constants)
+      map->surface_count++;
+
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
 
@@ -365,6 +404,14 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    unsigned surface = 0;
    unsigned sampler = 0;
    unsigned image = 0;
+
+   if (state.uses_constants) {
+      state.constants_offset = surface;
+      map->surface_to_descriptor[surface].set =
+         ANV_DESCRIPTOR_SET_SHADER_CONSTANTS;
+      surface++;
+   }
+
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
 
