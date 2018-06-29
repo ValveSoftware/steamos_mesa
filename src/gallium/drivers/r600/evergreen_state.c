@@ -2402,6 +2402,37 @@ static void evergreen_emit_cs_sampler_views(struct r600_context *rctx, struct r6
 	                             EG_FETCH_CONSTANTS_OFFSET_CS + R600_MAX_CONST_BUFFERS, RADEON_CP_PACKET3_COMPUTE_MODE);
 }
 
+static void evergreen_convert_border_color(union pipe_color_union *in,
+                                           union pipe_color_union *out,
+                                           enum pipe_format format)
+{
+	if (util_format_is_pure_integer(format) &&
+		 !util_format_is_depth_or_stencil(format)) {
+		const struct util_format_description *d = util_format_description(format);
+
+		for (int i = 0; i < d->nr_channels; ++i) {
+			int cs = d->channel[i].size;
+			if (d->channel[i].type == UTIL_FORMAT_TYPE_SIGNED)
+				out->f[i] = (double)(in->i[i]) / ((1ul << (cs - 1)) - 1 );
+			else if (d->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED)
+				out->f[i] = (double)(in->ui[i]) / ((1ul << cs) - 1 );
+			else
+				out->f[i] = 0;
+		}
+
+	} else {
+		switch (format) {
+		case PIPE_FORMAT_X24S8_UINT:
+		case PIPE_FORMAT_X32_S8X24_UINT:
+			out->f[0] = (double)(in->ui[0]) / 255.0;
+			out->f[1] = out->f[2] = out->f[3] = 0.0f;
+			break;
+		default:
+			memcpy(out->f, in->f, 4 * sizeof(float));
+		}
+	}
+}
+
 static void evergreen_emit_sampler_states(struct r600_context *rctx,
 				struct r600_textures_info *texinfo,
 				unsigned resource_id_base,
@@ -2410,6 +2441,8 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 {
 	struct radeon_cmdbuf *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = texinfo->states.dirty_mask;
+	union pipe_color_union border_color = {{0,0,0,1}};
+	union pipe_color_union *border_color_ptr = &border_color;
 
 	while (dirty_mask) {
 		struct r600_pipe_sampler_state *rstate;
@@ -2418,6 +2451,16 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 		rstate = texinfo->states.states[i];
 		assert(rstate);
 
+		if (rstate->border_color_use) {
+			struct r600_pipe_sampler_view	*rview = texinfo->views.views[i];
+			if (rview) {
+				evergreen_convert_border_color(&rstate->border_color,
+				                               &border_color, rview->base.format);
+			} else {
+				border_color_ptr = &rstate->border_color;
+			}
+		}
+
 		radeon_emit(cs, PKT3(PKT3_SET_SAMPLER, 3, 0) | pkt_flags);
 		radeon_emit(cs, (resource_id_base + i) * 3);
 		radeon_emit_array(cs, rstate->tex_sampler_words, 3);
@@ -2425,7 +2468,7 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 		if (rstate->border_color_use) {
 			radeon_set_config_reg_seq(cs, border_index_reg, 5);
 			radeon_emit(cs, i);
-			radeon_emit_array(cs, rstate->border_color.ui, 4);
+			radeon_emit_array(cs, border_color_ptr->ui, 4);
 		}
 	}
 	texinfo->states.dirty_mask = 0;
