@@ -103,6 +103,24 @@ nir_deref_instr_remove_if_unused(nir_deref_instr *instr)
 }
 
 bool
+nir_deref_instr_has_indirect(nir_deref_instr *instr)
+{
+   while (instr->deref_type != nir_deref_type_var) {
+      /* Consider casts to be indirects */
+      if (instr->deref_type == nir_deref_type_cast)
+         return true;
+
+      if (instr->deref_type == nir_deref_type_array &&
+          !nir_src_as_const_value(instr->arr.index))
+         return true;
+
+      instr = nir_deref_instr_parent(instr);
+   }
+
+   return false;
+}
+
+bool
 nir_remove_dead_derefs_impl(nir_function_impl *impl)
 {
    bool progress = false;
