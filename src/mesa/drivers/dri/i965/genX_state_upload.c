@@ -1935,7 +1935,7 @@ genX(upload_wm)(struct brw_context *brw)
                 brw_wm_prog_data_dispatch_grf_start_reg(wm_prog_data, wm, 2));
       }
 #elif GEN_GEN == 6
-      /* On gen5, we have multiple shader kernels and we no longer specify a
+      /* On gen6, we have multiple shader kernels and we no longer specify a
        * register count for each one.
        */
       wm.KernelStartPointer0 = stage_state->prog_offset +
