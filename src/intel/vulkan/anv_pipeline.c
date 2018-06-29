@@ -485,6 +485,8 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
                            struct anv_pipeline_cache *cache,
                            const void *key_data, uint32_t key_size,
                            const void *kernel_data, uint32_t kernel_size,
+                           const void *constant_data,
+                           uint32_t constant_data_size,
                            const struct brw_stage_prog_data *prog_data,
                            uint32_t prog_data_size,
                            const struct anv_pipeline_bind_map *bind_map)
@@ -492,11 +494,13 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
    if (cache) {
       return anv_pipeline_cache_upload_kernel(cache, key_data, key_size,
                                               kernel_data, kernel_size,
+                                              constant_data, constant_data_size,
                                               prog_data, prog_data_size,
                                               bind_map);
    } else {
       return anv_shader_bin_create(pipeline->device, key_data, key_size,
                                    kernel_data, kernel_size,
+                                   constant_data, constant_data_size,
                                    prog_data, prog_data_size,
                                    prog_data->param, bind_map);
    }
@@ -575,6 +579,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       unsigned code_size = prog_data.base.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
+                                       nir->constant_data,
+                                       nir->constant_data_size,
                                        &prog_data.base.base, sizeof(prog_data),
                                        &map);
       if (!bin) {
@@ -742,6 +748,8 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       tcs_bin = anv_pipeline_upload_kernel(pipeline, cache,
                                            tcs_sha1, sizeof(tcs_sha1),
                                            shader_code, code_size,
+                                           tcs_nir->constant_data,
+                                           tcs_nir->constant_data_size,
                                            &tcs_prog_data.base.base,
                                            sizeof(tcs_prog_data),
                                            &tcs_map);
@@ -763,6 +771,8 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       tes_bin = anv_pipeline_upload_kernel(pipeline, cache,
                                            tes_sha1, sizeof(tes_sha1),
                                            shader_code, code_size,
+                                           tes_nir->constant_data,
+                                           tes_nir->constant_data_size,
                                            &tes_prog_data.base.base,
                                            sizeof(tes_prog_data),
                                            &tes_map);
@@ -845,6 +855,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       const unsigned code_size = prog_data.base.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
+                                       nir->constant_data,
+                                       nir->constant_data_size,
                                        &prog_data.base.base, sizeof(prog_data),
                                        &map);
       if (!bin) {
@@ -995,6 +1007,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       unsigned code_size = prog_data.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
+                                       nir->constant_data,
+                                       nir->constant_data_size,
                                        &prog_data.base, sizeof(prog_data),
                                        &map);
       if (!bin) {
@@ -1071,6 +1085,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       const unsigned code_size = prog_data.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
+                                       nir->constant_data,
+                                       nir->constant_data_size,
                                        &prog_data.base, sizeof(prog_data),
                                        &map);
       if (!bin) {

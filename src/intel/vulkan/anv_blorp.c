@@ -70,6 +70,7 @@ upload_blorp_shader(struct blorp_context *blorp,
    struct anv_shader_bin *bin =
       anv_pipeline_cache_upload_kernel(&device->blorp_shader_cache,
                                        key, key_size, kernel, kernel_size,
+                                       NULL, 0,
                                        prog_data, prog_data_size, &bind_map);
 
    if (!bin)
