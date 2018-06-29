@@ -2067,6 +2067,14 @@ typedef struct nir_shader {
     * access plus one
     */
    unsigned num_inputs, num_uniforms, num_outputs, num_shared;
+
+   /** Constant data associated with this shader.
+    *
+    * Constant data is loaded through load_constant intrinsics.  See also
+    * nir_opt_large_constants.
+    */
+   void *constant_data;
+   unsigned constant_data_size;
 } nir_shader;
 
 static inline nir_function_impl *

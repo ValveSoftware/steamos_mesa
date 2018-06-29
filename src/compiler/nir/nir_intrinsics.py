@@ -532,6 +532,8 @@ load("per_vertex_output", 2, [BASE, COMPONENT], [CAN_ELIMINATE])
 load("shared", 1, [BASE], [CAN_ELIMINATE])
 # src[] = { offset }. const_index[] = { base, range }
 load("push_constant", 1, [BASE, RANGE], [CAN_ELIMINATE, CAN_REORDER])
+# src[] = { offset }. const_index[] = { base, range }
+load("constant", 1, [BASE, RANGE], [CAN_ELIMINATE, CAN_REORDER])
 
 # Stores work the same way as loads, except now the first source is the value
 # to store and the second (and possibly third) source specify where to store
