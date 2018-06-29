@@ -2905,6 +2905,10 @@ bool nir_opt_if(nir_shader *shader);
 
 bool nir_opt_intrinsics(nir_shader *shader);
 
+bool nir_opt_large_constants(nir_shader *shader,
+                             glsl_type_size_align_func size_align,
+                             unsigned threshold);
+
 bool nir_opt_loop_unroll(nir_shader *shader, nir_variable_mode indirect_mask);
 
 bool nir_opt_move_comparisons(nir_shader *shader);
