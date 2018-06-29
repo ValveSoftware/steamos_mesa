@@ -112,6 +112,12 @@ struct brw_compiler {
     * will attempt to push everything.
     */
    bool supports_pull_constants;
+
+   /**
+    * Whether or not the driver supports NIR shader constants.  This controls
+    * whether nir_opt_large_constants will be run.
+    */
+   bool supports_shader_constants;
 };
 
 /**
