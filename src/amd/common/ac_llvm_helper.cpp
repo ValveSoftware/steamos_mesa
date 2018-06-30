@@ -61,6 +61,16 @@ bool ac_llvm_is_function(LLVMValueRef v)
 	return LLVMGetValueKind(v) == LLVMFunctionValueKind;
 }
 
+LLVMModuleRef ac_create_module(LLVMTargetMachineRef tm, LLVMContextRef ctx)
+{
+   llvm::TargetMachine *TM = reinterpret_cast<llvm::TargetMachine*>(tm);
+   LLVMModuleRef module = LLVMModuleCreateWithNameInContext("mesa-shader", ctx);
+
+   llvm::unwrap(module)->setTargetTriple(TM->getTargetTriple().getTriple());
+   llvm::unwrap(module)->setDataLayout(TM->createDataLayout());
+   return module;
+}
+
 LLVMBuilderRef ac_create_builder(LLVMContextRef ctx,
 				 enum ac_float_mode float_mode)
 {

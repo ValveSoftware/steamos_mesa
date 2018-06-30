@@ -83,6 +83,7 @@ void ac_dump_module(LLVMModuleRef module);
 
 LLVMValueRef ac_llvm_get_called_value(LLVMValueRef call);
 bool ac_llvm_is_function(LLVMValueRef v);
+LLVMModuleRef ac_create_module(LLVMTargetMachineRef tm, LLVMContextRef ctx);
 
 LLVMBuilderRef ac_create_builder(LLVMContextRef ctx,
 				 enum ac_float_mode float_mode);

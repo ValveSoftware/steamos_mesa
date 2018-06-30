@@ -119,13 +119,14 @@ static void si_init_compiler(struct si_screen *sscreen,
 		(sscreen->info.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
 		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
 
+	const char *triple;
 	compiler->tm = ac_create_target_machine(sscreen->info.family,
-						tm_options, &compiler->triple);
+						tm_options, &triple);
 	if (!compiler->tm)
 		return;
 
 	compiler->target_library_info =
-		gallivm_create_target_library_info(compiler->triple);
+		gallivm_create_target_library_info(triple);
 	if (!compiler->target_library_info)
 		return;
 
@@ -150,19 +151,10 @@ static void si_init_compiler(struct si_screen *sscreen,
 	/* This is recommended by the instruction combining pass. */
 	LLVMAddEarlyCSEMemSSAPass(compiler->passmgr);
 	LLVMAddInstructionCombiningPass(compiler->passmgr);
-
-	/* Get the data layout. */
-	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(compiler->tm);
-	if (!data_layout)
-		return;
-	compiler->data_layout = LLVMCopyStringRepOfTargetData(data_layout);
-	LLVMDisposeTargetData(data_layout);
 }
 
 static void si_destroy_compiler(struct si_compiler *compiler)
 {
-	if (compiler->data_layout)
-		LLVMDisposeMessage((char*)compiler->data_layout);
 	if (compiler->passmgr)
 		LLVMDisposePassManager(compiler->passmgr);
 #if HAVE_LLVM >= 0x0700

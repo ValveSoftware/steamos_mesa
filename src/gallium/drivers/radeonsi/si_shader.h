@@ -320,8 +320,6 @@ struct si_shader;
 /* Per-thread persistent LLVM objects. */
 struct si_compiler {
 	LLVMTargetMachineRef		tm;
-	const char			*triple;
-	const char			*data_layout;
 	LLVMTargetLibraryInfoRef	target_library_info;
 	LLVMPassManagerRef		passmgr;
 };

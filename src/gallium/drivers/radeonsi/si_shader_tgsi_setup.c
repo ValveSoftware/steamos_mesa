@@ -986,10 +986,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->compiler = compiler;
 
 	ctx->gallivm.context = LLVMContextCreate();
-	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
-						ctx->gallivm.context);
-	LLVMSetTarget(ctx->gallivm.module, compiler->triple);
-	LLVMSetDataLayout(ctx->gallivm.module, compiler->data_layout);
+	ctx->gallivm.module = ac_create_module(compiler->tm, ctx->gallivm.context);
 
 	bool unsafe_fpmath = (sscreen->debug_flags & DBG(UNSAFE_MATH)) != 0;
 	enum ac_float_mode float_mode =

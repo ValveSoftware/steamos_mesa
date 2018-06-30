@@ -3165,14 +3165,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
-	LLVMSetTarget(ctx.ac.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
-
-	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);
-	char *data_layout_str = LLVMCopyStringRepOfTargetData(data_layout);
-	LLVMSetDataLayout(ctx.ac.module, data_layout_str);
-	LLVMDisposeTargetData(data_layout);
-	LLVMDisposeMessage(data_layout_str);
+	ctx.ac.module = ac_create_module(tm, ctx.context);
 
 	enum ac_float_mode float_mode =
 		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
@@ -3613,10 +3606,9 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
+	ctx.ac.module = ac_create_module(tm, ctx.context);
 
 	ctx.is_gs_copy_shader = true;
-	LLVMSetTarget(ctx.ac.module, "amdgcn--");
 
 	enum ac_float_mode float_mode =
 		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
