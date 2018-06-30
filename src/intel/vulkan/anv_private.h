@@ -870,9 +870,12 @@ struct anv_physical_device {
       struct anv_memory_heap                    heaps[VK_MAX_MEMORY_HEAPS];
     } memory;
 
+    uint8_t                                     driver_build_sha1[20];
     uint8_t                                     pipeline_cache_uuid[VK_UUID_SIZE];
     uint8_t                                     driver_uuid[VK_UUID_SIZE];
     uint8_t                                     device_uuid[VK_UUID_SIZE];
+
+    struct disk_cache *                         disk_cache;
 
     struct wsi_device                       wsi_device;
     int                                         local_fd;

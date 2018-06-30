@@ -24,6 +24,8 @@
 #include "compiler/blob.h"
 #include "util/hash_table.h"
 #include "util/debug.h"
+#include "util/disk_cache.h"
+#include "util/mesa-sha1.h"
 #include "anv_private.h"
 
 struct anv_shader_bin *
@@ -278,6 +280,25 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
       anv_shader_bin_ref(shader);
 
    return shader;
+}
+
+static void
+anv_pipeline_cache_add_shader_bin(struct anv_pipeline_cache *cache,
+                                  struct anv_shader_bin *bin)
+{
+   if (!cache->cache)
+      return;
+
+   pthread_mutex_lock(&cache->mutex);
+
+   struct hash_entry *entry = _mesa_hash_table_search(cache->cache, bin->key);
+   if (entry == NULL) {
+      /* Take a reference for the cache */
+      anv_shader_bin_ref(bin);
+      _mesa_hash_table_insert(cache->cache, bin->key, bin);
+   }
+
+   pthread_mutex_unlock(&cache->mutex);
 }
 
 static struct anv_shader_bin *
@@ -540,7 +561,38 @@ anv_device_search_for_kernel(struct anv_device *device,
                              struct anv_pipeline_cache *cache,
                              const void *key_data, uint32_t key_size)
 {
-   return cache ? anv_pipeline_cache_search(cache, key_data, key_size) : NULL;
+   struct anv_shader_bin *bin;
+
+   if (cache) {
+      bin = anv_pipeline_cache_search(cache, key_data, key_size);
+      if (bin)
+         return bin;
+   }
+
+#ifdef ENABLE_SHADER_CACHE
+   struct disk_cache *disk_cache = device->instance->physicalDevice.disk_cache;
+   if (disk_cache) {
+      cache_key cache_key;
+      disk_cache_compute_key(disk_cache, key_data, key_size, cache_key);
+
+      size_t buffer_size;
+      uint8_t *buffer = disk_cache_get(disk_cache, cache_key, &buffer_size);
+      if (buffer) {
+         struct blob_reader blob;
+         blob_reader_init(&blob, buffer, buffer_size);
+         bin = anv_shader_bin_create_from_blob(device, &blob);
+         free(buffer);
+
+         if (bin) {
+            if (cache)
+               anv_pipeline_cache_add_shader_bin(cache, bin);
+            return bin;
+         }
+      }
+   }
+#endif
+
+   return NULL;
 }
 
 struct anv_shader_bin *
@@ -554,17 +606,41 @@ anv_device_upload_kernel(struct anv_device *device,
                          uint32_t prog_data_size,
                          const struct anv_pipeline_bind_map *bind_map)
 {
+   struct anv_shader_bin *bin;
    if (cache) {
-      return anv_pipeline_cache_upload_kernel(cache, key_data, key_size,
-                                              kernel_data, kernel_size,
-                                              constant_data, constant_data_size,
-                                              prog_data, prog_data_size,
-                                              bind_map);
+      bin = anv_pipeline_cache_upload_kernel(cache, key_data, key_size,
+                                             kernel_data, kernel_size,
+                                             constant_data, constant_data_size,
+                                             prog_data, prog_data_size,
+                                             bind_map);
    } else {
-      return anv_shader_bin_create(device, key_data, key_size,
-                                   kernel_data, kernel_size,
-                                   constant_data, constant_data_size,
-                                   prog_data, prog_data_size,
-                                   prog_data->param, bind_map);
+      bin = anv_shader_bin_create(device, key_data, key_size,
+                                  kernel_data, kernel_size,
+                                  constant_data, constant_data_size,
+                                  prog_data, prog_data_size,
+                                  prog_data->param, bind_map);
    }
+
+   if (bin == NULL)
+      return NULL;
+
+#ifdef ENABLE_SHADER_CACHE
+   struct disk_cache *disk_cache = device->instance->physicalDevice.disk_cache;
+   if (disk_cache) {
+      struct blob binary;
+      blob_init(&binary);
+      anv_shader_bin_write_to_blob(bin, &binary);
+
+      if (!binary.out_of_memory) {
+         cache_key cache_key;
+         disk_cache_compute_key(disk_cache, key_data, key_size, cache_key);
+
+         disk_cache_put(disk_cache, cache_key, binary.data, binary.size, NULL);
+      }
+
+      blob_finish(&binary);
+   }
+#endif
+
+   return bin;
 }
