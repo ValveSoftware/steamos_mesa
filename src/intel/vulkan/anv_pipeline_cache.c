@@ -281,15 +281,16 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
 }
 
 static struct anv_shader_bin *
-anv_pipeline_cache_add_shader(struct anv_pipeline_cache *cache,
-                              const void *key_data, uint32_t key_size,
-                              const void *kernel_data, uint32_t kernel_size,
-                              const void *constant_data,
-                              uint32_t constant_data_size,
-                              const struct brw_stage_prog_data *prog_data,
-                              uint32_t prog_data_size,
-                              const void *prog_data_param,
-                              const struct anv_pipeline_bind_map *bind_map)
+anv_pipeline_cache_add_shader_locked(struct anv_pipeline_cache *cache,
+                                     const void *key_data, uint32_t key_size,
+                                     const void *kernel_data,
+                                     uint32_t kernel_size,
+                                     const void *constant_data,
+                                     uint32_t constant_data_size,
+                                     const struct brw_stage_prog_data *prog_data,
+                                     uint32_t prog_data_size,
+                                     const void *prog_data_param,
+                                     const struct anv_pipeline_bind_map *bind_map)
 {
    struct anv_shader_bin *shader =
       anv_pipeline_cache_search_locked(cache, key_data, key_size);
@@ -324,11 +325,11 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
       pthread_mutex_lock(&cache->mutex);
 
       struct anv_shader_bin *bin =
-         anv_pipeline_cache_add_shader(cache, key_data, key_size,
-                                       kernel_data, kernel_size,
-                                       constant_data, constant_data_size,
-                                       prog_data, prog_data_size,
-                                       prog_data->param, bind_map);
+         anv_pipeline_cache_add_shader_locked(cache, key_data, key_size,
+                                              kernel_data, kernel_size,
+                                              constant_data, constant_data_size,
+                                              prog_data, prog_data_size,
+                                              prog_data->param, bind_map);
 
       pthread_mutex_unlock(&cache->mutex);
 
