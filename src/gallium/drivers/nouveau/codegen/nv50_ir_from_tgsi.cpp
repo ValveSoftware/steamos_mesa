@@ -3613,6 +3613,9 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
                                   info->out[info->io.viewportId].slot[0] * 4);
          mkStore(OP_EXPORT, TYPE_U32, vpSym, NULL, viewport);
       }
+      /* handle user clip planes for each emitted vertex */
+      if (info->io.genUserClip > 0)
+         handleUserClipPlanes();
       /* fallthrough */
    case TGSI_OPCODE_ENDPRIM:
    {
@@ -3787,7 +3790,9 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       setPosition(epilogue, true);
       if (prog->getType() == Program::TYPE_FRAGMENT)
          exportOutputs();
-      if (info->io.genUserClip > 0)
+      if ((prog->getType() == Program::TYPE_VERTEX ||
+           prog->getType() == Program::TYPE_TESSELLATION_EVAL
+          ) && info->io.genUserClip > 0)
          handleUserClipPlanes();
       mkOp(OP_EXIT, TYPE_NONE, NULL)->terminator = 1;
    }
