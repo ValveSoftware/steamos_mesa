@@ -527,18 +527,17 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_vs_prog_key key;
    struct anv_shader_bin *bin = NULL;
-   unsigned char sha1[20];
 
    populate_vs_prog_key(&pipeline->device->info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
-   if (cache) {
-      anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
-                               MESA_SHADER_VERTEX, spec_info,
-                               &key, sizeof(key), sha1);
+   unsigned char sha1[20];
+   anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
+                            MESA_SHADER_VERTEX, spec_info,
+                            &key, sizeof(key), sha1);
+   if (cache)
       bin = anv_pipeline_cache_search(cache, sha1, 20);
-   }
 
    if (bin == NULL) {
       struct brw_vs_prog_data prog_data = {};
@@ -653,8 +652,6 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    struct brw_tes_prog_key tes_key = {};
    struct anv_shader_bin *tcs_bin = NULL;
    struct anv_shader_bin *tes_bin = NULL;
-   unsigned char tcs_sha1[40];
-   unsigned char tes_sha1[40];
 
    populate_sampler_prog_key(&pipeline->device->info, &tcs_key.tex);
    populate_sampler_prog_key(&pipeline->device->info, &tes_key.tex);
@@ -662,15 +659,18 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
+   unsigned char tcs_sha1[40];
+   unsigned char tes_sha1[40];
+   anv_pipeline_hash_shader(pipeline, layout, tcs_module, tcs_entrypoint,
+                            MESA_SHADER_TESS_CTRL, tcs_spec_info,
+                            &tcs_key, sizeof(tcs_key), tcs_sha1);
+   anv_pipeline_hash_shader(pipeline, layout, tes_module, tes_entrypoint,
+                            MESA_SHADER_TESS_EVAL, tes_spec_info,
+                            &tes_key, sizeof(tes_key), tes_sha1);
+   memcpy(&tcs_sha1[20], tes_sha1, 20);
+   memcpy(&tes_sha1[20], tcs_sha1, 20);
+
    if (cache) {
-      anv_pipeline_hash_shader(pipeline, layout, tcs_module, tcs_entrypoint,
-                               MESA_SHADER_TESS_CTRL, tcs_spec_info,
-                               &tcs_key, sizeof(tcs_key), tcs_sha1);
-      anv_pipeline_hash_shader(pipeline, layout, tes_module, tes_entrypoint,
-                               MESA_SHADER_TESS_EVAL, tes_spec_info,
-                               &tes_key, sizeof(tes_key), tes_sha1);
-      memcpy(&tcs_sha1[20], tes_sha1, 20);
-      memcpy(&tes_sha1[20], tcs_sha1, 20);
       tcs_bin = anv_pipeline_cache_search(cache, tcs_sha1, sizeof(tcs_sha1));
       tes_bin = anv_pipeline_cache_search(cache, tes_sha1, sizeof(tes_sha1));
    }
@@ -802,18 +802,17 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_gs_prog_key key;
    struct anv_shader_bin *bin = NULL;
-   unsigned char sha1[20];
 
    populate_gs_prog_key(&pipeline->device->info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
-   if (cache) {
-      anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
-                               MESA_SHADER_GEOMETRY, spec_info,
-                               &key, sizeof(key), sha1);
+   unsigned char sha1[20];
+   anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
+                            MESA_SHADER_GEOMETRY, spec_info,
+                            &key, sizeof(key), sha1);
+   if (cache)
       bin = anv_pipeline_cache_search(cache, sha1, 20);
-   }
 
    if (bin == NULL) {
       struct brw_gs_prog_data prog_data = {};
@@ -884,18 +883,17 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_wm_prog_key key;
    struct anv_shader_bin *bin = NULL;
-   unsigned char sha1[20];
 
    populate_wm_prog_key(pipeline, info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
-   if (cache) {
-      anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
-                               MESA_SHADER_FRAGMENT, spec_info,
-                               &key, sizeof(key), sha1);
+   unsigned char sha1[20];
+   anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
+                            MESA_SHADER_FRAGMENT, spec_info,
+                            &key, sizeof(key), sha1);
+   if (cache)
       bin = anv_pipeline_cache_search(cache, sha1, 20);
-   }
 
    if (bin == NULL) {
       struct brw_wm_prog_data prog_data = {};
@@ -1036,18 +1034,17 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_cs_prog_key key;
    struct anv_shader_bin *bin = NULL;
-   unsigned char sha1[20];
 
    populate_cs_prog_key(&pipeline->device->info, &key);
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
-   if (cache) {
-      anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
-                               MESA_SHADER_COMPUTE, spec_info,
-                               &key, sizeof(key), sha1);
+   unsigned char sha1[20];
+   anv_pipeline_hash_shader(pipeline, layout, module, entrypoint,
+                            MESA_SHADER_COMPUTE, spec_info,
+                            &key, sizeof(key), sha1);
+   if (cache)
       bin = anv_pipeline_cache_search(cache, sha1, 20);
-   }
 
    if (bin == NULL) {
       struct brw_cs_prog_data prog_data = {};
