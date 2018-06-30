@@ -604,6 +604,9 @@ VkResult anv_CreateInstance(
       return vk_error(result);
    }
 
+   instance->pipeline_cache_enabled =
+      env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", true);
+
    _mesa_locale_init();
 
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
@@ -1728,6 +1731,8 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_workaround_bo;
 
+   anv_pipeline_cache_init(&device->default_pipeline_cache, device, true);
+
    anv_device_init_blorp(device);
 
    anv_device_init_border_colors(device);
@@ -1778,6 +1783,8 @@ void anv_DestroyDevice(
       return;
 
    anv_device_finish_blorp(device);
+
+   anv_pipeline_cache_finish(&device->default_pipeline_cache);
 
    anv_queue_finish(&device->queue);
 

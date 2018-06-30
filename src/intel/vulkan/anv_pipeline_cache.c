@@ -394,15 +394,6 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
    }
 }
 
-static bool
-pipeline_cache_enabled()
-{
-   static int enabled = -1;
-   if (enabled < 0)
-      enabled = env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", true);
-   return enabled;
-}
-
 VkResult anv_CreatePipelineCache(
     VkDevice                                    _device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
@@ -421,7 +412,8 @@ VkResult anv_CreatePipelineCache(
    if (cache == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   anv_pipeline_cache_init(cache, device, pipeline_cache_enabled());
+   anv_pipeline_cache_init(cache, device,
+                           device->instance->pipeline_cache_enabled);
 
    if (pCreateInfo->initialDataSize > 0)
       anv_pipeline_cache_load(cache,

@@ -30,11 +30,11 @@ lookup_blorp_shader(struct blorp_context *blorp,
 {
    struct anv_device *device = blorp->driver_ctx;
 
-   /* The blorp cache must be a real cache */
-   assert(device->blorp_shader_cache.cache);
+   /* The default cache must be a real cache */
+   assert(device->default_pipeline_cache.cache);
 
    struct anv_shader_bin *bin =
-      anv_pipeline_cache_search(&device->blorp_shader_cache, key, key_size);
+      anv_pipeline_cache_search(&device->default_pipeline_cache, key, key_size);
    if (!bin)
       return false;
 
@@ -60,7 +60,7 @@ upload_blorp_shader(struct blorp_context *blorp,
    struct anv_device *device = blorp->driver_ctx;
 
    /* The blorp cache must be a real cache */
-   assert(device->blorp_shader_cache.cache);
+   assert(device->default_pipeline_cache.cache);
 
    struct anv_pipeline_bind_map bind_map = {
       .surface_count = 0,
@@ -68,7 +68,7 @@ upload_blorp_shader(struct blorp_context *blorp,
    };
 
    struct anv_shader_bin *bin =
-      anv_pipeline_cache_upload_kernel(&device->blorp_shader_cache,
+      anv_pipeline_cache_upload_kernel(&device->default_pipeline_cache,
                                        key, key_size, kernel, kernel_size,
                                        NULL, 0,
                                        prog_data, prog_data_size, &bind_map);
@@ -90,7 +90,6 @@ upload_blorp_shader(struct blorp_context *blorp,
 void
 anv_device_init_blorp(struct anv_device *device)
 {
-   anv_pipeline_cache_init(&device->blorp_shader_cache, device, true);
    blorp_init(&device->blorp, device, &device->isl_dev);
    device->blorp.compiler = device->instance->physicalDevice.compiler;
    device->blorp.lookup_shader = lookup_blorp_shader;
@@ -124,7 +123,6 @@ void
 anv_device_finish_blorp(struct anv_device *device)
 {
    blorp_finish(&device->blorp);
-   anv_pipeline_cache_finish(&device->blorp_shader_cache);
 }
 
 static void

@@ -891,6 +891,8 @@ struct anv_instance {
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
+    bool                                        pipeline_cache_enabled;
+
     struct vk_debug_report_instance             debug_report_callbacks;
 };
 
@@ -972,7 +974,7 @@ struct anv_device {
     struct anv_bo                               trivial_batch_bo;
     struct anv_bo                               hiz_clear_bo;
 
-    struct anv_pipeline_cache                   blorp_shader_cache;
+    struct anv_pipeline_cache                   default_pipeline_cache;
     struct blorp_context                        blorp;
 
     struct anv_state                            border_colors;
