@@ -570,7 +570,10 @@ static void r600_set_vertex_buffers(struct pipe_context *ctx,
 	/* Set vertex buffers. */
 	if (input) {
 		for (i = 0; i < count; i++) {
-			if (memcmp(&input[i], &vb[i], sizeof(struct pipe_vertex_buffer))) {
+			if ((input[i].buffer.resource != vb[i].buffer.resource) ||
+			    (vb[i].stride != input[i].stride) ||
+			    (vb[i].buffer_offset != input[i].buffer_offset) ||
+			    (vb[i].is_user_buffer != input[i].is_user_buffer)) {
 				if (input[i].buffer.resource) {
 					vb[i].stride = input[i].stride;
 					vb[i].buffer_offset = input[i].buffer_offset;
