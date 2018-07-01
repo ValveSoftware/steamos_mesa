@@ -748,13 +748,6 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 void
 si_lower_nir(struct si_shader_selector* sel)
 {
-	/* Disable const buffer fast path for old LLVM versions */
-	if (sel->screen->info.chip_class == SI && HAVE_LLVM < 0x0600 &&
-	    sel->info.const_buffers_declared == 1 &&
-	    sel->info.shader_buffers_declared == 0) {
-		sel->info.const_buffers_declared |= 0x2;
-	}
-
 	/* Adjust the driver location of inputs and outputs. The state tracker
 	 * interprets them as slots, while the ac/nir backend interprets them
 	 * as individual components.
