@@ -572,10 +572,18 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 	unsigned max_aniso = rscreen->force_aniso >= 0 ? rscreen->force_aniso
 						       : state->max_anisotropy;
 	unsigned max_aniso_ratio = r600_tex_aniso_filter(max_aniso);
+	float max_lod = state->max_lod;
 
 	if (!ss) {
 		return NULL;
 	}
+
+	/* If the min_mip_filter is NONE, then the texture has no mipmapping and
+	 * MIP_FILTER will also be set to NONE. However, if more then one LOD is
+	 * configured, then the texture lookup seems to fail for some specific texture
+	 * formats. Forcing the number of LODs to one in this case fixes it. */
+	if (state->min_mip_filter == PIPE_TEX_MIPFILTER_NONE)
+		max_lod = state->min_lod;
 
 	ss->border_color_use = sampler_state_needs_border_color(state);
 
@@ -593,7 +601,7 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 	/* R_03C004_SQ_TEX_SAMPLER_WORD1_0 */
 	ss->tex_sampler_words[1] =
 		S_03C004_MIN_LOD(S_FIXED(CLAMP(state->min_lod, 0, 15), 8)) |
-		S_03C004_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8));
+		S_03C004_MAX_LOD(S_FIXED(CLAMP(max_lod, 0, 15), 8));
 	/* R_03C008_SQ_TEX_SAMPLER_WORD2_0 */
 	ss->tex_sampler_words[2] =
 		S_03C008_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
