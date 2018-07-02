@@ -4073,13 +4073,13 @@ genX(upload_ps)(struct brw_context *brw)
 static const struct brw_tracked_state genX(ps_state) = {
    .dirty = {
       .mesa  = _NEW_MULTISAMPLE |
-               (GEN_GEN >= 9 ? BRW_NEW_NUM_SAMPLES : 0) |
                (GEN_GEN < 8 ? _NEW_BUFFERS |
                               _NEW_COLOR
                             : 0),
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_FS_PROG_DATA,
+               BRW_NEW_FS_PROG_DATA |
+               (GEN_GEN >= 9 ? BRW_NEW_NUM_SAMPLES : 0),
    },
    .emit = genX(upload_ps),
 };
