@@ -673,12 +673,10 @@ texstore_compressed(TEXSTORE_PARAMS)
 static GLboolean
 texstore_rgba(TEXSTORE_PARAMS)
 {
-   void *tempImage = NULL, *tempRGBA = NULL;
-   int srcRowStride, img;
+   void *tempImage = NULL;
+   int img;
    GLubyte *src, *dst;
-   uint32_t srcMesaFormat;
    uint8_t rebaseSwizzle[4];
-   bool needRebase;
    bool transferOpsDone = false;
 
    /* We have to handle MESA_FORMAT_YCBCR manually because it is a special case
@@ -748,15 +746,18 @@ texstore_rgba(TEXSTORE_PARAMS)
       }
    }
 
-   srcRowStride =
+   int srcRowStride =
       _mesa_image_row_stride(srcPacking, srcWidth, srcFormat, srcType);
 
-   srcMesaFormat = _mesa_format_from_format_and_type(srcFormat, srcType);
+   uint32_t srcMesaFormat =
+      _mesa_format_from_format_and_type(srcFormat, srcType);
+
    dstFormat = _mesa_get_srgb_format_linear(dstFormat);
 
    /* If we have transferOps then we need to convert to RGBA float first,
       then apply transferOps, then do the conversion to dst
     */
+   void *tempRGBA = NULL;
    if (!transferOpsDone &&
        _mesa_texstore_needs_transfer_ops(ctx, baseInternalFormat, dstFormat)) {
       /* Allocate RGBA float image */
@@ -797,6 +798,7 @@ texstore_rgba(TEXSTORE_PARAMS)
       _mesa_image_address(dims, srcPacking, srcAddr, srcWidth, srcHeight,
                           srcFormat, srcType, 0, 0, 0);
 
+   bool needRebase;
    if (_mesa_get_format_base_format(dstFormat) != baseInternalFormat) {
       needRebase =
          _mesa_compute_rgba2base2rgba_component_mapping(baseInternalFormat,
