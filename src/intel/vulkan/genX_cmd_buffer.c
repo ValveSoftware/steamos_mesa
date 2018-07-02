@@ -2518,12 +2518,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
             .MemoryObjectControlState = GENX(MOCS),
 #else
             .BufferAccessType = pipeline->vb[vb].instanced ? INSTANCEDATA : VERTEXDATA,
-            /* Our implementation of VK_KHR_multiview uses instancing to draw
-             * the different views.  If the client asks for instancing, we
-             * need to use the Instance Data Step Rate to ensure that we
-             * repeat the client's per-instance data once for each view.
-             */
-            .InstanceDataStepRate = anv_subpass_view_count(pipeline->subpass),
+            .InstanceDataStepRate = pipeline->vb[vb].instance_divisor,
             .VertexBufferMemoryObjectControlState = GENX(MOCS),
 #endif
 

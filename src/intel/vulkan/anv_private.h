@@ -2386,6 +2386,7 @@ struct anv_pipeline {
    struct anv_pipeline_vertex_binding {
       uint32_t                                  stride;
       bool                                      instanced;
+      uint32_t                                  instance_divisor;
    } vb[MAX_VBS];
 
    bool                                         primitive_restart;

@@ -156,12 +156,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
          vfi.InstancingEnable = pipeline->vb[desc->binding].instanced;
          vfi.VertexElementIndex = slot;
-         /* Our implementation of VK_KHR_multiview uses instancing to draw
-          * the different views.  If the client asks for instancing, we
-          * need to use the Instance Data Step Rate to ensure that we
-          * repeat the client's per-instance data once for each view.
-          */
-         vfi.InstanceDataStepRate = anv_subpass_view_count(pipeline->subpass);
+         vfi.InstanceDataStepRate =
+            pipeline->vb[desc->binding].instance_divisor;
       }
 #endif
    }

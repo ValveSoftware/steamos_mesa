@@ -1421,6 +1421,22 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
          pipeline->vb[desc->binding].instanced = true;
          break;
       }
+
+      pipeline->vb[desc->binding].instance_divisor = 1;
+   }
+
+
+   /* Our implementation of VK_KHR_multiview uses instancing to draw the
+    * different views.  If the client asks for instancing, we need to multiply
+    * the instance divisor by the number of views ensure that we repeat the
+    * client's per-instance data once for each view.
+    */
+   if (pipeline->subpass->view_mask) {
+      const uint32_t view_count = anv_subpass_view_count(pipeline->subpass);
+      for (uint32_t vb = 0; vb < MAX_VBS; vb++) {
+         if (pipeline->vb[vb].instanced)
+            pipeline->vb[vb].instance_divisor *= view_count;
+      }
    }
 
    const VkPipelineInputAssemblyStateCreateInfo *ia_info =
