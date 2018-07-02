@@ -1140,6 +1140,14 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_PROPERTIES_EXT: {
+         VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT *props =
+            (VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT *)ext;
+         /* We have to restrict this a bit for multiview */
+         props->maxVertexAttribDivisor = UINT32_MAX / 16;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;

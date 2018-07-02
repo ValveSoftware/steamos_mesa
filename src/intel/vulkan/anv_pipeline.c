@@ -33,6 +33,7 @@
 #include "compiler/brw_nir.h"
 #include "anv_nir.h"
 #include "spirv/nir_spirv.h"
+#include "vk_util.h"
 
 /* Needed for SWIZZLE macros */
 #include "program/prog_instruction.h"
@@ -1425,6 +1426,17 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       pipeline->vb[desc->binding].instance_divisor = 1;
    }
 
+   const VkPipelineVertexInputDivisorStateCreateInfoEXT *vi_div_state =
+      vk_find_struct_const(vi_info->pNext,
+                           PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO_EXT);
+   if (vi_div_state) {
+      for (uint32_t i = 0; i < vi_div_state->vertexBindingDivisorCount; i++) {
+         const VkVertexInputBindingDivisorDescriptionEXT *desc =
+            &vi_div_state->pVertexBindingDivisors[i];
+
+         pipeline->vb[desc->binding].instance_divisor = desc->divisor;
+      }
+   }
 
    /* Our implementation of VK_KHR_multiview uses instancing to draw the
     * different views.  If the client asks for instancing, we need to multiply
