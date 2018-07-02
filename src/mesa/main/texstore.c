@@ -764,7 +764,6 @@ texstore_rgba(TEXSTORE_PARAMS)
       tempRGBA = malloc(4 * elementCount * sizeof(float));
       if (!tempRGBA) {
          free(tempImage);
-         free(tempRGBA);
          return GL_FALSE;
       }
 
