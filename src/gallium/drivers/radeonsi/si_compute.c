@@ -86,7 +86,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	struct si_compute *program = (struct si_compute *)job;
 	struct si_shader *shader = &program->shader;
 	struct si_shader_selector sel;
-	struct si_compiler *compiler;
+	struct ac_llvm_compiler *compiler;
 	struct pipe_debug_callback *debug = &program->compiler_ctx_state.debug;
 	struct si_screen *sscreen = program->screen;
 

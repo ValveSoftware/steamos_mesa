@@ -81,7 +81,7 @@ static void si_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
  * @returns 0 for success, 1 for failure
  */
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
-			 struct si_compiler *compiler,
+			 struct ac_llvm_compiler *compiler,
 			 struct pipe_debug_callback *debug)
 {
 	struct si_llvm_diagnostics diag;
@@ -972,7 +972,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 
 void si_llvm_context_init(struct si_shader_context *ctx,
 			  struct si_screen *sscreen,
-			  struct si_compiler *compiler)
+			  struct ac_llvm_compiler *compiler)
 {
 	struct lp_type type;
 

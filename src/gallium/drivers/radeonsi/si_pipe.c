@@ -105,7 +105,7 @@ static const struct debug_named_value debug_options[] = {
 };
 
 static void si_init_compiler(struct si_screen *sscreen,
-			     struct si_compiler *compiler)
+			     struct ac_llvm_compiler *compiler)
 {
 	enum ac_target_machine_options tm_options =
 		(sscreen->debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
@@ -131,7 +131,7 @@ static void si_init_compiler(struct si_screen *sscreen,
 		return;
 }
 
-static void si_destroy_compiler(struct si_compiler *compiler)
+static void si_destroy_compiler(struct ac_llvm_compiler *compiler)
 {
 	if (compiler->passmgr)
 		LLVMDisposePassManager(compiler->passmgr);

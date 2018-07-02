@@ -67,6 +67,13 @@ enum ac_float_mode {
 	AC_FLOAT_MODE_UNSAFE_FP_MATH,
 };
 
+/* Per-thread persistent LLVM objects. */
+struct ac_llvm_compiler {
+	LLVMTargetMachineRef		tm;
+	LLVMTargetLibraryInfoRef	target_library_info;
+	LLVMPassManagerRef		passmgr;
+};
+
 const char *ac_get_llvm_processor_name(enum radeon_family family);
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family,
 					      enum ac_target_machine_options tm_options,
