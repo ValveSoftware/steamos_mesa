@@ -2383,8 +2383,11 @@ struct anv_pipeline {
    struct anv_state                             blend_state;
 
    uint32_t                                     vb_used;
-   uint32_t                                     binding_stride[MAX_VBS];
-   bool                                         instancing_enable[MAX_VBS];
+   struct anv_pipeline_vertex_binding {
+      uint32_t                                  stride;
+      bool                                      instanced;
+   } vb[MAX_VBS];
+
    bool                                         primitive_restart;
    uint32_t                                     topology;
 

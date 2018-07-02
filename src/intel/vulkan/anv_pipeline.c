@@ -1407,7 +1407,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       const VkVertexInputBindingDescription *desc =
          &vi_info->pVertexBindingDescriptions[i];
 
-      pipeline->binding_stride[desc->binding] = desc->stride;
+      pipeline->vb[desc->binding].stride = desc->stride;
 
       /* Step rate is programmed per vertex element (attribute), not
        * binding. Set up a map of which bindings step per instance, for
@@ -1415,10 +1415,10 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       switch (desc->inputRate) {
       default:
       case VK_VERTEX_INPUT_RATE_VERTEX:
-         pipeline->instancing_enable[desc->binding] = false;
+         pipeline->vb[desc->binding].instanced = false;
          break;
       case VK_VERTEX_INPUT_RATE_INSTANCE:
-         pipeline->instancing_enable[desc->binding] = true;
+         pipeline->vb[desc->binding].instanced = true;
          break;
       }
    }

@@ -154,7 +154,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * VERTEX_BUFFER_STATE which we emit later.
        */
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
-         vfi.InstancingEnable = pipeline->instancing_enable[desc->binding];
+         vfi.InstancingEnable = pipeline->vb[desc->binding].instanced;
          vfi.VertexElementIndex = slot;
          /* Our implementation of VK_KHR_multiview uses instancing to draw
           * the different views.  If the client asks for instancing, we

@@ -2517,7 +2517,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 #if GEN_GEN >= 8
             .MemoryObjectControlState = GENX(MOCS),
 #else
-            .BufferAccessType = pipeline->instancing_enable[vb] ? INSTANCEDATA : VERTEXDATA,
+            .BufferAccessType = pipeline->vb[vb].instanced ? INSTANCEDATA : VERTEXDATA,
             /* Our implementation of VK_KHR_multiview uses instancing to draw
              * the different views.  If the client asks for instancing, we
              * need to use the Instance Data Step Rate to ensure that we
@@ -2528,7 +2528,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
             .AddressModifyEnable = true,
-            .BufferPitch = pipeline->binding_stride[vb],
+            .BufferPitch = pipeline->vb[vb].stride,
             .BufferStartingAddress = anv_address_add(buffer->address, offset),
 
 #if GEN_GEN >= 8
