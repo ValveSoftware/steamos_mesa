@@ -111,7 +111,8 @@ static void si_init_compiler(struct si_screen *sscreen,
 		(sscreen->debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
 		(sscreen->info.chip_class >= GFX9 ? AC_TM_FORCE_ENABLE_XNACK : 0) |
 		(sscreen->info.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
-		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
+		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0) |
+		(sscreen->debug_flags & DBG(CHECK_IR) ? AC_TM_CHECK_IR : 0);
 
 	const char *triple;
 	ac_init_llvm_once();
@@ -126,7 +127,7 @@ static void si_init_compiler(struct si_screen *sscreen,
 		return;
 
 	compiler->passmgr = ac_create_passmgr(compiler->target_library_info,
-					      (sscreen->debug_flags & DBG(CHECK_IR)));
+					      tm_options & AC_TM_CHECK_IR);
 	if (!compiler->passmgr)
 		return;
 }

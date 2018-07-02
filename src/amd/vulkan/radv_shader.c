@@ -562,10 +562,12 @@ shader_variant_create(struct radv_device *device,
 		tm_options |= AC_TM_SUPPORTS_SPILL;
 	if (device->instance->perftest_flags & RADV_PERFTEST_SISCHED)
 		tm_options |= AC_TM_SISCHED;
+	if (options->check_ir)
+		tm_options |= AC_TM_CHECK_IR;
 
 	radv_init_llvm_once();
 	tm = ac_create_target_machine(chip_family, tm_options, NULL);
-	passmgr = ac_create_passmgr(NULL, options->check_ir);
+	passmgr = ac_create_passmgr(NULL, tm_options & AC_TM_CHECK_IR);
 	if (gs_copy_shader) {
 		assert(shader_count == 1);
 		radv_compile_gs_copy_shader(tm, passmgr, *shaders, &binary,

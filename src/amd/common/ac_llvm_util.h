@@ -59,6 +59,7 @@ enum ac_target_machine_options {
 	AC_TM_FORCE_ENABLE_XNACK = (1 << 2),
 	AC_TM_FORCE_DISABLE_XNACK = (1 << 3),
 	AC_TM_PROMOTE_ALLOCA_TO_SCRATCH = (1 << 4),
+	AC_TM_CHECK_IR = (1 << 5),
 };
 
 enum ac_float_mode {
