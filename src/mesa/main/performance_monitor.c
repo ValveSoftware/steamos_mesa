@@ -480,14 +480,18 @@ _mesa_SelectPerfMonitorCountersAMD(GLuint monitor, GLboolean enable,
    if (enable) {
       /* Enable the counters */
       for (i = 0; i < numCounters; i++) {
-         ++m->ActiveGroups[group];
-         BITSET_SET(m->ActiveCounters[group], counterList[i]);
+         if (!BITSET_TEST(m->ActiveCounters[group], counterList[i])) {
+            ++m->ActiveGroups[group];
+            BITSET_SET(m->ActiveCounters[group], counterList[i]);
+         }
       }
    } else {
       /* Disable the counters */
       for (i = 0; i < numCounters; i++) {
-         --m->ActiveGroups[group];
-         BITSET_CLEAR(m->ActiveCounters[group], counterList[i]);
+         if (BITSET_TEST(m->ActiveCounters[group], counterList[i])) {
+            --m->ActiveGroups[group];
+            BITSET_CLEAR(m->ActiveCounters[group], counterList[i]);
+         }
       }
    }
 }
