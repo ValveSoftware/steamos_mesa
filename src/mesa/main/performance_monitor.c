@@ -542,7 +542,7 @@ _mesa_EndPerfMonitorAMD(GLuint monitor)
     *  when a performance monitor is not currently started."
     */
    if (!m->Active) {
-      _mesa_error(ctx, GL_INVALID_OPERATION, "glBeginPerfMonitor(not active)");
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glEndPerfMonitor(not active)");
       return;
    }
 
