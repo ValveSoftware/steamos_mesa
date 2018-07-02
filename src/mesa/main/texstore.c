@@ -79,7 +79,7 @@
 
 
 enum {
-   ZERO = 4, 
+   ZERO = 4,
    ONE = 5
 };
 
@@ -431,47 +431,47 @@ _mesa_texstore_s8_z24(TEXSTORE_PARAMS)
    for (img = 0; img < srcDepth; img++) {
       GLuint *dstRow = (GLuint *) dstSlices[img];
       const GLubyte *src
-	 = (const GLubyte *) _mesa_image_address(dims, srcPacking, srcAddr,
-						srcWidth, srcHeight,
-						srcFormat, srcType,
-						img, 0, 0);
+         = (const GLubyte *) _mesa_image_address(dims, srcPacking, srcAddr,
+                                                srcWidth, srcHeight,
+                                                srcFormat, srcType,
+                                                img, 0, 0);
       for (row = 0; row < srcHeight; row++) {
-	 GLint i;
-	 GLboolean keepdepth = GL_FALSE, keepstencil = GL_FALSE;
-	 
-	 if (srcFormat == GL_DEPTH_COMPONENT) { /* preserve stencil */
-	    keepstencil = GL_TRUE;
-	 }
+         GLint i;
+         GLboolean keepdepth = GL_FALSE, keepstencil = GL_FALSE;
+
+         if (srcFormat == GL_DEPTH_COMPONENT) { /* preserve stencil */
+            keepstencil = GL_TRUE;
+         }
          else if (srcFormat == GL_STENCIL_INDEX) { /* preserve depth */
-	    keepdepth = GL_TRUE;
-	 }
+            keepdepth = GL_TRUE;
+         }
 
-	 if (keepdepth == GL_FALSE)
-	    /* the 24 depth bits will be in the low position: */
-	    _mesa_unpack_depth_span(ctx, srcWidth,
-				    GL_UNSIGNED_INT, /* dst type */
-				    keepstencil ? depth : dstRow, /* dst addr */
-				    depthScale,
-				    srcType, src, srcPacking);	 
+         if (keepdepth == GL_FALSE)
+            /* the 24 depth bits will be in the low position: */
+            _mesa_unpack_depth_span(ctx, srcWidth,
+                                    GL_UNSIGNED_INT, /* dst type */
+                                    keepstencil ? depth : dstRow, /* dst addr */
+                                    depthScale,
+                                    srcType, src, srcPacking);
 
-	 if (keepstencil == GL_FALSE)
-	    /* get the 8-bit stencil values */
-	    _mesa_unpack_stencil_span(ctx, srcWidth,
-				      GL_UNSIGNED_BYTE, /* dst type */
-				      stencil, /* dst addr */
-				      srcType, src, srcPacking,
-				      ctx->_ImageTransferState);
+         if (keepstencil == GL_FALSE)
+            /* get the 8-bit stencil values */
+            _mesa_unpack_stencil_span(ctx, srcWidth,
+                                      GL_UNSIGNED_BYTE, /* dst type */
+                                      stencil, /* dst addr */
+                                      srcType, src, srcPacking,
+                                      ctx->_ImageTransferState);
 
-	 /* merge stencil values into depth values */
-	 for (i = 0; i < srcWidth; i++) {
-	    if (keepstencil)
-	       dstRow[i] = depth[i] | (dstRow[i] & 0xFF000000);
-	    else
-	       dstRow[i] = (dstRow[i] & 0xFFFFFF) | (stencil[i] << 24);
+         /* merge stencil values into depth values */
+         for (i = 0; i < srcWidth; i++) {
+            if (keepstencil)
+               dstRow[i] = depth[i] | (dstRow[i] & 0xFF000000);
+            else
+               dstRow[i] = (dstRow[i] & 0xFFFFFF) | (stencil[i] << 24);
 
-	 }
-	 src += srcRowStride;
-	 dstRow += dstRowStride / sizeof(GLuint);
+         }
+         src += srcRowStride;
+         dstRow += dstRowStride / sizeof(GLuint);
       }
    }
 
@@ -493,7 +493,7 @@ _mesa_texstore_s8(TEXSTORE_PARAMS)
 
    {
       const GLint srcRowStride
-	 = _mesa_image_row_stride(srcPacking, srcWidth, srcFormat, srcType);
+         = _mesa_image_row_stride(srcPacking, srcWidth, srcFormat, srcType);
       GLint img, row;
       GLubyte *stencil = malloc(srcWidth * sizeof(GLubyte));
 
@@ -723,7 +723,9 @@ texstore_rgba(TEXSTORE_PARAMS)
        */
       GLint swapSize = _mesa_sizeof_packed_type(srcType);
       if (swapSize == 2 || swapSize == 4) {
-         int imageStride = _mesa_image_image_stride(srcPacking, srcWidth, srcHeight, srcFormat, srcType);
+         int imageStride = _mesa_image_image_stride(srcPacking, srcWidth,
+                                                    srcHeight, srcFormat,
+                                                    srcType);
          int bufferSize = imageStride * srcDepth;
          int layer;
          const uint8_t *src;
@@ -1055,7 +1057,8 @@ store_texsubimage(struct gl_context *ctx,
                                                 format, type);
       break;
    default:
-      _mesa_warning(ctx, "Unexpected target 0x%x in store_texsubimage()", target);
+      _mesa_warning(ctx, "Unexpected target 0x%x in store_texsubimage()",
+                    target);
       return;
    }
 
@@ -1290,7 +1293,8 @@ _mesa_compute_compressed_pixelstore(GLuint dims, mesa_format texFormat,
             ((packing->RowLength + bw - 1) / bw);
       }
 
-      store->SkipBytes += packing->SkipPixels * packing->CompressedBlockSize / bw;
+      store->SkipBytes +=
+         packing->SkipPixels * packing->CompressedBlockSize / bw;
    }
 
    if (dims > 1 && packing->CompressedBlockHeight &&
@@ -1378,7 +1382,8 @@ _mesa_store_compressed_texsubimage(struct gl_context *ctx, GLuint dims,
          ctx->Driver.UnmapTextureImage(ctx, texImage, slice + zoffset);
 
          /* advance to next slice */
-         src += store.TotalBytesPerRow * (store.TotalRowsPerSlice - store.CopyRowsPerSlice);
+         src += store.TotalBytesPerRow * (store.TotalRowsPerSlice
+                                          - store.CopyRowsPerSlice);
       }
       else {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "glCompressedTexSubImage%uD",
