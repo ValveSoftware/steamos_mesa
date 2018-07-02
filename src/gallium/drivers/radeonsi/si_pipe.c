@@ -114,35 +114,12 @@ static void si_init_compiler(struct si_screen *sscreen,
 		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0) |
 		(sscreen->debug_flags & DBG(CHECK_IR) ? AC_TM_CHECK_IR : 0);
 
-	const char *triple;
-	ac_init_llvm_once();
-	compiler->tm = ac_create_target_machine(sscreen->info.family,
-						tm_options, &triple);
-	if (!compiler->tm)
-		return;
-
-	compiler->target_library_info =
-		gallivm_create_target_library_info(triple);
-	if (!compiler->target_library_info)
-		return;
-
-	compiler->passmgr = ac_create_passmgr(compiler->target_library_info,
-					      tm_options & AC_TM_CHECK_IR);
-	if (!compiler->passmgr)
-		return;
+	ac_init_llvm_compiler(compiler, sscreen->info.family, tm_options);
 }
 
 static void si_destroy_compiler(struct ac_llvm_compiler *compiler)
 {
-	if (compiler->passmgr)
-		LLVMDisposePassManager(compiler->passmgr);
-#if HAVE_LLVM >= 0x0700
-	/* This crashes on LLVM 5.0 and 6.0 and Ubuntu 18.04, so leak it there. */
-	if (compiler->target_library_info)
-		gallivm_dispose_target_library_info(compiler->target_library_info);
-#endif
-	if (compiler->tm)
-		LLVMDisposeTargetMachine(compiler->tm);
+	ac_destroy_llvm_compiler(compiler);
 }
 
 /*

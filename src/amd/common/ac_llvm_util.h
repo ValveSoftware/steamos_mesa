@@ -125,6 +125,12 @@ LLVMTargetLibraryInfoRef ac_create_target_library_info(const char *triple);
 void ac_dispose_target_library_info(LLVMTargetLibraryInfoRef library_info);
 void ac_init_llvm_once(void);
 
+
+bool ac_init_llvm_compiler(struct ac_llvm_compiler *compiler,
+			   enum radeon_family family,
+			   enum ac_target_machine_options tm_options);
+void ac_destroy_llvm_compiler(struct ac_llvm_compiler *compiler);
+
 #ifdef __cplusplus
 }
 #endif

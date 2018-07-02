@@ -282,3 +282,46 @@ ac_count_scratch_private_memory(LLVMValueRef function)
 
 	return private_mem_vgprs;
 }
+
+bool
+ac_init_llvm_compiler(struct ac_llvm_compiler *compiler,
+		      enum radeon_family family,
+		      enum ac_target_machine_options tm_options)
+{
+	const char *triple;
+	memset(compiler, 0, sizeof(*compiler));
+
+	compiler->tm = ac_create_target_machine(family,
+					    tm_options, &triple);
+	if (!compiler->tm)
+		return false;
+
+	compiler->target_library_info =
+		ac_create_target_library_info(triple);
+	if (!compiler->target_library_info)
+		goto fail;
+
+	compiler->passmgr = ac_create_passmgr(compiler->target_library_info,
+					      tm_options & AC_TM_CHECK_IR);
+	if (!compiler->passmgr)
+		goto fail;
+
+	return true;
+fail:
+	ac_destroy_llvm_compiler(compiler);
+	return false;
+}
+
+void
+ac_destroy_llvm_compiler(struct ac_llvm_compiler *compiler)
+{
+	if (compiler->passmgr)
+		LLVMDisposePassManager(compiler->passmgr);
+#if HAVE_LLVM >= 0x0700
+	/* This crashes on LLVM 5.0 and 6.0 and Ubuntu 18.04, so leak it there. */
+	if (compiler->target_library_info)
+		ac_dispose_target_library_info(compiler->target_library_info);
+#endif
+	if (compiler->tm)
+		LLVMDisposeTargetMachine(compiler->tm);
+}
