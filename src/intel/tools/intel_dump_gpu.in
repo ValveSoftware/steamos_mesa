@@ -17,6 +17,8 @@ contents and execution of the GEM application.
 
   -v                 Enable verbose output
 
+  -vv                Enable extra verbosity - dumps gtt mappings
+
       --help         Display this help message and exit
 
 EOF
@@ -53,6 +55,10 @@ while true; do
             ;;
         -v)
             add_arg "verbose=1"
+            shift 1
+            ;;
+        -vv)
+            add_arg "verbose=2"
             shift 1
             ;;
         -o*)

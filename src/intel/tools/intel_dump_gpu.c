@@ -38,6 +38,7 @@
 #include <sys/mman.h>
 #include <dlfcn.h>
 #include <i915_drm.h>
+#include <inttypes.h>
 
 #include "intel_aub.h"
 
@@ -389,6 +390,11 @@ populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
    uint64_t entries[512] = {0};
    int dirty_start = 512, dirty_end = 0;
 
+   if (verbose == 2) {
+      printf("  PPGTT (0x%016" PRIx64 "), lvl %d, start: %x, end: %x\n",
+             table->phys_addr, level, start, end);
+   }
+
    for (int i = start; i <= end; i++) {
       if (!table->subtables[i]) {
          dirty_start = min(dirty_start, i);
@@ -396,11 +402,19 @@ populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
          if (level == 1) {
             table->subtables[i] =
                (void *)(phys_addrs_allocator++ << 12);
+            if (verbose == 2) {
+               printf("   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
+                      i, (uint64_t)table->subtables[i]);
+            }
          } else {
             table->subtables[i] =
                calloc(1, sizeof(struct ppgtt_table));
             table->subtables[i]->phys_addr =
                phys_addrs_allocator++ << 12;
+            if (verbose == 2) {
+               printf("   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
+                      i, table->subtables[i]->phys_addr);
+            }
          }
       }
       entries[i] = 3 /* read/write | present */ |
@@ -433,6 +447,11 @@ map_ppgtt(uint64_t start, uint64_t size)
 #define L3_table(addr) (pml4.subtables[L4_index(addr)])
 #define L2_table(addr) (L3_table(addr)->subtables[L3_index(addr)])
 #define L1_table(addr) (L2_table(addr)->subtables[L2_index(addr)])
+
+   if (verbose == 2) {
+      printf(" Mapping PPGTT address: 0x%" PRIx64 ", size: %" PRIu64"\n",
+             start, size);
+   }
 
    populate_ppgtt_table(&pml4, L4_index(l4_start), L4_index(l4_end), 4);
 
@@ -1072,7 +1091,11 @@ maybe_init(void)
    config = fdopen(3, "r");
    while (fscanf(config, "%m[^=]=%m[^\n]\n", &key, &value) != EOF) {
       if (!strcmp(key, "verbose")) {
-         verbose = 1;
+         if (!strcmp(value, "1")) {
+            verbose = 1;
+         } else if (!strcmp(value, "2")) {
+            verbose = 2;
+         }
       } else if (!strcmp(key, "device")) {
          fail_if(sscanf(value, "%i", &device) != 1,
                  "intel_aubdump: failed to parse device id '%s'",
