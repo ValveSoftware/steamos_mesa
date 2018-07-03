@@ -276,9 +276,15 @@ static void
 emit_rt_blend(struct v3d_context *v3d, struct v3d_job *job,
               struct pipe_blend_state *blend, int rt)
 {
-        cl_emit(&job->bcl, BLEND_CONFIG, config) {
-                struct pipe_rt_blend_state *rtblend = &blend->rt[rt];
+        struct pipe_rt_blend_state *rtblend = &blend->rt[rt];
 
+#if V3D_VERSION >= 40
+        /* We don't need to emit blend state for disabled RTs. */
+        if (!rtblend->blend_enable)
+                return;
+#endif
+
+        cl_emit(&job->bcl, BLEND_CONFIG, config) {
 #if V3D_VERSION >= 40
                 config.render_target_mask = 1 << rt;
 #else
