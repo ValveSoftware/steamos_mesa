@@ -455,6 +455,14 @@ optimizations = [
    (('iabs', ('b2i', a)), ('b2i', a)),
    (('inot', ('f2b', a)), ('feq', a, 0.0)),
 
+   # Ironically, mark these as imprecise because removing the conversions may
+   # preserve more precision than doing the conversions (e.g.,
+   # uint(float(0x81818181u)) == 0x81818200).
+   (('~f2i32', ('i2f32', 'a@32')), a),
+   (('~f2i32', ('u2f32', 'a@32')), a),
+   (('~f2u32', ('i2f32', 'a@32')), a),
+   (('~f2u32', ('u2f32', 'a@32')), a),
+
    # Packing and then unpacking does nothing
    (('unpack_64_2x32_split_x', ('pack_64_2x32_split', a, b)), a),
    (('unpack_64_2x32_split_y', ('pack_64_2x32_split', a, b)), b),
