@@ -593,16 +593,9 @@ radv_emit_descriptor_pointers(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t sh_base = pipeline->user_data_0[stage];
 	struct radv_userdata_locations *locs =
 		&pipeline->shaders[stage]->info.user_sgprs_locs;
-	unsigned mask;
+	unsigned mask = locs->descriptor_sets_enabled;
 
-	mask = descriptors_state->dirty & descriptors_state->valid;
-
-	for (int i = 0; i < MAX_SETS; i++) {
-		struct radv_userdata_info *loc = &locs->descriptor_sets[i];
-		if (loc->sgpr_idx != -1 && !loc->indirect)
-			continue;
-		mask &= ~(1 << i);
-	}
+	mask &= descriptors_state->dirty & descriptors_state->valid;
 
 	while (mask) {
 		int start, count;

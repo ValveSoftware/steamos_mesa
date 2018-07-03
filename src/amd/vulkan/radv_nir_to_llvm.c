@@ -578,11 +578,14 @@ static void
 set_loc_desc(struct radv_shader_context *ctx, int idx,  uint8_t *sgpr_idx,
 	     uint32_t indirect_offset)
 {
-	struct radv_userdata_info *ud_info =
-		&ctx->shader_info->user_sgprs_locs.descriptor_sets[idx];
+	struct radv_userdata_locations *locs =
+		&ctx->shader_info->user_sgprs_locs;
+	struct radv_userdata_info *ud_info = &locs->descriptor_sets[idx];
 	assert(ud_info);
 
 	set_loc(ud_info, sgpr_idx, HAVE_32BIT_POINTERS ? 1 : 2, indirect_offset);
+	if (indirect_offset == 0)
+		locs->descriptor_sets_enabled |= 1 << idx;
 }
 
 struct user_sgpr_info {
