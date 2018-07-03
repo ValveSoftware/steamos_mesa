@@ -446,7 +446,6 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 7);
 
 	++cmd_buffer->state.trace_id;
-	radv_cs_add_buffer(device->ws, cs, device->trace_bo, 8);
 	radv_emit_write_data_packet(cs, va, 1, &cmd_buffer->state.trace_id);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, AC_ENCODE_TRACE_POINT(cmd_buffer->state.trace_id));
@@ -509,7 +508,6 @@ radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	data[0] = (uintptr_t)pipeline;
 	data[1] = (uintptr_t)pipeline >> 32;
 
-	radv_cs_add_buffer(device->ws, cs, device->trace_bo, 8);
 	radv_emit_write_data_packet(cs, va, 2, data);
 }
 
@@ -551,7 +549,6 @@ radv_save_descriptors(struct radv_cmd_buffer *cmd_buffer,
 		data[i * 2 + 1] = (uintptr_t)set >> 32;
 	}
 
-	radv_cs_add_buffer(device->ws, cs, device->trace_bo, 8);
 	radv_emit_write_data_packet(cs, va, MAX_SETS * 2, data);
 }
 
@@ -2306,8 +2303,14 @@ VkResult radv_BeginCommandBuffer(
 		radv_cmd_buffer_set_subpass(cmd_buffer, subpass, false);
 	}
 
-	if (unlikely(cmd_buffer->device->trace_bo))
+	if (unlikely(cmd_buffer->device->trace_bo)) {
+		struct radv_device *device = cmd_buffer->device;
+
+		radv_cs_add_buffer(device->ws, cmd_buffer->cs,
+				   device->trace_bo, 8);
+
 		radv_cmd_buffer_trace_emit(cmd_buffer);
+	}
 
 	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_RECORDING;
 
