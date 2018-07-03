@@ -320,7 +320,7 @@ amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
    (void) simple_mtx_init(&ws->global_bo_list_lock, mtx_plain);
    (void) simple_mtx_init(&ws->bo_fence_lock, mtx_plain);
 
-   if (!util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1,
+   if (!util_queue_init(&ws->cs_queue, "cs", 8, 1,
                         UTIL_QUEUE_INIT_RESIZE_IF_FULL)) {
       amdgpu_winsys_destroy(&ws->base);
       simple_mtx_unlock(&dev_tab_mutex);
