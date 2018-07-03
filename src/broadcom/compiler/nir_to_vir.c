@@ -1030,6 +1030,9 @@ emit_frag_end(struct v3d_compile *c)
                                 b = color[0];
                         }
 
+                        if (c->fs_key->sample_alpha_to_one)
+                                a = vir_uniform_f(c, 1.0);
+
                         if (c->fs_key->f32_color_rb & (1 << rt)) {
                                 inst = vir_MOV_dest(c, vir_reg(QFILE_TLBU, 0), r);
                                 inst->src[vir_get_implicit_uniform_src(inst)] =
