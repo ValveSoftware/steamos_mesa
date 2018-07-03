@@ -375,7 +375,7 @@ struct v3d_context {
 
         /** @{ Current pipeline state objects */
         struct pipe_scissor_state scissor;
-        struct pipe_blend_state *blend;
+        struct v3d_blend_state *blend;
         struct v3d_rasterizer_state *rasterizer;
         struct v3d_depth_stencil_alpha_state *zsa;
 
@@ -452,6 +452,13 @@ struct v3d_depth_stencil_alpha_state {
 
         uint8_t stencil_front[6];
         uint8_t stencil_back[6];
+};
+
+struct v3d_blend_state {
+        struct pipe_blend_state base;
+
+        /* Per-RT mask of whether blending is enabled. */
+        uint8_t blend_enables;
 };
 
 #define perf_debug(...) do {                            \

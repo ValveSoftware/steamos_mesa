@@ -36,16 +36,6 @@
 #include "broadcom/common/v3d_macros.h"
 #include "broadcom/cle/v3dx_pack.h"
 
-static void *
-v3d_generic_cso_state_create(const void *src, uint32_t size)
-{
-        void *dst = calloc(1, size);
-        if (!dst)
-                return NULL;
-        memcpy(dst, src, size);
-        return dst;
-}
-
 static void
 v3d_generic_cso_state_delete(struct pipe_context *pctx, void *hwcso)
 {
@@ -128,7 +118,23 @@ static void *
 v3d_create_blend_state(struct pipe_context *pctx,
                        const struct pipe_blend_state *cso)
 {
-        return v3d_generic_cso_state_create(cso, sizeof(*cso));
+        struct v3d_blend_state *so;
+
+        so = CALLOC_STRUCT(v3d_blend_state);
+        if (!so)
+                return NULL;
+
+        so->base = *cso;
+
+        for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
+                so->blend_enables |= cso->rt[i].blend_enable << i;
+
+                /* V3D 4.x is when we got independent blend enables. */
+                assert(V3D_VERSION >= 40 ||
+                       cso->rt[i].blend_enable == cso->rt[0].blend_enable);
+        }
+
+        return so;
 }
 
 static uint32_t

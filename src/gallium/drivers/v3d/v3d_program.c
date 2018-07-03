@@ -414,8 +414,8 @@ v3d_update_compiled_fs(struct v3d_context *v3d, uint8_t prim_mode)
         key->is_lines = (prim_mode >= PIPE_PRIM_LINES &&
                          prim_mode <= PIPE_PRIM_LINE_STRIP);
         key->clamp_color = v3d->rasterizer->base.clamp_fragment_color;
-        if (v3d->blend->logicop_enable) {
-                key->logicop_func = v3d->blend->logicop_func;
+        if (v3d->blend->base.logicop_enable) {
+                key->logicop_func = v3d->blend->base.logicop_func;
         } else {
                 key->logicop_func = PIPE_LOGICOP_COPY;
         }
@@ -423,8 +423,8 @@ v3d_update_compiled_fs(struct v3d_context *v3d, uint8_t prim_mode)
                 key->msaa = v3d->rasterizer->base.multisample;
                 key->sample_coverage = (v3d->rasterizer->base.multisample &&
                                         v3d->sample_mask != (1 << VC5_MAX_SAMPLES) - 1);
-                key->sample_alpha_to_coverage = v3d->blend->alpha_to_coverage;
-                key->sample_alpha_to_one = v3d->blend->alpha_to_one;
+                key->sample_alpha_to_coverage = v3d->blend->base.alpha_to_coverage;
+                key->sample_alpha_to_one = v3d->blend->base.alpha_to_one;
         }
 
         key->depth_enabled = (v3d->zsa->base.depth.enabled ||
