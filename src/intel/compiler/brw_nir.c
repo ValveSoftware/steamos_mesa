@@ -793,6 +793,8 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
       OPT(nir_lower_vec_to_movs);
    }
 
+   OPT(nir_opt_dce);
+
    /* This is the last pass we run before we start emitting stuff.  It
     * determines when we need to insert boolean resolves on Gen <= 5.  We
     * run it last because it stashes data in instr->pass_flags and we don't
