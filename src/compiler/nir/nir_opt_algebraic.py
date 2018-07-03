@@ -193,6 +193,19 @@ optimizations = [
    (('ieq', ('b2i', a), 0),   ('inot', a)),
    (('ine', ('b2i', a), 0),   a),
 
+   (('fne', ('u2f32', a), 0.0), ('ine', a, 0)),
+   (('feq', ('u2f32', a), 0.0), ('ieq', a, 0)),
+   (('fge', ('u2f32', a), 0.0), True),
+   (('fge', 0.0, ('u2f32', a)), ('uge', 0, a)),    # ieq instead?
+   (('flt', ('u2f32', a), 0.0), False),
+   (('flt', 0.0, ('u2f32', a)), ('ult', 0, a)),    # ine instead?
+   (('fne', ('i2f32', a), 0.0), ('ine', a, 0)),
+   (('feq', ('i2f32', a), 0.0), ('ieq', a, 0)),
+   (('fge', ('i2f32', a), 0.0), ('ige', a, 0)),
+   (('fge', 0.0, ('i2f32', a)), ('ige', 0, a)),
+   (('flt', ('i2f32', a), 0.0), ('ilt', a, 0)),
+   (('flt', 0.0, ('i2f32', a)), ('ilt', 0, a)),
+
    # 0.0 < fabs(a)
    # fabs(a) > 0.0
    # fabs(a) != 0.0 because fabs(a) must be >= 0
