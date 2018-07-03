@@ -60,6 +60,8 @@ __getProgramName()
 #    define GET_PROGRAM_NAME() getprogname()
 #elif defined(__APPLE__)
 #    define GET_PROGRAM_NAME() getprogname()
+#elif defined(ANDROID)
+#    define GET_PROGRAM_NAME() getprogname()
 #elif defined(__sun)
 /* Solaris has getexecname() which returns the full path - return just
    the basename to match BSD getprogname() */
