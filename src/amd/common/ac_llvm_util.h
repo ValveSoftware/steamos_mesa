@@ -35,6 +35,9 @@
 extern "C" {
 #endif
 
+struct ac_shader_binary;
+struct ac_compiler_passes;
+
 enum ac_func_attr {
 	AC_FUNC_ATTR_ALWAYSINLINE = (1 << 0),
 	AC_FUNC_ATTR_INREG        = (1 << 2),
@@ -73,6 +76,7 @@ struct ac_llvm_compiler {
 	LLVMTargetMachineRef		tm;
 	LLVMTargetLibraryInfoRef	target_library_info;
 	LLVMPassManagerRef		passmgr;
+	struct ac_compiler_passes	*passes;
 };
 
 const char *ac_get_llvm_processor_name(enum radeon_family family);
@@ -124,6 +128,11 @@ bool ac_init_llvm_compiler(struct ac_llvm_compiler *compiler,
 			   enum radeon_family family,
 			   enum ac_target_machine_options tm_options);
 void ac_destroy_llvm_compiler(struct ac_llvm_compiler *compiler);
+
+struct ac_compiler_passes *ac_create_llvm_passes(LLVMTargetMachineRef tm);
+void ac_destroy_llvm_passes(struct ac_compiler_passes *p);
+bool ac_compile_module_to_binary(struct ac_compiler_passes *p, LLVMModuleRef module,
+				 struct ac_shader_binary *binary);
 
 #ifdef __cplusplus
 }
