@@ -116,10 +116,12 @@ static void si_init_compiler(struct si_screen *sscreen,
 
 	ac_init_llvm_once();
 	ac_init_llvm_compiler(compiler, true, sscreen->info.family, tm_options);
+	compiler->passes = ac_create_llvm_passes(compiler->tm);
 }
 
 static void si_destroy_compiler(struct ac_llvm_compiler *compiler)
 {
+	ac_destroy_llvm_passes(compiler->passes);
 	ac_destroy_llvm_compiler(compiler);
 }
 

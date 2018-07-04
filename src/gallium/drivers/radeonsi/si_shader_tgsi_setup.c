@@ -85,12 +85,7 @@ unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 struct pipe_debug_callback *debug)
 {
 	struct si_llvm_diagnostics diag;
-	char *err;
 	LLVMContextRef llvm_ctx;
-	LLVMMemoryBufferRef out_buffer;
-	unsigned buffer_size;
-	const char *buffer_data;
-	LLVMBool mem_err;
 
 	diag.debug = debug;
 	diag.retval = 0;
@@ -100,34 +95,10 @@ unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 
 	LLVMContextSetDiagnosticHandler(llvm_ctx, si_diagnostic_handler, &diag);
 
-	/* Compile IR*/
-	mem_err = LLVMTargetMachineEmitToMemoryBuffer(compiler->tm, M,
-						      LLVMObjectFile, &err,
-						      &out_buffer);
-
-	/* Process Errors/Warnings */
-	if (mem_err) {
-		fprintf(stderr, "%s: %s", __FUNCTION__, err);
-		pipe_debug_message(debug, SHADER_INFO,
-				   "LLVM emit error: %s", err);
-		FREE(err);
+	/* Compile IR. */
+	if (!ac_compile_module_to_binary(compiler->passes, M, binary))
 		diag.retval = 1;
-		goto out;
-	}
 
-	/* Extract Shader Code*/
-	buffer_size = LLVMGetBufferSize(out_buffer);
-	buffer_data = LLVMGetBufferStart(out_buffer);
-
-	if (!ac_elf_read(buffer_data, buffer_size, binary)) {
-		fprintf(stderr, "radeonsi: cannot read an ELF shader binary\n");
-		diag.retval = 1;
-	}
-
-	/* Clean up */
-	LLVMDisposeMemoryBuffer(out_buffer);
-
-out:
 	if (diag.retval != 0)
 		pipe_debug_message(debug, SHADER_INFO, "LLVM compile failed");
 	return diag.retval;
