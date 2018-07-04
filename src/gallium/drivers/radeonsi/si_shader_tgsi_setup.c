@@ -956,21 +956,21 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->screen = sscreen;
 	ctx->compiler = compiler;
 
-	ctx->gallivm.context = LLVMContextCreate();
-	ctx->gallivm.module = ac_create_module(compiler->tm, ctx->gallivm.context);
-
-	bool unsafe_fpmath = (sscreen->debug_flags & DBG(UNSAFE_MATH)) != 0;
-	enum ac_float_mode float_mode =
-		unsafe_fpmath ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
-				AC_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH;
-
-	ctx->gallivm.builder = ac_create_builder(ctx->gallivm.context,
-						 float_mode);
-
-	ac_llvm_context_init(&ctx->ac, ctx->gallivm.context,
+	ctx->ac.context = LLVMContextCreate();
+	ac_llvm_context_init(&ctx->ac, ctx->ac.context,
 			     sscreen->info.chip_class, sscreen->info.family);
-	ctx->ac.module = ctx->gallivm.module;
-	ctx->ac.builder = ctx->gallivm.builder;
+
+	ctx->ac.module = ac_create_module(compiler->tm, ctx->ac.context);
+
+	enum ac_float_mode float_mode =
+		sscreen->debug_flags & DBG(UNSAFE_MATH) ?
+			AC_FLOAT_MODE_UNSAFE_FP_MATH :
+			AC_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH;
+	ctx->ac.builder = ac_create_builder(ctx->ac.context, float_mode);
+
+	ctx->gallivm.context = ctx->ac.context;
+	ctx->gallivm.module = ctx->ac.module;
+	ctx->gallivm.builder = ctx->ac.builder;
 
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 
