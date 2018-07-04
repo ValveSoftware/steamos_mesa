@@ -956,10 +956,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->screen = sscreen;
 	ctx->compiler = compiler;
 
-	ctx->ac.context = LLVMContextCreate();
-	ac_llvm_context_init(&ctx->ac, ctx->ac.context,
-			     sscreen->info.chip_class, sscreen->info.family);
-
+	ac_llvm_context_init(&ctx->ac, sscreen->info.chip_class, sscreen->info.family);
 	ctx->ac.module = ac_create_module(compiler->tm, ctx->ac.context);
 
 	enum ac_float_mode float_mode =
