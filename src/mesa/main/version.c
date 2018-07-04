@@ -530,6 +530,7 @@ compute_version_es2(const struct gl_extensions *extensions,
    const bool es31_compute_shader =
       consts->MaxComputeWorkGroupInvocations >= 128;
    const bool ver_3_1 = (ver_3_0 &&
+                         consts->MaxVertexAttribStride >= 2048 &&
                          extensions->ARB_arrays_of_arrays &&
                          es31_compute_shader &&
                          extensions->ARB_draw_indirect &&
