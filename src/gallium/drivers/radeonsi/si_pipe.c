@@ -114,6 +114,7 @@ static void si_init_compiler(struct si_screen *sscreen,
 		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0) |
 		(sscreen->debug_flags & DBG(CHECK_IR) ? AC_TM_CHECK_IR : 0);
 
+	ac_init_llvm_once();
 	ac_init_llvm_compiler(compiler, true, sscreen->info.family, tm_options);
 }
 
