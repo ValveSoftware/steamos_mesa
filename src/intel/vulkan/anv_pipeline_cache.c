@@ -571,7 +571,7 @@ anv_device_search_for_kernel(struct anv_device *device,
 
 #ifdef ENABLE_SHADER_CACHE
    struct disk_cache *disk_cache = device->instance->physicalDevice.disk_cache;
-   if (disk_cache) {
+   if (disk_cache && device->instance->pipeline_cache_enabled) {
       cache_key cache_key;
       disk_cache_compute_key(disk_cache, key_data, key_size, cache_key);
 
