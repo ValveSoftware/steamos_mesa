@@ -369,6 +369,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_texture_view);
    const bool ver_4_4 = (ver_4_3 &&
                          consts->GLSLVersion >= 440 &&
+                         consts->MaxVertexAttribStride >= 2048 &&
                          extensions->ARB_buffer_storage &&
                          extensions->ARB_clear_texture &&
                          extensions->ARB_enhanced_layouts &&
