@@ -1978,8 +1978,10 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			flush_bits |= RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
+			if (!image || (image && radv_image_has_CB_metadata(image))) {
+				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+			}
 			break;
 		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
 			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB;

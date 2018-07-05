@@ -1487,6 +1487,17 @@ radv_dcc_enabled(const struct radv_image *image, unsigned level)
 }
 
 /**
+ * Return whether the image has CB metadata.
+ */
+static inline bool
+radv_image_has_CB_metadata(const struct radv_image *image)
+{
+	return radv_image_has_cmask(image) ||
+	       radv_image_has_fmask(image) ||
+	       radv_image_has_dcc(image);
+}
+
+/**
  * Return whether the image has HTILE metadata for depth surfaces.
  */
 static inline bool
