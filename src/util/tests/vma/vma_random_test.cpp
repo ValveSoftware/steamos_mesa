@@ -40,7 +40,7 @@
 
 namespace {
 
-static const uint64_t PAGE_SIZE = 4096;
+static const uint64_t MEM_PAGE_SIZE = 4096;
 
 struct allocation {
    uint64_t start_page;
@@ -62,12 +62,12 @@ constexpr uint64_t allocation_end_page(const allocation& a) {
 struct random_test {
    static const uint64_t MEM_START_PAGE = 1;
    static const uint64_t MEM_SIZE = 0xfffffffffffff000;
-   static const uint64_t MEM_PAGES = MEM_SIZE / PAGE_SIZE;
+   static const uint64_t MEM_PAGES = MEM_SIZE / MEM_PAGE_SIZE;
 
    random_test(uint_fast32_t seed)
       : heap_holes{allocation{MEM_START_PAGE, MEM_PAGES}}, rand{seed}
    {
-      util_vma_heap_init(&heap, MEM_START_PAGE * PAGE_SIZE, MEM_SIZE);
+      util_vma_heap_init(&heap, MEM_START_PAGE * MEM_PAGE_SIZE, MEM_SIZE);
    }
 
    void test(unsigned long count)
@@ -89,12 +89,12 @@ struct random_test {
       if (align_order > 51)
          align_order = std::min(dist(rand), 51);
       uint64_t align_pages = 1ULL << align_order;
-      uint64_t align = align_pages * PAGE_SIZE;
+      uint64_t align = align_pages * MEM_PAGE_SIZE;
 
       if (size_order > 51)
          size_order = std::min(dist(rand), 51);
       uint64_t size_pages = 1ULL << size_order;
-      uint64_t size = size_pages * PAGE_SIZE;
+      uint64_t size = size_pages * MEM_PAGE_SIZE;
 
       uint64_t addr = util_vma_heap_alloc(&heap, size, align);
 
@@ -110,7 +110,7 @@ struct random_test {
          return false;
       } else {
          assert(addr % align == 0);
-         uint64_t addr_page = addr / PAGE_SIZE;
+         uint64_t addr_page = addr / MEM_PAGE_SIZE;
          allocation a{addr_page, size_pages};
          auto i = heap_holes.find(a);
          assert(i != end(heap_holes));
@@ -146,8 +146,8 @@ struct random_test {
       allocation a = allocations.back();
       allocations.pop_back();
 
-      util_vma_heap_free(&heap, a.start_page * PAGE_SIZE,
-                         a.num_pages * PAGE_SIZE);
+      util_vma_heap_free(&heap, a.start_page * MEM_PAGE_SIZE,
+                         a.num_pages * MEM_PAGE_SIZE);
 
       assert(heap_holes.find(a) == end(heap_holes));
       auto next = heap_holes.upper_bound(a);
