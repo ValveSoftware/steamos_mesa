@@ -681,4 +681,6 @@ v3d_program_fini(struct pipe_context *pctx)
                 ralloc_free(shader);
                 _mesa_hash_table_remove(v3d->vs_cache, entry);
         }
+
+        v3d_bo_unreference(&v3d->prog.spill_bo);
 }
