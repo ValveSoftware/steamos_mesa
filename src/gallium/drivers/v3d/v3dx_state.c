@@ -417,6 +417,15 @@ v3d_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
 }
 
 static void
+v3d_vertex_state_delete(struct pipe_context *pctx, void *hwcso)
+{
+        struct v3d_vertex_stateobj *so = hwcso;
+
+        v3d_bo_unreference(&so->default_attribute_values);
+        free(so);
+}
+
+static void
 v3d_vertex_state_bind(struct pipe_context *pctx, void *hwcso)
 {
         struct v3d_context *v3d = v3d_context(pctx);
@@ -959,7 +968,7 @@ v3dX(state_init)(struct pipe_context *pctx)
         pctx->delete_depth_stencil_alpha_state = v3d_generic_cso_state_delete;
 
         pctx->create_vertex_elements_state = v3d_vertex_state_create;
-        pctx->delete_vertex_elements_state = v3d_generic_cso_state_delete;
+        pctx->delete_vertex_elements_state = v3d_vertex_state_delete;
         pctx->bind_vertex_elements_state = v3d_vertex_state_bind;
 
         pctx->create_sampler_state = v3d_create_sampler_state;
