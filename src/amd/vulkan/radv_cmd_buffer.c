@@ -4276,11 +4276,11 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 18);
 
 	/* Flags that only require a top-of-pipe event. */
-	static const VkPipelineStageFlags top_of_pipe_flags =
+	VkPipelineStageFlags top_of_pipe_flags =
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 	/* Flags that only require a post-index-fetch event. */
-	static const VkPipelineStageFlags post_index_fetch_flags =
+	VkPipelineStageFlags post_index_fetch_flags =
 		top_of_pipe_flags |
 		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
 		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
