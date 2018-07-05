@@ -4339,8 +4339,32 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 
 		if (spilled) {
 			struct r600_bytecode_output cf;
-			int reg = r600_get_temp(ctx);
+			int reg = 0;
 			int r;
+			bool add_pending_output = true;
+
+			memset(&cf, 0, sizeof(struct r600_bytecode_output));
+			get_spilled_array_base_and_size(ctx, tgsi_dst->Register.Index,
+				&cf.array_base, &cf.array_size);
+
+			/* If no component has spilled, reserve a register and add the spill code
+			 *  ctx->bc->n_pending_outputs is cleared after each instruction group */
+			if (ctx->bc->n_pending_outputs == 0) {
+				reg = r600_get_temp(ctx);
+			} else {
+				/* If we are already spilling and the output address is the same like
+				* before then just reuse the same slot */
+				struct r600_bytecode_output *tmpl = &ctx->bc->pending_outputs[ctx->bc->n_pending_outputs-1];
+				if ((cf.array_base + idx == tmpl->array_base) ||
+				    (cf.array_base == tmpl->array_base &&
+				     tmpl->index_gpr == ctx->bc->ar_reg &&
+				     tgsi_dst->Register.Indirect)) {
+					reg = ctx->bc->pending_outputs[0].gpr;
+					add_pending_output = false;
+				} else {
+					reg = r600_get_temp(ctx);
+				}
+			}
 
 			r600_dst->sel = reg;
 			r600_dst->chan = swizzle;
@@ -4349,29 +4373,26 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 				r600_dst->clamp = 1;
 			}
 
-			// needs to be added after op using tgsi_dst
-			memset(&cf, 0, sizeof(struct r600_bytecode_output));
-			cf.op = CF_OP_MEM_SCRATCH;
-			cf.elem_size = 3;
-			cf.gpr = reg;
-			cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE;
-			cf.mark = 1;
-			cf.comp_mask = inst->Dst[0].Register.WriteMask;
-			cf.swizzle_x = 0;
-			cf.swizzle_y = 1;
-			cf.swizzle_z = 2;
-			cf.swizzle_w = 3;
-			cf.burst_count = 1;
+			/* Add new outputs as pending */
+			if (add_pending_output) {
+				cf.op = CF_OP_MEM_SCRATCH;
+				cf.elem_size = 3;
+				cf.gpr = reg;
+				cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE;
+				cf.mark = 1;
+				cf.comp_mask = inst->Dst[0].Register.WriteMask;
+				cf.swizzle_x = 0;
+				cf.swizzle_y = 1;
+				cf.swizzle_z = 2;
+				cf.swizzle_w = 3;
+				cf.burst_count = 1;
 
-			get_spilled_array_base_and_size(ctx, tgsi_dst->Register.Index,
-				&cf.array_base, &cf.array_size);
-
-			if (tgsi_dst->Register.Indirect) {
-				if (ctx->bc->chip_class < R700)
-					cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND;
-				else
-					cf.type = 3; // V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND_ACK;
-				cf.index_gpr = ctx->bc->ar_reg;
+				if (tgsi_dst->Register.Indirect) {
+					if (ctx->bc->chip_class < R700)
+						cf.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND;
+					else
+						cf.type = 3; // V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND_ACK;
+					cf.index_gpr = ctx->bc->ar_reg;
 			}
 			else {
 				cf.array_base += idx;
@@ -4384,7 +4405,7 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 
 			if (ctx->bc->chip_class >= R700)
 				r600_bytecode_need_wait_ack(ctx->bc, true);
-
+			}
 			return;
 		}
 		else {
