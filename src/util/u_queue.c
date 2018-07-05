@@ -239,7 +239,7 @@ util_queue_thread_func(void *input)
 
    free(input);
 
-   if (queue->name) {
+   if (strlen(queue->name) > 0) {
       char name[16];
       util_snprintf(name, sizeof(name), "%s%i", queue->name, thread_index);
       u_thread_setname(name);
