@@ -139,7 +139,7 @@ def write_format_table(formats):
         u_format_pack.print_channels(format, do_swizzle_array)
         print "   %s," % (colorspace_map(format.colorspace),)
         access = True
-        if format.layout in ('astc'):
+        if format.layout == 'astc':
             access = False
         if format.layout == 'etc' and format.short_name() != 'etc1_rgb8':
             access = False
