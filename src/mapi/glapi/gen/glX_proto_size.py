@@ -612,10 +612,10 @@ class PrintGlxReqSize_c(PrintGlxReqSize_common):
                 if s == 0: s = 1
 
                 sig += "(%u,%u)" % (f.offset_of(p.counter), s)
-		if size == '':
-		    size = p.size_string()
-		else:
-		    size = "safe_add(%s, %s)" % (size, p.size_string())
+                if size == '':
+                    size = p.size_string()
+                else:
+                    size = "safe_add(%s, %s)" % (size, p.size_string())
 
         # If the calculated signature matches a function that has
         # already be emitted, don't emit this function.  Instead, add
