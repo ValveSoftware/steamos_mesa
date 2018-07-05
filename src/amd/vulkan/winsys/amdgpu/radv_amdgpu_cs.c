@@ -355,7 +355,7 @@ static void radv_amdgpu_cs_grow(struct radeon_cmdbuf *_cs, size_t min_size)
 	ib_size = MIN2(ib_size, 0xfffff);
 
 	while (!cs->base.cdw || (cs->base.cdw & 7) != 4)
-		cs->base.buf[cs->base.cdw++] = 0xffff1000;
+		radeon_emit(&cs->base, 0xffff1000);
 
 	*cs->ib_size_ptr |= cs->base.cdw + 4;
 
@@ -389,11 +389,12 @@ static void radv_amdgpu_cs_grow(struct radeon_cmdbuf *_cs, size_t min_size)
 
 	cs->ws->base.cs_add_buffer(&cs->base, cs->ib_buffer, 8);
 
-	cs->base.buf[cs->base.cdw++] = PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0);
-	cs->base.buf[cs->base.cdw++] = radv_amdgpu_winsys_bo(cs->ib_buffer)->base.va;
-	cs->base.buf[cs->base.cdw++] = radv_amdgpu_winsys_bo(cs->ib_buffer)->base.va >> 32;
-	cs->ib_size_ptr = cs->base.buf + cs->base.cdw;
-	cs->base.buf[cs->base.cdw++] = S_3F2_CHAIN(1) | S_3F2_VALID(1);
+	radeon_emit(&cs->base, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
+	radeon_emit(&cs->base, radv_amdgpu_winsys_bo(cs->ib_buffer)->base.va);
+	radeon_emit(&cs->base, radv_amdgpu_winsys_bo(cs->ib_buffer)->base.va >> 32);
+	radeon_emit(&cs->base, S_3F2_CHAIN(1) | S_3F2_VALID(1));
+
+	cs->ib_size_ptr = cs->base.buf + cs->base.cdw - 1;
 
 	cs->base.buf = (uint32_t *)cs->ib_mapped;
 	cs->base.cdw = 0;
@@ -407,7 +408,7 @@ static bool radv_amdgpu_cs_finalize(struct radeon_cmdbuf *_cs)
 
 	if (cs->ws->use_ib_bos) {
 		while (!cs->base.cdw || (cs->base.cdw & 7) != 0)
-			cs->base.buf[cs->base.cdw++] = 0xffff1000;
+			radeon_emit(&cs->base, 0xffff1000);
 
 		*cs->ib_size_ptr |= cs->base.cdw;
 
@@ -590,10 +591,10 @@ static void radv_amdgpu_cs_execute_secondary(struct radeon_cmdbuf *_parent,
 		if (parent->base.cdw + 4 > parent->base.max_dw)
 			radv_amdgpu_cs_grow(&parent->base, 4);
 
-		parent->base.buf[parent->base.cdw++] = PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0);
-		parent->base.buf[parent->base.cdw++] = child->ib.ib_mc_address;
-		parent->base.buf[parent->base.cdw++] = child->ib.ib_mc_address >> 32;
-		parent->base.buf[parent->base.cdw++] = child->ib.size;
+		radeon_emit(&parent->base, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
+		radeon_emit(&parent->base, child->ib.ib_mc_address);
+		radeon_emit(&parent->base, child->ib.ib_mc_address >> 32);
+		radeon_emit(&parent->base, child->ib.size);
 	} else {
 		if (parent->base.cdw + child->base.cdw > parent->base.max_dw)
 			radv_amdgpu_cs_grow(&parent->base, child->base.cdw);
