@@ -29,7 +29,7 @@ from __future__ import print_function
 from collections import OrderedDict
 from decimal import Decimal
 import xml.etree.ElementTree as ET
-import re, sys, string
+import re, sys
 import os.path
 import typeexpr
 import static_data
@@ -320,7 +320,7 @@ def create_parameter_string(parameters, include_names):
 
     if len(list) == 0: list = ["void"]
 
-    return string.join(list, ", ")
+    return ", ".join(list)
 
 
 class gl_item(object):
@@ -578,9 +578,9 @@ class gl_parameter(object):
                 list.append( str(s) )
 
             if len(list) > 1 and use_parens :
-                return "safe_mul(%s)" % (string.join(list, ", "))
+                return "safe_mul(%s)" % ", ".join(list)
             else:
-                return string.join(list, " * ")
+                return " * ".join(list)
 
         elif self.is_image():
             return "compsize"
