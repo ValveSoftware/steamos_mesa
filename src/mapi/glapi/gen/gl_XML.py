@@ -782,9 +782,9 @@ class gl_function( gl_item ):
 
     def parameterIterator(self, name = None):
         if name is not None:
-            return self.entry_point_parameters[name].__iter__();
+            return iter(self.entry_point_parameters[name]);
         else:
-            return self.parameters.__iter__();
+            return iter(self.parameters);
 
 
     def get_parameter_string(self, entrypoint = None):
@@ -996,7 +996,7 @@ class gl_api(object):
                 for name in names:
                     functions.append(lists[func_cat_type][key][name])
 
-        return functions.__iter__()
+        return iter(functions)
 
 
     def functionIterateByOffset(self):
@@ -1017,7 +1017,7 @@ class gl_api(object):
             if temp[i]:
                 list.append(temp[i])
 
-        return list.__iter__();
+        return iter(list);
 
 
     def functionIterateAll(self):
@@ -1031,7 +1031,7 @@ class gl_api(object):
         for enum in keys:
             list.append( self.enums_by_name[ enum ] )
 
-        return list.__iter__()
+        return iter(list)
 
 
     def categoryIterate(self):
@@ -1049,7 +1049,7 @@ class gl_api(object):
             for key in keys:
                 list.append(self.categories[cat_type][key])
 
-        return list.__iter__()
+        return iter(list)
 
 
     def get_category_for_name( self, name ):

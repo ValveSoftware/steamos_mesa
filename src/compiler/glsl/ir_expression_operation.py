@@ -62,7 +62,7 @@ class type_signature_iter(object):
    def __iter__(self):
       return self
 
-   def next(self):
+   def __next__(self):
       if self.i < len(self.source_types):
          i = self.i
          self.i += 1
@@ -75,6 +75,8 @@ class type_signature_iter(object):
          return (dest_type, self.num_operands * (self.source_types[i],))
       else:
          raise StopIteration()
+
+   next = __next__
 
 
 uint_type = type("unsigned", "u", "GLSL_TYPE_UINT")

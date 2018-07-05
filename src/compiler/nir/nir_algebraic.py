@@ -56,7 +56,7 @@ class VarSet(object):
    def __getitem__(self, name):
       if name not in self.names:
          assert not self.immutable, "Unknown replacement variable: " + name
-         self.names[name] = self.ids.next()
+         self.names[name] = next(self.ids)
 
       return self.names[name]
 
@@ -468,7 +468,7 @@ condition_list = ['true']
 
 class SearchAndReplace(object):
    def __init__(self, transform):
-      self.id = _optimization_ids.next()
+      self.id = next(_optimization_ids)
 
       search = transform[0]
       replace = transform[1]
