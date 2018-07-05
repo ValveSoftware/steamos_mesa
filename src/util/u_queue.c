@@ -242,7 +242,6 @@ util_queue_thread_func(void *input)
    if (queue->name) {
       char name[16];
       util_snprintf(name, sizeof(name), "%s%i", queue->name, thread_index);
-      puts(name);
       u_thread_setname(name);
    }
 
