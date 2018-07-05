@@ -943,7 +943,7 @@ class gl_api(object):
                 temp_name = child.get( "name" )
                 self.category_dict[ temp_name ] = [cat_name, cat_number]
 
-                if self.functions_by_name.has_key( func_name ):
+                if func_name in self.functions_by_name:
                     func = self.functions_by_name[ func_name ]
                     func.process_element( child )
                 else:
@@ -980,7 +980,7 @@ class gl_api(object):
             if (cat == None) or (cat == cat_name):
                 [func_cat_type, key] = classify_category(cat_name, cat_number)
 
-                if not lists[func_cat_type].has_key(key):
+                if key not in lists[func_cat_type]:
                     lists[func_cat_type][key] = {}
 
                 lists[func_cat_type][key][func.name] = func
@@ -1057,7 +1057,7 @@ class gl_api(object):
 
 
     def get_category_for_name( self, name ):
-        if self.category_dict.has_key(name):
+        if name in self.category_dict:
             return self.category_dict[name]
         else:
             return ["<unknown category>", None]

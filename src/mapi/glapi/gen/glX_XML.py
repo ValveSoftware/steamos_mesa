@@ -64,7 +64,7 @@ class glx_enum(gl_XML.gl_enum):
                 else:
                     mode = 1
 
-                if not self.functions.has_key(n):
+                if n not in self.functions:
                     self.functions[ n ] = [c, mode]
 
         return

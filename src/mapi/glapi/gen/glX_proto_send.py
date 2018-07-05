@@ -842,7 +842,7 @@ generic_%u_byte( GLint rop, const void * ptr )
 
 
     def printPixelFunction(self, f):
-        if self.pixel_stubs.has_key( f.name ):
+        if f.name in self.pixel_stubs:
             # Normally gl_function::get_parameter_string could be
             # used.  However, this call needs to have the missing
             # dimensions (e.g., a fake height value for
