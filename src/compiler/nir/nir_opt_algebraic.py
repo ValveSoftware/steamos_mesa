@@ -23,6 +23,8 @@
 # Authors:
 #    Jason Ekstrand (jason@jlekstrand.net)
 
+from __future__ import print_function
+
 from collections import OrderedDict
 import nir_algebraic
 import itertools
@@ -791,8 +793,8 @@ late_optimizations = [
    (('b2f@32', a), ('iand', a, 1.0), 'options->lower_b2f'),
 ]
 
-print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
-print nir_algebraic.AlgebraicPass("nir_opt_algebraic_before_ffma",
-                                  before_ffma_optimizations).render()
-print nir_algebraic.AlgebraicPass("nir_opt_algebraic_late",
-                                  late_optimizations).render()
+print(nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render())
+print(nir_algebraic.AlgebraicPass("nir_opt_algebraic_before_ffma",
+                                  before_ffma_optimizations).render())
+print(nir_algebraic.AlgebraicPass("nir_opt_algebraic_late",
+                                  late_optimizations).render())
