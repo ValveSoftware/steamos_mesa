@@ -107,7 +107,7 @@ __getProgramName()
 #        define GET_PROGRAM_NAME() __getProgramName()
 #    else
 #        define GET_PROGRAM_NAME() ""
-#        warning "Per application configuration won't work with your OS version."
+#        pragma message ( "Warning: Per application configuration won't work with your OS version." )
 #    endif
 #endif
 
