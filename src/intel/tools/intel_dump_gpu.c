@@ -423,13 +423,7 @@ static void
 map_ppgtt(uint64_t start, uint64_t size)
 {
    uint64_t l4_start = start & 0xff8000000000;
-   uint64_t l3_start = start & 0xffffc0000000;
-   uint64_t l2_start = start & 0xffffffe00000;
-   uint64_t l1_start = start & 0xfffffffff000;
    uint64_t l4_end = ((start + size - 1) | 0x007fffffffff) & 0xffffffffffff;
-   uint64_t l3_end = ((start + size - 1) | 0x00003fffffff) & 0xffffffffffff;
-   uint64_t l2_end = ((start + size - 1) | 0x0000001fffff) & 0xffffffffffff;
-   uint64_t l1_end = ((start + size - 1) | 0x000000000fff) & 0xffffffffffff;
 
 #define L4_index(addr) (((addr) >> 39) & 0x1ff)
 #define L3_index(addr) (((addr) >> 30) & 0x1ff)
@@ -442,28 +436,34 @@ map_ppgtt(uint64_t start, uint64_t size)
 
    populate_ppgtt_table(&pml4, L4_index(l4_start), L4_index(l4_end), 4);
 
-   for (uint64_t a = l4_start; a < l4_end; a += (1ULL << 39)) {
-      uint64_t _start = max(a, l3_start);
-      uint64_t _end = min(a + (1ULL << 39), l3_end);
+   for (uint64_t l4 = l4_start; l4 < l4_end; l4 += (1ULL << 39)) {
+      uint64_t l3_start = max(l4, start & 0xffffc0000000);
+      uint64_t l3_end = min(l4 + (1ULL << 39),
+                            ((start + size - 1) | 0x00003fffffff) & 0xffffffffffff);
+      uint64_t l3_start_idx = L3_index(l3_start);
+      uint64_t l3_end_idx = L3_index(l3_start) >= l3_start_idx ? L3_index(l3_end) : 0x1ff;
 
-      populate_ppgtt_table(L3_table(a), L3_index(_start),
-                           L3_index(_end), 3);
-   }
+      populate_ppgtt_table(L3_table(l4), l3_start_idx, l3_end_idx, 3);
 
-   for (uint64_t a = l3_start; a < l3_end; a += (1ULL << 30)) {
-      uint64_t _start = max(a, l2_start);
-      uint64_t _end = min(a + (1ULL << 30), l2_end);
+      for (uint64_t l3 = l3_start; l3 < l3_end; l3 += (1ULL << 30)) {
+         uint64_t l2_start = max(l3, start & 0xffffffe00000);
+         uint64_t l2_end = min(l3 + (1ULL << 30),
+                               ((start + size - 1) | 0x0000001fffff) & 0xffffffffffff);
+         uint64_t l2_start_idx = L2_index(l2_start);
+         uint64_t l2_end_idx = L2_index(l2_end) >= l2_start_idx ? L2_index(l2_end) : 0x1ff;
 
-      populate_ppgtt_table(L2_table(a), L2_index(_start),
-                           L2_index(_end), 2);
-   }
+         populate_ppgtt_table(L2_table(l3), l2_start_idx, l2_end_idx, 2);
 
-   for (uint64_t a = l2_start; a < l2_end; a += (1ULL << 21)) {
-      uint64_t _start = max(a, l1_start);
-      uint64_t _end = min(a + (1ULL << 21), l1_end);
+         for (uint64_t l2 = l2_start; l2 < l2_end; l2 += (1ULL << 21)) {
+            uint64_t l1_start = max(l2, start & 0xfffffffff000);
+            uint64_t l1_end = min(l2 + (1ULL << 21),
+                                  ((start + size - 1) | 0x000000000fff) & 0xffffffffffff);
+            uint64_t l1_start_idx = L1_index(l1_start);
+            uint64_t l1_end_idx = L1_index(l1_end) >= l1_start_idx ? L1_index(l1_end) : 0x1ff;
 
-      populate_ppgtt_table(L1_table(a), L1_index(_start),
-                           L1_index(_end), 1);
+            populate_ppgtt_table(L1_table(l2), l1_start_idx, l1_end_idx, 1);
+         }
+      }
    }
 }
 
