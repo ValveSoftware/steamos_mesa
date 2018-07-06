@@ -2024,6 +2024,9 @@ typedef struct nir_shader_compiler_options {
 
    bool lower_device_index_to_zero;
 
+   /* Set if nir_lower_wpos_ytransform() should also invert gl_PointCoord. */
+   bool lower_wpos_pntc;
+
    /**
     * Should nir_lower_io() create load_interpolated_input intrinsics?
     *
