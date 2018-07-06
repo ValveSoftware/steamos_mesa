@@ -470,7 +470,8 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return family >= CHIP_CEDAR ? 4 : 1;
 
 	case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
-		return 2047;
+		/* Should be 2047, but 2048 is a requirement for GL 4.4 */
+		return 2048;
 
 	/* Texturing. */
 	case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
