@@ -679,8 +679,8 @@ miptree_create(struct brw_context *brw,
                enum intel_miptree_create_flags flags)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const uint32_t alloc_flags = (flags & MIPTREE_CREATE_BUSY) ?
-                                BO_ALLOC_BUSY : 0;
+   const uint32_t alloc_flags =
+      (flags & MIPTREE_CREATE_BUSY || num_samples > 1) ? BO_ALLOC_BUSY : 0;
    isl_tiling_flags_t tiling_flags = ISL_TILING_ANY_MASK;
 
    /* TODO: This used to be because there wasn't BLORP to handle Y-tiling. */
