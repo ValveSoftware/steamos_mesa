@@ -216,13 +216,13 @@ class PrintCode(gl_XML.gl_print_base):
 
         # Check that the table has no gaps.  We expect a function at every offset,
         # and the code which generates the table relies on this.
-        for i in xrange(0, func_count):
+        for i in range(0, func_count):
             if funcnames[i] is None:
                 raise Exception("Function table has no function at offset %d" % (i))
 
         print("#define GLAPI_TABLE_COUNT %d" % func_count)
         print("static const char * const _glapi_table_func_names[GLAPI_TABLE_COUNT] = {")
-        for i in xrange(0, func_count):
+        for i in range(0, func_count):
             print("    /* %5d */ \"%s\"," % (i, funcnames[i]))
         print("};")
 

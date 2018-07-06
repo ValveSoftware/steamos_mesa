@@ -116,7 +116,7 @@ constant_template_common = mako.template.Template("""\
 constant_template_vector_scalar = mako.template.Template("""\
    case ${op.get_enum_name()}:
     % if "mixed" in op.flags:
-        % for i in xrange(op.num_operands):
+        % for i in range(op.num_operands):
       assert(op[${i}]->type->base_type == ${op.source_types[0].glsl_type} ||
             % for src_type in op.source_types[1:-1]:
              op[${i}]->type->base_type == ${src_type.glsl_type} ||

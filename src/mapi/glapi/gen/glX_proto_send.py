@@ -392,7 +392,7 @@ static const struct proc_pair
    _glapi_proc proc;
 } proc_pairs[%d] = {""" % len(procs))
         names = sorted(procs.keys())
-        for i in xrange(len(names)):
+        for i in range(len(names)):
             comma = ',' if i < len(names) - 1 else ''
             print('   { "%s", (_glapi_proc) gl%s }%s' % (names[i], procs[names[i]], comma))
         print("""};

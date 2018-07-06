@@ -260,7 +260,7 @@ def abi_sanity_check(entries):
     all_names = []
     last_slot = entries[-1].slot
     i = 0
-    for slot in xrange(last_slot + 1):
+    for slot in range(last_slot + 1):
         if entries[i].slot != slot:
             raise Exception('entries are not ordered by slots')
         if entries[i].alias:

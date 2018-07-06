@@ -367,8 +367,8 @@ for (unsigned bit = 0; bit < bit_size; bit++) {
 """)
 
 
-for i in xrange(1, 5):
-   for j in xrange(1, 5):
+for i in range(1, 5):
+   for j in range(1, 5):
       unop_horiz("fnoise{0}_{1}".format(i, j), i, tfloat, j, tfloat, "0.0f")
 
 
