@@ -433,7 +433,7 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
             e_clone.name = e.name
             entrypoints[e.name] = e_clone
 
-    return [e for e in entrypoints.itervalues() if e.enabled]
+    return [e for e in entrypoints.values() if e.enabled]
 
 
 def get_entrypoints_defines(doc):

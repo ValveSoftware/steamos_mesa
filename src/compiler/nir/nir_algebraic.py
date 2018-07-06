@@ -512,7 +512,7 @@ struct transform {
 
 #endif
 
-% for (opcode, xform_list) in xform_dict.iteritems():
+% for (opcode, xform_list) in xform_dict.items():
 % for xform in xform_list:
    ${xform.search.render()}
    ${xform.replace.render()}

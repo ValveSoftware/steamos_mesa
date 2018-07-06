@@ -504,7 +504,7 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
             assert e.core_version is None
             e.extensions.append(ext)
 
-    return [e for e in entrypoints.itervalues() if e.enabled]
+    return [e for e in entrypoints.values() if e.enabled]
 
 
 def get_entrypoints_defines(doc):

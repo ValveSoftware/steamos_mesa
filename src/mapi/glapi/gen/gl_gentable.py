@@ -202,13 +202,13 @@ class PrintCode(gl_XML.gl_print_base):
 
         # Determine how many functions have a defined offset.
         func_count = 0
-        for f in api.functions_by_name.itervalues():
+        for f in api.functions_by_name.values():
             if f.offset != -1:
                 func_count += 1
 
         # Build the mapping from offset to function name.
         funcnames = [None] * func_count
-        for f in api.functions_by_name.itervalues():
+        for f in api.functions_by_name.values():
             if f.offset != -1:
                 if not (funcnames[f.offset] is None):
                     raise Exception("Function table has more than one function with same offset (offset %d, func %s)" % (f.offset, f.name))

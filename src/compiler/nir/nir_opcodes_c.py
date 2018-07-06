@@ -116,7 +116,7 @@ nir_type_conversion_op(nir_alu_type src, nir_alu_type dst, nir_rounding_mode rnd
 }
 
 const nir_op_info nir_op_infos[nir_num_opcodes] = {
-% for name, opcode in sorted(opcodes.iteritems()):
+% for name, opcode in sorted(opcodes.items()):
 {
    .name = "${name}",
    .num_inputs = ${opcode.num_inputs},

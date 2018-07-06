@@ -834,7 +834,7 @@ class gl_function( gl_item ):
         versions.
         """
         result = []
-        for entry_point, api_to_ver in self.entry_point_api_map.iteritems():
+        for entry_point, api_to_ver in self.entry_point_api_map.items():
             if api not in api_to_ver:
                 continue
             if version is not None and version < api_to_ver[api]:
@@ -881,7 +881,7 @@ class gl_api(object):
     def filter_functions(self, entry_point_list):
         """Filter out entry points not in entry_point_list."""
         functions_by_name = {}
-        for func in self.functions_by_name.itervalues():
+        for func in self.functions_by_name.values():
             entry_points = [ent for ent in func.entry_points if ent in entry_point_list]
             if entry_points:
                 func.filter_entry_points(entry_points)
@@ -894,7 +894,7 @@ class gl_api(object):
         optionally, not in the given version of the given API).
         """
         functions_by_name = {}
-        for func in self.functions_by_name.itervalues():
+        for func in self.functions_by_name.values():
             entry_points = func.entry_points_for_api_version(api, version)
             if entry_points:
                 func.filter_entry_points(entry_points)
@@ -1003,13 +1003,13 @@ class gl_api(object):
 
     def functionIterateByOffset(self):
         max_offset = -1
-        for func in self.functions_by_name.itervalues():
+        for func in self.functions_by_name.values():
             if func.offset > max_offset:
                 max_offset = func.offset
 
 
         temp = [None for i in range(0, max_offset + 1)]
-        for func in self.functions_by_name.itervalues():
+        for func in self.functions_by_name.values():
             if func.offset != -1:
                 temp[ func.offset ] = func
 
@@ -1023,7 +1023,7 @@ class gl_api(object):
 
 
     def functionIterateAll(self):
-        return self.functions_by_name.itervalues()
+        return self.functions_by_name.values()
 
 
     def enumIterateByName(self):
@@ -1064,7 +1064,7 @@ class gl_api(object):
 
 
     def typeIterate(self):
-        return self.types_by_name.itervalues()
+        return self.types_by_name.values()
 
 
     def find_type( self, type_name ):
