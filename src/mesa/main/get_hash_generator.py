@@ -201,7 +201,7 @@ def show_usage():
 if __name__ == '__main__':
    try:
       (opts, args) = getopt.getopt(sys.argv[1:], "f:")
-   except Exception,e:
+   except Exception:
       show_usage()
 
    if len(args) != 0:
