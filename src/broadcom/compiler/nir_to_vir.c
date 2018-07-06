@@ -443,9 +443,7 @@ emit_fragment_varying(struct v3d_compile *c, nir_variable *var,
                         return vir_FADD(c, vir_FMUL(c, vary, c->payload_w), r5);
                 }
         case INTERP_MODE_NOPERSPECTIVE:
-                /* C appears after the mov from the varying.
-                   XXX: improve ldvary setup.
-                */
+                BITSET_SET(c->noperspective_flags, i);
                 return vir_FADD(c, vir_MOV(c, vary), r5);
         case INTERP_MODE_FLAT:
                 BITSET_SET(c->flat_shade_flags, i);

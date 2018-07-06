@@ -485,6 +485,11 @@ v3d_update_compiled_fs(struct v3d_context *v3d, uint8_t prim_mode)
                         v3d->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
                 }
 
+                if (v3d->prog.fs->prog_data.fs->noperspective_flags !=
+                    old_fs->prog_data.fs->noperspective_flags) {
+                        v3d->dirty |= VC5_DIRTY_NOPERSPECTIVE_FLAGS;
+                }
+
                 if (v3d->prog.fs->prog_data.fs->centroid_flags !=
                     old_fs->prog_data.fs->centroid_flags) {
                         v3d->dirty |= VC5_DIRTY_CENTROID_FLAGS;

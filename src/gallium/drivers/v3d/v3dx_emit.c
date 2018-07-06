@@ -328,6 +328,23 @@ emit_flat_shade_flags(struct v3d_job *job,
 
 #if V3D_VERSION >= 40
 static void
+emit_noperspective_flags(struct v3d_job *job,
+                         int varying_offset,
+                         uint32_t varyings,
+                         enum V3DX(Varying_Flags_Action) lower,
+                         enum V3DX(Varying_Flags_Action) higher)
+{
+        cl_emit(&job->bcl, NON_PERSPECTIVE_FLAGS, flags) {
+                flags.varying_offset_v0 = varying_offset;
+                flags.non_perspective_flags_for_varyings_v024 = varyings;
+                flags.action_for_non_perspective_flags_of_lower_numbered_varyings =
+                        lower;
+                flags.action_for_non_perspective_flags_of_higher_numbered_varyings =
+                        higher;
+        }
+}
+
+static void
 emit_centroid_flags(struct v3d_job *job,
                     int varying_offset,
                     uint32_t varyings,
@@ -648,6 +665,14 @@ v3dX(emit_state)(struct pipe_context *pctx)
         }
 
 #if V3D_VERSION >= 40
+        if (v3d->dirty & VC5_DIRTY_NOPERSPECTIVE_FLAGS) {
+                if (!emit_varying_flags(job,
+                                        v3d->prog.fs->prog_data.fs->noperspective_flags,
+                                        emit_noperspective_flags)) {
+                        cl_emit(&job->bcl, ZERO_ALL_NON_PERSPECTIVE_FLAGS, flags);
+                }
+        }
+
         if (v3d->dirty & VC5_DIRTY_CENTROID_FLAGS) {
                 if (!emit_varying_flags(job,
                                         v3d->prog.fs->prog_data.fs->centroid_flags,

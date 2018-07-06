@@ -81,6 +81,7 @@ void v3d_job_add_bo(struct v3d_job *job, struct v3d_bo *bo);
 #define VC5_DIRTY_STREAMOUT     (1 << 27)
 #define VC5_DIRTY_OQ            (1 << 28)
 #define VC5_DIRTY_CENTROID_FLAGS (1 << 29)
+#define VC5_DIRTY_NOPERSPECTIVE_FLAGS (1 << 30)
 
 #define VC5_MAX_FS_INPUTS 64
 

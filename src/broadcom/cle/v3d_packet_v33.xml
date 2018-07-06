@@ -668,7 +668,7 @@
   <packet code="100" name="Non-perspective Flags" min_ver="41">
     <field name="Non-perspective Flags for varyings V0*24" size="24" start="8" type="uint"/>
     <field name="Action for Non-perspective Flags of higher numbered varyings" size="2" start="6" type="Varying Flags Action"/>
-    <field name="Action for Non-perspectivey Flags of lower numbered varyings" size="2" start="4" type="Varying Flags Action"/>
+    <field name="Action for Non-perspective Flags of lower numbered varyings" size="2" start="4" type="Varying Flags Action"/>
     <field name="Varying offset V0" size="4" start="0" type="uint"/>
   </packet>
 
