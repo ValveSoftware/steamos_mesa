@@ -144,8 +144,7 @@ typedef struct {
                 print('')
                 print('/* OpenGL ES specific prototypes */')
                 print('')
-                keys = categories.keys()
-                keys.sort()
+                keys = sorted(categories.keys())
                 for key in keys:
                     print('/* category %s */' % key)
                     print("\n".join(categories[key]))

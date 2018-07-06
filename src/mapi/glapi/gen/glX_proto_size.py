@@ -208,8 +208,7 @@ class glx_enum_function(object):
                 for enum_obj in self.enums[e]:
                     list[ enum_obj.priority() ] = enum_obj.name
 
-                keys = list.keys()
-                keys.sort()
+                keys = sorted(list.keys())
                 for k in keys:
                     j = list[k]
                     if first:
@@ -275,8 +274,7 @@ class glx_server_enum_function(glx_enum_function):
             o = f.offset_of( param_name )
             foo[o] = param_name
 
-        keys = foo.keys()
-        keys.sort()
+        keys = sorted(foo.keys())
         for o in keys:
             p = f.parameters_by_name[ foo[o] ]
 
