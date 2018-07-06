@@ -309,6 +309,76 @@ emit_rt_blend(struct v3d_context *v3d, struct v3d_job *job,
         }
 }
 
+static void
+emit_flat_shade_flags(struct v3d_job *job,
+                      int varying_offset,
+                      uint32_t varyings,
+                      enum V3DX(Varying_Flags_Action) lower,
+                      enum V3DX(Varying_Flags_Action) higher)
+{
+        cl_emit(&job->bcl, FLAT_SHADE_FLAGS, flags) {
+                flags.varying_offset_v0 = varying_offset;
+                flags.flat_shade_flags_for_varyings_v024 = varyings;
+                flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
+                        lower;
+                flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
+                        higher;
+        }
+}
+
+#if V3D_VERSION >= 40
+static void
+emit_centroid_flags(struct v3d_job *job,
+                    int varying_offset,
+                    uint32_t varyings,
+                    enum V3DX(Varying_Flags_Action) lower,
+                    enum V3DX(Varying_Flags_Action) higher)
+{
+        cl_emit(&job->bcl, CENTROID_FLAGS, flags) {
+                flags.varying_offset_v0 = varying_offset;
+                flags.centroid_flags_for_varyings_v024 = varyings;
+                flags.action_for_centroid_flags_of_lower_numbered_varyings =
+                        lower;
+                flags.action_for_centroid_flags_of_higher_numbered_varyings =
+                        higher;
+        }
+}
+#endif /* V3D_VERSION >= 40 */
+
+static bool
+emit_varying_flags(struct v3d_job *job, uint32_t *flags,
+                   void (*flag_emit_callback)(struct v3d_job *job,
+                                              int varying_offset,
+                                              uint32_t flags,
+                                              enum V3DX(Varying_Flags_Action) lower,
+                                              enum V3DX(Varying_Flags_Action) higher))
+{
+        struct v3d_context *v3d = job->v3d;
+        bool emitted_any = false;
+
+        for (int i = 0; i < ARRAY_SIZE(v3d->prog.fs->prog_data.fs->flat_shade_flags); i++) {
+                if (!flags[i])
+                        continue;
+
+                if (emitted_any) {
+                        flag_emit_callback(job, i, flags[i],
+                                           V3D_VARYING_FLAGS_ACTION_UNCHANGED,
+                                           V3D_VARYING_FLAGS_ACTION_UNCHANGED);
+                } else if (i == 0) {
+                        flag_emit_callback(job, i, flags[i],
+                                           V3D_VARYING_FLAGS_ACTION_UNCHANGED,
+                                           V3D_VARYING_FLAGS_ACTION_ZEROED);
+                } else {
+                        flag_emit_callback(job, i, flags[i],
+                                           V3D_VARYING_FLAGS_ACTION_ZEROED,
+                                           V3D_VARYING_FLAGS_ACTION_ZEROED);
+                }
+                emitted_any = true;
+        }
+
+        return emitted_any;
+}
+
 void
 v3dX(emit_state)(struct pipe_context *pctx)
 {
@@ -570,76 +640,18 @@ v3dX(emit_state)(struct pipe_context *pctx)
 #endif
 
         if (v3d->dirty & VC5_DIRTY_FLAT_SHADE_FLAGS) {
-                bool emitted_any = false;
-
-                for (int i = 0; i < ARRAY_SIZE(v3d->prog.fs->prog_data.fs->flat_shade_flags); i++) {
-                        if (!v3d->prog.fs->prog_data.fs->flat_shade_flags[i])
-                                continue;
-
-                        cl_emit(&job->bcl, FLAT_SHADE_FLAGS, flags) {
-                                flags.varying_offset_v0 = i;
-
-                                if (emitted_any) {
-                                        flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
-                                        flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
-                                } else {
-                                        flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
-                                                ((i == 0) ?
-                                                 V3D_VARYING_FLAGS_ACTION_UNCHANGED :
-                                                 V3D_VARYING_FLAGS_ACTION_ZEROED);
-
-                                        flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_ZEROED;
-                                }
-
-                                flags.flat_shade_flags_for_varyings_v024 =
-                                        v3d->prog.fs->prog_data.fs->flat_shade_flags[i];
-                        }
-
-                        emitted_any = true;
-                }
-
-                if (!emitted_any) {
+                if (!emit_varying_flags(job,
+                                        v3d->prog.fs->prog_data.fs->flat_shade_flags,
+                                        emit_flat_shade_flags)) {
                         cl_emit(&job->bcl, ZERO_ALL_FLAT_SHADE_FLAGS, flags);
                 }
         }
 
 #if V3D_VERSION >= 40
         if (v3d->dirty & VC5_DIRTY_CENTROID_FLAGS) {
-                bool emitted_any = false;
-
-                for (int i = 0; i < ARRAY_SIZE(v3d->prog.fs->prog_data.fs->centroid_flags); i++) {
-                        if (!v3d->prog.fs->prog_data.fs->centroid_flags[i])
-                                continue;
-
-                        cl_emit(&job->bcl, CENTROID_FLAGS, flags) {
-                                flags.varying_offset_v0 = i;
-
-                                if (emitted_any) {
-                                        flags.action_for_centroid_flags_of_lower_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
-                                        flags.action_for_centroid_flags_of_higher_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
-                                } else {
-                                        flags.action_for_centroid_flags_of_lower_numbered_varyings =
-                                                ((i == 0) ?
-                                                 V3D_VARYING_FLAGS_ACTION_UNCHANGED :
-                                                 V3D_VARYING_FLAGS_ACTION_ZEROED);
-
-                                        flags.action_for_centroid_flags_of_higher_numbered_varyings =
-                                                V3D_VARYING_FLAGS_ACTION_ZEROED;
-                                }
-
-                                flags.centroid_flags_for_varyings_v024 =
-                                        v3d->prog.fs->prog_data.fs->centroid_flags[i];
-                        }
-
-                        emitted_any = true;
-                }
-
-                if (!emitted_any) {
+                if (!emit_varying_flags(job,
+                                        v3d->prog.fs->prog_data.fs->centroid_flags,
+                                        emit_centroid_flags)) {
                         cl_emit(&job->bcl, ZERO_ALL_CENTROID_FLAGS, flags);
                 }
         }
