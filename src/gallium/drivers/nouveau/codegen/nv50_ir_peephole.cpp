@@ -1654,6 +1654,7 @@ ModifierFolding::visit(BasicBlock *bb)
 // SLCT(a, b, const) -> cc(const) ? a : b
 // RCP(RCP(a)) -> a
 // MUL(MUL(a, b), const) -> MUL_Xconst(a, b)
+// EXTBF(RDSV(COMBINED_TID)) -> RDSV(TID)
 class AlgebraicOpt : public Pass
 {
 private:
@@ -1671,6 +1672,7 @@ private:
    void handleCVT_EXTBF(Instruction *);
    void handleSUCLAMP(Instruction *);
    void handleNEG(Instruction *);
+   void handleEXTBF_RDSV(Instruction *);
 
    BuildUtil bld;
 };
@@ -2175,6 +2177,41 @@ AlgebraicOpt::handleNEG(Instruction *i) {
    }
 }
 
+// EXTBF(RDSV(COMBINED_TID)) -> RDSV(TID)
+void
+AlgebraicOpt::handleEXTBF_RDSV(Instruction *i)
+{
+   Instruction *rdsv = i->getSrc(0)->getUniqueInsn();
+   if (rdsv->op != OP_RDSV ||
+       rdsv->getSrc(0)->asSym()->reg.data.sv.sv != SV_COMBINED_TID)
+      return;
+   // Avoid creating more RDSV instructions
+   if (rdsv->getDef(0)->refCount() > 1)
+      return;
+
+   ImmediateValue imm;
+   if (!i->src(1).getImmediate(imm))
+      return;
+
+   int index;
+   if (imm.isInteger(0x1000))
+      index = 0;
+   else
+   if (imm.isInteger(0x0a10))
+      index = 1;
+   else
+   if (imm.isInteger(0x061a))
+      index = 2;
+   else
+      return;
+
+   bld.setPosition(i, false);
+
+   i->op = OP_RDSV;
+   i->setSrc(0, bld.mkSysVal(SV_TID, index));
+   i->setSrc(1, NULL);
+}
+
 bool
 AlgebraicOpt::visit(BasicBlock *bb)
 {
@@ -2214,6 +2251,9 @@ AlgebraicOpt::visit(BasicBlock *bb)
          break;
       case OP_NEG:
          handleNEG(i);
+         break;
+      case OP_EXTBF:
+         handleEXTBF_RDSV(i);
          break;
       default:
          break;

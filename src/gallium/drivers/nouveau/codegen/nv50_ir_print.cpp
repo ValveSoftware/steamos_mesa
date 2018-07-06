@@ -306,6 +306,7 @@ static const char *SemanticStr[SV_LAST + 1] =
    "TESS_INNER",
    "TESS_COORD",
    "TID",
+   "COMBINED_TID",
    "CTAID",
    "NTID",
    "GRIDID",

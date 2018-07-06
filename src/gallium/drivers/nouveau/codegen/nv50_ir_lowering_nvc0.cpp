@@ -2576,6 +2576,18 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
          // TGSI backend may use 4th component of TID,NTID,CTAID,NCTAID
          i->op = OP_MOV;
          i->setSrc(0, bld.mkImm((sv == SV_NTID || sv == SV_NCTAID) ? 1 : 0));
+      } else
+      if (sv == SV_TID) {
+         // Help CSE combine TID fetches
+         Value *tid = bld.mkOp1v(OP_RDSV, TYPE_U32, bld.getScratch(),
+                                 bld.mkSysVal(SV_COMBINED_TID, 0));
+         i->op = OP_EXTBF;
+         i->setSrc(0, tid);
+         switch (sym->reg.data.sv.index) {
+         case 0: i->setSrc(1, bld.mkImm(0x1000)); break;
+         case 1: i->setSrc(1, bld.mkImm(0x0a10)); break;
+         case 2: i->setSrc(1, bld.mkImm(0x061a)); break;
+         }
       }
       if (sv == SV_VERTEX_COUNT) {
          bld.setPosition(i, true);

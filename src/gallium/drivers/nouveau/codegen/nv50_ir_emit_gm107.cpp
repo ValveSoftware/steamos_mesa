@@ -267,6 +267,7 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    case SV_INVOCATION_ID  : id = 0x11; break;
    case SV_THREAD_KILL    : id = 0x13; break;
    case SV_INVOCATION_INFO: id = 0x1d; break;
+   case SV_COMBINED_TID   : id = 0x20; break;
    case SV_TID            : id = 0x21 + val->reg.data.sv.index; break;
    case SV_CTAID          : id = 0x25 + val->reg.data.sv.index; break;
    case SV_LANEMASK_EQ    : id = 0x38; break;

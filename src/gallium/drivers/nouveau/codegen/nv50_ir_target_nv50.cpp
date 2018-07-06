@@ -257,6 +257,7 @@ TargetNV50::getSVAddress(DataFile shaderFile, const Symbol *sym) const
    case SV_NTID:
       return 0x2 + 2 * sym->reg.data.sv.index;
    case SV_TID:
+   case SV_COMBINED_TID:
       return 0;
    case SV_SAMPLE_POS:
       return 0; /* sample position is handled differently */
