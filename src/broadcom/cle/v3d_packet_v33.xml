@@ -360,7 +360,7 @@
 
     <field name="Decimate mode" size="2" start="10" type="Decimate Mode"/>
 
-    <field name="Dither Mode" size="2" start="9" type="Dither Mode"/>
+    <field name="Dither Mode" size="2" start="8" type="Dither Mode"/>
 
     <field name="Flip Y" size="1" start="7" type="bool"/>
 
