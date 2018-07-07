@@ -717,13 +717,6 @@ get_loop_info(loop_info_state *state, nir_function_impl *impl)
       }
    }
 
-   /* Induction analysis needs invariance information so get that first */
-   compute_invariance_information(state);
-
-   /* We have invariance information so try to find induction variables */
-   if (!compute_induction_information(state))
-      return;
-
    /* Try to find all simple terminators of the loop. If we can't find any,
     * or we find possible terminators that have side effects then bail.
     */
@@ -736,6 +729,13 @@ get_loop_info(loop_info_state *state, nir_function_impl *impl)
       }
       return;
    }
+
+   /* Induction analysis needs invariance information so get that first */
+   compute_invariance_information(state);
+
+   /* We have invariance information so try to find induction variables */
+   if (!compute_induction_information(state))
+      return;
 
    /* Run through each of the terminators and try to compute a trip-count */
    find_trip_count(state);
