@@ -317,15 +317,19 @@ find_loop_terminators(loop_info_state *state)
           * not find a loop terminator, but there is a break-statement then
           * we should return false so that we do not try to find trip-count
           */
-         if (!nir_is_trivial_loop_if(nif, break_blk))
+         if (!nir_is_trivial_loop_if(nif, break_blk)) {
+            state->loop->info->complex_loop = true;
             return false;
+         }
 
          /* Continue if the if contained no jumps at all */
          if (!break_blk)
             continue;
 
-         if (nif->condition.ssa->parent_instr->type == nir_instr_type_phi)
+         if (nif->condition.ssa->parent_instr->type == nir_instr_type_phi) {
+            state->loop->info->complex_loop = true;
             return false;
+         }
 
          nir_loop_terminator *terminator =
             rzalloc(state->loop->info, nir_loop_terminator);
