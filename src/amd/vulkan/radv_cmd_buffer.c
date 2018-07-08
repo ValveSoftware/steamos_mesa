@@ -2044,7 +2044,7 @@ static void radv_subpass_barrier(struct radv_cmd_buffer *cmd_buffer, const struc
 }
 
 static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buffer,
-						 VkAttachmentReference att)
+						 struct radv_subpass_attachment att)
 {
 	unsigned idx = att.attachment;
 	struct radv_image_view *view = cmd_buffer->state.framebuffer->attachments[idx].attachment;
@@ -3945,7 +3945,7 @@ void radv_CmdEndRenderPass(
 	for (unsigned i = 0; i < cmd_buffer->state.framebuffer->attachment_count; ++i) {
 		VkImageLayout layout = cmd_buffer->state.pass->attachments[i].final_layout;
 		radv_handle_subpass_image_transition(cmd_buffer,
-		                      (VkAttachmentReference){i, layout});
+		                      (struct radv_subpass_attachment){i, layout});
 	}
 
 	vk_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);

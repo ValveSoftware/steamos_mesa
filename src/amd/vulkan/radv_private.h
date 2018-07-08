@@ -1711,13 +1711,18 @@ struct radv_subpass_barrier {
 	VkAccessFlags        dst_access_mask;
 };
 
+struct radv_subpass_attachment {
+	uint32_t         attachment;
+	VkImageLayout    layout;
+};
+
 struct radv_subpass {
 	uint32_t                                     input_count;
 	uint32_t                                     color_count;
-	VkAttachmentReference *                      input_attachments;
-	VkAttachmentReference *                      color_attachments;
-	VkAttachmentReference *                      resolve_attachments;
-	VkAttachmentReference                        depth_stencil_attachment;
+	struct radv_subpass_attachment *             input_attachments;
+	struct radv_subpass_attachment *             color_attachments;
+	struct radv_subpass_attachment *             resolve_attachments;
+	struct radv_subpass_attachment               depth_stencil_attachment;
 
 	/** Subpass has at least one resolve attachment */
 	bool                                         has_resolve;
@@ -1741,7 +1746,7 @@ struct radv_render_pass_attachment {
 struct radv_render_pass {
 	uint32_t                                     attachment_count;
 	uint32_t                                     subpass_count;
-	VkAttachmentReference *                      subpass_attachments;
+	struct radv_subpass_attachment *             subpass_attachments;
 	struct radv_render_pass_attachment *         attachments;
 	struct radv_subpass_barrier                  end_barrier;
 	struct radv_subpass                          subpasses[0];
