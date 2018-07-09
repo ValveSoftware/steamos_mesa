@@ -3129,7 +3129,7 @@ radv_cs_emit_draw_indexed_packet(struct radv_cmd_buffer *cmd_buffer,
                                  uint64_t index_va,
                                  uint32_t index_count)
 {
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DRAW_INDEX_2, 4, false));
+	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DRAW_INDEX_2, 4, cmd_buffer->state.predicating));
 	radeon_emit(cmd_buffer->cs, cmd_buffer->state.max_index_count);
 	radeon_emit(cmd_buffer->cs, index_va);
 	radeon_emit(cmd_buffer->cs, index_va >> 32);
@@ -3149,6 +3149,7 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	                              : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 	bool draw_id_enable = radv_get_shader(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX)->info.info.vs.needs_draw_id;
 	uint32_t base_reg = cmd_buffer->state.pipeline->graphics.vtx_base_sgpr;
+	bool predicating = cmd_buffer->state.predicating;
 	assert(base_reg);
 
 	/* just reset draw state for vertex data */
@@ -3158,7 +3159,7 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 
 	if (draw_count == 1 && !count_va && !draw_id_enable) {
 		radeon_emit(cs, PKT3(indexed ? PKT3_DRAW_INDEX_INDIRECT :
-				     PKT3_DRAW_INDIRECT, 3, false));
+				     PKT3_DRAW_INDIRECT, 3, predicating));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, (base_reg - SI_SH_REG_OFFSET) >> 2);
 		radeon_emit(cs, ((base_reg + 4) - SI_SH_REG_OFFSET) >> 2);
@@ -3166,7 +3167,7 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	} else {
 		radeon_emit(cs, PKT3(indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
 				     PKT3_DRAW_INDIRECT_MULTI,
-				     8, false));
+				     8, predicating));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, (base_reg - SI_SH_REG_OFFSET) >> 2);
 		radeon_emit(cs, ((base_reg + 4) - SI_SH_REG_OFFSET) >> 2);
