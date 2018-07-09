@@ -3498,6 +3498,12 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(shader_viewport_index_layer, cap);
          break;
 
+      case SpvCapabilityStorageBuffer8BitAccess:
+      case SpvCapabilityUniformAndStorageBuffer8BitAccess:
+      case SpvCapabilityStoragePushConstant8:
+         spv_check_supported(storage_8bit, cap);
+         break;
+
       case SpvCapabilityInputAttachmentArrayDynamicIndexingEXT:
       case SpvCapabilityUniformTexelBufferArrayDynamicIndexingEXT:
       case SpvCapabilityStorageTexelBufferArrayDynamicIndexingEXT:
