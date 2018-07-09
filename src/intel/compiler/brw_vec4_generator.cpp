@@ -1185,7 +1185,7 @@ generate_scratch_write(struct brw_codegen *p,
    const unsigned target_cache =
       (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
        devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
+       BRW_SFID_DATAPORT_WRITE);
    struct brw_reg header = brw_vec8_grf(0, 0);
    bool write_commit;
 
@@ -1237,21 +1237,19 @@ generate_scratch_write(struct brw_codegen *p,
     * dword is written.
     */
    brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_inst_set_sfid(p->devinfo, send, target_cache);
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
-   brw_set_dp_write_message(p, send,
-                            brw_scratch_surface_idx(p),
-			    BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
-			    msg_type,
-                            target_cache,
-			    3, /* mlen */
-			    true, /* header present */
-			    false, /* not a render target write */
-			    write_commit, /* rlen */
-			    false, /* eot */
-			    write_commit);
+   brw_set_desc(p, send,
+                brw_message_desc(devinfo, 3, write_commit, true) |
+                brw_dp_write_desc(devinfo,
+                                  brw_scratch_surface_idx(p),
+                                  BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
+                                  msg_type,
+                                  false, /* not a render target write */
+                                  write_commit));
 }
 
 static void

@@ -245,18 +245,6 @@ ROUND(RNDE)
 
 /* Helpers for SEND instruction:
  */
-void brw_set_dp_write_message(struct brw_codegen *p,
-			      brw_inst *insn,
-			      unsigned binding_table_index,
-			      unsigned msg_control,
-			      unsigned msg_type,
-                              unsigned target_cache,
-			      unsigned msg_length,
-			      bool header_present,
-			      unsigned last_render_target,
-			      unsigned response_length,
-			      unsigned end_of_thread,
-			      unsigned send_commit_msg);
 
 /**
  * Construct a message descriptor immediate with the specified common
@@ -331,6 +319,35 @@ brw_dp_read_desc(const struct gen_device_info *devinfo,
       return (desc | SET_BITS(msg_control, 11, 8) |
               SET_BITS(msg_type, 13, 12) |
               SET_BITS(target_cache, 15, 14));
+}
+
+/**
+ * Construct a message descriptor immediate with the specified dataport write
+ * function controls.
+ */
+static inline uint32_t
+brw_dp_write_desc(const struct gen_device_info *devinfo,
+                  unsigned binding_table_index,
+                  unsigned msg_control,
+                  unsigned msg_type,
+                  unsigned last_render_target,
+                  unsigned send_commit_msg)
+{
+   const unsigned desc = SET_BITS(binding_table_index, 7, 0);
+   if (devinfo->gen >= 7)
+      return (desc | SET_BITS(msg_control, 13, 8) |
+              SET_BITS(last_render_target, 12, 12) |
+              SET_BITS(msg_type, 17, 14));
+   else if (devinfo->gen >= 6)
+      return (desc | SET_BITS(msg_control, 12, 8) |
+              SET_BITS(last_render_target, 12, 12) |
+              SET_BITS(msg_type, 16, 13) |
+              SET_BITS(send_commit_msg, 17, 17));
+   else
+      return (desc | SET_BITS(msg_control, 11, 8) |
+              SET_BITS(last_render_target, 11, 11) |
+              SET_BITS(msg_type, 14, 12) |
+              SET_BITS(send_commit_msg, 15, 15));
 }
 
 void brw_urb_WRITE(struct brw_codegen *p,

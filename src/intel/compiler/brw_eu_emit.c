@@ -489,41 +489,6 @@ static void brw_set_urb_message( struct brw_codegen *p,
    }
 }
 
-void
-brw_set_dp_write_message(struct brw_codegen *p,
-			 brw_inst *insn,
-			 unsigned binding_table_index,
-			 unsigned msg_control,
-			 unsigned msg_type,
-                         unsigned target_cache,
-			 unsigned msg_length,
-			 bool header_present,
-			 unsigned last_render_target,
-			 unsigned response_length,
-			 unsigned end_of_thread,
-			 unsigned send_commit_msg)
-{
-   const struct gen_device_info *devinfo = p->devinfo;
-   const unsigned sfid = (devinfo->gen >= 6 ? target_cache :
-                          BRW_SFID_DATAPORT_WRITE);
-
-   brw_set_desc(p, insn, brw_message_desc(
-                   devinfo, msg_length, response_length, header_present));
-
-   brw_inst_set_sfid(devinfo, insn, sfid);
-   brw_inst_set_eot(devinfo, insn, !!end_of_thread);
-   brw_inst_set_binding_table_index(devinfo, insn, binding_table_index);
-   brw_inst_set_dp_write_msg_type(devinfo, insn, msg_type);
-   brw_inst_set_dp_write_msg_control(devinfo, insn, msg_control);
-   brw_inst_set_rt_last(devinfo, insn, last_render_target);
-   if (devinfo->gen < 7) {
-      brw_inst_set_dp_write_commit(devinfo, insn, send_commit_msg);
-   }
-
-   if (devinfo->gen >= 11)
-      brw_inst_set_null_rt(devinfo, insn, false);
-}
-
 static void
 gen7_set_dp_scratch_message(struct brw_codegen *p,
                             brw_inst *inst,
@@ -1943,7 +1908,7 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
    const unsigned target_cache =
       (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
        devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
+       BRW_SFID_DATAPORT_WRITE);
    uint32_t msg_type;
 
    if (devinfo->gen >= 6)
@@ -1984,6 +1949,7 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
       struct brw_reg src_header = retype(brw_vec8_grf(0, 0),
 					 BRW_REGISTER_TYPE_UW);
 
+      brw_inst_set_sfid(devinfo, insn, target_cache);
       brw_inst_set_compression(devinfo, insn, false);
 
       if (brw_inst_exec_size(devinfo, insn) >= 16)
@@ -2023,18 +1989,12 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
       else
 	 msg_type = BRW_DATAPORT_WRITE_MESSAGE_OWORD_BLOCK_WRITE;
 
-      brw_set_dp_write_message(p,
-			       insn,
-                               brw_scratch_surface_idx(p),
-			       BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
-			       msg_type,
-                               target_cache,
-			       mlen,
-			       true, /* header_present */
-			       0, /* not a render target */
-			       send_commit_msg, /* response_length */
-			       0, /* eot */
-			       send_commit_msg);
+      brw_set_desc(p, insn,
+                   brw_message_desc(devinfo, mlen, send_commit_msg, true) |
+                   brw_dp_write_desc(devinfo, brw_scratch_surface_idx(p),
+                                     BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
+                                     msg_type, 0, /* not a render target */
+                                     send_commit_msg));
    }
 }
 
@@ -2232,7 +2192,7 @@ brw_fb_WRITE(struct brw_codegen *p,
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned target_cache =
       (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
+       BRW_SFID_DATAPORT_WRITE);
    brw_inst *insn;
    unsigned msg_type;
    struct brw_reg dest, src0;
@@ -2247,6 +2207,7 @@ brw_fb_WRITE(struct brw_codegen *p,
    } else {
       insn = next_insn(p, BRW_OPCODE_SEND);
    }
+   brw_inst_set_sfid(devinfo, insn, target_cache);
    brw_inst_set_compression(devinfo, insn, false);
 
    if (devinfo->gen >= 6) {
@@ -2264,18 +2225,13 @@ brw_fb_WRITE(struct brw_codegen *p,
 
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);
-   brw_set_dp_write_message(p,
-			    insn,
-			    binding_table_index,
-			    msg_control,
-			    msg_type,
-                            target_cache,
-			    msg_length,
-			    header_present,
-			    last_render_target,
-			    response_length,
-			    eot,
-			    0 /* send_commit_msg */);
+   brw_set_desc(p, insn,
+                brw_message_desc(devinfo, msg_length, response_length,
+                                 header_present) |
+                brw_dp_write_desc(devinfo, binding_table_index, msg_control,
+                                  msg_type, last_render_target,
+                                  0 /* send_commit_msg */));
+   brw_inst_set_eot(devinfo, insn, eot);
 
    return insn;
 }
@@ -2770,26 +2726,22 @@ brw_svb_write(struct brw_codegen *p,
    const unsigned target_cache =
       (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
        devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
-       BRW_DATAPORT_READ_TARGET_RENDER_CACHE);
+       BRW_SFID_DATAPORT_WRITE);
    brw_inst *insn;
 
    gen6_resolve_implied_move(p, &src0, msg_reg_nr);
 
    insn = next_insn(p, BRW_OPCODE_SEND);
+   brw_inst_set_sfid(devinfo, insn, target_cache);
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);
-   brw_set_src1(p, insn, brw_imm_d(0));
-   brw_set_dp_write_message(p, insn,
-                            binding_table_index,
-                            0, /* msg_control: ignored */
-                            GEN6_DATAPORT_WRITE_MESSAGE_STREAMED_VB_WRITE,
-                            target_cache,
-                            1, /* msg_length */
-                            true, /* header_present */
-                            0, /* last_render_target: ignored */
-                            send_commit_msg, /* response_length */
-                            0, /* end_of_thread */
-                            send_commit_msg); /* send_commit_msg */
+   brw_set_desc(p, insn,
+                brw_message_desc(devinfo, 1, send_commit_msg, true) |
+                brw_dp_write_desc(devinfo, binding_table_index,
+                                  0, /* msg_control: ignored */
+                                  GEN6_DATAPORT_WRITE_MESSAGE_STREAMED_VB_WRITE,
+                                  0, /* last_render_target: ignored */
+                                  send_commit_msg)); /* send_commit_msg */
 }
 
 static unsigned
