@@ -220,6 +220,12 @@ compile_init(struct ir3_compiler *compiler,
 		nir_print_shader(ctx->s, stdout);
 	}
 
+	if (shader_debug_enabled(so->type)) {
+		fprintf(stderr, "NIR (final form) for %s shader:\n",
+			shader_stage_name(so->type));
+		nir_print_shader(ctx->s, stderr);
+	}
+
 	ir3_nir_scan_driver_consts(ctx->s, &so->const_layout);
 
 	so->num_uniforms = ctx->s->num_uniforms;

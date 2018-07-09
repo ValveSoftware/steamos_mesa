@@ -93,6 +93,17 @@ int fd_mesa_debug = 0;
 bool fd_binning_enabled = true;
 static bool glsl120 = false;
 
+static const struct debug_named_value shader_debug_options[] = {
+		{"vs", FD_DBG_SHADER_VS, "Print shader disasm for vertex shaders"},
+		{"fs", FD_DBG_SHADER_FS, "Print shader disasm for fragment shaders"},
+		{"cs", FD_DBG_SHADER_CS, "Print shader disasm for compute shaders"},
+		DEBUG_NAMED_VALUE_END
+};
+
+DEBUG_GET_ONCE_FLAGS_OPTION(fd_shader_debug, "FD_SHADER_DEBUG", shader_debug_options, 0)
+
+enum fd_shader_debug fd_shader_debug = 0;
+
 static const char *
 fd_screen_get_name(struct pipe_screen *pscreen)
 {
@@ -783,6 +794,7 @@ fd_screen_create(struct fd_device *dev)
 	uint64_t val;
 
 	fd_mesa_debug = debug_get_option_fd_mesa_debug();
+	fd_shader_debug = debug_get_option_fd_shader_debug();
 
 	if (fd_mesa_debug & FD_DBG_NOBIN)
 		fd_binning_enabled = false;

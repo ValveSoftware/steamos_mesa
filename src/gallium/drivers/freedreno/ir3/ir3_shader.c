@@ -162,6 +162,14 @@ assemble_variant(struct ir3_shader_variant *v)
 		ir3_shader_disasm(v, bin, stdout);
 	}
 
+	if (shader_debug_enabled(v->shader->type)) {
+		fprintf(stderr, "Native code for unnamed %s shader %s:\n",
+			shader_stage_name(v->shader->type), v->shader->nir->info.name);
+		if (v->shader->type == SHADER_FRAGMENT)
+			fprintf(stderr, "SIMD0\n");
+		ir3_shader_disasm(v, bin, stderr);
+	}
+
 	free(bin);
 
 	/* no need to keep the ir around beyond this point: */
