@@ -4414,3 +4414,40 @@ void radv_CmdSetDeviceMask(VkCommandBuffer commandBuffer,
 {
    /* No-op */
 }
+
+/* VK_EXT_conditional_rendering */
+void vkCmdBeginConditionalRenderingEXT(
+	VkCommandBuffer                             commandBuffer,
+	const VkConditionalRenderingBeginInfoEXT*   pConditionalRenderingBegin)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, buffer, pConditionalRenderingBegin->buffer);
+	bool inverted;
+	uint64_t va;
+
+	va = radv_buffer_get_va(buffer->bo) + pConditionalRenderingBegin->offset;
+
+	inverted = pConditionalRenderingBegin->flags & VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT;
+
+	/* Enable predication for this command buffer. */
+	si_emit_set_predication_state(cmd_buffer, inverted, va);
+	cmd_buffer->state.predicating = true;
+
+	/* Store conditional rendering user info. */
+	cmd_buffer->state.predication_type = inverted;
+	cmd_buffer->state.predication_va = va;
+}
+
+void vkCmdEndConditionalRenderingEXT(
+	VkCommandBuffer                             commandBuffer)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+
+	/* Disable predication for this command buffer. */
+	si_emit_set_predication_state(cmd_buffer, false, 0);
+	cmd_buffer->state.predicating = false;
+
+	/* Reset conditional rendering user info. */
+	cmd_buffer->state.predication_type = -1;
+	cmd_buffer->state.predication_va = 0;
+}

@@ -982,6 +982,10 @@ struct radv_cmd_state {
 
 	/* Whether CP DMA is busy/idle. */
 	bool dma_is_busy;
+
+	/* Conditional rendering info. */
+	int predication_type; /* -1: disabled, 0: normal, 1: inverted */
+	uint64_t predication_va;
 };
 
 struct radv_cmd_pool {
