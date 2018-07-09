@@ -3255,25 +3255,23 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
                              unsigned response_length)
 {
    const struct gen_device_info *devinfo = p->devinfo;
-   struct brw_inst *insn;
    const uint16_t exec_size = brw_get_default_exec_size(p);
-   const uint16_t qtr_ctrl = brw_get_default_group(p) / 8;
+   const unsigned slot_group = brw_get_default_group(p) / 16;
+   const unsigned simd_mode = (exec_size == BRW_EXECUTE_16);
+   const unsigned desc =
+      brw_message_desc(devinfo, msg_length, response_length, false) |
+      brw_pixel_interp_desc(devinfo, mode, noperspective, simd_mode,
+                            slot_group);
 
    /* brw_send_indirect_message will automatically use a direct send message
     * if data is actually immediate.
     */
-   insn = brw_send_indirect_message(p,
-                                    GEN7_SFID_PIXEL_INTERPOLATOR,
-                                    dest,
-                                    mrf,
-                                    vec1(data), 0);
-   brw_inst_set_mlen(devinfo, insn, msg_length);
-   brw_inst_set_rlen(devinfo, insn, response_length);
-
-   brw_inst_set_pi_simd_mode(devinfo, insn, exec_size == BRW_EXECUTE_16);
-   brw_inst_set_pi_slot_group(devinfo, insn, qtr_ctrl / 2);
-   brw_inst_set_pi_nopersp(devinfo, insn, noperspective);
-   brw_inst_set_pi_message_type(devinfo, insn, mode);
+   brw_send_indirect_message(p,
+                             GEN7_SFID_PIXEL_INTERPOLATOR,
+                             dest,
+                             mrf,
+                             vec1(data),
+                             desc);
 }
 
 void

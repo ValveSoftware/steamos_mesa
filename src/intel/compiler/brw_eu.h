@@ -350,6 +350,23 @@ brw_dp_write_desc(const struct gen_device_info *devinfo,
               SET_BITS(send_commit_msg, 15, 15));
 }
 
+/**
+ * Construct a message descriptor immediate with the specified pixel
+ * interpolator function controls.
+ */
+static inline uint32_t
+brw_pixel_interp_desc(const struct gen_device_info *devinfo,
+                      unsigned msg_type,
+                      bool noperspective,
+                      unsigned simd_mode,
+                      unsigned slot_group)
+{
+   return (SET_BITS(slot_group, 11, 11) |
+           SET_BITS(msg_type, 13, 12) |
+           SET_BITS(!!noperspective, 14, 14) |
+           SET_BITS(simd_mode, 16, 16));
+}
+
 void brw_urb_WRITE(struct brw_codegen *p,
 		   struct brw_reg dest,
 		   unsigned msg_reg_nr,
