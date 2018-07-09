@@ -887,6 +887,10 @@ brw_type_for_nir_type(const struct gen_device_info *devinfo, nir_alu_type type)
       return BRW_REGISTER_TYPE_W;
    case nir_type_uint16:
       return BRW_REGISTER_TYPE_UW;
+   case nir_type_int8:
+      return BRW_REGISTER_TYPE_B;
+   case nir_type_uint8:
+      return BRW_REGISTER_TYPE_UB;
    default:
       unreachable("unknown type");
    }

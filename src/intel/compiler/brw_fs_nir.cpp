@@ -303,10 +303,13 @@ brw_reg_type_from_bit_size(const unsigned bit_size,
       default:
          unreachable("Invalid bit size");
       }
+   case BRW_REGISTER_TYPE_B:
    case BRW_REGISTER_TYPE_W:
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_Q:
       switch(bit_size) {
+      case 8:
+         return BRW_REGISTER_TYPE_B;
       case 16:
          return BRW_REGISTER_TYPE_W;
       case 32:
@@ -316,10 +319,13 @@ brw_reg_type_from_bit_size(const unsigned bit_size,
       default:
          unreachable("Invalid bit size");
       }
+   case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_UW:
    case BRW_REGISTER_TYPE_UD:
    case BRW_REGISTER_TYPE_UQ:
       switch(bit_size) {
+      case 8:
+         return BRW_REGISTER_TYPE_UB;
       case 16:
          return BRW_REGISTER_TYPE_UW;
       case 32:
@@ -1666,7 +1672,10 @@ fs_visitor::get_nir_dest(const nir_dest &dest)
 {
    if (dest.is_ssa) {
       const brw_reg_type reg_type =
-         brw_reg_type_from_bit_size(dest.ssa.bit_size, BRW_REGISTER_TYPE_F);
+         brw_reg_type_from_bit_size(dest.ssa.bit_size,
+                                    dest.ssa.bit_size == 8 ?
+                                    BRW_REGISTER_TYPE_D :
+                                    BRW_REGISTER_TYPE_F);
       nir_ssa_values[dest.ssa.index] =
          bld.vgrf(reg_type, dest.ssa.num_components);
       return nir_ssa_values[dest.ssa.index];
