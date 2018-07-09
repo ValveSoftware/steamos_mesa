@@ -571,7 +571,7 @@ radv_emit_set_predication_state_from_image(struct radv_cmd_buffer *cmd_buffer,
 		va += image->dcc_pred_offset;
 	}
 
-	si_emit_set_predication_state(cmd_buffer, va);
+	si_emit_set_predication_state(cmd_buffer, true, va);
 }
 
 /**
