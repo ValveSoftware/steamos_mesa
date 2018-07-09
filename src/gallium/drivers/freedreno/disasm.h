@@ -24,6 +24,8 @@
 #ifndef DISASM_H_
 #define DISASM_H_
 
+#include <stdio.h>
+
 enum shader_t {
 	SHADER_VERTEX,
 	SHADER_TCS,
@@ -41,7 +43,7 @@ enum debug_t {
 };
 
 int disasm_a2xx(uint32_t *dwords, int sizedwords, int level, enum shader_t type);
-int disasm_a3xx(uint32_t *dwords, int sizedwords, int level, enum shader_t type);
+int disasm_a3xx(uint32_t *dwords, int sizedwords, int level, FILE *out);
 void disasm_set_debug(enum debug_t debug);
 
 #endif /* DISASM_H_ */

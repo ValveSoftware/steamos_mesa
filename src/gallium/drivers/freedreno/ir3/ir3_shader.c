@@ -441,7 +441,9 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 				so->immediates[i].val[3]);
 	}
 
-	disasm_a3xx(bin, so->info.sizedwords, 0, so->type);
+#ifdef DEBUG
+	disasm_a3xx(bin, so->info.sizedwords, 0, stdout);
+#endif
 
 	switch (so->type) {
 	case SHADER_VERTEX:
