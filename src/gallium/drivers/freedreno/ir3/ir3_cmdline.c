@@ -56,7 +56,7 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 	const char *type = ir3_shader_stage(so->shader);
 	bin = ir3_shader_assemble(so, so->shader->compiler->gpu_id);
 	debug_printf("; %s: %s\n", type, str);
-	ir3_shader_disasm(so, bin);
+	ir3_shader_disasm(so, bin, stdout);
 	free(bin);
 }
 
