@@ -3699,6 +3699,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 	struct radv_shader_variant *compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
 	unsigned dispatch_initiator = cmd_buffer->device->dispatch_initiator;
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
+	bool predicating = cmd_buffer->state.predicating;
 	struct radeon_cmdbuf *cs = cmd_buffer->cs;
 	struct radv_userdata_info *loc;
 
@@ -3728,7 +3729,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 		}
 
 		if (radv_cmd_buffer_uses_mec(cmd_buffer)) {
-			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 2, 0) |
+			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 2, predicating) |
 					PKT3_SHADER_TYPE_S(1));
 			radeon_emit(cs, va);
 			radeon_emit(cs, va >> 32);
@@ -3740,7 +3741,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 			radeon_emit(cs, va);
 			radeon_emit(cs, va >> 32);
 
-			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
+			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, predicating) |
 					PKT3_SHADER_TYPE_S(1));
 			radeon_emit(cs, 0);
 			radeon_emit(cs, dispatch_initiator);
@@ -3810,7 +3811,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 			dispatch_initiator |= S_00B800_FORCE_START_AT_000(1);
 		}
 
-		radeon_emit(cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
+		radeon_emit(cs, PKT3(PKT3_DISPATCH_DIRECT, 3, predicating) |
 				PKT3_SHADER_TYPE_S(1));
 		radeon_emit(cs, blocks[0]);
 		radeon_emit(cs, blocks[1]);
