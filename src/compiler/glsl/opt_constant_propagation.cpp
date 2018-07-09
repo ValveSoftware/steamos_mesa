@@ -77,20 +77,6 @@ public:
 };
 
 
-class kill_entry
-{
-public:
-   /* override operator new from exec_node */
-   DECLARE_LINEAR_ZALLOC_CXX_OPERATORS(kill_entry)
-
-   explicit kill_entry(unsigned write_mask)
-   {
-      this->write_mask = write_mask;
-   }
-
-   unsigned write_mask;
-};
-
 class ir_constant_propagation_visitor : public ir_rvalue_visitor {
 public:
    ir_constant_propagation_visitor()
@@ -126,8 +112,7 @@ public:
    exec_list *acp;
 
    /**
-    * Hash table of kill_entry: The masks of variables whose values were
-    * killed in this block.
+    * Hash table of killed entries: maps variables to the mask of killed channels.
     */
    hash_table *kills;
 
@@ -381,10 +366,8 @@ ir_constant_propagation_visitor::handle_if_block(exec_list *instructions)
    this->killed_all = this->killed_all || orig_killed_all;
 
    hash_entry *htk;
-   hash_table_foreach(new_kills, htk) {
-      kill_entry *k = (kill_entry *) htk->data;
-      kill((ir_variable *) htk->key, k->write_mask);
-   }
+   hash_table_foreach(new_kills, htk)
+      kill((ir_variable *) htk->key, (uintptr_t) htk->data);
 }
 
 ir_visitor_status
@@ -429,8 +412,7 @@ ir_constant_propagation_visitor::visit_enter(ir_loop *ir)
 
    hash_entry *htk;
    hash_table_foreach(new_kills, htk) {
-      kill_entry *k = (kill_entry *) htk->data;
-      kill((ir_variable *) htk->key, k->write_mask);
+      kill((ir_variable *) htk->key, (uintptr_t) htk->data);
    }
 
    /* already descended into the children. */
@@ -460,13 +442,12 @@ ir_constant_propagation_visitor::kill(ir_variable *var, unsigned write_mask)
     */
    hash_entry *kill_hash_entry = _mesa_hash_table_search(this->kills, var);
    if (kill_hash_entry) {
-      kill_entry *entry = (kill_entry *) kill_hash_entry->data;
-      entry->write_mask |= write_mask;
+      uintptr_t new_write_mask = ((uintptr_t) kill_hash_entry->data) | write_mask;
+      kill_hash_entry->data = (void *) new_write_mask;
       return;
    }
    /* Not already in the hash table.  Make new entry. */
-   _mesa_hash_table_insert(this->kills, var,
-                           new(this->lin_ctx) kill_entry(write_mask));
+   _mesa_hash_table_insert(this->kills, var, (void *) uintptr_t(write_mask));
 }
 
 /**
