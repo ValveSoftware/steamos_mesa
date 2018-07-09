@@ -979,6 +979,9 @@ struct radv_cmd_state {
 	uint32_t last_num_instances;
 	uint32_t last_first_instance;
 	uint32_t last_vertex_offset;
+
+	/* Whether CP DMA is busy/idle. */
+	bool dma_is_busy;
 };
 
 struct radv_cmd_pool {
@@ -1091,6 +1094,8 @@ void si_cp_dma_prefetch(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
                         unsigned size);
 void si_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
 			    uint64_t size, unsigned value);
+void si_cp_dma_wait_for_idle(struct radv_cmd_buffer *cmd_buffer);
+
 void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer);
 bool
 radv_cmd_buffer_upload_alloc(struct radv_cmd_buffer *cmd_buffer,

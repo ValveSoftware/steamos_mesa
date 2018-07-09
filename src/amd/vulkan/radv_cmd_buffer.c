@@ -2596,6 +2596,11 @@ VkResult radv_EndCommandBuffer(
 		si_emit_cache_flush(cmd_buffer);
 	}
 
+	/* Make sure CP DMA is idle at the end of IBs because the kernel
+	 * doesn't wait for it.
+	 */
+	si_cp_dma_wait_for_idle(cmd_buffer);
+
 	vk_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
 
 	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs))
@@ -4242,6 +4247,11 @@ radv_barrier(struct radv_cmd_buffer *cmd_buffer,
 					     0);
 	}
 
+	/* Make sure CP DMA is idle because the driver might have performed a
+	 * DMA operation for copying or filling buffers/images.
+	 */
+	si_cp_dma_wait_for_idle(cmd_buffer);
+
 	cmd_buffer->state.flush_bits |= dst_flush_bits;
 }
 
@@ -4291,6 +4301,11 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 		top_of_pipe_flags |
 		VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
 		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	/* Make sure CP DMA is idle because the driver might have performed a
+	 * DMA operation for copying or filling buffers/images.
+	 */
+	si_cp_dma_wait_for_idle(cmd_buffer);
 
 	/* TODO: Emit EOS events for syncing PS/CS stages. */
 
