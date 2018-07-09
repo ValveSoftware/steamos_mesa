@@ -83,10 +83,6 @@ public:
    void setup_uniform_clipplane_values();
    void compute_clip_distance();
 
-   fs_inst *get_instruction_generating_reg(fs_inst *start,
-					   fs_inst *end,
-					   const fs_reg &reg);
-
    void VARYING_PULL_CONSTANT_LOAD(const brw::fs_builder &bld,
                                    const fs_reg &dst,
                                    const fs_reg &surf_index,
