@@ -35,6 +35,7 @@
  */
 
 #include "util/u_inlines.h"
+#include "util/os_time.h"
 
 #include "v3d_context.h"
 #include "v3d_bufmgr.h"
@@ -70,7 +71,11 @@ v3d_fence_finish(struct pipe_screen *pscreen,
         struct v3d_screen *screen = v3d_screen(pscreen);
         struct v3d_fence *f = (struct v3d_fence *)pf;
 
-        return drmSyncobjWait(screen->fd, &f->sync, 1, timeout_ns, 0, NULL) >= 0;
+        uint64_t abs_timeout = os_time_get_absolute_timeout(timeout_ns);
+        if (abs_timeout == OS_TIMEOUT_INFINITE)
+                abs_timeout = INT64_MAX;
+        return drmSyncobjWait(screen->fd, &f->sync, 1, abs_timeout,
+                              0, NULL) >= 0;
 }
 
 struct v3d_fence *
