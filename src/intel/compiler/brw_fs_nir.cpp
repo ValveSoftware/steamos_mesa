@@ -834,6 +834,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_u2u16:
    case nir_op_i2f16:
    case nir_op_u2f16:
+   case nir_op_i2i8:
+   case nir_op_u2u8:
       inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
