@@ -1088,7 +1088,7 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       obj->relocs_ptr = 0;
       obj->alignment = 0;
       obj->offset = bo->offset;
-      obj->flags = bo->flags | extra_flags;
+      obj->flags = (bo->flags & ~ANV_BO_FLAG_MASK) | extra_flags;
       obj->rsvd1 = 0;
       obj->rsvd2 = 0;
    }

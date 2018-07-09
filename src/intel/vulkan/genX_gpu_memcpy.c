@@ -167,11 +167,10 @@ genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
          .AddressModifyEnable = true,
          .BufferStartingAddress = src,
          .BufferPitch = bs,
+         .VertexBufferMOCS = anv_mocs_for_bo(cmd_buffer->device, src.bo),
 #if (GEN_GEN >= 8)
-         .MemoryObjectControlState = GENX(MOCS),
          .BufferSize = size,
 #else
-         .VertexBufferMemoryObjectControlState = GENX(MOCS),
          .EndAddress = anv_address_add(src, size - 1),
 #endif
       });
@@ -228,7 +227,7 @@ genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_SO_BUFFER), sob) {
       sob.SOBufferIndex = 0;
-      sob.SOBufferObjectControlState = GENX(MOCS);
+      sob.SOBufferMOCS = anv_mocs_for_bo(cmd_buffer->device, dst.bo),
       sob.SurfaceBaseAddress = dst;
 
 #if GEN_GEN >= 8

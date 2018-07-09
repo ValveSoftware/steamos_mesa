@@ -246,7 +246,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
          ib.CutIndexEnable             = pipeline->primitive_restart;
 #endif
          ib.IndexFormat                = cmd_buffer->state.gfx.gen7.index_type;
-         ib.MemoryObjectControlState   = GENX(MOCS);
+         ib.IndexBufferMOCS            = anv_mocs_for_bo(cmd_buffer->device,
+                                                         buffer->address.bo);
 
          ib.BufferStartingAddress      = anv_address_add(buffer->address,
                                                          offset);

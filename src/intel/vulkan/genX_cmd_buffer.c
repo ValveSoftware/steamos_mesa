@@ -2546,12 +2546,11 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          struct GENX(VERTEX_BUFFER_STATE) state = {
             .VertexBufferIndex = vb,
 
-#if GEN_GEN >= 8
-            .MemoryObjectControlState = GENX(MOCS),
-#else
+            .VertexBufferMOCS = anv_mocs_for_bo(cmd_buffer->device,
+                                                buffer->address.bo),
+#if GEN_GEN <= 7
             .BufferAccessType = pipeline->vb[vb].instanced ? INSTANCEDATA : VERTEXDATA,
             .InstanceDataStepRate = pipeline->vb[vb].instance_divisor,
-            .VertexBufferMemoryObjectControlState = GENX(MOCS),
 #endif
 
             .AddressModifyEnable = true,
@@ -2666,12 +2665,11 @@ emit_vertex_bo(struct anv_cmd_buffer *cmd_buffer,
          .VertexBufferIndex = index,
          .AddressModifyEnable = true,
          .BufferPitch = 0,
+         .VertexBufferMOCS = anv_mocs_for_bo(cmd_buffer->device, addr.bo),
 #if (GEN_GEN >= 8)
-         .MemoryObjectControlState = GENX(MOCS),
          .BufferStartingAddress = addr,
          .BufferSize = size
 #else
-         .VertexBufferMemoryObjectControlState = GENX(MOCS),
          .BufferStartingAddress = addr,
          .EndAddress = anv_address_add(addr, size),
 #endif
@@ -3423,9 +3421,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (dw == NULL)
       return;
 
-   struct isl_depth_stencil_hiz_emit_info info = {
-      .mocs = device->default_mocs,
-   };
+   struct isl_depth_stencil_hiz_emit_info info = { };
 
    if (iview)
       info.view = &iview->planes[0].isl;
@@ -3443,6 +3439,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
                               image->planes[depth_plane].address.bo,
                               image->planes[depth_plane].address.offset +
                               surface->offset);
+      info.mocs =
+         anv_mocs_for_bo(device, image->planes[depth_plane].address.bo);
 
       const uint32_t ds =
          cmd_buffer->state.subpass->depth_stencil_attachment->attachment;
@@ -3474,6 +3472,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
                               image->planes[stencil_plane].address.bo,
                               image->planes[stencil_plane].address.offset +
                               surface->offset);
+      info.mocs =
+         anv_mocs_for_bo(device, image->planes[stencil_plane].address.bo);
    }
 
    isl_emit_depth_stencil_hiz_s(&device->isl_dev, dw, &info);
