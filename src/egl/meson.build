@@ -93,7 +93,6 @@ if with_dri2
   )
   c_args_for_egl += [
     '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_search_path),
-    '-D_EGL_BUILT_IN_DRIVER_DRI2',
   ]
 endif
 
