@@ -4284,7 +4284,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             write_src = shuffle_for_32bit_write(bld, write_src, 0,
                                                 num_components);
          } else if (type_size < 4) {
-            assert(type_size == 2);
             /* For 16-bit types we pack two consecutive values into a 32-bit
              * word and use an untyped write message. For single values or not
              * 32-bit-aligned we need to use byte-scattered writes because
@@ -4308,12 +4307,15 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                 * being aligned to 32-bit.
                 */
                num_components = 1;
-            } else if (num_components > 2 && (num_components % 2)) {
-               /* If there is an odd number of consecutive components we left
-                * the not paired component for a following emit of length == 1
-                * with byte_scattered_write.
+            } else if (num_components * type_size > 4 &&
+                       (num_components * type_size % 4)) {
+               /* If the pending components size is not a multiple of 4 bytes
+                * we left the not aligned components for following emits of
+                * length == 1 with byte_scattered_write.
                 */
-               num_components --;
+               num_components -= (num_components * type_size % 4) / type_size;
+            } else if (num_components * type_size < 4) {
+               num_components = 1;
             }
             /* For num_components == 1 we are also shuffling the component
              * because byte scattered writes of 16-bit need values to be dword
@@ -4337,7 +4339,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          }
 
          if (type_size < 4 && num_components == 1) {
-            assert(type_size == 2);
             /* Untyped Surface messages have a fixed 32-bit size, so we need
              * to rely on byte scattered in order to write 16-bit elements.
              * The byte_scattered_write message needs that every written 16-bit
