@@ -1040,7 +1040,6 @@ struct radv_cmd_buffer {
 
 	VkResult record_result;
 
-	int ring_offsets_idx; /* just used for verification */
 	uint32_t gfx9_fence_offset;
 	struct radeon_winsys_bo *gfx9_fence_bo;
 	uint32_t gfx9_fence_idx;

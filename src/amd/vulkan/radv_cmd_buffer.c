@@ -310,8 +310,6 @@ radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 
 	cmd_buffer->record_result = VK_SUCCESS;
 
-	cmd_buffer->ring_offsets_idx = -1;
-
 	for (unsigned i = 0; i < VK_PIPELINE_BIND_POINT_RANGE_SIZE; i++) {
 		cmd_buffer->descriptors[i].dirty = 0;
 		cmd_buffer->descriptors[i].valid = 0;
@@ -2699,15 +2697,6 @@ void radv_CmdBindPipeline(
 
 		if (radv_pipeline_has_tess(pipeline))
 			cmd_buffer->tess_rings_needed = true;
-
-		if (radv_pipeline_has_gs(pipeline)) {
-			struct radv_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_GEOMETRY,
-									     AC_UD_SCRATCH_RING_OFFSETS);
-			if (cmd_buffer->ring_offsets_idx == -1)
-				cmd_buffer->ring_offsets_idx = loc->sgpr_idx;
-			else if (loc->sgpr_idx != -1)
-				assert(loc->sgpr_idx == cmd_buffer->ring_offsets_idx);
-		}
 		break;
 	default:
 		assert(!"invalid bind point");
@@ -2895,12 +2884,6 @@ void radv_CmdExecuteCommands(
 		if (secondary->sample_positions_needed)
 			primary->sample_positions_needed = true;
 
-		if (secondary->ring_offsets_idx != -1) {
-			if (primary->ring_offsets_idx == -1)
-				primary->ring_offsets_idx = secondary->ring_offsets_idx;
-			else
-				assert(secondary->ring_offsets_idx == primary->ring_offsets_idx);
-		}
 		primary->device->ws->cs_execute_secondary(primary->cs, secondary->cs);
 
 
