@@ -218,6 +218,7 @@ transfer_map_msaa(struct pipe_context *pctx,
       return NULL;
    }
 
+   ptrans->stride = trans->trans->stride;
    *pptrans = ptrans;
    return ss_map;
 }
