@@ -2401,9 +2401,8 @@ radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 
 	radv_set_descriptor_set(cmd_buffer, bind_point, set, idx);
-	if (!set)
-		return;
 
+	assert(set);
 	assert(!(set->layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR));
 
 	if (!cmd_buffer->device->use_global_bo_list) {
