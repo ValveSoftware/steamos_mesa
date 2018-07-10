@@ -305,7 +305,7 @@ radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 
 	if (cmd_buffer->upload.upload_bo)
 		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
-				   cmd_buffer->upload.upload_bo, 8);
+				   cmd_buffer->upload.upload_bo);
 	cmd_buffer->upload.offset = 0;
 
 	cmd_buffer->record_result = VK_SUCCESS;
@@ -365,7 +365,7 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 		return false;
 	}
 
-	radv_cs_add_buffer(device->ws, cmd_buffer->cs, bo, 8);
+	radv_cs_add_buffer(device->ws, cmd_buffer->cs, bo);
 	if (cmd_buffer->upload.upload_bo) {
 		upload = malloc(sizeof(*upload));
 
@@ -872,12 +872,12 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 			continue;
 
 		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
-				   pipeline->shaders[i]->bo, 8);
+				   pipeline->shaders[i]->bo);
 	}
 
 	if (radv_pipeline_has_gs(pipeline))
 		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
-				   pipeline->gs_copy_shader->bo, 8);
+				   pipeline->gs_copy_shader->bo);
 
 	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_save_pipeline(cmd_buffer, pipeline, RING_GFX);
@@ -1459,7 +1459,7 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		struct radv_image *image = att->attachment->image;
 		VkImageLayout layout = subpass->color_attachments[i].layout;
 
-		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, att->attachment->bo, 8);
+		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, att->attachment->bo);
 
 		assert(att->attachment->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT);
 		radv_emit_fb_color_state(cmd_buffer, i, att, image, layout);
@@ -1472,7 +1472,7 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		VkImageLayout layout = subpass->depth_stencil_attachment.layout;
 		struct radv_attachment_info *att = &framebuffer->attachments[idx];
 		struct radv_image *image = att->attachment->image;
-		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, att->attachment->bo, 8);
+		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, att->attachment->bo);
 		MAYBE_UNUSED uint32_t queue_mask = radv_image_queue_family_mask(image,
 										cmd_buffer->queue_family_index,
 										cmd_buffer->queue_family_index);
@@ -2249,7 +2249,7 @@ static void emit_gfx_buffer_state(struct radv_cmd_buffer *cmd_buffer)
 	struct radv_device *device = cmd_buffer->device;
 	if (device->gfx_init) {
 		uint64_t va = radv_buffer_get_va(device->gfx_init);
-		radv_cs_add_buffer(device->ws, cmd_buffer->cs, device->gfx_init, 8);
+		radv_cs_add_buffer(device->ws, cmd_buffer->cs, device->gfx_init);
 		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
 		radeon_emit(cmd_buffer->cs, va);
 		radeon_emit(cmd_buffer->cs, va >> 32);
@@ -2317,7 +2317,7 @@ VkResult radv_BeginCommandBuffer(
 		struct radv_device *device = cmd_buffer->device;
 
 		radv_cs_add_buffer(device->ws, cmd_buffer->cs,
-				   device->trace_bo, 8);
+				   device->trace_bo);
 
 		radv_cmd_buffer_trace_emit(cmd_buffer);
 	}
@@ -2355,7 +2355,7 @@ void radv_CmdBindVertexBuffers(
 		vb[idx].offset = pOffsets[i];
 
 		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
-				   vb[idx].buffer->bo, 8);
+				   vb[idx].buffer->bo);
 	}
 
 	if (!changed) {
@@ -2391,7 +2391,7 @@ void radv_CmdBindIndexBuffer(
 	int index_size_shift = cmd_buffer->state.index_type ? 2 : 1;
 	cmd_buffer->state.max_index_count = (index_buffer->size - offset) >> index_size_shift;
 	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
-	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, index_buffer->bo, 8);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, index_buffer->bo);
 }
 
 
@@ -2411,11 +2411,11 @@ radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 	if (!cmd_buffer->device->use_global_bo_list) {
 		for (unsigned j = 0; j < set->layout->buffer_count; ++j)
 			if (set->descriptors[j])
-				radv_cs_add_buffer(ws, cmd_buffer->cs, set->descriptors[j], 7);
+				radv_cs_add_buffer(ws, cmd_buffer->cs, set->descriptors[j]);
 	}
 
 	if(set->bo)
-		radv_cs_add_buffer(ws, cmd_buffer->cs, set->bo, 8);
+		radv_cs_add_buffer(ws, cmd_buffer->cs, set->bo);
 }
 
 void radv_CmdBindDescriptorSets(
@@ -2639,7 +2639,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
 
 	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
-			   pipeline->shaders[MESA_SHADER_COMPUTE]->bo, 8);
+			   pipeline->shaders[MESA_SHADER_COMPUTE]->bo);
 
 	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_save_pipeline(cmd_buffer, pipeline, RING_COMPUTE);
@@ -3252,7 +3252,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 
 		va += info->indirect->offset + info->indirect_offset;
 
-		radv_cs_add_buffer(ws, cs, info->indirect->bo, 8);
+		radv_cs_add_buffer(ws, cs, info->indirect->bo);
 
 		radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
 		radeon_emit(cs, 1);
@@ -3264,7 +3264,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 			count_va += info->count_buffer->offset +
 				    info->count_buffer_offset;
 
-			radv_cs_add_buffer(ws, cs, info->count_buffer->bo, 8);
+			radv_cs_add_buffer(ws, cs, info->count_buffer->bo);
 		}
 
 		if (!state->subpass->view_mask) {
@@ -3724,7 +3724,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 
 		va += info->indirect->offset + info->indirect_offset;
 
-		radv_cs_add_buffer(ws, cs, info->indirect->bo, 8);
+		radv_cs_add_buffer(ws, cs, info->indirect->bo);
 
 		if (loc->sgpr_idx != -1) {
 			for (unsigned i = 0; i < 3; ++i) {
@@ -4236,7 +4236,7 @@ radv_barrier(struct radv_cmd_buffer *cmd_buffer,
 		RADV_FROM_HANDLE(radv_event, event, info->pEvents[i]);
 		uint64_t va = radv_buffer_get_va(event->bo);
 
-		radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo, 8);
+		radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo);
 
 		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
 
@@ -4322,7 +4322,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_cmdbuf *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(event->bo);
 
-	radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo, 8);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cs, event->bo);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 18);
 

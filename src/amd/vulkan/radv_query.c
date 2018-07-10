@@ -956,8 +956,8 @@ void radv_CmdCopyQueryPoolResults(
 	uint64_t dest_va = radv_buffer_get_va(dst_buffer->bo);
 	dest_va += dst_buffer->offset + dstOffset;
 
-	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, pool->bo, 8);
-	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, dst_buffer->bo, 8);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, pool->bo);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, dst_buffer->bo);
 
 	switch (pool->type) {
 	case VK_QUERY_TYPE_OCCLUSION:
@@ -1199,7 +1199,7 @@ void radv_CmdBeginQuery(
 	struct radeon_cmdbuf *cs = cmd_buffer->cs;
 	uint64_t va = radv_buffer_get_va(pool->bo);
 
-	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 8);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo);
 
 	if (cmd_buffer->pending_reset_query) {
 		if (pool->size >= RADV_BUFFER_OPS_CS_THRESHOLD) {
@@ -1270,7 +1270,7 @@ void radv_CmdWriteTimestamp(
 	uint64_t avail_va = va + pool->availability_offset + 4 * query;
 	uint64_t query_va = va + pool->stride * query;
 
-	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 5);
+	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo);
 
 	int num_queries = 1;
 	if (cmd_buffer->state.subpass && cmd_buffer->state.subpass->view_mask)
