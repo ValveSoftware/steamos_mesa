@@ -29,7 +29,7 @@
 #include "pipe/p_config.h"
 #include "os/os_process.h"
 #include "util/u_memory.h"
-#include "util/process.h"
+#include "util/u_process.h"
 
 #if defined(PIPE_SUBSYSTEM_WINDOWS_USER)
 #  include <windows.h>

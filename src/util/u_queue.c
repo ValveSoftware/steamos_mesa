@@ -31,7 +31,7 @@
 #include "util/os_time.h"
 #include "util/u_string.h"
 #include "util/u_thread.h"
-#include "process.h"
+#include "u_process.h"
 
 static void util_queue_killall_and_wait(struct util_queue *queue);
 
