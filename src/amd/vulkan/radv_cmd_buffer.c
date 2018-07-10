@@ -528,10 +528,8 @@ void radv_set_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 		radv_get_descriptors_state(cmd_buffer, bind_point);
 
 	descriptors_state->sets[idx] = set;
-	if (set)
-		descriptors_state->valid |= (1u << idx);
-	else
-		descriptors_state->valid &= ~(1u << idx);
+
+	descriptors_state->valid |= (1u << idx); /* active descriptors */
 	descriptors_state->dirty |= (1u << idx);
 }
 
