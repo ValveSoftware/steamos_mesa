@@ -339,7 +339,14 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   key->nr_color_regions = pipeline->subpass->color_count;
+   assert(pipeline->subpass->color_count <= MAX_RTS);
+   for (uint32_t i = 0; i < pipeline->subpass->color_count; i++) {
+      if (pipeline->subpass->color_attachments[i].attachment !=
+          VK_ATTACHMENT_UNUSED)
+         key->color_outputs_valid |= (1 << i);
+   }
+
+   key->nr_color_regions = _mesa_bitcount(key->color_outputs_valid);
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
                           info->pMultisampleState &&
@@ -904,8 +911,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
             continue;
 
          const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
-         /* Out-of-bounds */
-         if (rt >= key.nr_color_regions)
+         /* Unused or out-of-bounds */
+         if (rt >= MAX_RTS || !(key.color_outputs_valid & (1 << rt)))
             continue;
 
          const unsigned array_len =
@@ -936,8 +943,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
             continue;
 
          const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
-         if (rt >= key.nr_color_regions) {
-            /* Out-of-bounds, throw it away */
+         if (rt >= MAX_RTS || !(key.color_outputs_valid & (1 << rt))) {
+            /* Unused or out-of-bounds, throw it away */
             deleted_output = true;
             var->data.mode = nir_var_local;
             exec_node_remove(&var->node);
@@ -967,6 +974,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
        * the key accordingly.
        */
       key.nr_color_regions = num_rts;
+      key.color_outputs_valid = (1 << num_rts) - 1;
 
       assert(num_rts <= max_rt);
       map.surface_to_descriptor -= num_rts;
