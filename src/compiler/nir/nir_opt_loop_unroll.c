@@ -575,8 +575,16 @@ nir_opt_loop_unroll_impl(nir_function_impl *impl,
                                 &has_nested_loop);
    }
 
-   if (progress)
+   if (progress) {
       nir_lower_regs_to_ssa_impl(impl);
+
+      /* Calling nir_convert_loop_to_lcssa() adds extra phi nodes which may
+       * not be valid if they're used for something such as a deref.
+       *  Remove any unneeded phis.
+       */
+      nir_copy_prop(impl->function->shader);
+      nir_opt_remove_phis_impl(impl);
+   }
 
    return progress;
 }
