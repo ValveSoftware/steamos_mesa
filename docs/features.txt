@@ -381,16 +381,21 @@ Vulkan 1.1 -- all DONE: anv, radv
   VK_KHR_variable_pointers                              DONE (anv, radv)
 
 Khronos extensions that are not part of any Vulkan version:
+  VK_KHR_8bit_storage                                   DONE (anv)
   VK_KHR_android_surface                                not started
+  VK_KHR_create_renderpass2                             DONE (anv, radv)
   VK_KHR_display                                        DONE (anv, radv)
   VK_KHR_display_swapchain                              DONE (anv, radv)
+  VK_KHR_draw_indirect_count                            DONE (radv)
   VK_KHR_external_fence_fd                              DONE (anv, radv)
   VK_KHR_external_fence_win32                           not started
   VK_KHR_external_memory_fd                             DONE (anv, radv)
   VK_KHR_external_memory_win32                          not started
   VK_KHR_external_semaphore_fd                          DONE (anv, radv)
   VK_KHR_external_semaphore_win32                       not started
+  VK_KHR_get_display_properties2                        DONE (anv, radv)
   VK_KHR_get_surface_capabilities2                      DONE (anv, radv)
+  VK_KHR_image_format_list                              DONE (anv, radv)
   VK_KHR_incremental_present                            DONE (anv, radv)
   VK_KHR_mir_surface                                    not started
   VK_KHR_push_descriptor                                DONE (anv, radv)
