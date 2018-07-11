@@ -831,9 +831,25 @@ anv_pipeline_compile_fs(const struct brw_compiler *compiler,
    fs_stage->key.wm.input_slots_valid =
       prev_stage->prog_data.vue.vue_map.slots_valid;
 
-   return brw_compile_fs(compiler, NULL, mem_ctx, &fs_stage->key.wm,
-                         &fs_stage->prog_data.wm, fs_stage->nir,
-                         NULL, -1, -1, -1, true, false, NULL, NULL);
+   const unsigned *code =
+      brw_compile_fs(compiler, NULL, mem_ctx, &fs_stage->key.wm,
+                     &fs_stage->prog_data.wm, fs_stage->nir,
+                     NULL, -1, -1, -1, true, false, NULL, NULL);
+
+   if (fs_stage->key.wm.nr_color_regions == 0 &&
+       !fs_stage->prog_data.wm.has_side_effects &&
+       !fs_stage->prog_data.wm.uses_kill &&
+       fs_stage->prog_data.wm.computed_depth_mode == BRW_PSCDEPTH_OFF &&
+       !fs_stage->prog_data.wm.computed_stencil) {
+      /* This fragment shader has no outputs and no side effects.  Go ahead
+       * and return the code pointer so we don't accidentally think the
+       * compile failed but zero out prog_data which will set program_size to
+       * zero and disable the stage.
+       */
+      memset(&fs_stage->prog_data, 0, sizeof(fs_stage->prog_data));
+   }
+
+   return code;
 }
 
 static VkResult
@@ -915,7 +931,7 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
 
    if (found == __builtin_popcount(pipeline->active_stages)) {
       /* We found all our shaders in the cache.  We're done. */
-      return VK_SUCCESS;
+      goto done;
    } else if (found > 0) {
       /* We found some but not all of our shaders.  This shouldn't happen
        * most of the time but it can if we have a partially populated
@@ -1056,6 +1072,19 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
    }
 
    ralloc_free(pipeline_ctx);
+
+done:
+
+   if (pipeline->shaders[MESA_SHADER_FRAGMENT] &&
+       pipeline->shaders[MESA_SHADER_FRAGMENT]->prog_data->program_size == 0) {
+      /* This can happen if we decided to implicitly disable the fragment
+       * shader.  See anv_pipeline_compile_fs().
+       */
+      anv_shader_bin_unref(pipeline->device,
+                           pipeline->shaders[MESA_SHADER_FRAGMENT]);
+      pipeline->shaders[MESA_SHADER_FRAGMENT] = NULL;
+      pipeline->active_stages &= ~VK_SHADER_STAGE_FRAGMENT_BIT;
+   }
 
    return VK_SUCCESS;
 
