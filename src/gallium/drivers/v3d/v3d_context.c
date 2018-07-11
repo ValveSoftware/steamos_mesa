@@ -164,6 +164,7 @@ v3d_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
         v3d->blitter = util_blitter_create(pctx);
         if (!v3d->blitter)
                 goto fail;
+        v3d->blitter->use_index_buffer = true;
 
         v3d->primconvert = util_primconvert_create(pctx,
                                                    (1 << PIPE_PRIM_QUADS) - 1);
