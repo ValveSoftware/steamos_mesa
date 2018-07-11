@@ -1213,7 +1213,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       set_mode_system_value(b, mode);
       break;
    default:
-      vtn_fail("unsupported builtin");
+      vtn_fail("unsupported builtin: %u", builtin);
    }
 }
 
