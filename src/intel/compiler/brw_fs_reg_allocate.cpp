@@ -549,7 +549,7 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
    if (devinfo->gen >= 7)
       node_count += BRW_MAX_GRF - GEN7_MRF_HACK_START;
    int grf127_send_hack_node = node_count;
-   if (devinfo->gen >= 8 && dispatch_width == 8)
+   if (devinfo->gen >= 8)
       node_count ++;
    struct ra_graph *g =
       ra_alloc_interference_graph(compiler->fs_reg_sets[rsi].regs, node_count);
@@ -656,7 +656,7 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
       }
    }
 
-   if (devinfo->gen >= 8 && dispatch_width == 8) {
+   if (devinfo->gen >= 8) {
       /* At Intel Broadwell PRM, vol 07, section "Instruction Set Reference",
        * subsection "EUISA Instructions", Send Message (page 990):
        *
@@ -671,9 +671,26 @@ fs_visitor::assign_regs(bool allow_spilling, bool spill_all)
        * overlap between sources and destination.
        */
       ra_set_node_reg(g, grf127_send_hack_node, 127);
-      foreach_block_and_inst(block, fs_inst, inst, cfg) {
-         if (inst->is_send_from_grf() && inst->dst.file == VGRF) {
-            ra_add_node_interference(g, inst->dst.nr, grf127_send_hack_node);
+      if (dispatch_width == 8) {
+         foreach_block_and_inst(block, fs_inst, inst, cfg) {
+            if (inst->is_send_from_grf() && inst->dst.file == VGRF)
+               ra_add_node_interference(g, inst->dst.nr, grf127_send_hack_node);
+         }
+      }
+
+      if (spilled_any_registers) {
+         foreach_block_and_inst(block, fs_inst, inst, cfg) {
+            /* Spilling instruction are genereated as SEND messages from MRF
+             * but as Gen7+ supports sending from GRF the driver will maps
+             * assingn these MRF registers to a GRF. Implementations reuses
+             * the dest of the send message as source. So as we will have an
+             * overlap for sure, we create an interference between destination
+             * and grf127.
+             */
+            if ((inst->opcode == SHADER_OPCODE_GEN7_SCRATCH_READ ||
+                 inst->opcode == SHADER_OPCODE_GEN4_SCRATCH_READ) &&
+                inst->dst.file == VGRF)
+               ra_add_node_interference(g, inst->dst.nr, grf127_send_hack_node);
          }
       }
    }
