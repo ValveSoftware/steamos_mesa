@@ -44,14 +44,15 @@ is_send(uint32_t opcode)
 }
 
 static int
-gen_disasm_find_end(struct gen_disasm *disasm, void *assembly, int start)
+gen_disasm_find_end(struct gen_disasm *disasm,
+                    const void *assembly, int start)
 {
    struct gen_device_info *devinfo = &disasm->devinfo;
    int offset = start;
 
    /* This loop exits when send-with-EOT or when opcode is 0 */
    while (true) {
-      brw_inst *insn = assembly + offset;
+      const brw_inst *insn = assembly + offset;
 
       if (brw_inst_cmpt_control(devinfo, insn)) {
          offset += 8;
@@ -70,7 +71,7 @@ gen_disasm_find_end(struct gen_disasm *disasm, void *assembly, int start)
 }
 
 void
-gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly,
+gen_disasm_disassemble(struct gen_disasm *disasm, const void *assembly,
                        int start, FILE *out)
 {
    struct gen_device_info *devinfo = &disasm->devinfo;
