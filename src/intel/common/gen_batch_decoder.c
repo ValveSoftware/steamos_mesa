@@ -128,13 +128,13 @@ static void
 ctx_disassemble_program(struct gen_batch_decode_ctx *ctx,
                         uint32_t ksp, const char *type)
 {
-   if (!ctx->instruction_base.map)
+   uint64_t addr = ctx->instruction_base.addr + ksp;
+   struct gen_batch_decode_bo bo = ctx_get_bo(ctx, addr);
+   if (!bo.map)
       return;
 
-   printf("\nReferenced %s:\n", type);
-   gen_disasm_disassemble(ctx->disasm,
-                          (void *)ctx->instruction_base.map, ksp,
-                          ctx->fp);
+   fprintf(ctx->fp, "\nReferenced %s:\n", type);
+   gen_disasm_disassemble(ctx->disasm, bo.map, 0, ctx->fp);
 }
 
 /* Heuristic to determine whether a uint32_t is probably actually a float
@@ -225,35 +225,30 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
    if (count < 0)
       count = update_count(ctx, offset, 1, 8);
 
-   if (ctx->surface_base.map == NULL) {
-      fprintf(ctx->fp, "  binding table unavailable\n");
-      return;
-   }
-
-   if (offset % 32 != 0 || offset >= UINT16_MAX ||
-       offset >= ctx->surface_base.size) {
+   if (offset % 32 != 0 || offset >= UINT16_MAX) {
       fprintf(ctx->fp, "  invalid binding table pointer\n");
       return;
    }
 
-   struct gen_batch_decode_bo bo = ctx->surface_base;
-   const uint32_t *pointers = ctx->surface_base.map + offset;
+   struct gen_batch_decode_bo bind_bo =
+      ctx_get_bo(ctx, ctx->surface_base.addr + offset);
+
+   if (bind_bo.map == NULL) {
+      fprintf(ctx->fp, "  binding table unavailable\n");
+      return;
+   }
+
+   const uint32_t *pointers = bind_bo.map;
    for (int i = 0; i < count; i++) {
       if (pointers[i] == 0)
          continue;
 
-      if (pointers[i] % 32 != 0) {
-         fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
-         continue;
-      }
-
       uint64_t addr = ctx->surface_base.addr + pointers[i];
+      struct gen_batch_decode_bo bo = ctx_get_bo(ctx, addr);
       uint32_t size = strct->dw_length * 4;
 
-      if (addr < bo.addr || addr + size >= bo.addr + bo.size)
-         bo = ctx->get_bo(ctx->user_data, addr);
-
-      if (addr < bo.addr || addr + size >= bo.addr + bo.size) {
+      if (pointers[i] % 32 != 0 ||
+          addr < bo.addr || addr + size >= bo.addr + bo.size) {
          fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
          continue;
       }
@@ -271,18 +266,20 @@ dump_samplers(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
    if (count < 0)
       count = update_count(ctx, offset, strct->dw_length, 4);
 
-   if (ctx->dynamic_base.map == NULL) {
+   uint64_t state_addr = ctx->dynamic_base.addr + offset;
+   struct gen_batch_decode_bo bo = ctx_get_bo(ctx, state_addr);
+   const void *state_map = bo.map;
+
+   if (state_map == NULL) {
       fprintf(ctx->fp, "  samplers unavailable\n");
       return;
    }
 
-   if (offset % 32 != 0 || offset >= ctx->dynamic_base.size) {
+   if (offset % 32 != 0 || state_addr - bo.addr >= bo.size) {
       fprintf(ctx->fp, "  invalid sampler state pointer\n");
       return;
    }
 
-   uint64_t state_addr = ctx->dynamic_base.addr + offset;
-   const void *state_map = ctx->dynamic_base.map + offset;
    for (int i = 0; i < count; i++) {
       fprintf(ctx->fp, "sampler state %d\n", i);
       ctx_print_group(ctx, strct, state_addr, state_map);
@@ -295,9 +292,6 @@ static void
 handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
                                        const uint32_t *p)
 {
-   if (ctx->dynamic_base.map == NULL)
-      return;
-
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
    struct gen_group *desc =
       gen_spec_find_struct(ctx->spec, "INTERFACE_DESCRIPTOR_DATA");
@@ -316,7 +310,14 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
    }
 
    uint64_t desc_addr = ctx->dynamic_base.addr + descriptor_offset;
-   const uint32_t *desc_map = ctx->dynamic_base.map + descriptor_offset;
+   struct gen_batch_decode_bo bo = ctx_get_bo(ctx, desc_addr);
+   const void *desc_map = bo.map;
+
+   if (desc_map == NULL) {
+      fprintf(ctx->fp, "  interface descriptors unavailable\n");
+      return;
+   }
+
    for (int i = 0; i < descriptor_count; i++) {
       fprintf(ctx->fp, "descriptor %d: %08x\n", i, descriptor_offset);
 
@@ -640,11 +641,6 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
                               const char *struct_type, const uint32_t *p,
                               int count)
 {
-   if (ctx->dynamic_base.map == NULL) {
-      fprintf(ctx->fp, "  dynamic %s state unavailable\n", struct_type);
-      return;
-   }
-
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
    struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
 
@@ -659,8 +655,15 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
       }
    }
 
-   uint32_t state_addr = ctx->dynamic_base.addr + state_offset;
-   const uint32_t *state_map = ctx->dynamic_base.map + state_offset;
+   uint64_t state_addr = ctx->dynamic_base.addr + state_offset;
+   struct gen_batch_decode_bo bo = ctx_get_bo(ctx, state_addr);
+   const void *state_map = bo.map;
+
+   if (state_map == NULL) {
+      fprintf(ctx->fp, "  dynamic %s state unavailable\n", struct_type);
+      return;
+   }
+
    for (int i = 0; i < count; i++) {
       fprintf(ctx->fp, "%s %d\n", struct_type, i);
       ctx_print_group(ctx, state, state_offset, state_map);
