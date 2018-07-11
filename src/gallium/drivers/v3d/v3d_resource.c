@@ -281,7 +281,7 @@ v3d_resource_transfer_map(struct pipe_context *pctx,
                 return trans->map;
         } else {
                 ptrans->stride = slice->stride;
-                ptrans->layer_stride = ptrans->stride;
+                ptrans->layer_stride = rsc->cube_map_stride;
 
                 return buf + slice->offset +
                         ptrans->box.y * ptrans->stride +
