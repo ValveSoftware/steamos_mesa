@@ -319,11 +319,21 @@ radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 	}
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		unsigned num_db = cmd_buffer->device->physical_device->rad_info.num_render_backends;
+		unsigned eop_bug_offset;
 		void *fence_ptr;
+
 		radv_cmd_buffer_upload_alloc(cmd_buffer, 8, 0,
 					     &cmd_buffer->gfx9_fence_offset,
 					     &fence_ptr);
 		cmd_buffer->gfx9_fence_bo = cmd_buffer->upload.upload_bo;
+
+		/* Allocate a buffer for the EOP bug on GFX9. */
+		radv_cmd_buffer_upload_alloc(cmd_buffer, 16 * num_db, 0,
+					     &eop_bug_offset, &fence_ptr);
+		cmd_buffer->gfx9_eop_bug_va =
+			radv_buffer_get_va(cmd_buffer->upload.upload_bo);
+		cmd_buffer->gfx9_eop_bug_va += eop_bug_offset;
 	}
 
 	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_INITIAL;
@@ -473,7 +483,7 @@ radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer,
 				       cmd_buffer->device->physical_device->rad_info.chip_class,
 				       ptr, va,
 				       radv_cmd_buffer_uses_mec(cmd_buffer),
-				       flags);
+				       flags, cmd_buffer->gfx9_eop_bug_va);
 	}
 
 	if (unlikely(cmd_buffer->device->trace_bo))
@@ -4357,7 +4367,8 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 					   cmd_buffer->device->physical_device->rad_info.chip_class,
 					   radv_cmd_buffer_uses_mec(cmd_buffer),
 					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
-					   EOP_DATA_SEL_VALUE_32BIT, va, 2, value);
+					   EOP_DATA_SEL_VALUE_32BIT, va, 2, value,
+					   cmd_buffer->gfx9_eop_bug_va);
 	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);

@@ -1180,7 +1180,8 @@ static void emit_end_query(struct radv_cmd_buffer *cmd_buffer,
 					   radv_cmd_buffer_uses_mec(cmd_buffer),
 					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 					   EOP_DATA_SEL_VALUE_32BIT,
-					   avail_va, 0, 1);
+					   avail_va, 0, 1,
+					   cmd_buffer->gfx9_eop_bug_va);
 		break;
 	default:
 		unreachable("ending unhandled query type");
@@ -1303,13 +1304,15 @@ void radv_CmdWriteTimestamp(
 						   mec,
 						   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 						   EOP_DATA_SEL_TIMESTAMP,
-						   query_va, 0, 0);
+						   query_va, 0, 0,
+						   cmd_buffer->gfx9_eop_bug_va);
 			si_cs_emit_write_event_eop(cs,
 						   cmd_buffer->device->physical_device->rad_info.chip_class,
 						   mec,
 						   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 						   EOP_DATA_SEL_VALUE_32BIT,
-						   avail_va, 0, 1);
+						   avail_va, 0, 1,
+						   cmd_buffer->gfx9_eop_bug_va);
 			break;
 		}
 		query_va += pool->stride;

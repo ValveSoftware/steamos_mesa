@@ -1044,6 +1044,7 @@ struct radv_cmd_buffer {
 	uint32_t gfx9_fence_offset;
 	struct radeon_winsys_bo *gfx9_fence_bo;
 	uint32_t gfx9_fence_idx;
+	uint64_t gfx9_eop_bug_va;
 
 	/**
 	 * Whether a query pool has been resetted and we have to flush caches.
@@ -1075,7 +1076,8 @@ void si_cs_emit_write_event_eop(struct radeon_cmdbuf *cs,
 				unsigned data_sel,
 				uint64_t va,
 				uint32_t old_fence,
-				uint32_t new_fence);
+				uint32_t new_fence,
+				uint64_t gfx9_eop_bug_va);
 
 void si_emit_wait_fence(struct radeon_cmdbuf *cs,
 			uint64_t va, uint32_t ref,
@@ -1084,7 +1086,8 @@ void si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 			    enum chip_class chip_class,
 			    uint32_t *fence_ptr, uint64_t va,
 			    bool is_mec,
-			    enum radv_cmd_flush_bits flush_bits);
+			    enum radv_cmd_flush_bits flush_bits,
+			    uint64_t gfx9_eop_bug_va);
 void si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer);
 void si_emit_set_predication_state(struct radv_cmd_buffer *cmd_buffer, uint64_t va);
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,

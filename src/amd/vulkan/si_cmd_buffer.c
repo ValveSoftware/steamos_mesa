@@ -679,7 +679,8 @@ void si_cs_emit_write_event_eop(struct radeon_cmdbuf *cs,
 				unsigned data_sel,
 				uint64_t va,
 				uint32_t old_fence,
-				uint32_t new_fence)
+				uint32_t new_fence,
+				uint64_t gfx9_eop_bug_va)
 {
 	unsigned op = EVENT_TYPE(event) |
 		EVENT_INDEX(5) |
@@ -693,6 +694,17 @@ void si_cs_emit_write_event_eop(struct radeon_cmdbuf *cs,
 		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
 	if (chip_class >= GFX9 || is_gfx8_mec) {
+		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
+		 * counters) must immediately precede every timestamp event to
+		 * prevent a GPU hang on GFX9.
+		 */
+		if (chip_class == GFX9) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
+			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
+			radeon_emit(cs, gfx9_eop_bug_va);
+			radeon_emit(cs, gfx9_eop_bug_va >> 32);
+		}
+
 		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, is_gfx8_mec ? 5 : 6, false));
 		radeon_emit(cs, op);
 		radeon_emit(cs, sel);
@@ -772,7 +784,8 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 		       uint32_t *flush_cnt,
 		       uint64_t flush_va,
                        bool is_mec,
-                       enum radv_cmd_flush_bits flush_bits)
+                       enum radv_cmd_flush_bits flush_bits,
+		       uint64_t gfx9_eop_bug_va)
 {
 	unsigned cp_coher_cntl = 0;
 	uint32_t flush_cb_db = flush_bits & (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
@@ -803,7 +816,8 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 							   V_028A90_FLUSH_AND_INV_CB_DATA_TS,
 							   0,
 							   EOP_DATA_SEL_DISCARD,
-							   0, 0, 0);
+							   0, 0, 0,
+							   gfx9_eop_bug_va);
 			}
 		}
 		if (flush_bits & RADV_CMD_FLAG_FLUSH_AND_INV_DB) {
@@ -873,7 +887,8 @@ si_cs_emit_cache_flush(struct radeon_cmdbuf *cs,
 
 		si_cs_emit_write_event_eop(cs, chip_class, false, cb_db_event, tc_flags,
 					   EOP_DATA_SEL_VALUE_32BIT,
-					   flush_va, old_fence, *flush_cnt);
+					   flush_va, old_fence, *flush_cnt,
+					   gfx9_eop_bug_va);
 		si_emit_wait_fence(cs, flush_va, *flush_cnt, 0xffffffff);
 	}
 
@@ -975,7 +990,8 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	                       cmd_buffer->device->physical_device->rad_info.chip_class,
 			       ptr, va,
 	                       radv_cmd_buffer_uses_mec(cmd_buffer),
-	                       cmd_buffer->state.flush_bits);
+	                       cmd_buffer->state.flush_bits,
+			       cmd_buffer->gfx9_eop_bug_va);
 
 
 	if (unlikely(cmd_buffer->device->trace_bo))
