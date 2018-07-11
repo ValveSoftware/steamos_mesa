@@ -126,12 +126,17 @@ v3d_create_blend_state(struct pipe_context *pctx,
 
         so->base = *cso;
 
-        for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
-                so->blend_enables |= cso->rt[i].blend_enable << i;
+        if (cso->independent_blend_enable) {
+                for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
+                        so->blend_enables |= cso->rt[i].blend_enable << i;
 
-                /* V3D 4.x is when we got independent blend enables. */
-                assert(V3D_VERSION >= 40 ||
-                       cso->rt[i].blend_enable == cso->rt[0].blend_enable);
+                        /* V3D 4.x is when we got independent blend enables. */
+                        assert(V3D_VERSION >= 40 ||
+                               cso->rt[i].blend_enable == cso->rt[0].blend_enable);
+                }
+        } else {
+                if (cso->rt[0].blend_enable)
+                        so->blend_enables = (1 << VC5_MAX_DRAW_BUFFERS) - 1;
         }
 
         return so;

@@ -286,7 +286,10 @@ emit_rt_blend(struct v3d_context *v3d, struct v3d_job *job,
 
         cl_emit(&job->bcl, BLEND_CONFIG, config) {
 #if V3D_VERSION >= 40
-                config.render_target_mask = 1 << rt;
+                if (blend->independent_blend_enable)
+                        config.render_target_mask = 1 << rt;
+                else
+                        config.render_target_mask = (1 << VC5_MAX_DRAW_BUFFERS) - 1;
 #else
                 assert(rt == 0);
 #endif
