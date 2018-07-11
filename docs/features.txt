@@ -359,23 +359,23 @@ Khronos extensions that are not part of any Vulkan version:
   VK_KHR_android_surface                                not started
   VK_KHR_dedicated_allocation                           DONE (anv, radv)
   VK_KHR_descriptor_update_template                     DONE (anv, radv)
-  VK_KHR_display                                        not started
-  VK_KHR_display_swapchain                              not started
-  VK_KHR_external_fence                                 not started
-  VK_KHR_external_fence_capabilities                    not started
-  VK_KHR_external_fence_fd                              not started
+  VK_KHR_display                                        DONE (anv, radv)
+  VK_KHR_display_swapchain                              DONE (anv, radv)
+  VK_KHR_external_fence                                 DONE (anv, radv)
+  VK_KHR_external_fence_capabilities                    DONE (anv, radv)
+  VK_KHR_external_fence_fd                              DONE (anv, radv)
   VK_KHR_external_fence_win32                           not started
   VK_KHR_external_memory                                DONE (anv, radv)
   VK_KHR_external_memory_capabilities                   DONE (anv, radv)
   VK_KHR_external_memory_fd                             DONE (anv, radv)
   VK_KHR_external_memory_win32                          not started
-  VK_KHR_external_semaphore                             DONE (radv)
-  VK_KHR_external_semaphore_capabilities                DONE (radv)
-  VK_KHR_external_semaphore_fd                          DONE (radv)
+  VK_KHR_external_semaphore                             DONE (anv, radv)
+  VK_KHR_external_semaphore_capabilities                DONE (anv, radv)
+  VK_KHR_external_semaphore_fd                          DONE (anv, radv)
   VK_KHR_external_semaphore_win32                       not started
   VK_KHR_get_memory_requirements2                       DONE (anv, radv)
   VK_KHR_get_physical_device_properties2                DONE (anv, radv)
-  VK_KHR_get_surface_capabilities2                      DONE (anv)
+  VK_KHR_get_surface_capabilities2                      DONE (anv, radv)
   VK_KHR_incremental_present                            DONE (anv, radv)
   VK_KHR_maintenance1                                   DONE (anv, radv)
   VK_KHR_mir_surface                                    not started
