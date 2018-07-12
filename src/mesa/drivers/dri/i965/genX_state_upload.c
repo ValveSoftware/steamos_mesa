@@ -1879,8 +1879,8 @@ genX(upload_wm)(struct brw_context *brw)
          /* Pointer to the WM constant buffer.  Covered by the set of
           * state flags from gen6_upload_wm_push_constants.
           */
-         wmcp.PointertoPSConstantBuffer0 = stage_state->push_const_offset;
-         wmcp.PSConstantBuffer0ReadLength = stage_state->push_const_size - 1;
+         wmcp.ConstantBody.PointertoConstantBuffer0 = stage_state->push_const_offset;
+         wmcp.ConstantBody.ConstantBuffer0ReadLength = stage_state->push_const_size - 1;
       }
    }
 #endif
@@ -2215,8 +2215,8 @@ genX(upload_vs_state)(struct brw_context *brw)
    brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_VS), cvs) {
       if (stage_state->push_const_size != 0) {
          cvs.Buffer0Valid = true;
-         cvs.PointertoVSConstantBuffer0 = stage_state->push_const_offset;
-         cvs.VSConstantBuffer0ReadLength = stage_state->push_const_size - 1;
+         cvs.ConstantBody.PointertoConstantBuffer0 = stage_state->push_const_offset;
+         cvs.ConstantBody.ConstantBuffer0ReadLength = stage_state->push_const_size - 1;
       }
    }
 #endif
@@ -2707,8 +2707,8 @@ genX(upload_gs_state)(struct brw_context *brw)
    brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_GS), cgs) {
       if (active && stage_state->push_const_size != 0) {
          cgs.Buffer0Valid = true;
-         cgs.PointertoGSConstantBuffer0 = stage_state->push_const_offset;
-         cgs.GSConstantBuffer0ReadLength = stage_state->push_const_size - 1;
+         cgs.ConstantBody.PointertoConstantBuffer0 = stage_state->push_const_offset;
+         cgs.ConstantBody.ConstantBuffer0ReadLength = stage_state->push_const_size - 1;
       }
    }
 #endif
