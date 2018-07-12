@@ -269,7 +269,7 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 	/* Add separate DCC. */
 	if (tex->dcc_separate_buffer) {
 		radeon_add_to_gfx_buffer_list_check_mem(sctx, tex->dcc_separate_buffer,
-							usage, RADEON_PRIO_DCC, check_mem);
+							usage, RADEON_PRIO_SEPARATE_META, check_mem);
 	}
 }
 

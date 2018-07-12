@@ -2997,14 +2997,14 @@ static void si_emit_framebuffer_state(struct si_context *sctx)
 		if (tex->cmask_buffer && tex->cmask_buffer != &tex->buffer) {
 			radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
 				tex->cmask_buffer, RADEON_USAGE_READWRITE,
-				RADEON_PRIO_CMASK);
+				RADEON_PRIO_SEPARATE_META);
 		}
 
 		if (tex->dcc_separate_buffer)
 			radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
 						  tex->dcc_separate_buffer,
 						  RADEON_USAGE_READWRITE,
-						  RADEON_PRIO_DCC);
+						  RADEON_PRIO_SEPARATE_META);
 
 		/* Compute mutable surface parameters. */
 		cb_color_base = tex->buffer.gpu_address >> 8;
