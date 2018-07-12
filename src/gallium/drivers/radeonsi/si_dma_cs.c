@@ -93,13 +93,11 @@ void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 
 	if (dst) {
 		radeon_add_to_buffer_list(ctx, ctx->dma_cs, dst,
-					  RADEON_USAGE_WRITE,
-					  RADEON_PRIO_SDMA_BUFFER);
+					  RADEON_USAGE_WRITE, 0);
 	}
 	if (src) {
 		radeon_add_to_buffer_list(ctx, ctx->dma_cs, src,
-					  RADEON_USAGE_READ,
-					  RADEON_PRIO_SDMA_BUFFER);
+					  RADEON_USAGE_READ, 0);
 	}
 
 	/* this function is called before all DMA calls, so increment this. */

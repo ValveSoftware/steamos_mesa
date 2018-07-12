@@ -1033,7 +1033,7 @@ static void send_cmd(struct radeon_decoder *dec, unsigned cmd,
 	uint64_t addr;
 
 	dec->ws->cs_add_buffer(dec->cs, buf, usage | RADEON_USAGE_SYNCHRONIZED,
-			   domain, RADEON_PRIO_UVD);
+			   domain, 0);
 	addr = dec->ws->buffer_get_virtual_address(buf);
 	addr = addr + off;
 
