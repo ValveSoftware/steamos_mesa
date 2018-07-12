@@ -6,6 +6,7 @@ insert_and_lookup
 insert_many
 null_destroy
 random_entry
+remove_key
 remove_null
 replacement
 clear
