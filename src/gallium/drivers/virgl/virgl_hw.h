@@ -37,6 +37,7 @@ enum virgl_formats {
    VIRGL_FORMAT_B5G5R5A1_UNORM          = 5,
    VIRGL_FORMAT_B4G4R4A4_UNORM          = 6,
    VIRGL_FORMAT_B5G6R5_UNORM            = 7,
+   VIRGL_FORMAT_R10G10B10A2_UNORM       = 8,
    VIRGL_FORMAT_L8_UNORM                = 9,    /**< ubyte luminance */
    VIRGL_FORMAT_A8_UNORM                = 10,   /**< ubyte alpha */
    VIRGL_FORMAT_L8A8_UNORM              = 12,   /**< ubyte alpha, luminance */
@@ -112,6 +113,8 @@ enum virgl_formats {
    VIRGL_FORMAT_B10G10R10A2_UNORM       = 131,
    VIRGL_FORMAT_R8G8B8X8_UNORM          = 134,
    VIRGL_FORMAT_B4G4R4X4_UNORM          = 135,
+   VIRGL_FORMAT_X24S8_UINT              = 136,
+   VIRGL_FORMAT_S8X24_UINT              = 137,
    VIRGL_FORMAT_B2G3R3_UNORM            = 139,
 
    VIRGL_FORMAT_L16A16_UNORM            = 140,
@@ -186,14 +189,29 @@ enum virgl_formats {
    VIRGL_FORMAT_L32_SINT                = 223,
    VIRGL_FORMAT_L32A32_SINT             = 224,
 
-   VIRGL_FORMAT_B10G10R10A2_UINT        = 225, 
+   VIRGL_FORMAT_B10G10R10A2_UINT        = 225,
    VIRGL_FORMAT_R8G8B8X8_SNORM          = 229,
 
    VIRGL_FORMAT_R8G8B8X8_SRGB           = 230,
 
+   VIRGL_FORMAT_R8G8B8X8_UINT           = 231,
+   VIRGL_FORMAT_R8G8B8X8_SINT           = 232,
    VIRGL_FORMAT_B10G10R10X2_UNORM       = 233,
    VIRGL_FORMAT_R16G16B16X16_UNORM      = 234,
    VIRGL_FORMAT_R16G16B16X16_SNORM      = 235,
+   VIRGL_FORMAT_R16G16B16X16_FLOAT      = 236,
+   VIRGL_FORMAT_R16G16B16X16_UINT       = 237,
+   VIRGL_FORMAT_R16G16B16X16_SINT       = 238,
+
+   VIRGL_FORMAT_R10G10B10A2_UINT        = 253,
+
+   VIRGL_FORMAT_BPTC_RGBA_UNORM         = 255,
+   VIRGL_FORMAT_BPTC_SRGBA              = 256,
+   VIRGL_FORMAT_BPTC_RGB_FLOAT          = 257,
+   VIRGL_FORMAT_BPTC_RGB_UFLOAT         = 258,
+
+   VIRGL_FORMAT_R10G10B10X2_UNORM       = 308,
+   VIRGL_FORMAT_A4B4G4R4_UNORM          = 311,
    VIRGL_FORMAT_MAX,
 };
 
@@ -211,6 +229,9 @@ enum virgl_formats {
 #define VIRGL_CAP_ROBUST_BUFFER_ACCESS (1 << 9)
 #define VIRGL_CAP_TGSI_FBFETCH         (1 << 10)
 
+/* virgl bind flags - these are compatible with mesa 10.5 gallium.
+ * but are fixed, no other should be passed to virgl either.
+ */
 #define VIRGL_BIND_DEPTH_STENCIL (1 << 0)
 #define VIRGL_BIND_RENDER_TARGET (1 << 1)
 #define VIRGL_BIND_SAMPLER_VIEW  (1 << 3)
@@ -285,6 +306,10 @@ struct virgl_caps_v1 {
         uint32_t max_texture_gather_components;
 };
 
+/*
+ * This struct should be growable when used in capset 2,
+ * so we shouldn't have to add a v3 ever.
+ */
 struct virgl_caps_v2 {
         struct virgl_caps_v1 v1;
         float min_aliased_point_size;
