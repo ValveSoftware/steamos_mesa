@@ -1343,9 +1343,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 	 ++num_handles;
       }
 
-      if (acs->ring_type == RING_GFX)
-         ws->gfx_bo_list_counter += cs->num_real_buffers;
-
       if (num_handles) {
          r = amdgpu_bo_list_create(ws->dev, num_handles,
                                    handles, flags, &bo_list);
@@ -1361,6 +1358,9 @@ bo_list_error:
       cs->error_code = r;
       goto cleanup;
    }
+
+   if (acs->ring_type == RING_GFX)
+      ws->gfx_bo_list_counter += cs->num_real_buffers;
 
    if (acs->ctx->num_rejected_cs) {
       r = -ECANCELED;
