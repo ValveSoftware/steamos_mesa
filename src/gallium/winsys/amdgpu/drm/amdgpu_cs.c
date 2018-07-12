@@ -37,6 +37,10 @@
 #define AMDGPU_IB_FLAG_TC_WB_NOT_INVALIDATE (1 << 3)
 #endif
 
+#ifndef AMDGPU_CHUNK_ID_BO_HANDLES
+#define AMDGPU_CHUNK_ID_BO_HANDLES 0x06
+#endif
+
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 /* FENCES */
@@ -1290,11 +1294,14 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
    amdgpu_bo_list_handle bo_list = NULL;
    uint64_t seq_no = 0;
    bool has_user_fence = amdgpu_cs_has_user_fence(cs);
+   bool use_bo_list_create = ws->info.drm_minor < 27;
+   struct drm_amdgpu_bo_list_in bo_list_in;
 
-   /* Create the buffer list.
-    * Use a buffer list containing all allocated buffers if requested.
-    */
+   /* Prepare the buffer list. */
    if (ws->debug_all_bos) {
+      /* The buffer list contains all buffers. This is a slow path that
+       * ensures that no buffer is missing in the BO list.
+       */
       struct amdgpu_winsys_bo *bo;
       amdgpu_bo_handle *handles;
       unsigned num = 0;
@@ -1314,7 +1321,38 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
          goto cleanup;
       }
+   } else if (!use_bo_list_create) {
+      /* Standard path passing the buffer list via the CS ioctl. */
+      if (!amdgpu_add_sparse_backing_buffers(cs)) {
+         fprintf(stderr, "amdgpu: amdgpu_add_sparse_backing_buffers failed\n");
+         r = -ENOMEM;
+         goto cleanup;
+      }
+
+      struct drm_amdgpu_bo_list_entry *list =
+         alloca(cs->num_real_buffers * sizeof(struct drm_amdgpu_bo_list_entry));
+
+      unsigned num_handles = 0;
+      for (i = 0; i < cs->num_real_buffers; ++i) {
+         struct amdgpu_cs_buffer *buffer = &cs->real_buffers[i];
+
+         if (buffer->bo->is_local)
+            continue;
+
+         assert(buffer->u.real.priority_usage != 0);
+
+         list[num_handles].bo_handle = buffer->bo->u.real.kms_handle;
+         list[num_handles].bo_priority = (util_last_bit(buffer->u.real.priority_usage) - 1) / 2;
+         ++num_handles;
+      }
+
+      bo_list_in.operation = ~0;
+      bo_list_in.list_handle = ~0;
+      bo_list_in.bo_number = num_handles;
+      bo_list_in.bo_info_size = sizeof(struct drm_amdgpu_bo_list_entry);
+      bo_list_in.bo_info_ptr = (uint64_t)(uintptr_t)list;
    } else {
+      /* Legacy path creating the buffer list handle and passing it to the CS ioctl. */
       unsigned num_handles;
 
       if (!amdgpu_add_sparse_backing_buffers(cs)) {
@@ -1356,7 +1394,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
    if (acs->ctx->num_rejected_cs) {
       r = -ECANCELED;
    } else {
-      struct drm_amdgpu_cs_chunk chunks[5];
+      struct drm_amdgpu_cs_chunk chunks[6];
       unsigned num_chunks = 0;
 
       /* Convert from dwords to bytes. */
@@ -1444,6 +1482,14 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          chunks[num_chunks].length_dw = sizeof(sem_chunk[0]) / 4
                                         * cs->num_syncobj_to_signal;
          chunks[num_chunks].chunk_data = (uintptr_t)sem_chunk;
+         num_chunks++;
+      }
+
+      /* BO list */
+      if (!use_bo_list_create) {
+         chunks[num_chunks].chunk_id = AMDGPU_CHUNK_ID_BO_HANDLES;
+         chunks[num_chunks].length_dw = sizeof(struct drm_amdgpu_bo_list_in) / 4;
+         chunks[num_chunks].chunk_data = (uintptr_t)&bo_list_in;
          num_chunks++;
       }
 
