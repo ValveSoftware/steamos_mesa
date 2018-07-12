@@ -1300,14 +1300,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       unsigned num = 0;
 
       simple_mtx_lock(&ws->global_bo_list_lock);
-
-      handles = malloc(sizeof(handles[0]) * ws->num_buffers);
-      if (!handles) {
-         simple_mtx_unlock(&ws->global_bo_list_lock);
-         amdgpu_cs_context_cleanup(cs);
-         cs->error_code = -ENOMEM;
-         return;
-      }
+      handles = alloca(sizeof(handles[0]) * ws->num_buffers);
 
       LIST_FOR_EACH_ENTRY(bo, &ws->global_bo_list, u.real.global_list_item) {
          assert(num < ws->num_buffers);
@@ -1316,7 +1309,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 
       r = amdgpu_bo_list_create(ws->dev, ws->num_buffers,
                                 handles, NULL, &bo_list);
-      free(handles);
       simple_mtx_unlock(&ws->global_bo_list_lock);
       if (r) {
          fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
