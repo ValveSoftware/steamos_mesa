@@ -366,7 +366,7 @@ static unsigned radeon_drm_cs_add_buffer(struct radeon_cmdbuf *rcs,
     reloc->read_domains |= rd;
     reloc->write_domain |= wd;
     reloc->flags = MAX2(reloc->flags, priority);
-    cs->csc->relocs_bo[index].u.real.priority_usage |= 1ull << priority;
+    cs->csc->relocs_bo[index].u.real.priority_usage |= 1u << priority;
 
     if (added_domains & RADEON_DOMAIN_VRAM)
         cs->base.used_vram += bo->base.size;

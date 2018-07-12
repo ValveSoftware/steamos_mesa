@@ -629,7 +629,7 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_cmdbuf *rcs,
     */
    if (bo == cs->last_added_bo &&
        (usage & cs->last_added_bo_usage) == usage &&
-       (1ull << priority) & cs->last_added_bo_priority_usage)
+       (1u << priority) & cs->last_added_bo_priority_usage)
       return cs->last_added_bo_index;
 
    if (!bo->sparse) {
@@ -658,7 +658,7 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_cmdbuf *rcs,
       buffer = &cs->sparse_buffers[index];
    }
 
-   buffer->u.real.priority_usage |= 1ull << priority;
+   buffer->u.real.priority_usage |= 1u << priority;
    buffer->usage |= usage;
 
    cs->last_added_bo = bo;
@@ -1339,7 +1339,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          assert(buffer->u.real.priority_usage != 0);
 
          handles[num_handles] = buffer->bo->bo;
-         flags[num_handles] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
+         flags[num_handles] = (util_last_bit(buffer->u.real.priority_usage) - 1) / 2;
 	 ++num_handles;
       }
 

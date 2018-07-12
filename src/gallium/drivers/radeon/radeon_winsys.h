@@ -115,50 +115,51 @@ enum radeon_value_id {
     RADEON_CS_THREAD_TIME,
 };
 
-/* Each group of four has the same priority. */
 enum radeon_bo_priority {
+    /* Each group of two has the same priority. */
     RADEON_PRIO_FENCE = 0,
     RADEON_PRIO_TRACE,
-    RADEON_PRIO_SO_FILLED_SIZE,
+
+    RADEON_PRIO_SO_FILLED_SIZE = 2,
     RADEON_PRIO_QUERY,
 
     RADEON_PRIO_IB1 = 4, /* main IB submitted to the kernel */
     RADEON_PRIO_IB2, /* IB executed with INDIRECT_BUFFER */
-    RADEON_PRIO_DRAW_INDIRECT,
+
+    RADEON_PRIO_DRAW_INDIRECT = 6,
     RADEON_PRIO_INDEX_BUFFER,
 
-    RADEON_PRIO_CP_DMA = 12,
-
-    RADEON_PRIO_CONST_BUFFER = 16,
-    RADEON_PRIO_DESCRIPTORS,
+    RADEON_PRIO_CP_DMA = 8,
     RADEON_PRIO_BORDER_COLORS,
 
-    RADEON_PRIO_SAMPLER_BUFFER = 20,
+    RADEON_PRIO_CONST_BUFFER = 10,
+    RADEON_PRIO_DESCRIPTORS,
+
+    RADEON_PRIO_SAMPLER_BUFFER = 12,
     RADEON_PRIO_VERTEX_BUFFER,
 
-    RADEON_PRIO_SHADER_RW_BUFFER = 24,
+    RADEON_PRIO_SHADER_RW_BUFFER = 14,
     RADEON_PRIO_COMPUTE_GLOBAL,
 
-    RADEON_PRIO_SAMPLER_TEXTURE = 28,
+    RADEON_PRIO_SAMPLER_TEXTURE = 16,
     RADEON_PRIO_SHADER_RW_IMAGE,
 
-    RADEON_PRIO_SAMPLER_TEXTURE_MSAA = 32,
+    RADEON_PRIO_SAMPLER_TEXTURE_MSAA = 18,
+    RADEON_PRIO_COLOR_BUFFER,
 
-    RADEON_PRIO_COLOR_BUFFER = 36,
+    RADEON_PRIO_DEPTH_BUFFER = 20,
 
-    RADEON_PRIO_DEPTH_BUFFER = 40,
+    RADEON_PRIO_COLOR_BUFFER_MSAA = 22,
 
-    RADEON_PRIO_COLOR_BUFFER_MSAA = 44,
+    RADEON_PRIO_DEPTH_BUFFER_MSAA = 24,
 
-    RADEON_PRIO_DEPTH_BUFFER_MSAA = 48,
-
-    RADEON_PRIO_SEPARATE_META = 52,
+    RADEON_PRIO_SEPARATE_META = 26,
     RADEON_PRIO_SHADER_BINARY, /* the hw can't hide instruction cache misses */
 
-    RADEON_PRIO_SHADER_RINGS = 56,
+    RADEON_PRIO_SHADER_RINGS = 28,
 
-    RADEON_PRIO_SCRATCH_BUFFER = 60,
-    /* 63 is the maximum value */
+    RADEON_PRIO_SCRATCH_BUFFER = 30,
+    /* 31 is the maximum value */
 };
 
 struct winsys_handle;
@@ -223,7 +224,7 @@ enum radeon_feature_id {
 struct radeon_bo_list_item {
     uint64_t bo_size;
     uint64_t vm_address;
-    uint64_t priority_usage; /* mask of (1 << RADEON_PRIO_*) */
+    uint32_t priority_usage; /* mask of (1 << RADEON_PRIO_*) */
 };
 
 struct radeon_winsys {

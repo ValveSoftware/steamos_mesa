@@ -568,8 +568,8 @@ static void si_dump_bo_list(struct si_context *sctx,
 			size / page_size, va / page_size, (va + size) / page_size);
 
 		/* Print the usage. */
-		for (j = 0; j < 64; j++) {
-			if (!(saved->bo_list[i].priority_usage & (1ull << j)))
+		for (j = 0; j < 32; j++) {
+			if (!(saved->bo_list[i].priority_usage & (1u << j)))
 				continue;
 
 			fprintf(f, "%s%s", !hit ? "" : ", ", priority_to_string(j));

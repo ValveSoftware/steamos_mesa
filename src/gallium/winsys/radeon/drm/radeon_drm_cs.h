@@ -33,7 +33,7 @@ struct radeon_bo_item {
     struct radeon_bo    *bo;
     union {
         struct {
-            uint64_t    priority_usage;
+            uint32_t    priority_usage;
         } real;
         struct {
             unsigned    real_idx;
