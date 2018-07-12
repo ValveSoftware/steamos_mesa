@@ -246,7 +246,7 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
    unsigned dest_components = glsl_get_vector_elements(dest->type);
    vtn_assert(src_bit_size * src_components == dest_bit_size * dest_components);
 
-   nir_ssa_def *dest_chan[4];
+   nir_ssa_def *dest_chan[NIR_MAX_VEC_COMPONENTS];
    if (src_bit_size > dest_bit_size) {
       vtn_assert(src_bit_size % dest_bit_size == 0);
       unsigned divisor = src_bit_size / dest_bit_size;

@@ -3087,7 +3087,7 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
       unsigned elems = count - 3;
       assume(elems >= 1);
       if (glsl_type_is_vector_or_scalar(type)) {
-         nir_ssa_def *srcs[4];
+         nir_ssa_def *srcs[NIR_MAX_VEC_COMPONENTS];
          for (unsigned i = 0; i < elems; i++)
             srcs[i] = vtn_ssa_value(b, w[3 + i])->def;
          val->ssa->def =
