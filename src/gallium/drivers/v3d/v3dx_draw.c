@@ -613,12 +613,42 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 v3d_flush(pctx);
 }
 
+/* GFXH-1461: If we were to emit a load of just depth or just stencil, then
+ * the clear for the other may get lost.  Just fall back to drawing a quad in
+ * that case.
+ */
+static bool
+v3d_gfxh1461_clear_workaround(struct v3d_context *v3d,
+                              unsigned buffers, double depth, unsigned stencil)
+{
+        unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
+        if (!zsclear || zsclear == PIPE_CLEAR_DEPTHSTENCIL)
+                return false;
+
+        static const union pipe_color_union dummy_color = {};
+
+        v3d_blitter_save(v3d);
+        util_blitter_clear(v3d->blitter,
+                           v3d->framebuffer.width,
+                           v3d->framebuffer.height,
+                           1,
+                           zsclear,
+                           &dummy_color, depth, stencil);
+        return true;
+}
+
 static void
 v3d_clear(struct pipe_context *pctx, unsigned buffers,
           const union pipe_color_union *color, double depth, unsigned stencil)
 {
         struct v3d_context *v3d = v3d_context(pctx);
         struct v3d_job *job = v3d_get_job_for_fbo(v3d);
+
+        if (v3d_gfxh1461_clear_workaround(v3d, buffers, depth, stencil))
+                buffers &= ~PIPE_CLEAR_DEPTHSTENCIL;
+
+        if (!buffers)
+                return;
 
         /* We can't flag new buffers for clearing once we've queued draws.  We
          * could avoid this by using the 3d engine to clear.
