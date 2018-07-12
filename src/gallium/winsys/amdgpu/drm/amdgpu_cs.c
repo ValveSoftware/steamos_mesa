@@ -1312,8 +1312,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       simple_mtx_unlock(&ws->global_bo_list_lock);
       if (r) {
          fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
-         amdgpu_fence_signalled(cs->fence);
-         cs->error_code = r;
          goto cleanup;
       }
    } else {
@@ -1321,8 +1319,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 
       if (!amdgpu_add_sparse_backing_buffers(cs)) {
          fprintf(stderr, "amdgpu: amdgpu_add_sparse_backing_buffers failed\n");
-         amdgpu_fence_signalled(cs->fence);
-         cs->error_code = -ENOMEM;
+         r = -ENOMEM;
          goto cleanup;
       }
 
@@ -1348,8 +1345,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
                                    handles, flags, &bo_list);
          if (r) {
             fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
-            amdgpu_fence_signalled(cs->fence);
-            cs->error_code = r;
             goto cleanup;
          }
       }
@@ -1458,7 +1453,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
                                num_chunks, chunks, &seq_no);
    }
 
-   cs->error_code = r;
    if (r) {
       if (r == -ENOMEM)
          fprintf(stderr, "amdgpu: Not enough memory for command submission.\n");
@@ -1467,8 +1461,6 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       else
          fprintf(stderr, "amdgpu: The CS has been rejected, "
                  "see dmesg for more information (%i).\n", r);
-
-      amdgpu_fence_signalled(cs->fence);
 
       acs->ctx->num_rejected_cs++;
       ws->num_total_rejected_cs++;
@@ -1486,6 +1478,13 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       amdgpu_bo_list_destroy(bo_list);
 
 cleanup:
+   /* If there was an error, signal the fence, because it won't be signalled
+    * by the hardware. */
+   if (r)
+      amdgpu_fence_signalled(cs->fence);
+
+   cs->error_code = r;
+
    for (i = 0; i < cs->num_real_buffers; i++)
       p_atomic_dec(&cs->real_buffers[i].bo->num_active_ioctls);
    for (i = 0; i < cs->num_slab_buffers; i++)
