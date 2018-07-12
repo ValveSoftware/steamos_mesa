@@ -728,6 +728,8 @@ aub_dump_execlist(uint64_t batch_offset, int ring_flag)
       status_reg = EXECLIST_STATUS_BCSUNIT;
       control_reg = EXECLIST_CONTROL_BCSUNIT;
       break;
+   default:
+      unreachable("unknown ring");
    }
 
    mem_trace_memory_write_header_out(ring_addr, 16,
