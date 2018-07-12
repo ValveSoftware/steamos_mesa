@@ -496,6 +496,13 @@ virgl_is_format_supported( struct pipe_screen *screen,
       return virgl_is_vertex_format_supported(screen, format);
    }
 
+   /* Allow 3-comp 32 bit textures only for TBOs (needed for ARB_tbo_rgb32) */
+   if ((format == PIPE_FORMAT_R32G32B32_FLOAT ||
+       format == PIPE_FORMAT_R32G32B32_SINT ||
+       format == PIPE_FORMAT_R32G32B32_UINT) &&
+       target != PIPE_BUFFER)
+      return FALSE;
+
    if (bind & PIPE_BIND_RENDER_TARGET) {
       if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
          return FALSE;
