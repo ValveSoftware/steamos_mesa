@@ -1698,7 +1698,7 @@ get_red_format_for_rgb_format(enum isl_format format)
    }
 }
 
-static void
+void
 surf_fake_rgb_with_red(const struct isl_device *isl_dev,
                        struct brw_blorp_surface_info *info)
 {
