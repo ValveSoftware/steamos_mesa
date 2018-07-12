@@ -902,9 +902,7 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
 static void amdgpu_destroy_cs_context(struct amdgpu_cs_context *cs)
 {
    amdgpu_cs_context_cleanup(cs);
-   FREE(cs->flags);
    FREE(cs->real_buffers);
-   FREE(cs->handles);
    FREE(cs->slab_buffers);
    FREE(cs->sparse_buffers);
    FREE(cs->fence_dependencies);
@@ -1328,19 +1326,8 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          goto bo_list_error;
       }
 
-      if (cs->max_real_submit < cs->num_real_buffers) {
-         FREE(cs->handles);
-         FREE(cs->flags);
-
-         cs->handles = MALLOC(sizeof(*cs->handles) * cs->num_real_buffers);
-         cs->flags = MALLOC(sizeof(*cs->flags) * cs->num_real_buffers);
-
-         if (!cs->handles || !cs->flags) {
-            cs->max_real_submit = 0;
-            r = -ENOMEM;
-            goto bo_list_error;
-         }
-      }
+      amdgpu_bo_handle *handles = alloca(sizeof(*handles) * cs->num_real_buffers);
+      uint8_t *flags = alloca(sizeof(*flags) * cs->num_real_buffers);
 
       num_handles = 0;
       for (i = 0; i < cs->num_real_buffers; ++i) {
@@ -1351,8 +1338,8 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 
          assert(buffer->u.real.priority_usage != 0);
 
-         cs->handles[num_handles] = buffer->bo->bo;
-         cs->flags[num_handles] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
+         handles[num_handles] = buffer->bo->bo;
+         flags[num_handles] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
 	 ++num_handles;
       }
 
@@ -1361,7 +1348,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
 
       if (num_handles) {
          r = amdgpu_bo_list_create(ws->dev, num_handles,
-                                   cs->handles, cs->flags, &bo_list);
+                                   handles, flags, &bo_list);
       } else {
          r = 0;
       }
