@@ -1318,12 +1318,20 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
                                 handles, NULL, &bo_list);
       free(handles);
       simple_mtx_unlock(&ws->global_bo_list_lock);
+      if (r) {
+         fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
+         amdgpu_fence_signalled(cs->fence);
+         cs->error_code = r;
+         goto cleanup;
+      }
    } else {
       unsigned num_handles;
 
       if (!amdgpu_add_sparse_backing_buffers(cs)) {
-         r = -ENOMEM;
-         goto bo_list_error;
+         fprintf(stderr, "amdgpu: amdgpu_add_sparse_backing_buffers failed\n");
+         amdgpu_fence_signalled(cs->fence);
+         cs->error_code = -ENOMEM;
+         goto cleanup;
       }
 
       amdgpu_bo_handle *handles = alloca(sizeof(*handles) * cs->num_real_buffers);
@@ -1346,17 +1354,13 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       if (num_handles) {
          r = amdgpu_bo_list_create(ws->dev, num_handles,
                                    handles, flags, &bo_list);
-      } else {
-         r = 0;
+         if (r) {
+            fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
+            amdgpu_fence_signalled(cs->fence);
+            cs->error_code = r;
+            goto cleanup;
+         }
       }
-   }
-bo_list_error:
-
-   if (r) {
-      fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
-      amdgpu_fence_signalled(cs->fence);
-      cs->error_code = r;
-      goto cleanup;
    }
 
    if (acs->ring_type == RING_GFX)
