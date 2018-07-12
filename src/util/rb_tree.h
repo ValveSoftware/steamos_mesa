@@ -55,7 +55,7 @@ struct rb_node {
 static inline struct rb_node *
 rb_node_parent(struct rb_node *n)
 {
-    return (struct rb_node *)(n->parent & ~1ull);
+    return (struct rb_node *)(n->parent & ~(uintptr_t)1);
 }
 
 /** A red-black tree
