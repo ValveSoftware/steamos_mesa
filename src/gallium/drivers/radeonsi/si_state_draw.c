@@ -134,7 +134,7 @@ static bool si_emit_derived_tess_state(struct si_context *sctx,
 		num_tcs_patch_outputs = 2; /* TESSINNER + TESSOUTER */
 	}
 
-	input_vertex_size = num_tcs_inputs * 16;
+	input_vertex_size = ls->lshs_vertex_stride;
 	output_vertex_size = num_tcs_outputs * 16;
 
 	input_patch_size = num_tcs_input_cp * input_vertex_size;

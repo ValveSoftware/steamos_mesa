@@ -417,14 +417,14 @@ static LLVMValueRef get_tcs_in_vertex_dw_stride(struct si_shader_context *ctx)
 
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
-		stride = util_last_bit64(ctx->shader->selector->outputs_written);
-		return LLVMConstInt(ctx->i32, stride * 4, 0);
+		stride = ctx->shader->selector->lshs_vertex_stride / 4;
+		return LLVMConstInt(ctx->i32, stride, 0);
 
 	case PIPE_SHADER_TESS_CTRL:
 		if (ctx->screen->info.chip_class >= GFX9 &&
 		    ctx->shader->is_monolithic) {
-			stride = util_last_bit64(ctx->shader->key.part.tcs.ls->outputs_written);
-			return LLVMConstInt(ctx->i32, stride * 4, 0);
+			stride = ctx->shader->key.part.tcs.ls->lshs_vertex_stride / 4;
+			return LLVMConstInt(ctx->i32, stride, 0);
 		}
 		return si_unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
 

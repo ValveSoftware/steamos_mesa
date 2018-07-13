@@ -2160,6 +2160,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
+		sel->lshs_vertex_stride = sel->esgs_itemsize;
+
+		/* Add 1 dword to reduce LDS bank conflicts, so that each vertex
+		 * will start on a different bank. (except for the maximum 32*16).
+		 */
+		if (sel->lshs_vertex_stride < 32*16)
+			sel->lshs_vertex_stride += 4;
 
 		/* For the ESGS ring in LDS, add 1 dword to reduce LDS bank
 		 * conflicts, i.e. each vertex will start at a different bank.

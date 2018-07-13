@@ -368,7 +368,8 @@ struct si_shader_selector {
 	ubyte		culldist_mask;
 
 	/* ES parameters. */
-	unsigned	esgs_itemsize;
+	unsigned	esgs_itemsize; /* vertex stride */
+	unsigned	lshs_vertex_stride;
 
 	/* GS parameters. */
 	unsigned	gs_input_verts_per_prim;
