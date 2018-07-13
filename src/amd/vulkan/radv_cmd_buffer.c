@@ -1966,8 +1966,15 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 		      VkAccessFlags src_flags,
 		      struct radv_image *image)
 {
+	bool flush_CB_meta = true, flush_DB_meta = true;
 	enum radv_cmd_flush_bits flush_bits = 0;
 	uint32_t b;
+
+	if (image && !radv_image_has_CB_metadata(image))
+		flush_CB_meta = false;
+	if (image && !radv_image_has_htile(image))
+		flush_DB_meta = false;
+
 	for_each_bit(b, src_flags) {
 		switch ((VkAccessFlagBits)(1 << b)) {
 		case VK_ACCESS_SHADER_WRITE_BIT:
@@ -1975,22 +1982,23 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 			break;
 		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
 			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
-			if (!image || (image && radv_image_has_CB_metadata(image))) {
+			if (flush_CB_meta)
 				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
-			}
 			break;
 		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
 			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB;
-			if (!image || (image && radv_image_has_htile(image))) {
+			if (flush_DB_meta)
 				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
-			}
 			break;
 		case VK_ACCESS_TRANSFER_WRITE_BIT:
 			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-			              RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
 			              RADV_CMD_FLAG_FLUSH_AND_INV_DB |
-			              RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
 			              RADV_CMD_FLAG_INV_GLOBAL_L2;
+
+			if (flush_CB_meta)
+				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+			if (flush_DB_meta)
+				flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 			break;
 		default:
 			break;
