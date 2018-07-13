@@ -188,10 +188,8 @@ build_occlusion_query_shader(struct radv_device *device) {
 	load->num_components = 2;
 	nir_builder_instr_insert(&b, &load->instr);
 
-	const unsigned swizzle0[] = {0,0,0,0};
-	const unsigned swizzle1[] = {1,1,1,1};
-	nir_store_var(&b, start, nir_swizzle(&b, &load->dest.ssa, swizzle0, 1, false), 0x1);
-	nir_store_var(&b, end, nir_swizzle(&b, &load->dest.ssa, swizzle1, 1, false), 0x1);
+	nir_store_var(&b, start, nir_channel(&b, &load->dest.ssa, 0), 0x1);
+	nir_store_var(&b, end, nir_channel(&b, &load->dest.ssa, 1), 0x1);
 
 	nir_ssa_def *start_done = nir_ilt(&b, nir_load_var(&b, start), nir_imm_int64(&b, 0));
 	nir_ssa_def *end_done = nir_ilt(&b, nir_load_var(&b, end), nir_imm_int64(&b, 0));

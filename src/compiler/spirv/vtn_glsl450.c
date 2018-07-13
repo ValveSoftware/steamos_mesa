@@ -36,7 +36,7 @@
 static nir_ssa_def *
 build_mat2_det(nir_builder *b, nir_ssa_def *col[2])
 {
-   unsigned swiz[4] = {1, 0, 0, 0};
+   unsigned swiz[2] = {1, 0 };
    nir_ssa_def *p = nir_fmul(b, col[0], nir_swizzle(b, col[1], swiz, 2, true));
    return nir_fsub(b, nir_channel(b, p, 0), nir_channel(b, p, 1));
 }
@@ -44,8 +44,8 @@ build_mat2_det(nir_builder *b, nir_ssa_def *col[2])
 static nir_ssa_def *
 build_mat3_det(nir_builder *b, nir_ssa_def *col[3])
 {
-   unsigned yzx[4] = {1, 2, 0, 0};
-   unsigned zxy[4] = {2, 0, 1, 0};
+   unsigned yzx[3] = {1, 2, 0 };
+   unsigned zxy[3] = {2, 0, 1 };
 
    nir_ssa_def *prod0 =
       nir_fmul(b, col[0],
@@ -602,8 +602,8 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Cross: {
-      unsigned yzx[4] = { 1, 2, 0, 0 };
-      unsigned zxy[4] = { 2, 0, 1, 0 };
+      unsigned yzx[3] = { 1, 2, 0 };
+      unsigned zxy[3] = { 2, 0, 1 };
       val->ssa->def =
          nir_fsub(nb, nir_fmul(nb, nir_swizzle(nb, src[0], yzx, 3, true),
                                    nir_swizzle(nb, src[1], zxy, 3, true)),

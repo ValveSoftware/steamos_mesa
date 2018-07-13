@@ -479,8 +479,8 @@ lower_gradient_cube_map(nir_builder *b, nir_tex_instr *tex)
    nir_ssa_def *cond_z = nir_fge(b, abs_p_z, nir_fmax(b, abs_p_x, abs_p_y));
    nir_ssa_def *cond_y = nir_fge(b, abs_p_y, nir_fmax(b, abs_p_x, abs_p_z));
 
-   unsigned yzx[4] = { 1, 2, 0, 0 };
-   unsigned xzy[4] = { 0, 2, 1, 0 };
+   unsigned yzx[3] = { 1, 2, 0 };
+   unsigned xzy[3] = { 0, 2, 1 };
 
    Q = nir_bcsel(b, cond_z,
                  p,
@@ -508,16 +508,15 @@ lower_gradient_cube_map(nir_builder *b, nir_tex_instr *tex)
     */
    nir_ssa_def *rcp_Q_z = nir_frcp(b, nir_channel(b, Q, 2));
 
-   unsigned xy[4] = { 0, 1, 0, 0 };
-   nir_ssa_def *Q_xy = nir_swizzle(b, Q, xy, 2, false);
+   nir_ssa_def *Q_xy = nir_channels(b, Q, 0x3);
    nir_ssa_def *tmp = nir_fmul(b, Q_xy, rcp_Q_z);
 
-   nir_ssa_def *dQdx_xy = nir_swizzle(b, dQdx, xy, 2, false);
+   nir_ssa_def *dQdx_xy = nir_channels(b, dQdx, 0x3);
    nir_ssa_def *dQdx_z = nir_channel(b, dQdx, 2);
    nir_ssa_def *dx =
       nir_fmul(b, rcp_Q_z, nir_fsub(b, dQdx_xy, nir_fmul(b, tmp, dQdx_z)));
 
-   nir_ssa_def *dQdy_xy = nir_swizzle(b, dQdy, xy, 2, false);
+   nir_ssa_def *dQdy_xy = nir_channels(b, dQdy, 0x3);
    nir_ssa_def *dQdy_z = nir_channel(b, dQdy, 2);
    nir_ssa_def *dy =
       nir_fmul(b, rcp_Q_z, nir_fsub(b, dQdy_xy, nir_fmul(b, tmp, dQdy_z)));
