@@ -943,11 +943,11 @@ static void virgl_get_sample_position(struct pipe_context *ctx,
       return;
    } else if (sample_count == 2) {
       bits = vs->caps.caps.v2.msaa_sample_positions[0] >> (8 * index);
-   } else if (sample_count < 4) {
+   } else if (sample_count <= 4) {
       bits = vs->caps.caps.v2.msaa_sample_positions[1] >> (8 * index);
-   } else if (sample_count < 8) {
+   } else if (sample_count <= 8) {
       bits = vs->caps.caps.v2.msaa_sample_positions[2 + (index >> 2)] >> (8 * (index & 3));
-   } else if (sample_count < 8) {
+   } else if (sample_count <= 16) {
       bits = vs->caps.caps.v2.msaa_sample_positions[4 + (index >> 2)] >> (8 * (index & 3));
    }
    out_value[0] = ((bits >> 4) & 0xf) / 16.0f;
