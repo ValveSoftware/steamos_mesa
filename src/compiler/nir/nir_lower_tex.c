@@ -37,6 +37,7 @@
 
 #include "nir.h"
 #include "nir_builder.h"
+#include "nir_format_convert.h"
 
 static void
 project_src(nir_builder *b, nir_tex_instr *tex)
@@ -710,24 +711,8 @@ linearize_srgb_result(nir_builder *b, nir_tex_instr *tex)
 
    b->cursor = nir_after_instr(&tex->instr);
 
-   static const unsigned swiz[4] = {0, 1, 2, 0};
-   nir_ssa_def *comp = nir_swizzle(b, &tex->dest.ssa, swiz, 3, true);
-
-   /* Formula is:
-    *    (comp <= 0.04045) ?
-    *          (comp / 12.92) :
-    *          pow((comp + 0.055) / 1.055, 2.4)
-    */
-   nir_ssa_def *low  = nir_fmul(b, comp, nir_imm_float(b, 1.0 / 12.92));
-   nir_ssa_def *high = nir_fpow(b,
-                                nir_fmul(b,
-                                         nir_fadd(b,
-                                                  comp,
-                                                  nir_imm_float(b, 0.055)),
-                                         nir_imm_float(b, 1.0 / 1.055)),
-                                nir_imm_float(b, 2.4));
-   nir_ssa_def *cond = nir_fge(b, nir_imm_float(b, 0.04045), comp);
-   nir_ssa_def *rgb  = nir_bcsel(b, cond, low, high);
+   nir_ssa_def *rgb =
+      nir_format_srgb_to_linear(b, nir_channels(b, &tex->dest.ssa, 0x7));
 
    /* alpha is untouched: */
    nir_ssa_def *result = nir_vec4(b,
