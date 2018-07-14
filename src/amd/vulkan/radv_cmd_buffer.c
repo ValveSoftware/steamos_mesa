@@ -721,8 +721,11 @@ radv_emit_rbplus_state(struct radv_cmd_buffer *cmd_buffer)
 	unsigned sx_blend_opt_control = 0;
 
 	for (unsigned i = 0; i < subpass->color_count; ++i) {
-		if (subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED)
+		if (subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED) {
+			sx_blend_opt_control |= S_02875C_MRT0_COLOR_OPT_DISABLE(1) << (i * 4);
+			sx_blend_opt_control |= S_02875C_MRT0_ALPHA_OPT_DISABLE(1) << (i * 4);
 			continue;
+		}
 
 		int idx = subpass->color_attachments[i].attachment;
 		struct radv_color_buffer_info *cb = &framebuffer->attachments[idx].cb;
@@ -836,6 +839,10 @@ radv_emit_rbplus_state(struct radv_cmd_buffer *cmd_buffer)
 		}
 	}
 
+	for (unsigned i = subpass->color_count; i < 8; ++i) {
+		sx_blend_opt_control |= S_02875C_MRT0_COLOR_OPT_DISABLE(1) << (i * 4);
+		sx_blend_opt_control |= S_02875C_MRT0_ALPHA_OPT_DISABLE(1) << (i * 4);
+	}
 	radeon_set_context_reg_seq(cmd_buffer->cs, R_028754_SX_PS_DOWNCONVERT, 3);
 	radeon_emit(cmd_buffer->cs, sx_ps_downconvert);
 	radeon_emit(cmd_buffer->cs, sx_blend_opt_epsilon);
