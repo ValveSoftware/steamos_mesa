@@ -2468,7 +2468,7 @@ radv_compute_bin_size(struct radv_pipeline *pipeline, const VkGraphicsPipelineCr
 	}
 
 	const struct radv_bin_size_entry *color_entry = color_size_table[log_num_rb_per_se][log_num_se];
-	while(color_entry->bpp <= color_bytes_per_pixel)
+	while(color_entry[1].bpp <= color_bytes_per_pixel)
 		++color_entry;
 
 	extent = color_entry->extent;
@@ -2482,7 +2482,7 @@ radv_compute_bin_size(struct radv_pipeline *pipeline, const VkGraphicsPipelineCr
 		unsigned ds_bytes_per_pixel = 4 * (depth_coeff + stencil_coeff) * total_samples;
 
 		const struct radv_bin_size_entry *ds_entry = ds_size_table[log_num_rb_per_se][log_num_se];
-		while(ds_entry->bpp <= ds_bytes_per_pixel)
+		while(ds_entry[1].bpp <= ds_bytes_per_pixel)
 			++ds_entry;
 
 		extent.width = MIN2(extent.width, ds_entry->extent.width);
