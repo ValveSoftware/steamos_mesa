@@ -415,7 +415,7 @@ vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
    case SpvOpDPdyCoarse:   return nir_op_fddy_coarse;
 
    default:
-      vtn_fail("No NIR equivalent");
+      vtn_fail("No NIR equivalent: %u", opcode);
    }
 }
 
