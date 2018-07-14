@@ -1561,10 +1561,8 @@ void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
 						       R_028A4C_PA_SC_MODE_CNTL_1,
 						       pa_sc_mode_cntl_1);
 			}
-			db_count_control = 0;
-		} else {
-			db_count_control = S_028004_ZPASS_INCREMENT_DISABLE(1);
 		}
+		db_count_control = S_028004_ZPASS_INCREMENT_DISABLE(1);
 	} else {
 		const struct radv_subpass *subpass = cmd_buffer->state.subpass;
 		uint32_t sample_rate = subpass ? util_logbase2(subpass->max_sample_count) : 0;
