@@ -382,7 +382,7 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen,
    case PIPE_SHADER_CAP_MAX_OUTPUTS:
       return 32;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
-      return 65536;
+      return NVC0_MAX_CONSTBUF_SIZE;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
       return NVC0_MAX_PIPE_CONSTBUFS;
    case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
@@ -829,6 +829,40 @@ nvc0_screen_resize_text_area(struct nvc0_screen *screen, uint64_t size)
    return 0;
 }
 
+void
+nvc0_screen_bind_cb_3d(struct nvc0_screen *screen, bool *can_serialize,
+                       int stage, int index, int size, uint64_t addr)
+{
+   assert(stage != 5);
+
+   struct nouveau_pushbuf *push = screen->base.pushbuf;
+
+   if (screen->base.class_3d >= GM107_3D_CLASS) {
+      struct nvc0_cb_binding *binding = &screen->cb_bindings[stage][index];
+
+      // TODO: Better figure out the conditions in which this is needed
+      bool serialize = binding->addr == addr && binding->size != size;
+      if (can_serialize)
+         serialize = serialize && *can_serialize;
+      if (serialize) {
+         IMMED_NVC0(push, NVC0_3D(SERIALIZE), 0);
+         if (can_serialize)
+            *can_serialize = false;
+      }
+
+      binding->addr = addr;
+      binding->size = size;
+   }
+
+   if (size >= 0) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, size);
+      PUSH_DATAh(push, addr);
+      PUSH_DATA (push, addr);
+   }
+   IMMED_NVC0(push, NVC0_3D(CB_BIND(stage)), (index << 4) | (size >= 0));
+}
+
 #define FAIL_SCREEN_INIT(str, err)                    \
    do {                                               \
       NOUVEAU_ERR(str, err);                          \
@@ -1272,14 +1306,14 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    /* XXX: Compute and 3D are somehow aliased on Fermi. */
    for (i = 0; i < 5; ++i) {
+      unsigned j = 0;
+      for (j = 0; j < 16; j++)
+         screen->cb_bindings[i][j].size = -1;
+
       /* TIC and TSC entries for each unit (nve4+ only) */
       /* auxiliary constants (6 user clip planes, base instance id) */
-      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, NVC0_CB_AUX_SIZE);
-      PUSH_DATAh(push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
-      PUSH_DATA (push, screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
-      BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);
-      PUSH_DATA (push, (15 << 4) | 1);
+      nvc0_screen_bind_cb_3d(screen, NULL, i, 15, NVC0_CB_AUX_SIZE,
+                             screen->uniform_bo->offset + NVC0_CB_AUX_INFO(i));
       if (screen->eng3d->oclass >= NVE4_3D_CLASS) {
          unsigned j;
          BEGIN_1IC0(push, NVC0_3D(CB_POS), 9);
