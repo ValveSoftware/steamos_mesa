@@ -841,7 +841,7 @@ iter_advance_field(struct gen_field_iterator *iter)
    }
 
    if (iter->field->name)
-      strncpy(iter->name, iter->field->name, sizeof(iter->name));
+      snprintf(iter->name, sizeof(iter->name), "%s", iter->field->name);
    else
       memset(iter->name, 0, sizeof(iter->name));
 
@@ -894,7 +894,7 @@ iter_decode_field(struct gen_field_iterator *iter)
    } v;
 
    if (iter->field->name)
-      strncpy(iter->name, iter->field->name, sizeof(iter->name));
+      snprintf(iter->name, sizeof(iter->name), "%s", iter->field->name);
    else
       memset(iter->name, 0, sizeof(iter->name));
 
