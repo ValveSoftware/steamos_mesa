@@ -49,7 +49,7 @@ void
 fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
               const fs_reg *src, unsigned sources)
 {
-   memset(this, 0, sizeof(*this));
+   memset((void*)this, 0, sizeof(*this));
 
    this->src = new fs_reg[MAX2(sources, 3)];
    for (unsigned i = 0; i < sources; i++)
@@ -131,7 +131,7 @@ fs_inst::fs_inst(enum opcode opcode, uint8_t exec_width, const fs_reg &dst,
 
 fs_inst::fs_inst(const fs_inst &that)
 {
-   memcpy(this, &that, sizeof(that));
+   memcpy((void*)this, &that, sizeof(that));
 
    this->src = new fs_reg[MAX2(that.sources, 3)];
 
@@ -408,7 +408,7 @@ fs_inst::can_change_types() const
 void
 fs_reg::init()
 {
-   memset(this, 0, sizeof(*this));
+   memset((void*)this, 0, sizeof(*this));
    type = BRW_REGISTER_TYPE_UD;
    stride = 1;
 }
