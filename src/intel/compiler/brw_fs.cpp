@@ -5758,7 +5758,7 @@ fs_visitor::lower_simd_width()
              */
             fs_inst split_inst = *inst;
             split_inst.exec_size = lower_width;
-            split_inst.eot = inst->eot && i == n - 1;
+            split_inst.eot = inst->eot && i == int(n - 1);
 
             /* Select the correct channel enables for the i-th group, then
              * transform the sources and destination and emit the lowered
