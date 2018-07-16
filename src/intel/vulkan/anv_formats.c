@@ -724,7 +724,8 @@ void anv_GetPhysicalDeviceFormatProperties2(
                                          &pFormatProperties->formatProperties);
 
    vk_foreach_struct(ext, pFormatProperties->pNext) {
-      switch (ext->sType) {
+      /* Use unsigned since some cases are not in the VkStructureType enum. */
+      switch ((unsigned)ext->sType) {
       case VK_STRUCTURE_TYPE_WSI_FORMAT_MODIFIER_PROPERTIES_LIST_MESA:
          get_wsi_format_modifier_properties_list(physical_device, format,
                                                  (void *)ext);
