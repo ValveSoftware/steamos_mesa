@@ -1395,6 +1395,26 @@ static LLVMValueRef visit_load_push_constant(struct ac_nir_context *ctx,
 			    get_src(ctx, instr->src[0]), "");
 
 	ptr = ac_build_gep0(&ctx->ac, ctx->abi->push_constants, addr);
+
+	if (instr->dest.ssa.bit_size == 16) {
+		unsigned load_dwords = instr->dest.ssa.num_components / 2 + 1;
+		LLVMTypeRef vec_type = LLVMVectorType(LLVMInt16Type(), 2 * load_dwords);
+		ptr = ac_cast_ptr(&ctx->ac, ptr, vec_type);
+		LLVMValueRef res = LLVMBuildLoad(ctx->ac.builder, ptr, "");
+		res = LLVMBuildBitCast(ctx->ac.builder, res, vec_type, "");
+		LLVMValueRef cond = LLVMBuildLShr(ctx->ac.builder, addr, ctx->ac.i32_1, "");
+		cond = LLVMBuildTrunc(ctx->ac.builder, cond, LLVMInt1Type(), "");
+		LLVMValueRef mask[] = { LLVMConstInt(ctx->ac.i32, 0, false), LLVMConstInt(ctx->ac.i32, 1, false),
+					LLVMConstInt(ctx->ac.i32, 2, false), LLVMConstInt(ctx->ac.i32, 3, false),
+					LLVMConstInt(ctx->ac.i32, 4, false)};
+		LLVMValueRef swizzle_aligned = LLVMConstVector(&mask[0], instr->dest.ssa.num_components);
+		LLVMValueRef swizzle_unaligned = LLVMConstVector(&mask[1], instr->dest.ssa.num_components);
+		LLVMValueRef shuffle_aligned = LLVMBuildShuffleVector(ctx->ac.builder, res, res, swizzle_aligned, "");
+		LLVMValueRef shuffle_unaligned = LLVMBuildShuffleVector(ctx->ac.builder, res, res, swizzle_unaligned, "");
+		res = LLVMBuildSelect(ctx->ac.builder, cond, shuffle_unaligned, shuffle_aligned, "");
+		return LLVMBuildBitCast(ctx->ac.builder, res, get_def_type(ctx, &instr->dest.ssa), "");
+	}
+
 	ptr = ac_cast_ptr(&ctx->ac, ptr, get_def_type(ctx, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->ac.builder, ptr, "");
