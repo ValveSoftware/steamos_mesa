@@ -1772,7 +1772,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
    enum isl_aux_state initial_state;
    uint8_t memset_value;
    struct isl_surf aux_surf;
-   MAYBE_UNUSED bool aux_surf_ok;
+   MAYBE_UNUSED bool aux_surf_ok = false;
 
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_NONE:
@@ -1781,6 +1781,7 @@ intel_miptree_alloc_aux(struct brw_context *brw,
       break;
    case ISL_AUX_USAGE_HIZ:
       initial_state = ISL_AUX_STATE_AUX_INVALID;
+      memset_value = 0;
       aux_surf_ok = isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &aux_surf);
       break;
    case ISL_AUX_USAGE_MCS:
