@@ -2568,6 +2568,28 @@ dri2_export_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *img,
    return EGL_TRUE;
 }
 
+/**
+ * Checks if we can support EGL_MESA_image_dma_buf_export on this image.
+
+ * The spec provides a boolean return for the driver to reject exporting for
+ * basically any reason, but doesn't specify any particular error cases.  For
+ * now, we just fail if we don't have a DRM fourcc for the format.
+ */
+static bool
+dri2_can_export_dma_buf_image(_EGLDisplay *disp, _EGLImage *img)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_image *dri2_img = dri2_egl_image(img);
+   EGLint fourcc;
+
+   if (!dri2_dpy->image->queryImage(dri2_img->dri_image,
+                                    __DRI_IMAGE_ATTRIB_FOURCC, &fourcc)) {
+      return false;
+   }
+
+   return true;
+}
+
 static EGLBoolean
 dri2_export_dma_buf_image_query_mesa(_EGLDriver *drv, _EGLDisplay *disp,
                                      _EGLImage *img,
@@ -2579,6 +2601,8 @@ dri2_export_dma_buf_image_query_mesa(_EGLDriver *drv, _EGLDisplay *disp,
 
    (void) drv;
 
+   if (!dri2_can_export_dma_buf_image(disp, img))
+      return EGL_FALSE;
 
    if (nplanes)
       dri2_dpy->image->queryImage(dri2_img->dri_image,
@@ -2601,6 +2625,9 @@ dri2_export_dma_buf_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *im
    struct dri2_egl_image *dri2_img = dri2_egl_image(img);
 
    (void) drv;
+
+   if (!dri2_can_export_dma_buf_image(disp, img))
+      return EGL_FALSE;
 
    /* rework later to provide multiple fds/strides/offsets */
    if (fds)
