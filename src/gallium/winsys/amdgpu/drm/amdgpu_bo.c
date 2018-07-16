@@ -168,14 +168,15 @@ static void amdgpu_bo_remove_fences(struct amdgpu_winsys_bo *bo)
 void amdgpu_bo_destroy(struct pb_buffer *_buf)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
+   struct amdgpu_winsys *ws = bo->ws;
 
    assert(bo->bo && "must not be called for slab entries");
 
-   if (bo->ws->debug_all_bos) {
-      simple_mtx_lock(&bo->ws->global_bo_list_lock);
+   if (ws->debug_all_bos) {
+      simple_mtx_lock(&ws->global_bo_list_lock);
       LIST_DEL(&bo->u.real.global_list_item);
-      bo->ws->num_buffers--;
-      simple_mtx_unlock(&bo->ws->global_bo_list_lock);
+      ws->num_buffers--;
+      simple_mtx_unlock(&ws->global_bo_list_lock);
    }
 
    amdgpu_bo_va_op(bo->bo, 0, bo->base.size, bo->va, 0, AMDGPU_VA_OP_UNMAP);
@@ -185,16 +186,16 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
    amdgpu_bo_remove_fences(bo);
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
-      bo->ws->allocated_vram -= align64(bo->base.size, bo->ws->info.gart_page_size);
+      ws->allocated_vram -= align64(bo->base.size, ws->info.gart_page_size);
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
-      bo->ws->allocated_gtt -= align64(bo->base.size, bo->ws->info.gart_page_size);
+      ws->allocated_gtt -= align64(bo->base.size, ws->info.gart_page_size);
 
    if (bo->u.real.map_count >= 1) {
       if (bo->initial_domain & RADEON_DOMAIN_VRAM)
-         bo->ws->mapped_vram -= bo->base.size;
+         ws->mapped_vram -= bo->base.size;
       else if (bo->initial_domain & RADEON_DOMAIN_GTT)
-         bo->ws->mapped_gtt -= bo->base.size;
-      bo->ws->num_mapped_buffers--;
+         ws->mapped_gtt -= bo->base.size;
+      ws->num_mapped_buffers--;
    }
 
    FREE(bo);
