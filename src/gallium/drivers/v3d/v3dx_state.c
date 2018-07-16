@@ -768,7 +768,9 @@ v3d_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                  */
                 tex.texture_base_pointer = cl_address(NULL,
                                                       rsc->bo->offset +
-                                                      rsc->slices[0].offset),
+                                                      rsc->slices[0].offset +
+                                                      cso->u.tex.first_layer *
+                                                      rsc->cube_map_stride),
 
                 tex.swizzle_r = translate_swizzle(so->swizzle[0]);
                 tex.swizzle_g = translate_swizzle(so->swizzle[1]);
