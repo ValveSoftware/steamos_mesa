@@ -1265,20 +1265,14 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
                                                unsigned *offset)
 {
    struct amdgpu_winsys *ws = amdgpu_winsys(rws);
-   struct amdgpu_winsys_bo *bo;
+   struct amdgpu_winsys_bo *bo = NULL;
    enum amdgpu_bo_handle_type type;
    struct amdgpu_bo_import_result result = {0};
    uint64_t va;
-   amdgpu_va_handle va_handle;
+   amdgpu_va_handle va_handle = NULL;
    struct amdgpu_bo_info info = {0};
    enum radeon_bo_domain initial = 0;
    int r;
-
-   /* Initialize the structure. */
-   bo = CALLOC_STRUCT(amdgpu_winsys_bo);
-   if (!bo) {
-      return NULL;
-   }
 
    switch (whandle->type) {
    case WINSYS_HANDLE_TYPE_SHARED:
@@ -1293,29 +1287,33 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
 
    r = amdgpu_bo_import(ws->dev, type, whandle->handle, &result);
    if (r)
-      goto error;
+      return NULL;
 
    /* Get initial domains. */
    r = amdgpu_bo_query_info(result.buf_handle, &info);
    if (r)
-      goto error_query;
+      goto error;
 
    r = amdgpu_va_range_alloc(ws->dev, amdgpu_gpu_va_range_general,
                              result.alloc_size, 1 << 20, 0, &va, &va_handle,
 			     AMDGPU_VA_RANGE_HIGH);
    if (r)
-      goto error_query;
+      goto error;
+
+   bo = CALLOC_STRUCT(amdgpu_winsys_bo);
+   if (!bo)
+      goto error;
 
    r = amdgpu_bo_va_op(result.buf_handle, 0, result.alloc_size, va, 0, AMDGPU_VA_OP_MAP);
    if (r)
-      goto error_va_map;
+      goto error;
 
    if (info.preferred_heap & AMDGPU_GEM_DOMAIN_VRAM)
       initial |= RADEON_DOMAIN_VRAM;
    if (info.preferred_heap & AMDGPU_GEM_DOMAIN_GTT)
       initial |= RADEON_DOMAIN_GTT;
 
-
+   /* Initialize the structure. */
    pipe_reference_init(&bo->base.reference, 1);
    bo->base.alignment = info.phys_alignment;
    bo->bo = result.buf_handle;
@@ -1342,14 +1340,12 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
 
    return &bo->base;
 
-error_va_map:
-   amdgpu_va_range_free(va_handle);
-
-error_query:
-   amdgpu_bo_free(result.buf_handle);
-
 error:
-   FREE(bo);
+   if (bo)
+      FREE(bo);
+   if (va_handle)
+      amdgpu_va_range_free(va_handle);
+   amdgpu_bo_free(result.buf_handle);
    return NULL;
 }
 
