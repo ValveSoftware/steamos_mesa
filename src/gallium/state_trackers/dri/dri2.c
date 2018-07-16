@@ -1318,7 +1318,7 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FOURCC:
       *value = convert_to_fourcc(image->dri_format);
-      return GL_TRUE;
+      return *value != -1;
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
       *value = 1;
       return GL_TRUE;
