@@ -323,9 +323,9 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
       ctx_print_group(ctx, desc, desc_addr, desc_map);
 
       gen_field_iterator_init(&iter, desc, desc_map, 0, false);
-      uint64_t ksp;
-      uint32_t sampler_offset, sampler_count;
-      uint32_t binding_table_offset, binding_entry_count;
+      uint64_t ksp = 0;
+      uint32_t sampler_offset = 0, sampler_count = 0;
+      uint32_t binding_table_offset = 0, binding_entry_count = 0;
       while (gen_field_iterator_next(&iter)) {
          if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
             ksp = strtoll(iter.value, NULL, 16);
@@ -648,7 +648,7 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
    struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
 
-   uint32_t state_offset;
+   uint32_t state_offset = 0;
 
    struct gen_field_iterator iter;
    gen_field_iterator_init(&iter, inst, p, 0, false);
@@ -841,7 +841,7 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
       }
 
       if (strcmp(inst_name, "MI_BATCH_BUFFER_START") == 0) {
-         struct gen_batch_decode_bo next_batch;
+         struct gen_batch_decode_bo next_batch = {};
          bool second_level;
          struct gen_field_iterator iter;
          gen_field_iterator_init(&iter, inst, p, 0, false);
