@@ -802,6 +802,8 @@ si_lower_nir(struct si_shader_selector* sel)
 
 	ac_lower_indirect_derefs(sel->nir, sel->screen->info.chip_class);
 
+	NIR_PASS_V(sel->nir, nir_lower_load_const_to_scalar);
+
 	bool progress;
 	do {
 		progress = false;
