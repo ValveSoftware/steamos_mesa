@@ -201,6 +201,7 @@ enum virgl_formats {
 #define VIRGL_CAP_NONE 0
 #define VIRGL_CAP_TGSI_INVARIANT       (1 << 0)
 #define VIRGL_CAP_TEXTURE_VIEW         (1 << 1)
+#define VIRGL_CAP_SET_MIN_SAMPLES      (1 << 2)
 
 #define VIRGL_BIND_DEPTH_STENCIL (1 << 0)
 #define VIRGL_BIND_RENDER_TARGET (1 << 1)

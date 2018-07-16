@@ -211,6 +211,9 @@ void virgl_encoder_set_polygon_stipple(struct virgl_context *ctx,
 void virgl_encoder_set_sample_mask(struct virgl_context *ctx,
                                   unsigned sample_mask);
 
+void virgl_encoder_set_min_samples(struct virgl_context *ctx,
+                                  unsigned min_samples);
+
 void virgl_encoder_set_clip_state(struct virgl_context *ctx,
                                  const struct pipe_clip_state *clip);
 

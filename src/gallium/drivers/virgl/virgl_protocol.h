@@ -85,6 +85,7 @@ enum virgl_context_cmd {
    VIRGL_CCMD_BIND_SHADER,
 
    VIRGL_CCMD_SET_TESS_STATE,
+   VIRGL_CCMD_SET_MIN_SAMPLES,
 };
 
 /*
@@ -485,5 +486,9 @@ enum virgl_context_cmd {
 
 /* tess state */
 #define VIRGL_TESS_STATE_SIZE 6
+
+/* set min samples */
+#define VIRGL_SET_MIN_SAMPLES_SIZE 1
+#define VIRGL_SET_MIN_SAMPLES_MASK 1
 
 #endif

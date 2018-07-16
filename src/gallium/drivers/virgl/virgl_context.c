@@ -844,6 +844,17 @@ static void virgl_set_sample_mask(struct pipe_context *ctx,
    virgl_encoder_set_sample_mask(vctx, sample_mask);
 }
 
+static void virgl_set_min_samples(struct pipe_context *ctx,
+                                 unsigned min_samples)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *rs = virgl_screen(ctx->screen);
+
+   if (!(rs->caps.caps.v2.capability_bits & VIRGL_CAP_SET_MIN_SAMPLES))
+      return;
+   virgl_encoder_set_min_samples(vctx, min_samples);
+}
+
 static void virgl_set_clip_state(struct pipe_context *ctx,
                                 const struct pipe_clip_state *clip)
 {
@@ -1025,6 +1036,7 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.set_polygon_stipple = virgl_set_polygon_stipple;
    vctx->base.set_scissor_states = virgl_set_scissor_states;
    vctx->base.set_sample_mask = virgl_set_sample_mask;
+   vctx->base.set_min_samples = virgl_set_min_samples;
    vctx->base.set_stencil_ref = virgl_set_stencil_ref;
    vctx->base.set_clip_state = virgl_set_clip_state;
 
