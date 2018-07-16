@@ -31,6 +31,7 @@
 #include "amdgpu_public.h"
 
 #include "util/u_hash_table.h"
+#include "util/hash_table.h"
 #include <amdgpu_drm.h>
 #include <xf86drm.h>
 #include <stdio.h>
@@ -187,16 +188,12 @@ static bool amdgpu_read_registers(struct radeon_winsys *rws,
                                    0xffffffff, 0, out) == 0;
 }
 
-static unsigned hash_dev(void *key)
+static unsigned hash_pointer(void *key)
 {
-#if defined(PIPE_ARCH_X86_64)
-   return pointer_to_intptr(key) ^ (pointer_to_intptr(key) >> 32);
-#else
-   return pointer_to_intptr(key);
-#endif
+   return _mesa_hash_pointer(key);
 }
 
-static int compare_dev(void *key1, void *key2)
+static int compare_pointers(void *key1, void *key2)
 {
    return key1 != key2;
 }
@@ -252,7 +249,7 @@ amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
    /* Look up the winsys from the dev table. */
    simple_mtx_lock(&dev_tab_mutex);
    if (!dev_tab)
-      dev_tab = util_hash_table_create(hash_dev, compare_dev);
+      dev_tab = util_hash_table_create(hash_pointer, compare_pointers);
 
    /* Initialize the amdgpu device. This should always return the same pointer
     * for the same fd. */
