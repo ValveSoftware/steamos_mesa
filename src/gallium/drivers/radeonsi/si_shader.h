@@ -502,7 +502,7 @@ union si_shader_part_key {
 		unsigned	ancillary_vgpr_index:5;
 		unsigned	wqm:1;
 		char		color_attr_index[2];
-		char		color_interp_vgpr_index[2]; /* -1 == constant */
+		signed char	color_interp_vgpr_index[2]; /* -1 == constant */
 	} ps_prolog;
 	struct {
 		struct si_ps_epilog_bits states;
