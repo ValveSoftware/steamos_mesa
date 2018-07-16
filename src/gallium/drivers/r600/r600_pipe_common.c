@@ -314,12 +314,10 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	if (ctx->screen->info.r600_has_virtual_memory) {
 		if (dst)
 			radeon_add_to_buffer_list(ctx, &ctx->dma, dst,
-						  RADEON_USAGE_WRITE,
-						  RADEON_PRIO_SDMA_BUFFER);
+						  RADEON_USAGE_WRITE, 0);
 		if (src)
 			radeon_add_to_buffer_list(ctx, &ctx->dma, src,
-						  RADEON_USAGE_READ,
-						  RADEON_PRIO_SDMA_BUFFER);
+						  RADEON_USAGE_READ, 0);
 	}
 
 	/* this function is called before all DMA calls, so increment this. */

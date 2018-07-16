@@ -64,10 +64,8 @@ void evergreen_dma_copy_buffer(struct r600_context *rctx,
 	for (i = 0; i < ncopy; i++) {
 		csize = size < EG_DMA_COPY_MAX_SIZE ? size : EG_DMA_COPY_MAX_SIZE;
 		/* emit reloc before writing cs so that cs is always in consistent state */
-		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, rsrc, RADEON_USAGE_READ,
-				      RADEON_PRIO_SDMA_BUFFER);
-		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, rdst, RADEON_USAGE_WRITE,
-				      RADEON_PRIO_SDMA_BUFFER);
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, rsrc, RADEON_USAGE_READ, 0);
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, rdst, RADEON_USAGE_WRITE, 0);
 		radeon_emit(cs, DMA_PACKET(DMA_PACKET_COPY, sub_cmd, csize));
 		radeon_emit(cs, dst_offset & 0xffffffff);
 		radeon_emit(cs, src_offset & 0xffffffff);
