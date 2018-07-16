@@ -267,6 +267,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
    uint32_t depthbuffer_format = BRW_DEPTHFORMAT_D32_FLOAT;
    uint32_t depth_offset = 0;
    uint32_t width = 1, height = 1;
+   bool tiled_surface = true;
 
    /* If there's a packed depth/stencil bound to stencil only, we need to
     * emit the packed depth/stencil buffer packet.
@@ -282,6 +283,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
       depth_offset = brw->depthstencil.depth_offset;
       width = depth_irb->Base.Base.Width;
       height = depth_irb->Base.Base.Height;
+      tiled_surface = depth_mt->surf.tiling != ISL_TILING_LINEAR;
    }
 
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
@@ -292,7 +294,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
    OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
              (depthbuffer_format << 18) |
              (BRW_TILEWALK_YMAJOR << 26) |
-             (1 << 27) |
+             (tiled_surface << 27) |
              (depth_surface_type << 29));
 
    if (depth_mt) {
