@@ -24,7 +24,7 @@ inc_egl_dri2 = include_directories('drivers/dri2')
 c_args_for_egl = []
 link_for_egl = []
 deps_for_egl = []
-incs_for_egl = [inc_include, inc_src, inc_egl]
+incs_for_egl = [inc_include, inc_drm_uapi, inc_src, inc_egl]
 
 files_egl = files(
   'main/eglapi.c',

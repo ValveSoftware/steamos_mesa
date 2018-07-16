@@ -44,6 +44,7 @@ LOCAL_CFLAGS := \
 	-DHAVE_ANDROID_PLATFORM
 
 LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/include/drm-uapi \
 	$(MESA_TOP)/src/egl/main \
 	$(MESA_TOP)/src/egl/drivers/dri2
 
