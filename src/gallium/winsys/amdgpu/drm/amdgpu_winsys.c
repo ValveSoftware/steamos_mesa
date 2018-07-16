@@ -92,7 +92,9 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
    simple_mtx_destroy(&ws->bo_fence_lock);
    pb_slabs_deinit(&ws->bo_slabs);
    pb_cache_deinit(&ws->bo_cache);
+   util_hash_table_destroy(ws->bo_export_table);
    simple_mtx_destroy(&ws->global_bo_list_lock);
+   simple_mtx_destroy(&ws->bo_export_table_lock);
    do_winsys_deinit(ws);
    FREE(rws);
 }
@@ -314,8 +316,11 @@ amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
    amdgpu_surface_init_functions(ws);
 
    LIST_INITHEAD(&ws->global_bo_list);
+   ws->bo_export_table = util_hash_table_create(hash_pointer, compare_pointers);
+
    (void) simple_mtx_init(&ws->global_bo_list_lock, mtx_plain);
    (void) simple_mtx_init(&ws->bo_fence_lock, mtx_plain);
+   (void) simple_mtx_init(&ws->bo_export_table_lock, mtx_plain);
 
    if (!util_queue_init(&ws->cs_queue, "cs", 8, 1,
                         UTIL_QUEUE_INIT_RESIZE_IF_FULL)) {

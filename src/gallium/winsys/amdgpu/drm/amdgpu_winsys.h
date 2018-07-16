@@ -85,6 +85,11 @@ struct amdgpu_winsys {
    simple_mtx_t global_bo_list_lock;
    struct list_head global_bo_list;
    unsigned num_buffers;
+
+   /* For returning the same amdgpu_winsys_bo instance for exported
+    * and re-imported buffers. */
+   struct util_hash_table *bo_export_table;
+   simple_mtx_t bo_export_table_lock;
 };
 
 static inline struct amdgpu_winsys *

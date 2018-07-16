@@ -28,6 +28,7 @@
 #include "amdgpu_cs.h"
 
 #include "util/os_time.h"
+#include "util/u_hash_table.h"
 #include "state_tracker/drm_driver.h"
 #include <amdgpu_drm.h>
 #include <xf86drm.h>
@@ -178,6 +179,10 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
       ws->num_buffers--;
       simple_mtx_unlock(&ws->global_bo_list_lock);
    }
+
+   simple_mtx_lock(&ws->bo_export_table_lock);
+   util_hash_table_remove(ws->bo_export_table, bo->bo);
+   simple_mtx_unlock(&ws->bo_export_table_lock);
 
    amdgpu_bo_va_op(bo->bo, 0, bo->base.size, bo->va, 0, AMDGPU_VA_OP_UNMAP);
    amdgpu_va_range_free(bo->u.real.va_handle);
@@ -1285,9 +1290,26 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
       return NULL;
    }
 
+   if (stride)
+      *stride = whandle->stride;
+   if (offset)
+      *offset = whandle->offset;
+
    r = amdgpu_bo_import(ws->dev, type, whandle->handle, &result);
    if (r)
       return NULL;
+
+   simple_mtx_lock(&ws->bo_export_table_lock);
+   bo = util_hash_table_get(ws->bo_export_table, result.buf_handle);
+
+   /* If the amdgpu_winsys_bo instance already exists, bump the reference
+    * counter and return it.
+    */
+   if (bo) {
+      p_atomic_inc(&bo->base.reference.count);
+      simple_mtx_unlock(&ws->bo_export_table_lock);
+      return &bo->base;
+   }
 
    /* Get initial domains. */
    r = amdgpu_bo_query_info(result.buf_handle, &info);
@@ -1326,11 +1348,6 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
    bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
    bo->is_shared = true;
 
-   if (stride)
-      *stride = whandle->stride;
-   if (offset)
-      *offset = whandle->offset;
-
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
       ws->allocated_vram += align64(bo->base.size, ws->info.gart_page_size);
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
@@ -1338,9 +1355,13 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
 
    amdgpu_add_buffer_to_global_list(bo);
 
+   util_hash_table_set(ws->bo_export_table, bo->bo, bo);
+   simple_mtx_unlock(&ws->bo_export_table_lock);
+
    return &bo->base;
 
 error:
+   simple_mtx_unlock(&ws->bo_export_table_lock);
    if (bo)
       FREE(bo);
    if (va_handle)
@@ -1355,6 +1376,7 @@ static bool amdgpu_bo_get_handle(struct pb_buffer *buffer,
                                  struct winsys_handle *whandle)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(buffer);
+   struct amdgpu_winsys *ws = bo->ws;
    enum amdgpu_bo_handle_type type;
    int r;
 
@@ -1381,6 +1403,10 @@ static bool amdgpu_bo_get_handle(struct pb_buffer *buffer,
    r = amdgpu_bo_export(bo->bo, type, &whandle->handle);
    if (r)
       return false;
+
+   simple_mtx_lock(&ws->bo_export_table_lock);
+   util_hash_table_set(ws->bo_export_table, bo->bo, bo);
+   simple_mtx_unlock(&ws->bo_export_table_lock);
 
    whandle->stride = stride;
    whandle->offset = offset;
