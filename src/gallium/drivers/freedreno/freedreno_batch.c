@@ -276,10 +276,6 @@ batch_flush(struct fd_batch *batch, bool force)
 	DBG("%p: needs_flush=%d", batch, batch->needs_flush);
 
 	if (!batch->needs_flush) {
-		if (force) {
-			fd_gmem_render_noop(batch);
-			goto out;
-		}
 		return;
 	}
 
@@ -310,7 +306,6 @@ batch_flush(struct fd_batch *batch, bool force)
 
 	debug_assert(batch->reference.count > 0);
 
-out:
 	if (batch == batch->ctx->batch) {
 		batch_reset(batch);
 	} else {

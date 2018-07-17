@@ -442,21 +442,6 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	flush_ring(batch);
 }
 
-/* special case for when we need to create a fence but have no rendering
- * to flush.. just emit a no-op string-marker packet.
- */
-void
-fd_gmem_render_noop(struct fd_batch *batch)
-{
-	struct fd_context *ctx = batch->ctx;
-	struct pipe_context *pctx = &ctx->base;
-
-	pctx->emit_string_marker(pctx, "noop", 4);
-	/* emit IB to drawcmds (which contain the string marker): */
-	ctx->emit_ib(batch->gmem, batch->draw);
-	flush_ring(batch);
-}
-
 /* tile needs restore if it isn't completely contained within the
  * cleared scissor:
  */

@@ -355,6 +355,9 @@ OUT_WFI5(struct fd_ringbuffer *ring)
 static inline void
 __OUT_IB(struct fd_ringbuffer *ring, bool prefetch, struct fd_ringbuffer *target)
 {
+	if (target->cur == target->start)
+		return;
+
 	unsigned count = fd_ringbuffer_cmd_count(target);
 
 	debug_assert(__gpu_id(ring) < 500);
@@ -382,6 +385,9 @@ __OUT_IB(struct fd_ringbuffer *ring, bool prefetch, struct fd_ringbuffer *target
 static inline void
 __OUT_IB5(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 {
+	if (target->cur == target->start)
+		return;
+
 	unsigned count = fd_ringbuffer_cmd_count(target);
 
 	for (unsigned i = 0; i < count; i++) {
