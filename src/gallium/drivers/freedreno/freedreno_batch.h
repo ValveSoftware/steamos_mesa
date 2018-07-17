@@ -228,16 +228,6 @@ void __fd_batch_destroy(struct fd_batch *batch);
  * __fd_batch_destroy() needs to unref resources)
  */
 
-static inline void
-fd_batch_reference(struct fd_batch **ptr, struct fd_batch *batch)
-{
-	struct fd_batch *old_batch = *ptr;
-	if (pipe_reference_described(&(*ptr)->reference, &batch->reference,
-			(debug_reference_descriptor)__fd_batch_describe))
-		__fd_batch_destroy(old_batch);
-	*ptr = batch;
-}
-
 /* fwd-decl prototypes to untangle header dependency :-/ */
 static inline void fd_context_assert_locked(struct fd_context *ctx);
 static inline void fd_context_lock(struct fd_context *ctx);
@@ -248,19 +238,30 @@ fd_batch_reference_locked(struct fd_batch **ptr, struct fd_batch *batch)
 {
 	struct fd_batch *old_batch = *ptr;
 
+	/* only need lock if a reference is dropped: */
 	if (old_batch)
 		fd_context_assert_locked(old_batch->ctx);
-	else if (batch)
-		fd_context_assert_locked(batch->ctx);
 
 	if (pipe_reference_described(&(*ptr)->reference, &batch->reference,
-			(debug_reference_descriptor)__fd_batch_describe)) {
-		struct fd_context *ctx = old_batch->ctx;
-		fd_context_unlock(ctx);
+			(debug_reference_descriptor)__fd_batch_describe))
 		__fd_batch_destroy(old_batch);
-		fd_context_lock(ctx);
-	}
+
 	*ptr = batch;
+}
+
+static inline void
+fd_batch_reference(struct fd_batch **ptr, struct fd_batch *batch)
+{
+	struct fd_batch *old_batch = *ptr;
+	struct fd_context *ctx = old_batch ? old_batch->ctx : NULL;
+
+	if (ctx)
+		fd_context_lock(ctx);
+
+	fd_batch_reference_locked(ptr, batch);
+
+	if (ctx)
+		fd_context_unlock(ctx);
 }
 
 #include "freedreno_context.h"

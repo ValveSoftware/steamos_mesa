@@ -223,24 +223,26 @@ fd_batch_reset(struct fd_batch *batch)
 void
 __fd_batch_destroy(struct fd_batch *batch)
 {
+	struct fd_context *ctx = batch->ctx;
+
 	DBG("%p", batch);
 
-	util_copy_framebuffer_state(&batch->framebuffer, NULL);
+	fd_context_assert_locked(batch->ctx);
 
-	mtx_lock(&batch->ctx->screen->lock);
 	fd_bc_invalidate_batch(batch, true);
-	mtx_unlock(&batch->ctx->screen->lock);
 
-	batch_fini(batch);
-
-	batch_reset_resources(batch);
+	batch_reset_resources_locked(batch);
 	debug_assert(batch->resources->entries == 0);
 	_mesa_set_destroy(batch->resources, NULL);
 
 	batch_flush_reset_dependencies(batch, false);
 	debug_assert(batch->dependents_mask == 0);
 
+	fd_context_unlock(ctx);
+	util_copy_framebuffer_state(&batch->framebuffer, NULL);
+	batch_fini(batch);
 	free(batch);
+	fd_context_lock(ctx);
 }
 
 void
