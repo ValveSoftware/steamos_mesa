@@ -164,6 +164,8 @@ struct pipe_resource *virgl_buffer_create(struct virgl_screen *vs,
    vbind = pipe_to_virgl_bind(template->bind);
    size = template->width0;
 
+   if (vbind == VIRGL_BIND_SHADER_BUFFER)
+      buf->base.clean = FALSE;
    buf->base.hw_res = vs->vws->resource_create(vs->vws, template->target, template->format, vbind, template->width0, 1, 1, 1, 0, 0, size);
 
    util_range_set_empty(&buf->valid_buffer_range);

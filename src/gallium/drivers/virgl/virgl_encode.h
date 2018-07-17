@@ -258,4 +258,9 @@ int virgl_encode_bind_shader(struct virgl_context *ctx,
 int virgl_encode_set_tess_state(struct virgl_context *ctx,
                                 const float outer[4],
                                 const float inner[2]);
+
+int virgl_encode_set_shader_buffers(struct virgl_context *ctx,
+                                    enum pipe_shader_type shader,
+                                    unsigned start_slot, unsigned count,
+                                    const struct pipe_shader_buffer *buffers);
 #endif

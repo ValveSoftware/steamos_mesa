@@ -370,6 +370,11 @@ virgl_get_shader_param(struct pipe_screen *screen,
          return 32;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return 4096 * sizeof(float[4]);
+      case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+         if (shader == PIPE_SHADER_FRAGMENT)
+            return vscreen->caps.caps.v2.max_shader_buffer_frag_compute;
+         else
+            return vscreen->caps.caps.v2.max_shader_buffer_other_stages;
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       case PIPE_SHADER_CAP_INT64_ATOMICS:
