@@ -96,6 +96,7 @@ struct fd_batch {
 	/* is this a non-draw batch (ie compute/blit which has no pfb state)? */
 	bool nondraw : 1;
 	bool needs_flush : 1;
+	bool flushed : 1;
 	bool blit : 1;
 	bool back_blit : 1;      /* only blit so far is resource shadowing back-blit */
 

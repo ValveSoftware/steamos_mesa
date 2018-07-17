@@ -72,6 +72,7 @@ batch_init(struct fd_batch *batch)
 	batch->cleared = batch->partial_cleared = 0;
 	batch->restore = batch->resolve = 0;
 	batch->needs_flush = false;
+	batch->flushed = false;
 	batch->gmem_reason = 0;
 	batch->num_draws = 0;
 	batch->stage = FD_STAGE_NULL;
@@ -117,6 +118,8 @@ fd_batch_create(struct fd_context *ctx, bool nondraw)
 static void
 batch_fini(struct fd_batch *batch)
 {
+	DBG("%p", batch);
+
 	pipe_resource_reference(&batch->query_buf, NULL);
 
 	if (batch->in_fence_fd != -1)
@@ -259,6 +262,8 @@ batch_flush_func(void *job, int id)
 {
 	struct fd_batch *batch = job;
 
+	DBG("%p", batch);
+
 	fd_gmem_render_tiles(batch);
 	batch_reset_resources(batch);
 }
@@ -275,9 +280,8 @@ batch_flush(struct fd_batch *batch, bool force)
 {
 	DBG("%p: needs_flush=%d", batch, batch->needs_flush);
 
-	if (!batch->needs_flush) {
+	if (batch->flushed)
 		return;
-	}
 
 	batch->needs_flush = false;
 
@@ -288,6 +292,8 @@ batch_flush(struct fd_batch *batch, bool force)
 
 	fd_context_all_dirty(batch->ctx);
 	batch_flush_reset_dependencies(batch, true);
+
+	batch->flushed = true;
 
 	if (batch->ctx->screen->reorder) {
 		struct fd_batch *tmp = NULL;
@@ -306,13 +312,9 @@ batch_flush(struct fd_batch *batch, bool force)
 
 	debug_assert(batch->reference.count > 0);
 
-	if (batch == batch->ctx->batch) {
-		batch_reset(batch);
-	} else {
-		mtx_lock(&batch->ctx->screen->lock);
-		fd_bc_invalidate_batch(batch, false);
-		mtx_unlock(&batch->ctx->screen->lock);
-	}
+	mtx_lock(&batch->ctx->screen->lock);
+	fd_bc_invalidate_batch(batch, false);
+	mtx_unlock(&batch->ctx->screen->lock);
 }
 
 /* NOTE: could drop the last ref to batch
@@ -326,16 +328,36 @@ batch_flush(struct fd_batch *batch, bool force)
 void
 fd_batch_flush(struct fd_batch *batch, bool sync, bool force)
 {
+	struct fd_batch *tmp = NULL;
+	bool newbatch = false;
+
 	/* NOTE: we need to hold an extra ref across the body of flush,
 	 * since the last ref to this batch could be dropped when cleaning
 	 * up used_resources
 	 */
-	struct fd_batch *tmp = NULL;
-
 	fd_batch_reference(&tmp, batch);
+
+	if (batch == batch->ctx->batch) {
+		batch->ctx->batch = NULL;
+		newbatch = true;
+	}
+
 	batch_flush(tmp, force);
+
+	if (newbatch) {
+		struct fd_context *ctx = batch->ctx;
+		struct fd_batch *new_batch =
+			fd_batch_from_fb(&ctx->screen->batch_cache, ctx, &batch->framebuffer);
+
+		util_copy_framebuffer_state(&new_batch->framebuffer, &batch->framebuffer);
+
+		fd_batch_reference(&batch, NULL);
+		ctx->batch = new_batch;
+	}
+
 	if (sync)
 		fd_batch_sync(tmp);
+
 	fd_batch_reference(&tmp, NULL);
 }
 
@@ -447,6 +469,8 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 void
 fd_batch_check_size(struct fd_batch *batch)
 {
+	debug_assert(!batch->flushed);
+
 	if (fd_device_version(batch->ctx->screen->dev) >= FD_VERSION_UNLIMITED_CMDS)
 		return;
 
