@@ -126,7 +126,7 @@ EXT(ARB_shader_storage_buffer_object        , ARB_shader_storage_buffer_object  
 EXT(ARB_shader_subroutine                   , dummy_true                             ,  31, GLC,  x ,  x , 2010)
 EXT(ARB_shader_texture_image_samples        , ARB_shader_texture_image_samples       , GLL, GLC,  x ,  x , 2014)
 EXT(ARB_shader_texture_lod                  , ARB_shader_texture_lod                 , GLL, GLC,  x ,  x , 2009)
-EXT(ARB_shader_viewport_layer_array         , ARB_shader_viewport_layer_array        ,  x , GLC,  x ,  x , 2015)
+EXT(ARB_shader_viewport_layer_array         , ARB_shader_viewport_layer_array        , GLL, GLC,  x ,  x , 2015)
 EXT(ARB_shading_language_100                , dummy_true                             , GLL,  x ,  x ,  x , 2003)
 EXT(ARB_shading_language_420pack            , ARB_shading_language_420pack           , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_shading_language_packing            , ARB_shading_language_packing           , GLL, GLC,  x ,  x , 2011)
