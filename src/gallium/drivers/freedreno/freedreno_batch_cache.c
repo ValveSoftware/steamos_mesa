@@ -414,7 +414,7 @@ fd_batch_from_fb(struct fd_batch_cache *cache, struct fd_context *ctx,
 	key->width = pfb->width;
 	key->height = pfb->height;
 	key->layers = pfb->layers;
-	key->samples = pfb->samples;
+	key->samples = util_framebuffer_get_num_samples(pfb);
 	key->ctx = ctx;
 
 	if (pfb->zsbuf)
