@@ -2081,8 +2081,6 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
    }
 
    if (ctx->API == API_OPENGL_CORE) {
-      SET_MultiDrawArraysIndirect(exec, vbo_exec_MultiDrawArraysIndirect);
-      SET_MultiDrawElementsIndirect(exec, vbo_exec_MultiDrawElementsIndirect);
       SET_MultiDrawArraysIndirectCountARB(exec,
                                           vbo_exec_MultiDrawArraysIndirectCount);
       SET_MultiDrawElementsIndirectCountARB(exec,
@@ -2102,6 +2100,8 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
                                          vbo_exec_DrawTransformFeedbackInstanced);
       SET_DrawTransformFeedbackStreamInstanced(exec,
                                                vbo_exec_DrawTransformFeedbackStreamInstanced);
+      SET_MultiDrawArraysIndirect(exec, vbo_exec_MultiDrawArraysIndirect);
+      SET_MultiDrawElementsIndirect(exec, vbo_exec_MultiDrawElementsIndirect);
    }
 }
 
