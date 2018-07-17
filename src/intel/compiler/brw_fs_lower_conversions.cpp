@@ -98,7 +98,10 @@ fs_visitor::lower_conversions()
              * size_written accordingly.
              */
             inst->size_written = inst->dst.component_size(inst->exec_size);
-            ibld.at(block, inst->next).MOV(dst, strided_temp)->saturate = saturate;
+
+            fs_inst *mov = ibld.at(block, inst->next).MOV(dst, strided_temp);
+            mov->saturate = saturate;
+            mov->predicate = inst->predicate;
 
             progress = true;
          }
