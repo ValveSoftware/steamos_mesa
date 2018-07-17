@@ -1188,6 +1188,10 @@ const struct function common_desktop_functions_possible[] = {
    { "glNamedFramebufferSampleLocationsfvARB", 30, -1 },
    { "glEvaluateDepthValuesARB", 30, -1 },
 
+   /* GL_ARB_indirect_parameters */
+   { "glMultiDrawArraysIndirectCountARB", 11, -1 },
+   { "glMultiDrawElementsIndirectCountARB", 11, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -1937,10 +1941,6 @@ const struct function gl_core_functions_possible[] = {
 
 /* GL 4.5 */
    { "glMemoryBarrierByRegion", 45, -1 },
-
-   /* GL_ARB_indirect_parameters */
-   { "glMultiDrawArraysIndirectCountARB", 31, -1 },
-   { "glMultiDrawElementsIndirectCountARB", 31, -1 },
 
    /* GL_ARB_ES3_2_compatibility */
    { "glPrimitiveBoundingBoxARB", 45, -1 },
