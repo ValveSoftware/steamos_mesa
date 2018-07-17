@@ -1942,10 +1942,7 @@ static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH;
 	}
 
-	if (src_stage_mask & (VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
-			      VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-			      VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-			      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+	if (src_stage_mask & (VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
 			      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
 			      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
 			      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
@@ -1956,7 +1953,10 @@ static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
 	} else if (src_stage_mask & (VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
 	                             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
-	                             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)) {
+	                             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+				     VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+				     VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
+				     VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)) {
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VS_PARTIAL_FLUSH;
 	}
 }
