@@ -7478,6 +7478,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	int8_t offset_x = 0, offset_y = 0, offset_z = 0;
 	boolean has_txq_cube_array_z = false;
 	unsigned sampler_index_mode;
+	int array_index_offset_channel = -1;
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ &&
 	    ((inst->Texture.Texture == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -8273,7 +8274,14 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		t->src_gpr = ctx->file_offset[inst->TexOffsets[0].File] + inst->TexOffsets[0].Index;
 		t->src_sel_x = inst->TexOffsets[0].SwizzleX;
 		t->src_sel_y = inst->TexOffsets[0].SwizzleY;
-		t->src_sel_z = inst->TexOffsets[0].SwizzleZ;
+		if (inst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY ||
+			 inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY)
+			/* make sure array index selector is 0, this is just a safety
+			 * precausion because TGSI seems to emit something strange here */
+			t->src_sel_z = 4;
+		else
+			t->src_sel_z = inst->TexOffsets[0].SwizzleZ;
+
 		t->src_sel_w = 4;
 
 		t->dst_sel_x = 7;
@@ -8429,18 +8437,42 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		    opcode == FETCH_OP_SAMPLE_C_LB) {
 			/* the array index is read from Y */
 			tex.coord_type_y = 0;
+			array_index_offset_channel = tex.src_sel_y;
 		} else {
 			/* the array index is read from Z */
 			tex.coord_type_z = 0;
 			tex.src_sel_z = tex.src_sel_y;
+			array_index_offset_channel = tex.src_sel_z;
 		}
 	} else if (inst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY ||
-		   inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY ||
-		   ((inst->Texture.Texture == TGSI_TEXTURE_CUBE_ARRAY ||
-		    inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) &&
-		    (ctx->bc->chip_class >= EVERGREEN)))
-		/* the array index is read from Z */
+		    inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY) {
 		tex.coord_type_z = 0;
+		array_index_offset_channel = tex.src_sel_z;
+	} else if  ((inst->Texture.Texture == TGSI_TEXTURE_CUBE_ARRAY ||
+		    inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) &&
+		    (ctx->bc->chip_class >= EVERGREEN))
+		/* the array index is read from Z, coordinate will be corrected elsewhere  */
+		tex.coord_type_z = 0;
+
+	/* We have array access to 1D or 2D ARRAY, the coordinates are not int ->
+	 * evaluate the array index  */
+	if (array_index_offset_channel >= 0 &&
+		 opcode != FETCH_OP_LD &&
+		 opcode != FETCH_OP_GET_TEXTURE_RESINFO) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.src[0].sel =  tex.src_gpr;
+		alu.src[0].chan =  array_index_offset_channel;
+		alu.src[0].rel = tex.src_rel;
+		alu.op = ALU_OP1_RNDNE;
+		alu.dst.sel = tex.src_gpr;
+		alu.dst.chan = array_index_offset_channel;
+		alu.dst.rel = tex.src_rel;
+		alu.dst.write = 1;
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
 
 	/* mask unused source components */
 	if (opcode == FETCH_OP_SAMPLE || opcode == FETCH_OP_GATHER4) {
