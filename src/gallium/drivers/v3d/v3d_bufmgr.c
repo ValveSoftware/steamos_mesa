@@ -53,10 +53,17 @@ v3d_bo_dump_stats(struct v3d_screen *screen)
 {
         struct v3d_bo_cache *cache = &screen->bo_cache;
 
+        uint32_t cache_count = 0;
+        uint32_t cache_size = 0;
+        list_for_each_entry(struct v3d_bo, bo, &cache->time_list, time_list) {
+                cache_count++;
+                cache_size += bo->size;
+        }
+
         fprintf(stderr, "  BOs allocated:   %d\n", screen->bo_count);
         fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 1024);
-        fprintf(stderr, "  BOs cached:      %d\n", cache->bo_count);
-        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 1024);
+        fprintf(stderr, "  BOs cached:      %d\n", cache_count);
+        fprintf(stderr, "  BOs cached size: %dkb\n", cache_size / 1024);
 
         if (!list_empty(&cache->time_list)) {
                 struct v3d_bo *first = LIST_ENTRY(struct v3d_bo,
@@ -83,8 +90,6 @@ v3d_bo_remove_from_cache(struct v3d_bo_cache *cache, struct v3d_bo *bo)
 {
         list_del(&bo->time_list);
         list_del(&bo->size_list);
-        cache->bo_count--;
-        cache->bo_size -= bo->size;
 }
 
 static struct v3d_bo *
@@ -310,8 +315,6 @@ v3d_bo_last_unreference_locked_timed(struct v3d_bo *bo, time_t time)
         bo->free_time = time;
         list_addtail(&bo->size_list, &cache->size_list[page_index]);
         list_addtail(&bo->time_list, &cache->time_list);
-        cache->bo_count++;
-        cache->bo_size += bo->size;
         if (dump_stats) {
                 fprintf(stderr, "Freed %s %dkb to cache:\n",
                         bo->name, bo->size / 1024);

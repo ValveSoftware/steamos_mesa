@@ -71,9 +71,6 @@ struct v3d_screen {
                 uint32_t size_list_size;
 
                 mtx_t lock;
-
-                uint32_t bo_size;
-                uint32_t bo_count;
         } bo_cache;
 
         const struct v3d_compiler *compiler;
