@@ -255,11 +255,8 @@ static int (*libc_ioctl)(int fd, unsigned long request, ...) = ioctl_init_helper
 static int drm_fd = -1;
 static char *filename = NULL;
 static FILE *files[2] = { NULL, NULL };
-static struct gen_device_info devinfo = {0};
 static int verbose = 0;
 static bool device_override;
-static uint32_t device;
-static int addr_bits = 0;
 
 #define MAX_BO_COUNT 64 * 1024
 
@@ -279,11 +276,6 @@ static struct bo *bos;
 #define USERPTR_FLAG 1
 #define IS_USERPTR(p) ((uintptr_t) (p) & USERPTR_FLAG)
 #define GET_PTR(p) ( (void *) ((uintptr_t) p & ~(uintptr_t) 1) )
-
-static inline bool use_execlists(void)
-{
-   return devinfo.gen >= 8;
-}
 
 static void __attribute__ ((format(__printf__, 2, 3)))
 fail_if(int cond, const char *format, ...)
@@ -317,82 +309,121 @@ align_u32(uint32_t v, uint32_t a)
    return (v + a - 1) & ~(a - 1);
 }
 
-static void
-dword_out(uint32_t data)
-{
-   for (int i = 0; i < ARRAY_SIZE (files); i++) {
-      if (files[i] == NULL)
-         continue;
+struct aub_ppgtt_table {
+   uint64_t phys_addr;
+   struct aub_ppgtt_table *subtables[512];
+};
 
-      fail_if(fwrite(&data, 1, 4, files[i]) == 0,
-              "Writing to output failed\n");
+static void
+aub_ppgtt_table_finish(struct aub_ppgtt_table *table)
+{
+   for (unsigned i = 0; i < ARRAY_SIZE(table->subtables); i++) {
+      aub_ppgtt_table_finish(table->subtables[i]);
+      free(table->subtables[i]);
    }
 }
 
+struct aub_file {
+   FILE *file;
+
+   /* Set if you want extra logging */
+   FILE *verbose_log_file;
+
+   uint16_t pci_id;
+   struct gen_device_info devinfo;
+
+   int addr_bits;
+
+   struct aub_ppgtt_table pml4;
+};
+
 static void
-data_out(const void *data, size_t size)
+aub_file_init(struct aub_file *aub, FILE *file, uint16_t pci_id)
+{
+   memset(aub, 0, sizeof(*aub));
+
+   aub->file = file;
+   aub->pci_id = pci_id;
+   fail_if(!gen_get_device_info(pci_id, &aub->devinfo),
+           "failed to identify chipset=0x%x\n", pci_id);
+   aub->addr_bits = aub->devinfo.gen >= 8 ? 48 : 32;
+
+   aub->pml4.phys_addr = PML4_PHYS_ADDR;
+}
+
+static void
+aub_file_finish(struct aub_file *aub)
+{
+   aub_ppgtt_table_finish(&aub->pml4);
+   fclose(aub->file);
+}
+
+static inline bool aub_use_execlists(const struct aub_file *aub)
+{
+   return aub->devinfo.gen >= 8;
+}
+
+static void
+data_out(struct aub_file *aub, const void *data, size_t size)
 {
    if (size == 0)
       return;
 
-   for (int i = 0; i < ARRAY_SIZE (files); i++) {
-      if (files[i] == NULL)
-         continue;
+   fail_if(fwrite(data, 1, size, aub->file) == 0,
+           "Writing to output failed\n");
+}
 
-      fail_if(fwrite(data, 1, size, files[i]) == 0,
-              "Writing to output failed\n");
-   }
+static void
+dword_out(struct aub_file *aub, uint32_t data)
+{
+   data_out(aub, &data, sizeof(data));
 }
 
 static uint32_t
-gtt_size(void)
+aub_gtt_size(struct aub_file *aub)
 {
-   return NUM_PT_ENTRIES * (addr_bits > 32 ? GEN8_PTE_SIZE : PTE_SIZE);
+   return NUM_PT_ENTRIES * (aub->addr_bits > 32 ? GEN8_PTE_SIZE : PTE_SIZE);
 }
 
 static void
-mem_trace_memory_write_header_out(uint64_t addr, uint32_t len,
-                                  uint32_t addr_space)
+mem_trace_memory_write_header_out(struct aub_file *aub, uint64_t addr,
+                                  uint32_t len, uint32_t addr_space)
 {
    uint32_t dwords = ALIGN(len, sizeof(uint32_t)) / sizeof(uint32_t);
 
-   dword_out(CMD_MEM_TRACE_MEMORY_WRITE | (5 + dwords - 1));
-   dword_out(addr & 0xFFFFFFFF);   /* addr lo */
-   dword_out(addr >> 32);   /* addr hi */
-   dword_out(addr_space);   /* gtt */
-   dword_out(len);
+   dword_out(aub, CMD_MEM_TRACE_MEMORY_WRITE | (5 + dwords - 1));
+   dword_out(aub, addr & 0xFFFFFFFF);   /* addr lo */
+   dword_out(aub, addr >> 32);   /* addr hi */
+   dword_out(aub, addr_space);   /* gtt */
+   dword_out(aub, len);
 }
 
 static void
-register_write_out(uint32_t addr, uint32_t value)
+register_write_out(struct aub_file *aub, uint32_t addr, uint32_t value)
 {
    uint32_t dwords = 1;
 
-   dword_out(CMD_MEM_TRACE_REGISTER_WRITE | (5 + dwords - 1));
-   dword_out(addr);
-   dword_out(AUB_MEM_TRACE_REGISTER_SIZE_DWORD |
-             AUB_MEM_TRACE_REGISTER_SPACE_MMIO);
-   dword_out(0xFFFFFFFF);   /* mask lo */
-   dword_out(0x00000000);   /* mask hi */
-   dword_out(value);
+   dword_out(aub, CMD_MEM_TRACE_REGISTER_WRITE | (5 + dwords - 1));
+   dword_out(aub, addr);
+   dword_out(aub, AUB_MEM_TRACE_REGISTER_SIZE_DWORD |
+                  AUB_MEM_TRACE_REGISTER_SPACE_MMIO);
+   dword_out(aub, 0xFFFFFFFF);   /* mask lo */
+   dword_out(aub, 0x00000000);   /* mask hi */
+   dword_out(aub, value);
 }
 
-static struct ppgtt_table {
-   uint64_t phys_addr;
-   struct ppgtt_table *subtables[512];
-} pml4 = {PML4_PHYS_ADDR};
-
 static void
-populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
-                     int level)
+populate_ppgtt_table(struct aub_file *aub, struct aub_ppgtt_table *table,
+                     int start, int end, int level)
 {
    static uint64_t phys_addrs_allocator = (PML4_PHYS_ADDR >> 12) + 1;
    uint64_t entries[512] = {0};
    int dirty_start = 512, dirty_end = 0;
 
-   if (verbose == 2) {
-      printf("  PPGTT (0x%016" PRIx64 "), lvl %d, start: %x, end: %x\n",
-             table->phys_addr, level, start, end);
+   if (aub->verbose_log_file) {
+      fprintf(aub->verbose_log_file,
+              "  PPGTT (0x%016" PRIx64 "), lvl %d, start: %x, end: %x\n",
+              table->phys_addr, level, start, end);
    }
 
    for (int i = start; i <= end; i++) {
@@ -402,18 +433,20 @@ populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
          if (level == 1) {
             table->subtables[i] =
                (void *)(phys_addrs_allocator++ << 12);
-            if (verbose == 2) {
-               printf("   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
-                      i, (uint64_t)table->subtables[i]);
+            if (aub->verbose_log_file) {
+               fprintf(aub->verbose_log_file,
+                       "   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
+                       i, (uint64_t)table->subtables[i]);
             }
          } else {
             table->subtables[i] =
-               calloc(1, sizeof(struct ppgtt_table));
+               calloc(1, sizeof(struct aub_ppgtt_table));
             table->subtables[i]->phys_addr =
                phys_addrs_allocator++ << 12;
-            if (verbose == 2) {
-               printf("   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
-                      i, table->subtables[i]->phys_addr);
+            if (aub->verbose_log_file) {
+               fprintf(aub->verbose_log_file,
+                       "   Adding entry: %x, phys_addr: 0x%016" PRIx64 "\n",
+                       i, table->subtables[i]->phys_addr);
             }
          }
       }
@@ -427,14 +460,14 @@ populate_ppgtt_table(struct ppgtt_table *table, int start, int end,
          sizeof(uint64_t);
       uint64_t write_size = (dirty_end - dirty_start + 1) *
          sizeof(uint64_t);
-      mem_trace_memory_write_header_out(write_addr, write_size,
+      mem_trace_memory_write_header_out(aub, write_addr, write_size,
                                         AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
-      data_out(entries + dirty_start, write_size);
+      data_out(aub, entries + dirty_start, write_size);
    }
 }
 
 static void
-map_ppgtt(uint64_t start, uint64_t size)
+aub_map_ppgtt(struct aub_file *aub, uint64_t start, uint64_t size)
 {
    uint64_t l4_start = start & 0xff8000000000;
    uint64_t l4_end = ((start + size - 1) | 0x007fffffffff) & 0xffffffffffff;
@@ -444,16 +477,17 @@ map_ppgtt(uint64_t start, uint64_t size)
 #define L2_index(addr) (((addr) >> 21) & 0x1ff)
 #define L1_index(addr) (((addr) >> 12) & 0x1ff)
 
-#define L3_table(addr) (pml4.subtables[L4_index(addr)])
+#define L3_table(addr) (aub->pml4.subtables[L4_index(addr)])
 #define L2_table(addr) (L3_table(addr)->subtables[L3_index(addr)])
 #define L1_table(addr) (L2_table(addr)->subtables[L2_index(addr)])
 
-   if (verbose == 2) {
-      printf(" Mapping PPGTT address: 0x%" PRIx64 ", size: %" PRIu64"\n",
-             start, size);
+   if (aub->verbose_log_file) {
+      fprintf(aub->verbose_log_file,
+              " Mapping PPGTT address: 0x%" PRIx64 ", size: %" PRIu64"\n",
+              start, size);
    }
 
-   populate_ppgtt_table(&pml4, L4_index(l4_start), L4_index(l4_end), 4);
+   populate_ppgtt_table(aub, &aub->pml4, L4_index(l4_start), L4_index(l4_end), 4);
 
    for (uint64_t l4 = l4_start; l4 < l4_end; l4 += (1ULL << 39)) {
       uint64_t l3_start = max(l4, start & 0xffffc0000000);
@@ -462,7 +496,7 @@ map_ppgtt(uint64_t start, uint64_t size)
       uint64_t l3_start_idx = L3_index(l3_start);
       uint64_t l3_end_idx = L3_index(l3_end);
 
-      populate_ppgtt_table(L3_table(l4), l3_start_idx, l3_end_idx, 3);
+      populate_ppgtt_table(aub, L3_table(l4), l3_start_idx, l3_end_idx, 3);
 
       for (uint64_t l3 = l3_start; l3 < l3_end; l3 += (1ULL << 30)) {
          uint64_t l2_start = max(l3, start & 0xffffffe00000);
@@ -471,7 +505,7 @@ map_ppgtt(uint64_t start, uint64_t size)
          uint64_t l2_start_idx = L2_index(l2_start);
          uint64_t l2_end_idx = L2_index(l2_end);
 
-         populate_ppgtt_table(L2_table(l3), l2_start_idx, l2_end_idx, 2);
+         populate_ppgtt_table(aub, L2_table(l3), l2_start_idx, l2_end_idx, 2);
 
          for (uint64_t l2 = l2_start; l2 < l2_end; l2 += (1ULL << 21)) {
             uint64_t l1_start = max(l2, start & 0xfffffffff000);
@@ -480,148 +514,158 @@ map_ppgtt(uint64_t start, uint64_t size)
             uint64_t l1_start_idx = L1_index(l1_start);
             uint64_t l1_end_idx = L1_index(l1_end);
 
-            populate_ppgtt_table(L1_table(l2), l1_start_idx, l1_end_idx, 1);
+            populate_ppgtt_table(aub, L1_table(l2), l1_start_idx, l1_end_idx, 1);
          }
       }
    }
 }
 
 static uint64_t
-ppgtt_lookup(uint64_t ppgtt_addr)
+ppgtt_lookup(struct aub_file *aub, uint64_t ppgtt_addr)
 {
    return (uint64_t)L1_table(ppgtt_addr)->subtables[L1_index(ppgtt_addr)];
 }
 
 static void
-write_execlists_header(void)
+write_execlists_header(struct aub_file *aub, const char *name)
 {
    char app_name[8 * 4];
    int app_name_len, dwords;
 
    app_name_len =
-      snprintf(app_name, sizeof(app_name), "PCI-ID=0x%X %s", device,
-               program_invocation_short_name);
+      snprintf(app_name, sizeof(app_name), "PCI-ID=0x%X %s",
+               aub->pci_id, name);
    app_name_len = ALIGN(app_name_len, sizeof(uint32_t));
 
    dwords = 5 + app_name_len / sizeof(uint32_t);
-   dword_out(CMD_MEM_TRACE_VERSION | (dwords - 1));
-   dword_out(AUB_MEM_TRACE_VERSION_FILE_VERSION);
-   dword_out(devinfo.simulator_id << AUB_MEM_TRACE_VERSION_DEVICE_SHIFT);
-   dword_out(0);      /* version */
-   dword_out(0);      /* version */
-   data_out(app_name, app_name_len);
+   dword_out(aub, CMD_MEM_TRACE_VERSION | (dwords - 1));
+   dword_out(aub, AUB_MEM_TRACE_VERSION_FILE_VERSION);
+   dword_out(aub, aub->devinfo.simulator_id << AUB_MEM_TRACE_VERSION_DEVICE_SHIFT);
+   dword_out(aub, 0);      /* version */
+   dword_out(aub, 0);      /* version */
+   data_out(aub, app_name, app_name_len);
 
    /* GGTT PT */
    uint32_t ggtt_ptes = STATIC_GGTT_MAP_SIZE >> 12;
 
-   mem_trace_memory_write_header_out(STATIC_GGTT_MAP_START >> 12,
+   mem_trace_memory_write_header_out(aub, STATIC_GGTT_MAP_START >> 12,
                                      ggtt_ptes * GEN8_PTE_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT_ENTRY);
    for (uint32_t i = 0; i < ggtt_ptes; i++) {
-      dword_out(1 + 0x1000 * i + STATIC_GGTT_MAP_START);
-      dword_out(0);
+      dword_out(aub, 1 + 0x1000 * i + STATIC_GGTT_MAP_START);
+      dword_out(aub, 0);
    }
 
    /* RENDER_RING */
-   mem_trace_memory_write_header_out(RENDER_RING_ADDR, RING_SIZE,
+   mem_trace_memory_write_header_out(aub, RENDER_RING_ADDR, RING_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* RENDER_PPHWSP */
-   mem_trace_memory_write_header_out(RENDER_CONTEXT_ADDR,
+   mem_trace_memory_write_header_out(aub, RENDER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(render_context_init),
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* RENDER_CONTEXT */
-   data_out(render_context_init, sizeof(render_context_init));
+   data_out(aub, render_context_init, sizeof(render_context_init));
 
    /* BLITTER_RING */
-   mem_trace_memory_write_header_out(BLITTER_RING_ADDR, RING_SIZE,
+   mem_trace_memory_write_header_out(aub, BLITTER_RING_ADDR, RING_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* BLITTER_PPHWSP */
-   mem_trace_memory_write_header_out(BLITTER_CONTEXT_ADDR,
+   mem_trace_memory_write_header_out(aub, BLITTER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(blitter_context_init),
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* BLITTER_CONTEXT */
-   data_out(blitter_context_init, sizeof(blitter_context_init));
+   data_out(aub, blitter_context_init, sizeof(blitter_context_init));
 
    /* VIDEO_RING */
-   mem_trace_memory_write_header_out(VIDEO_RING_ADDR, RING_SIZE,
+   mem_trace_memory_write_header_out(aub, VIDEO_RING_ADDR, RING_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* VIDEO_PPHWSP */
-   mem_trace_memory_write_header_out(VIDEO_CONTEXT_ADDR,
+   mem_trace_memory_write_header_out(aub, VIDEO_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(video_context_init),
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
-      dword_out(0);
+      dword_out(aub, 0);
 
    /* VIDEO_CONTEXT */
-   data_out(video_context_init, sizeof(video_context_init));
+   data_out(aub, video_context_init, sizeof(video_context_init));
 
-   register_write_out(HWS_PGA_RCSUNIT, RENDER_CONTEXT_ADDR);
-   register_write_out(HWS_PGA_VCSUNIT0, VIDEO_CONTEXT_ADDR);
-   register_write_out(HWS_PGA_BCSUNIT, BLITTER_CONTEXT_ADDR);
+   register_write_out(aub, HWS_PGA_RCSUNIT, RENDER_CONTEXT_ADDR);
+   register_write_out(aub, HWS_PGA_VCSUNIT0, VIDEO_CONTEXT_ADDR);
+   register_write_out(aub, HWS_PGA_BCSUNIT, BLITTER_CONTEXT_ADDR);
 
-   register_write_out(GFX_MODE_RCSUNIT, 0x80008000 /* execlist enable */);
-   register_write_out(GFX_MODE_VCSUNIT0, 0x80008000 /* execlist enable */);
-   register_write_out(GFX_MODE_BCSUNIT, 0x80008000 /* execlist enable */);
+   register_write_out(aub, GFX_MODE_RCSUNIT, 0x80008000 /* execlist enable */);
+   register_write_out(aub, GFX_MODE_VCSUNIT0, 0x80008000 /* execlist enable */);
+   register_write_out(aub, GFX_MODE_BCSUNIT, 0x80008000 /* execlist enable */);
 }
 
-static void write_legacy_header(void)
+static void write_legacy_header(struct aub_file *aub, const char *name)
 {
    char app_name[8 * 4];
    char comment[16];
    int comment_len, comment_dwords, dwords;
    uint32_t entry = 0x200003;
 
-   comment_len = snprintf(comment, sizeof(comment), "PCI-ID=0x%x", device);
+   comment_len = snprintf(comment, sizeof(comment), "PCI-ID=0x%x", aub->pci_id);
    comment_dwords = ((comment_len + 3) / 4);
 
    /* Start with a (required) version packet. */
    dwords = 13 + comment_dwords;
-   dword_out(CMD_AUB_HEADER | (dwords - 2));
-   dword_out((4 << AUB_HEADER_MAJOR_SHIFT) |
-             (0 << AUB_HEADER_MINOR_SHIFT));
+   dword_out(aub, CMD_AUB_HEADER | (dwords - 2));
+   dword_out(aub, (4 << AUB_HEADER_MAJOR_SHIFT) |
+                  (0 << AUB_HEADER_MINOR_SHIFT));
 
    /* Next comes a 32-byte application name. */
    strncpy(app_name, program_invocation_short_name, sizeof(app_name));
    app_name[sizeof(app_name) - 1] = 0;
-   data_out(app_name, sizeof(app_name));
+   data_out(aub, app_name, sizeof(app_name));
 
-   dword_out(0); /* timestamp */
-   dword_out(0); /* timestamp */
-   dword_out(comment_len);
-   data_out(comment, comment_dwords * 4);
+   dword_out(aub, 0); /* timestamp */
+   dword_out(aub, 0); /* timestamp */
+   dword_out(aub, comment_len);
+   data_out(aub, comment, comment_dwords * 4);
 
    /* Set up the GTT. The max we can handle is 64M */
-   dword_out(CMD_AUB_TRACE_HEADER_BLOCK | ((addr_bits > 32 ? 6 : 5) - 2));
-   dword_out(AUB_TRACE_MEMTYPE_GTT_ENTRY |
-             AUB_TRACE_TYPE_NOTYPE | AUB_TRACE_OP_DATA_WRITE);
-   dword_out(0); /* subtype */
-   dword_out(0); /* offset */
-   dword_out(gtt_size()); /* size */
-   if (addr_bits > 32)
-      dword_out(0);
+   dword_out(aub, CMD_AUB_TRACE_HEADER_BLOCK |
+                  ((aub->addr_bits > 32 ? 6 : 5) - 2));
+   dword_out(aub, AUB_TRACE_MEMTYPE_GTT_ENTRY |
+                  AUB_TRACE_TYPE_NOTYPE | AUB_TRACE_OP_DATA_WRITE);
+   dword_out(aub, 0); /* subtype */
+   dword_out(aub, 0); /* offset */
+   dword_out(aub, aub_gtt_size(aub)); /* size */
+   if (aub->addr_bits > 32)
+      dword_out(aub, 0);
    for (uint32_t i = 0; i < NUM_PT_ENTRIES; i++) {
-      dword_out(entry + 0x1000 * i);
-      if (addr_bits > 32)
-         dword_out(0);
+      dword_out(aub, entry + 0x1000 * i);
+      if (aub->addr_bits > 32)
+         dword_out(aub, 0);
    }
+}
+
+static void
+aub_write_header(struct aub_file *aub, const char *app_name)
+{
+   if (aub_use_execlists(aub))
+      write_execlists_header(aub, app_name);
+   else
+      write_legacy_header(aub, app_name);
 }
 
 /**
@@ -630,7 +674,9 @@ static void write_legacy_header(void)
  * everything goes badly after that.
  */
 static void
-aub_write_trace_block(uint32_t type, void *virtual, uint32_t size, uint64_t gtt_offset)
+aub_write_trace_block(struct aub_file *aub,
+                      uint32_t type, void *virtual,
+                      uint32_t size, uint64_t gtt_offset)
 {
    uint32_t block_size;
    uint32_t subtype = 0;
@@ -639,37 +685,38 @@ aub_write_trace_block(uint32_t type, void *virtual, uint32_t size, uint64_t gtt_
    for (uint32_t offset = 0; offset < size; offset += block_size) {
       block_size = min(8 * 4096, size - offset);
 
-      if (use_execlists()) {
+      if (aub_use_execlists(aub)) {
          block_size = min(4096, block_size);
-         mem_trace_memory_write_header_out(ppgtt_lookup(gtt_offset + offset),
+         mem_trace_memory_write_header_out(aub,
+                                           ppgtt_lookup(aub, gtt_offset + offset),
                                            block_size,
                                            AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
       } else {
-         dword_out(CMD_AUB_TRACE_HEADER_BLOCK |
-                   ((addr_bits > 32 ? 6 : 5) - 2));
-         dword_out(AUB_TRACE_MEMTYPE_GTT |
-                   type | AUB_TRACE_OP_DATA_WRITE);
-         dword_out(subtype);
-         dword_out(gtt_offset + offset);
-         dword_out(align_u32(block_size, 4));
-         if (addr_bits > 32)
-            dword_out((gtt_offset + offset) >> 32);
+         dword_out(aub, CMD_AUB_TRACE_HEADER_BLOCK |
+                        ((aub->addr_bits > 32 ? 6 : 5) - 2));
+         dword_out(aub, AUB_TRACE_MEMTYPE_GTT |
+                        type | AUB_TRACE_OP_DATA_WRITE);
+         dword_out(aub, subtype);
+         dword_out(aub, gtt_offset + offset);
+         dword_out(aub, align_u32(block_size, 4));
+         if (aub->addr_bits > 32)
+            dword_out(aub, (gtt_offset + offset) >> 32);
       }
 
       if (virtual)
-         data_out(((char *) GET_PTR(virtual)) + offset, block_size);
+         data_out(aub, ((char *) virtual) + offset, block_size);
       else
-         data_out(null_block, block_size);
+         data_out(aub, null_block, block_size);
 
       /* Pad to a multiple of 4 bytes. */
-      data_out(null_block, -block_size & 3);
+      data_out(aub, null_block, -block_size & 3);
    }
 }
 
 static void
-write_reloc(void *p, uint64_t v)
+aub_write_reloc(const struct gen_device_info *devinfo, void *p, uint64_t v)
 {
-   if (addr_bits > 32) {
+   if (devinfo->gen >= 8) {
       /* From the Broadwell PRM Vol. 2a,
        * MI_LOAD_REGISTER_MEM::MemoryAddress:
        *
@@ -693,7 +740,7 @@ write_reloc(void *p, uint64_t v)
 }
 
 static void
-aub_dump_execlist(uint64_t batch_offset, int ring_flag)
+aub_dump_execlist(struct aub_file *aub, uint64_t batch_offset, int ring_flag)
 {
    uint32_t ring_addr;
    uint64_t descriptor;
@@ -732,48 +779,49 @@ aub_dump_execlist(uint64_t batch_offset, int ring_flag)
       unreachable("unknown ring");
    }
 
-   mem_trace_memory_write_header_out(ring_addr, 16,
+   mem_trace_memory_write_header_out(aub, ring_addr, 16,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
-   dword_out(AUB_MI_BATCH_BUFFER_START | MI_BATCH_NON_SECURE_I965 | (3 - 2));
-   dword_out(batch_offset & 0xFFFFFFFF);
-   dword_out(batch_offset >> 32);
-   dword_out(0 /* MI_NOOP */);
+   dword_out(aub, AUB_MI_BATCH_BUFFER_START | MI_BATCH_NON_SECURE_I965 | (3 - 2));
+   dword_out(aub, batch_offset & 0xFFFFFFFF);
+   dword_out(aub, batch_offset >> 32);
+   dword_out(aub, 0 /* MI_NOOP */);
 
-   mem_trace_memory_write_header_out(ring_addr + 8192 + 20, 4,
+   mem_trace_memory_write_header_out(aub, ring_addr + 8192 + 20, 4,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
-   dword_out(0); /* RING_BUFFER_HEAD */
-   mem_trace_memory_write_header_out(ring_addr + 8192 + 28, 4,
+   dword_out(aub, 0); /* RING_BUFFER_HEAD */
+   mem_trace_memory_write_header_out(aub, ring_addr + 8192 + 28, 4,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
-   dword_out(16); /* RING_BUFFER_TAIL */
+   dword_out(aub, 16); /* RING_BUFFER_TAIL */
 
-   if (devinfo.gen >= 11) {
-      register_write_out(elsq_reg, descriptor & 0xFFFFFFFF);
-      register_write_out(elsq_reg + sizeof(uint32_t), descriptor >> 32);
-      register_write_out(control_reg, 1);
+   if (aub->devinfo.gen >= 11) {
+      register_write_out(aub, elsq_reg, descriptor & 0xFFFFFFFF);
+      register_write_out(aub, elsq_reg + sizeof(uint32_t), descriptor >> 32);
+      register_write_out(aub, control_reg, 1);
    } else {
-      register_write_out(elsp_reg, 0);
-      register_write_out(elsp_reg, 0);
-      register_write_out(elsp_reg, descriptor >> 32);
-      register_write_out(elsp_reg, descriptor & 0xFFFFFFFF);
+      register_write_out(aub, elsp_reg, 0);
+      register_write_out(aub, elsp_reg, 0);
+      register_write_out(aub, elsp_reg, descriptor >> 32);
+      register_write_out(aub, elsp_reg, descriptor & 0xFFFFFFFF);
    }
 
-   dword_out(CMD_MEM_TRACE_REGISTER_POLL | (5 + 1 - 1));
-   dword_out(status_reg);
-   dword_out(AUB_MEM_TRACE_REGISTER_SIZE_DWORD |
-             AUB_MEM_TRACE_REGISTER_SPACE_MMIO);
-   if (devinfo.gen >= 11) {
-      dword_out(0x00000001);   /* mask lo */
-      dword_out(0x00000000);   /* mask hi */
-      dword_out(0x00000001);
+   dword_out(aub, CMD_MEM_TRACE_REGISTER_POLL | (5 + 1 - 1));
+   dword_out(aub, status_reg);
+   dword_out(aub, AUB_MEM_TRACE_REGISTER_SIZE_DWORD |
+                  AUB_MEM_TRACE_REGISTER_SPACE_MMIO);
+   if (aub->devinfo.gen >= 11) {
+      dword_out(aub, 0x00000001);   /* mask lo */
+      dword_out(aub, 0x00000000);   /* mask hi */
+      dword_out(aub, 0x00000001);
    } else {
-      dword_out(0x00000010);   /* mask lo */
-      dword_out(0x00000000);   /* mask hi */
-      dword_out(0x00000000);
+      dword_out(aub, 0x00000010);   /* mask lo */
+      dword_out(aub, 0x00000000);   /* mask hi */
+      dword_out(aub, 0x00000000);
    }
 }
 
 static void
-aub_dump_ringbuffer(uint64_t batch_offset, uint64_t offset, int ring_flag)
+aub_dump_ringbuffer(struct aub_file *aub, uint64_t batch_offset,
+                    uint64_t offset, int ring_flag)
 {
    uint32_t ringbuffer[4096];
    unsigned aub_mi_bbs_len;
@@ -788,25 +836,42 @@ aub_dump_ringbuffer(uint64_t batch_offset, uint64_t offset, int ring_flag)
    /* Make a ring buffer to execute our batchbuffer. */
    memset(ringbuffer, 0, sizeof(ringbuffer));
 
-   aub_mi_bbs_len = addr_bits > 32 ? 3 : 2;
+   aub_mi_bbs_len = aub->addr_bits > 32 ? 3 : 2;
    ringbuffer[ring_count] = AUB_MI_BATCH_BUFFER_START | (aub_mi_bbs_len - 2);
-   write_reloc(&ringbuffer[ring_count + 1], batch_offset);
+   aub_write_reloc(&aub->devinfo, &ringbuffer[ring_count + 1], batch_offset);
    ring_count += aub_mi_bbs_len;
 
    /* Write out the ring.  This appears to trigger execution of
     * the ring in the simulator.
     */
-   dword_out(CMD_AUB_TRACE_HEADER_BLOCK |
-             ((addr_bits > 32 ? 6 : 5) - 2));
-   dword_out(AUB_TRACE_MEMTYPE_GTT | ring | AUB_TRACE_OP_COMMAND_WRITE);
-   dword_out(0); /* general/surface subtype */
-   dword_out(offset);
-   dword_out(ring_count * 4);
-   if (addr_bits > 32)
-      dword_out(offset >> 32);
+   dword_out(aub, CMD_AUB_TRACE_HEADER_BLOCK |
+                  ((aub->addr_bits > 32 ? 6 : 5) - 2));
+   dword_out(aub, AUB_TRACE_MEMTYPE_GTT | ring | AUB_TRACE_OP_COMMAND_WRITE);
+   dword_out(aub, 0); /* general/surface subtype */
+   dword_out(aub, offset);
+   dword_out(aub, ring_count * 4);
+   if (aub->addr_bits > 32)
+      dword_out(aub, offset >> 32);
 
-   data_out(ringbuffer, ring_count * 4);
+   data_out(aub, ringbuffer, ring_count * 4);
 }
+
+static void
+aub_write_exec(struct aub_file *aub, uint64_t batch_addr,
+               uint64_t offset, int ring_flag)
+{
+   if (aub_use_execlists(aub)) {
+      aub_dump_execlist(aub, batch_addr, ring_flag);
+   } else {
+      /* Dump ring buffer */
+      aub_dump_ringbuffer(aub, batch_addr, offset, ring_flag);
+   }
+   fflush(aub->file);
+}
+
+static struct gen_device_info devinfo = {0};
+static uint32_t device;
+static struct aub_file aubs[2];
 
 static void *
 relocate_bo(struct bo *bo, const struct drm_i915_gem_execbuffer2 *execbuffer2,
@@ -830,8 +895,8 @@ relocate_bo(struct bo *bo, const struct drm_i915_gem_execbuffer2 *execbuffer2,
       else
          handle = relocs[i].target_handle;
 
-      write_reloc(((char *)relocated) + relocs[i].offset,
-                  get_bo(handle)->offset + relocs[i].delta);
+      aub_write_reloc(&devinfo, ((char *)relocated) + relocs[i].offset,
+                      get_bo(handle)->offset + relocs[i].delta);
    }
 
    return relocated;
@@ -900,12 +965,14 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
       fail_if(!gen_get_device_info(device, &devinfo),
               "failed to identify chipset=0x%x\n", device);
 
-      addr_bits = devinfo.gen >= 8 ? 48 : 32;
-
-      if (use_execlists())
-         write_execlists_header();
-      else
-         write_legacy_header();
+      for (int i = 0; i < ARRAY_SIZE(files); i++) {
+         if (files[i] != NULL) {
+            aub_file_init(&aubs[i], files[i], device);
+            if (verbose == 2)
+               aubs[i].verbose_log_file = stdout;
+            aub_write_header(&aubs[i], program_invocation_short_name);
+         }
+      }
 
       if (verbose)
          printf("[intel_aubdump: running, "
@@ -913,10 +980,13 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
                 filename, device, devinfo.gen);
    }
 
-   if (use_execlists())
+   /* Any aub */
+   struct aub_file *any_aub = files[0] ? &aubs[0] : &aubs[1];;
+
+   if (aub_use_execlists(any_aub))
       offset = 0x1000;
    else
-      offset = gtt_size();
+      offset = aub_gtt_size(any_aub);
 
    if (verbose)
       printf("Dumping execbuffer2:\n");
@@ -953,8 +1023,13 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
          bo->map = gem_mmap(fd, obj->handle, 0, bo->size);
       fail_if(bo->map == MAP_FAILED, "intel_aubdump: bo mmap failed\n");
 
-      if (use_execlists())
-         map_ppgtt(bo->offset, bo->size);
+      for (int i = 0; i < ARRAY_SIZE(files); i++) {
+         if (files[i] == NULL)
+            continue;
+
+         if (aub_use_execlists(&aubs[i]))
+            aub_map_ppgtt(&aubs[i], bo->offset, bo->size);
+      }
    }
 
    batch_index = (execbuffer2->flags & I915_EXEC_BATCH_FIRST) ? 0 :
@@ -969,30 +1044,29 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
       else
          data = bo->map;
 
-      if (bo == batch_bo) {
-         aub_write_trace_block(AUB_TRACE_TYPE_BATCH,
-                               data, bo->size, bo->offset);
-      } else {
-         aub_write_trace_block(AUB_TRACE_TYPE_NOTYPE,
-                               data, bo->size, bo->offset);
+      for (int i = 0; i < ARRAY_SIZE(files); i++) {
+         if (files[i] == NULL)
+            continue;
+
+         if (bo == batch_bo) {
+            aub_write_trace_block(&aubs[i], AUB_TRACE_TYPE_BATCH,
+                                  GET_PTR(data), bo->size, bo->offset);
+         } else {
+            aub_write_trace_block(&aubs[i], AUB_TRACE_TYPE_NOTYPE,
+                                  GET_PTR(data), bo->size, bo->offset);
+         }
       }
       if (data != bo->map)
          free(data);
    }
 
-   if (use_execlists()) {
-      aub_dump_execlist(batch_bo->offset +
-                        execbuffer2->batch_start_offset, ring_flag);
-   } else {
-      /* Dump ring buffer */
-      aub_dump_ringbuffer(batch_bo->offset +
-                          execbuffer2->batch_start_offset, offset,
-                          ring_flag);
-   }
-
    for (int i = 0; i < ARRAY_SIZE(files); i++) {
       if (files[i] != NULL)
-         fflush(files[i]);
+         continue;
+
+      aub_write_exec(&aubs[i],
+                     batch_bo->offset + execbuffer2->batch_start_offset,
+                     offset, ring_flag);
    }
 
    if (device_override &&
@@ -1286,7 +1360,9 @@ fini(void)
 {
    free(filename);
    for (int i = 0; i < ARRAY_SIZE(files); i++) {
-      if (files[i] != NULL)
+      if (aubs[i].file)
+         aub_file_finish(&aubs[i]);
+      else if (files[i])
          fclose(files[i]);
    }
    free(bos);
