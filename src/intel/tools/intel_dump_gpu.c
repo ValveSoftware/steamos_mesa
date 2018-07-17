@@ -457,28 +457,28 @@ map_ppgtt(uint64_t start, uint64_t size)
 
    for (uint64_t l4 = l4_start; l4 < l4_end; l4 += (1ULL << 39)) {
       uint64_t l3_start = max(l4, start & 0xffffc0000000);
-      uint64_t l3_end = min(l4 + (1ULL << 39),
+      uint64_t l3_end = min(l4 + (1ULL << 39) - 1,
                             ((start + size - 1) | 0x00003fffffff) & 0xffffffffffff);
       uint64_t l3_start_idx = L3_index(l3_start);
-      uint64_t l3_end_idx = L3_index(l3_start) >= l3_start_idx ? L3_index(l3_end) : 0x1ff;
+      uint64_t l3_end_idx = L3_index(l3_end);
 
       populate_ppgtt_table(L3_table(l4), l3_start_idx, l3_end_idx, 3);
 
       for (uint64_t l3 = l3_start; l3 < l3_end; l3 += (1ULL << 30)) {
          uint64_t l2_start = max(l3, start & 0xffffffe00000);
-         uint64_t l2_end = min(l3 + (1ULL << 30),
+         uint64_t l2_end = min(l3 + (1ULL << 30) - 1,
                                ((start + size - 1) | 0x0000001fffff) & 0xffffffffffff);
          uint64_t l2_start_idx = L2_index(l2_start);
-         uint64_t l2_end_idx = L2_index(l2_end) >= l2_start_idx ? L2_index(l2_end) : 0x1ff;
+         uint64_t l2_end_idx = L2_index(l2_end);
 
          populate_ppgtt_table(L2_table(l3), l2_start_idx, l2_end_idx, 2);
 
          for (uint64_t l2 = l2_start; l2 < l2_end; l2 += (1ULL << 21)) {
             uint64_t l1_start = max(l2, start & 0xfffffffff000);
-            uint64_t l1_end = min(l2 + (1ULL << 21),
+            uint64_t l1_end = min(l2 + (1ULL << 21) - 1,
                                   ((start + size - 1) | 0x000000000fff) & 0xffffffffffff);
             uint64_t l1_start_idx = L1_index(l1_start);
-            uint64_t l1_end_idx = L1_index(l1_end) >= l1_start_idx ? L1_index(l1_end) : 0x1ff;
+            uint64_t l1_end_idx = L1_index(l1_end);
 
             populate_ppgtt_table(L1_table(l2), l1_start_idx, l1_end_idx, 1);
          }
