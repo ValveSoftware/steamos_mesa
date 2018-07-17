@@ -238,14 +238,13 @@ free_stale_bos(struct v3d_screen *screen, time_t time)
 
         list_for_each_entry_safe(struct v3d_bo, bo, &cache->time_list,
                                  time_list) {
-                if (dump_stats && !freed_any) {
-                        fprintf(stderr, "Freeing stale BOs:\n");
-                        v3d_bo_dump_stats(screen);
-                        freed_any = true;
-                }
-
                 /* If it's more than a second old, free it. */
                 if (time - bo->free_time > 2) {
+                        if (dump_stats && !freed_any) {
+                                fprintf(stderr, "Freeing stale BOs:\n");
+                                v3d_bo_dump_stats(screen);
+                                freed_any = true;
+                        }
                         v3d_bo_remove_from_cache(cache, bo);
                         v3d_bo_free(bo);
                 } else {
