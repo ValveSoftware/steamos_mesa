@@ -114,7 +114,7 @@ void compute_memory_pool_delete(struct compute_memory_pool* pool)
 {
 	COMPUTE_DBG(pool->screen, "* compute_memory_pool_delete()\n");
 	free(pool->shadow);
-	pipe_resource_reference(&pool->bo, NULL);
+	r600_resource_reference(&pool->bo, NULL);
 	/* In theory, all of the items were freed in compute_memory_free.
 	 * Just delete the list heads
 	 */
@@ -157,7 +157,7 @@ static int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
 			compute_memory_defrag(pool, src, dst, pipe);
 
 			/* Release the old buffer */
-			pipe_resource_reference(&pool->bo, NULL);
+			r600_resource_reference(&pool->bo, NULL);
 			pool->bo = temp;
 			pool->size_in_dw = new_size_in_dw;
 		}
@@ -172,7 +172,7 @@ static int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
 
 			pool->size_in_dw = new_size_in_dw;
 			/* Release the old buffer */
-			pipe_resource_reference(&pool->bo, NULL);
+			r600_resource_reference(&pool->bo, NULL);
 			pool->bo = r600_compute_buffer_alloc_vram(pool->screen, pool->size_in_dw * 4);
 			compute_memory_shadow(pool, pipe, 0);
 
