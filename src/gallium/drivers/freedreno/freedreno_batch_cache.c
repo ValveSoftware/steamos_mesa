@@ -199,8 +199,18 @@ fd_bc_invalidate_context(struct fd_context *ctx)
 	mtx_unlock(&ctx->screen->lock);
 }
 
+/**
+ * Note that when batch is flushed, it needs to remain in the cache so
+ * that fd_bc_invalidate_resource() can work.. otherwise we can have
+ * the case where a rsc is destroyed while a batch still has a dangling
+ * reference to it.
+ *
+ * Note that the cmdstream (or, after the SUBMIT ioctl, the kernel)
+ * would have a reference to the underlying bo, so it is ok for the
+ * rsc to be destroyed before the batch.
+ */
 void
-fd_bc_invalidate_batch(struct fd_batch *batch, bool destroy)
+fd_bc_invalidate_batch(struct fd_batch *batch, bool remove)
 {
 	if (!batch)
 		return;
@@ -208,9 +218,9 @@ fd_bc_invalidate_batch(struct fd_batch *batch, bool destroy)
 	struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
 	struct key *key = (struct key *)batch->key;
 
-	pipe_mutex_assert_locked(batch->ctx->screen->lock);
+	fd_context_assert_locked(batch->ctx);
 
-	if (destroy) {
+	if (remove) {
 		cache->batches[batch->idx] = NULL;
 		cache->batch_mask &= ~(1 << batch->idx);
 	}
