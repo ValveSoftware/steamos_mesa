@@ -73,7 +73,7 @@ if with_tools.contains('intel')
 
   libintel_dump_gpu = shared_library(
     'intel_dump_gpu',
-    files('intel_dump_gpu.c'),
+    files('aub_write.h', 'aub_write.c', 'intel_dump_gpu.c'),
     dependencies : dep_dl,
     include_directories : [inc_common, inc_intel, inc_drm_uapi],
     link_with : libintel_dev,
