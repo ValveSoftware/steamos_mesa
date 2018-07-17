@@ -32,6 +32,7 @@
 #include "brw_defines.h"
 #include "brw_state.h"
 #include "common/gen_decoder.h"
+#include "common/gen_gem.h"
 
 #include "util/hash_table.h"
 
@@ -922,7 +923,7 @@ emit_reloc(struct intel_batchbuffer *batch,
 
    if (target->kflags & EXEC_OBJECT_PINNED) {
       brw_use_pinned_bo(batch, target, reloc_flags & RELOC_WRITE);
-      return target->gtt_offset + target_offset;
+      return gen_canonical_address(target->gtt_offset + target_offset);
    }
 
    unsigned int index = add_exec_bo(batch, target);
