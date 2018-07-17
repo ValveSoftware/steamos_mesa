@@ -140,7 +140,6 @@ static void si_emit_guardband(struct si_context *ctx)
 {
 	const struct si_signed_scissor *vp_as_scissor;
 	struct si_signed_scissor max_vp_scissor;
-	struct radeon_cmdbuf *cs = ctx->gfx_cs;
 	struct pipe_viewport_state vp;
 	float left, top, right, bottom, max_range, guardband_x, guardband_y;
 	float discard_x, discard_y;
@@ -214,13 +213,14 @@ static void si_emit_guardband(struct si_context *ctx)
 		discard_y = MIN2(discard_y, guardband_y);
 	}
 
-	/* If any of the GB registers is updated, all of them must be updated. */
-	radeon_set_context_reg_seq(cs, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
-
-	radeon_emit(cs, fui(guardband_y)); /* R_028BE8_PA_CL_GB_VERT_CLIP_ADJ */
-	radeon_emit(cs, fui(discard_y));   /* R_028BEC_PA_CL_GB_VERT_DISC_ADJ */
-	radeon_emit(cs, fui(guardband_x)); /* R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ */
-	radeon_emit(cs, fui(discard_x));   /* R_028BF4_PA_CL_GB_HORZ_DISC_ADJ */
+	/* If any of the GB registers is updated, all of them must be updated.
+	 * R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, R_028BEC_PA_CL_GB_VERT_DISC_ADJ
+	 * R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ
+	 */
+	radeon_opt_set_context_reg4(ctx, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ,
+				    SI_TRACKED_PA_CL_GB_VERT_CLIP_ADJ,
+				    fui(guardband_y), fui(discard_y),
+				    fui(guardband_x), fui(discard_x));
 }
 
 static void si_emit_scissors(struct si_context *ctx)
