@@ -121,19 +121,18 @@ class ABIEntry(object):
     def __str__(self):
         return self.c_prototype()
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         # compare slot, alias, and then name
-        res = cmp(self.slot, other.slot)
-        if not res:
+        if self.slot == other.slot:
             if not self.alias:
-                res = -1
+                return True
             elif not other.alias:
-                res = 1
+                return False
 
-            if not res:
-                res = cmp(self.name, other.name)
+            return self.name < other.name
 
-        return res
+        return self.slot < other.slot
+
 
 def abi_parse_xml(xml):
     """Parse a GLAPI XML file for ABI entries."""
