@@ -444,12 +444,11 @@ struct sync_merge_data {
 int
 anv_gem_sync_file_merge(struct anv_device *device, int fd1, int fd2)
 {
-   const char name[] = "anv merge fence";
    struct sync_merge_data args = {
+      .name = "anv merge fence",
       .fd2 = fd2,
       .fence = -1,
    };
-   memcpy(args.name, name, sizeof(name));
 
    int ret = anv_ioctl(fd1, SYNC_IOC_MERGE, &args);
    if (ret == -1)
