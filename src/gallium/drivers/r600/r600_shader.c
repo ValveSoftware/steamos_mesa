@@ -7453,9 +7453,10 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_tex tex;
+	struct r600_bytecode_tex grad_offs[3];
 	struct r600_bytecode_alu alu;
 	unsigned src_gpr;
-	int r, i, j;
+	int r, i, j, n_grad_offs = 0;
 	int opcode;
 	bool read_compressed_msaa = ctx->bc->has_compressed_msaa_texturing &&
 				    inst->Instruction.Opcode == TGSI_OPCODE_TXF &&
@@ -7828,31 +7829,29 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		}
 		for (i = 1; i < 3; i++) {
 			/* set gradients h/v */
-			memset(&tex, 0, sizeof(struct r600_bytecode_tex));
-			tex.op = (i == 1) ? FETCH_OP_SET_GRADIENTS_H :
+			struct r600_bytecode_tex *t = &grad_offs[n_grad_offs++];
+			memset(t, 0, sizeof(struct r600_bytecode_tex));
+			t->op = (i == 1) ? FETCH_OP_SET_GRADIENTS_H :
 				FETCH_OP_SET_GRADIENTS_V;
-			tex.sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
-			tex.sampler_index_mode = sampler_index_mode;
-			tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
-			tex.resource_index_mode = sampler_index_mode;
+			t->sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
+			t->sampler_index_mode = sampler_index_mode;
+			t->resource_id = t->sampler_id + R600_MAX_CONST_BUFFERS;
+			t->resource_index_mode = sampler_index_mode;
 
-			tex.src_gpr = (i == 1) ? temp_h : temp_v;
-			tex.src_sel_x = 0;
-			tex.src_sel_y = 1;
-			tex.src_sel_z = 2;
-			tex.src_sel_w = 3;
+			t->src_gpr = (i == 1) ? temp_h : temp_v;
+			t->src_sel_x = 0;
+			t->src_sel_y = 1;
+			t->src_sel_z = 2;
+			t->src_sel_w = 3;
 
-			tex.dst_gpr = r600_get_temp(ctx); /* just to avoid confusing the asm scheduler */
-			tex.dst_sel_x = tex.dst_sel_y = tex.dst_sel_z = tex.dst_sel_w = 7;
+			t->dst_gpr = r600_get_temp(ctx); /* just to avoid confusing the asm scheduler */
+			t->dst_sel_x = t->dst_sel_y = t->dst_sel_z = t->dst_sel_w = 7;
 			if (inst->Texture.Texture != TGSI_TEXTURE_RECT) {
-				tex.coord_type_x = 1;
-				tex.coord_type_y = 1;
-				tex.coord_type_z = 1;
-				tex.coord_type_w = 1;
+				t->coord_type_x = 1;
+				t->coord_type_y = 1;
+				t->coord_type_z = 1;
+				t->coord_type_w = 1;
 			}
-			r = r600_bytecode_add_tex(ctx->bc, &tex);
-			if (r)
-				return r;
 		}
 	}
 
@@ -8257,32 +8256,30 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	if (opcode == FETCH_OP_GATHER4 &&
 		inst->TexOffsets[0].File != TGSI_FILE_NULL &&
 		inst->TexOffsets[0].File != TGSI_FILE_IMMEDIATE) {
+		struct r600_bytecode_tex *t;
 		opcode = FETCH_OP_GATHER4_O;
 
 		/* GATHER4_O/GATHER4_C_O use offset values loaded by
 		   SET_TEXTURE_OFFSETS instruction. The immediate offset values
 		   encoded in the instruction are ignored. */
-		memset(&tex, 0, sizeof(struct r600_bytecode_tex));
-		tex.op = FETCH_OP_SET_TEXTURE_OFFSETS;
-		tex.sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
-		tex.sampler_index_mode = sampler_index_mode;
-		tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
-		tex.resource_index_mode = sampler_index_mode;
+		t = &grad_offs[n_grad_offs++];
+		memset(t, 0, sizeof(struct r600_bytecode_tex));
+		t->op = FETCH_OP_SET_TEXTURE_OFFSETS;
+		t->sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
+		t->sampler_index_mode = sampler_index_mode;
+		t->resource_id = t->sampler_id + R600_MAX_CONST_BUFFERS;
+		t->resource_index_mode = sampler_index_mode;
 
-		tex.src_gpr = ctx->file_offset[inst->TexOffsets[0].File] + inst->TexOffsets[0].Index;
-		tex.src_sel_x = inst->TexOffsets[0].SwizzleX;
-		tex.src_sel_y = inst->TexOffsets[0].SwizzleY;
-		tex.src_sel_z = inst->TexOffsets[0].SwizzleZ;
-		tex.src_sel_w = 4;
+		t->src_gpr = ctx->file_offset[inst->TexOffsets[0].File] + inst->TexOffsets[0].Index;
+		t->src_sel_x = inst->TexOffsets[0].SwizzleX;
+		t->src_sel_y = inst->TexOffsets[0].SwizzleY;
+		t->src_sel_z = inst->TexOffsets[0].SwizzleZ;
+		t->src_sel_w = 4;
 
-		tex.dst_sel_x = 7;
-		tex.dst_sel_y = 7;
-		tex.dst_sel_z = 7;
-		tex.dst_sel_w = 7;
-
-		r = r600_bytecode_add_tex(ctx->bc, &tex);
-		if (r)
-			return r;
+		t->dst_sel_x = 7;
+		t->dst_sel_y = 7;
+		t->dst_sel_z = 7;
+		t->dst_sel_w = 7;
 	}
 
 	if (inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D ||
@@ -8463,6 +8460,13 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 			tex.src_sel_w = 7;
 			break;
 		}
+	}
+
+	/* Emit set gradient and offset instructions. */
+	for (i = 0; i < n_grad_offs; ++i) {
+		r = r600_bytecode_add_tex(ctx->bc, &grad_offs[i]);
+		if (r)
+			return r;
 	}
 
 	r = r600_bytecode_add_tex(ctx->bc, &tex);
