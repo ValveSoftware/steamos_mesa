@@ -362,20 +362,27 @@ fd_batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 	if (batch->dependents_mask & (1 << dep->idx))
 		return;
 
-	/* if the new depedency already depends on us, we need to flush
-	 * to avoid a loop in the dependency graph.
-	 */
-	if (batch_depends_on(dep, batch)) {
-		DBG("%p: flush forced on %p!", batch, dep);
-		mtx_unlock(&batch->ctx->screen->lock);
-		fd_batch_flush(dep, false, false);
-		mtx_lock(&batch->ctx->screen->lock);
-	} else {
-		struct fd_batch *other = NULL;
-		fd_batch_reference_locked(&other, dep);
-		batch->dependents_mask |= (1 << dep->idx);
-		DBG("%p: added dependency on %p", batch, dep);
-	}
+	/* a loop should not be possible */
+	debug_assert(!batch_depends_on(dep, batch));
+
+	struct fd_batch *other = NULL;
+	fd_batch_reference_locked(&other, dep);
+	batch->dependents_mask |= (1 << dep->idx);
+	DBG("%p: added dependency on %p", batch, dep);
+}
+
+static void
+flush_write_batch(struct fd_resource *rsc)
+{
+	struct fd_batch *b = NULL;
+	fd_batch_reference(&b, rsc->write_batch);
+
+	mtx_unlock(&b->ctx->screen->lock);
+	fd_batch_flush(b, true, false);
+	mtx_lock(&b->ctx->screen->lock);
+
+	fd_bc_invalidate_batch(b, false);
+	fd_batch_reference_locked(&b, NULL);
 }
 
 void
@@ -397,21 +404,12 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 
 	if (write) {
 		/* if we are pending read or write by any other batch: */
-		if (rsc->batch_mask != (1 << batch->idx)) {
+		if (rsc->batch_mask & ~(1 << batch->idx)) {
 			struct fd_batch_cache *cache = &batch->ctx->screen->batch_cache;
 			struct fd_batch *dep;
 
-			if (rsc->write_batch && rsc->write_batch != batch) {
-				struct fd_batch *b = NULL;
-				fd_batch_reference(&b, rsc->write_batch);
-
-				mtx_unlock(&batch->ctx->screen->lock);
-				fd_batch_flush(b, true, false);
-				mtx_lock(&batch->ctx->screen->lock);
-
-				fd_bc_invalidate_batch(b, false);
-				fd_batch_reference_locked(&b, NULL);
-			}
+			if (rsc->write_batch && rsc->write_batch != batch)
+				flush_write_batch(rsc);
 
 			foreach_batch(dep, cache, rsc->batch_mask) {
 				struct fd_batch *b = NULL;
@@ -429,10 +427,12 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 		}
 		fd_batch_reference_locked(&rsc->write_batch, batch);
 	} else {
-		if (rsc->write_batch) {
-			fd_batch_add_dep(batch, rsc->write_batch);
-			fd_bc_invalidate_batch(rsc->write_batch, false);
-		}
+		/* If reading a resource pending a write, go ahead and flush the
+		 * writer.  This avoids situations where we end up having to
+		 * flush the current batch in _resource_used()
+		 */
+		if (rsc->write_batch && rsc->write_batch != batch)
+			flush_write_batch(rsc);
 	}
 
 	if (rsc->batch_mask & (1 << batch->idx))
