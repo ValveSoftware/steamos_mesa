@@ -196,6 +196,19 @@ static void virgl_attach_res_shader_images(struct virgl_context *vctx,
    }
 }
 
+static void virgl_attach_res_atomic_buffers(struct virgl_context *vctx)
+{
+   struct virgl_winsys *vws = virgl_screen(vctx->base.screen)->vws;
+   struct virgl_resource *res;
+   unsigned i;
+   for (i = 0; i < PIPE_MAX_HW_ATOMIC_BUFFERS; i++) {
+      res = virgl_resource(vctx->atomic_buffers[i]);
+      if (res) {
+         vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
+      }
+   }
+}
+
 /*
  * after flushing, the hw context still has a bunch of
  * resources bound, so we need to rebind those here.
@@ -214,6 +227,7 @@ static void virgl_reemit_res(struct virgl_context *vctx)
       virgl_attach_res_shader_buffers(vctx, shader_type);
       virgl_attach_res_shader_images(vctx, shader_type);
    }
+   virgl_attach_res_atomic_buffers(vctx);
    virgl_attach_res_vertex_buffers(vctx);
    virgl_attach_res_so_targets(vctx);
 }
@@ -952,6 +966,28 @@ static void virgl_blit(struct pipe_context *ctx,
                     blit);
 }
 
+static void virgl_set_hw_atomic_buffers(struct pipe_context *ctx,
+                                        unsigned start_slot,
+                                        unsigned count,
+                                        const struct pipe_shader_buffer *buffers)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+
+   for (unsigned i = 0; i < count; i++) {
+      unsigned idx = start_slot + i;
+
+      if (buffers) {
+         if (buffers[i].buffer) {
+            pipe_resource_reference(&vctx->atomic_buffers[idx],
+                                    buffers[i].buffer);
+            continue;
+         }
+      }
+      pipe_resource_reference(&vctx->atomic_buffers[idx], NULL);
+   }
+   virgl_encode_set_hw_atomic_buffers(vctx, start_slot, count, buffers);
+}
+
 static void virgl_set_shader_buffers(struct pipe_context *ctx,
                                      enum pipe_shader_type shader,
                                      unsigned start_slot, unsigned count,
@@ -1209,6 +1245,7 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.blit =  virgl_blit;
 
    vctx->base.set_shader_buffers = virgl_set_shader_buffers;
+   vctx->base.set_hw_atomic_buffers = virgl_set_hw_atomic_buffers;
    vctx->base.set_shader_images = virgl_set_shader_images;
    vctx->base.memory_barrier = virgl_memory_barrier;
 

@@ -248,6 +248,12 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_SHADER_CLOCK;
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_TGSI_COMPONENTS;
+   case PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS:
+      return vscreen->caps.caps.v2.max_combined_shader_buffers;
+   case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTERS:
+      return vscreen->caps.caps.v2.max_combined_atomic_counters;
+   case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS:
+      return vscreen->caps.caps.v2.max_combined_atomic_counter_buffers;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -410,12 +416,14 @@ virgl_get_shader_param(struct pipe_screen *screen,
             return vscreen->caps.caps.v2.max_shader_image_other_stages;
       case PIPE_SHADER_CAP_SUPPORTED_IRS:
          return (1 << PIPE_SHADER_IR_TGSI);
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+         return vscreen->caps.caps.v2.max_atomic_counters[shader];
+      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
+         return vscreen->caps.caps.v2.max_atomic_counter_buffers[shader];
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       case PIPE_SHADER_CAP_INT64_ATOMICS:
       case PIPE_SHADER_CAP_FP16:
-      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
-      case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
          return 0;
       case PIPE_SHADER_CAP_SCALAR_ISA:
          return 1;

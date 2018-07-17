@@ -267,6 +267,9 @@ int virgl_encode_set_shader_images(struct virgl_context *ctx,
                                    enum pipe_shader_type shader,
                                    unsigned start_slot, unsigned count,
                                    const struct pipe_image_view *images);
+int virgl_encode_set_hw_atomic_buffers(struct virgl_context *ctx,
+                                       unsigned start_slot, unsigned count,
+                                       const struct pipe_shader_buffer *buffers);
 int virgl_encode_memory_barrier(struct virgl_context *ctx,
                                 unsigned flags);
 int virgl_encode_launch_grid(struct virgl_context *ctx,
