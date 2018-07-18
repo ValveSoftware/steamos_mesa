@@ -53,8 +53,8 @@ static int (*libc_close)(int fd) = close_init_helper;
 static int (*libc_ioctl)(int fd, unsigned long request, ...) = ioctl_init_helper;
 
 static int drm_fd = -1;
-static char *filename = NULL;
-static FILE *files[2] = { NULL, NULL };
+static char *output_filename = NULL;
+static FILE *output_file = NULL;
 static int verbose = 0;
 static bool device_override;
 
@@ -111,7 +111,7 @@ align_u32(uint32_t v, uint32_t a)
 
 static struct gen_device_info devinfo = {0};
 static uint32_t device;
-static struct aub_file aubs[2];
+static struct aub_file aub_file;
 
 static void *
 relocate_bo(struct bo *bo, const struct drm_i915_gem_execbuffer2 *execbuffer2,
@@ -205,28 +205,21 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
       fail_if(!gen_get_device_info(device, &devinfo),
               "failed to identify chipset=0x%x\n", device);
 
-      for (int i = 0; i < ARRAY_SIZE(files); i++) {
-         if (files[i] != NULL) {
-            aub_file_init(&aubs[i], files[i], device);
-            if (verbose == 2)
-               aubs[i].verbose_log_file = stdout;
-            aub_write_header(&aubs[i], program_invocation_short_name);
-         }
-      }
+      aub_file_init(&aub_file, output_file, device);
+      if (verbose == 2)
+         aub_file.verbose_log_file = stdout;
+      aub_write_header(&aub_file, program_invocation_short_name);
 
       if (verbose)
          printf("[intel_aubdump: running, "
                 "output file %s, chipset id 0x%04x, gen %d]\n",
-                filename, device, devinfo.gen);
+                output_filename, device, devinfo.gen);
    }
 
-   /* Any aub */
-   struct aub_file *any_aub = files[0] ? &aubs[0] : &aubs[1];;
-
-   if (aub_use_execlists(any_aub))
+   if (aub_use_execlists(&aub_file))
       offset = 0x1000;
    else
-      offset = aub_gtt_size(any_aub);
+      offset = aub_gtt_size(&aub_file);
 
    if (verbose)
       printf("Dumping execbuffer2:\n");
@@ -263,13 +256,8 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
          bo->map = gem_mmap(fd, obj->handle, 0, bo->size);
       fail_if(bo->map == MAP_FAILED, "intel_aubdump: bo mmap failed\n");
 
-      for (int i = 0; i < ARRAY_SIZE(files); i++) {
-         if (files[i] == NULL)
-            continue;
-
-         if (aub_use_execlists(&aubs[i]))
-            aub_map_ppgtt(&aubs[i], bo->offset, bo->size);
-      }
+      if (aub_use_execlists(&aub_file))
+         aub_map_ppgtt(&aub_file, bo->offset, bo->size);
    }
 
    batch_index = (execbuffer2->flags & I915_EXEC_BATCH_FIRST) ? 0 :
@@ -284,30 +272,21 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
       else
          data = bo->map;
 
-      for (int i = 0; i < ARRAY_SIZE(files); i++) {
-         if (files[i] == NULL)
-            continue;
-
-         if (bo == batch_bo) {
-            aub_write_trace_block(&aubs[i], AUB_TRACE_TYPE_BATCH,
-                                  GET_PTR(data), bo->size, bo->offset);
-         } else {
-            aub_write_trace_block(&aubs[i], AUB_TRACE_TYPE_NOTYPE,
-                                  GET_PTR(data), bo->size, bo->offset);
-         }
+      if (bo == batch_bo) {
+         aub_write_trace_block(&aub_file, AUB_TRACE_TYPE_BATCH,
+                               GET_PTR(data), bo->size, bo->offset);
+      } else {
+         aub_write_trace_block(&aub_file, AUB_TRACE_TYPE_NOTYPE,
+                               GET_PTR(data), bo->size, bo->offset);
       }
+
       if (data != bo->map)
          free(data);
    }
 
-   for (int i = 0; i < ARRAY_SIZE(files); i++) {
-      if (files[i] != NULL)
-         continue;
-
-      aub_write_exec(&aubs[i],
-                     batch_bo->offset + execbuffer2->batch_start_offset,
-                     offset, ring_flag);
-   }
+   aub_write_exec(&aub_file,
+                  batch_bo->offset + execbuffer2->batch_start_offset,
+                  offset, ring_flag);
 
    if (device_override &&
        (execbuffer2->flags & I915_EXEC_FENCE_ARRAY) != 0) {
@@ -358,40 +337,6 @@ close(int fd)
    return libc_close(fd);
 }
 
-static FILE *
-launch_command(char *command)
-{
-   int i = 0, fds[2];
-   char **args = calloc(strlen(command), sizeof(char *));
-   char *iter = command;
-
-   args[i++] = iter = command;
-
-   while ((iter = strstr(iter, ",")) != NULL) {
-      *iter = '\0';
-      iter += 1;
-      args[i++] = iter;
-   }
-
-   if (pipe(fds) == -1)
-      return NULL;
-
-   switch (fork()) {
-   case 0:
-      dup2(fds[0], 0);
-      fail_if(execvp(args[0], args) == -1,
-              "intel_aubdump: failed to launch child command\n");
-      return NULL;
-
-   default:
-      free(args);
-      return fdopen(fds[1], "w");
-
-   case -1:
-      return NULL;
-   }
-}
-
 static void
 maybe_init(void)
 {
@@ -418,16 +363,11 @@ maybe_init(void)
                  value);
          device_override = true;
       } else if (!strcmp(key, "file")) {
-         filename = strdup(value);
-         files[0] = fopen(filename, "w+");
-         fail_if(files[0] == NULL,
+         output_filename = strdup(value);
+         output_file = fopen(output_filename, "w+");
+         fail_if(output_file == NULL,
                  "intel_aubdump: failed to open file '%s'\n",
-                 filename);
-      } else if (!strcmp(key,  "command")) {
-         files[1] = launch_command(value);
-         fail_if(files[1] == NULL,
-                 "intel_aubdump: failed to launch command '%s'\n",
-                 value);
+                 output_filename);
       } else {
          fprintf(stderr, "intel_aubdump: unknown option '%s'\n", key);
       }
@@ -598,12 +538,7 @@ ioctl_init_helper(int fd, unsigned long request, ...)
 static void __attribute__ ((destructor))
 fini(void)
 {
-   free(filename);
-   for (int i = 0; i < ARRAY_SIZE(files); i++) {
-      if (aubs[i].file)
-         aub_file_finish(&aubs[i]);
-      else if (files[i])
-         fclose(files[i]);
-   }
+   free(output_filename);
+   aub_file_finish(&aub_file);
    free(bos);
 }
