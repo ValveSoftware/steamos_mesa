@@ -25,6 +25,7 @@
 
 #include <inttypes.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
