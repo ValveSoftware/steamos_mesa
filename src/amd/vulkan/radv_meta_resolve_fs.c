@@ -582,18 +582,6 @@ radv_cmd_buffer_resolve_subpass_fs(struct radv_cmd_buffer *cmd_buffer)
 	struct radv_meta_saved_state saved_state;
 	struct radv_subpass_barrier barrier;
 
-	/* FINISHME(perf): Skip clears for resolve attachments.
-	 *
-	 * From the Vulkan 1.0 spec:
-	 *
-	 *    If the first use of an attachment in a render pass is as a resolve
-	 *    attachment, then the loadOp is effectively ignored as the resolve is
-	 *    guaranteed to overwrite all pixels in the render area.
-	 */
-
-	if (!subpass->has_resolve)
-		return;
-
 	radv_meta_save(&saved_state, cmd_buffer,
 		       RADV_META_SAVE_GRAPHICS_PIPELINE |
 		       RADV_META_SAVE_CONSTANTS |
