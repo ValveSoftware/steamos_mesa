@@ -308,9 +308,16 @@ dword_out(struct aub_file *aub, uint32_t data)
 
 static void
 mem_trace_memory_write_header_out(struct aub_file *aub, uint64_t addr,
-                                  uint32_t len, uint32_t addr_space)
+                                  uint32_t len, uint32_t addr_space,
+                                  const char *desc)
 {
    uint32_t dwords = ALIGN(len, sizeof(uint32_t)) / sizeof(uint32_t);
+
+   if (aub->verbose_log_file) {
+      fprintf(aub->verbose_log_file,
+              "  MEM WRITE (0x%016" PRIx64 "-0x%016" PRIx64 ") %s\n",
+              addr, addr + len, desc);
+   }
 
    dword_out(aub, CMD_MEM_TRACE_MEMORY_WRITE | (5 + dwords - 1));
    dword_out(aub, addr & 0xFFFFFFFF);   /* addr lo */
@@ -382,7 +389,8 @@ populate_ppgtt_table(struct aub_file *aub, struct aub_ppgtt_table *table,
       uint64_t write_size = (dirty_end - dirty_start + 1) *
          sizeof(uint64_t);
       mem_trace_memory_write_header_out(aub, write_addr, write_size,
-                                        AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
+                                        AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL,
+                                        "PPGTT update");
       data_out(aub, entries + dirty_start, write_size);
    }
 }
@@ -471,7 +479,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
 
    mem_trace_memory_write_header_out(aub, STATIC_GGTT_MAP_START >> 12,
                                      ggtt_ptes * GEN8_PTE_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT_ENTRY);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT_ENTRY,
+                                     "GGTT PT");
    for (uint32_t i = 0; i < ggtt_ptes; i++) {
       dword_out(aub, 1 + 0x1000 * i + STATIC_GGTT_MAP_START);
       dword_out(aub, 0);
@@ -479,7 +488,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
 
    /* RENDER_RING */
    mem_trace_memory_write_header_out(aub, RENDER_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "RENDER RING");
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -487,7 +497,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
    mem_trace_memory_write_header_out(aub, RENDER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(render_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "RENDER PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -496,7 +507,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
 
    /* BLITTER_RING */
    mem_trace_memory_write_header_out(aub, BLITTER_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "BLITTER RING");
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -504,7 +516,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
    mem_trace_memory_write_header_out(aub, BLITTER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(blitter_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "BLITTER PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -513,7 +526,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
 
    /* VIDEO_RING */
    mem_trace_memory_write_header_out(aub, VIDEO_RING_ADDR, RING_SIZE,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "VIDEO RING");
    for (uint32_t i = 0; i < RING_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -521,7 +535,8 @@ write_execlists_header(struct aub_file *aub, const char *name)
    mem_trace_memory_write_header_out(aub, VIDEO_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
                                      sizeof(video_context_init),
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "VIDEO PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
@@ -611,7 +626,8 @@ aub_write_trace_block(struct aub_file *aub,
          mem_trace_memory_write_header_out(aub,
                                            ppgtt_lookup(aub, gtt_offset + offset),
                                            block_size,
-                                           AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL);
+                                           AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_PHYSICAL,
+                                           "legacy");
       } else {
          dword_out(aub, CMD_AUB_TRACE_HEADER_BLOCK |
                         ((aub->addr_bits > 32 ? 6 : 5) - 2));
@@ -675,17 +691,20 @@ aub_dump_execlist(struct aub_file *aub, uint64_t batch_offset, int ring_flag)
    }
 
    mem_trace_memory_write_header_out(aub, ring_addr, 16,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "RING MI_BATCH_BUFFER_START user");
    dword_out(aub, AUB_MI_BATCH_BUFFER_START | MI_BATCH_NON_SECURE_I965 | (3 - 2));
    dword_out(aub, batch_offset & 0xFFFFFFFF);
    dword_out(aub, batch_offset >> 32);
    dword_out(aub, 0 /* MI_NOOP */);
 
    mem_trace_memory_write_header_out(aub, ring_addr + 8192 + 20, 4,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "RING BUFFER HEAD");
    dword_out(aub, 0); /* RING_BUFFER_HEAD */
    mem_trace_memory_write_header_out(aub, ring_addr + 8192 + 28, 4,
-                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT);
+                                     AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
+                                     "RING BUFFER TAIL");
    dword_out(aub, 16); /* RING_BUFFER_TAIL */
 
    if (aub->devinfo.gen >= 11) {
