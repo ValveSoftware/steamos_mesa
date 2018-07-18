@@ -293,6 +293,7 @@ surfaceless_probe_device(_EGLDisplay *dpy, bool swrast)
    int fd;
    int i;
 
+   /* Attempt to find DRM device. */
    for (i = 0; i < limit; ++i) {
       char *card_path;
       if (asprintf(&card_path, DRM_RENDER_DEV_NAME, DRM_DIR_NAME, base + i) < 0)
@@ -324,6 +325,24 @@ surfaceless_probe_device(_EGLDisplay *dpy, bool swrast)
       free(dri2_dpy->driver_name);
       dri2_dpy->driver_name = NULL;
       dri2_dpy->loader_extensions = NULL;
+   }
+
+   /* No DRM device, so attempt to fall back to software path w/o DRM. */
+   if (swrast) {
+      _eglLog(_EGL_DEBUG, "Falling back to surfaceless swrast without DRM.");
+      dri2_dpy->fd = -1;
+      dri2_dpy->driver_name = strdup("swrast");
+      if (!dri2_dpy->driver_name) {
+         return false;
+      }
+
+      if (dri2_load_driver_swrast(dpy)) {
+         dri2_dpy->loader_extensions = swrast_loader_extensions;
+         return true;
+      }
+
+      free(dri2_dpy->driver_name);
+      dri2_dpy->driver_name = NULL;
    }
 
    return false;
