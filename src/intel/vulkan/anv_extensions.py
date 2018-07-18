@@ -31,11 +31,11 @@ import xml.etree.cElementTree as et
 
 def _bool_to_c_expr(b):
     if b is True:
-        return 'true';
+        return 'true'
     elif b is False:
-        return 'false';
+        return 'false'
     else:
-        return b;
+        return b
 
 class Extension:
     def __init__(self, name, ext_version, enable):
