@@ -41,7 +41,7 @@ aubinator_error_decode = executable(
 )
 
 error2aub = executable(
-  'error2aub',
+  'intel_error2aub',
   files('aub_write.h', 'aub_write.c', 'error2aub.c'),
   dependencies : [dep_zlib, dep_dl, dep_thread, dep_m],
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
