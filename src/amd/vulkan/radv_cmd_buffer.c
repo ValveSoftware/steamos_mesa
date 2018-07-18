@@ -1975,10 +1975,12 @@ radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
 	enum radv_cmd_flush_bits flush_bits = 0;
 	uint32_t b;
 
-	if (image && !radv_image_has_CB_metadata(image))
-		flush_CB_meta = false;
-	if (image && !radv_image_has_htile(image))
-		flush_DB_meta = false;
+	if (image) {
+		if (!radv_image_has_CB_metadata(image))
+			flush_CB_meta = false;
+		if (!radv_image_has_htile(image))
+			flush_DB_meta = false;
+	}
 
 	for_each_bit(b, src_flags) {
 		switch ((VkAccessFlagBits)(1 << b)) {
