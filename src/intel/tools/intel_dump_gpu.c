@@ -86,6 +86,7 @@ fail_if(int cond, const char *format, ...)
       return;
 
    va_start(args, format);
+   fprintf(stderr, "intel_dump_gpu: ");
    vfprintf(stderr, format, args);
    va_end(args);
 
@@ -125,10 +126,10 @@ relocate_bo(struct bo *bo, const struct drm_i915_gem_execbuffer2 *execbuffer2,
    int handle;
 
    relocated = malloc(bo->size);
-   fail_if(relocated == NULL, "intel_aubdump: out of memory\n");
+   fail_if(relocated == NULL, "out of memory\n");
    memcpy(relocated, GET_PTR(bo->map), bo->size);
    for (size_t i = 0; i < obj->relocation_count; i++) {
-      fail_if(relocs[i].offset >= bo->size, "intel_aubdump: reloc outside bo\n");
+      fail_if(relocs[i].offset >= bo->size, "reloc outside bo\n");
 
       if (execbuffer2->flags & I915_EXEC_HANDLE_LUT)
          handle = exec_objects[relocs[i].target_handle].handle;
@@ -211,8 +212,7 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
       aub_write_header(&aub_file, program_invocation_short_name);
 
       if (verbose)
-         printf("[intel_aubdump: running, "
-                "output file %s, chipset id 0x%04x, gen %d]\n",
+         printf("[running, output file %s, chipset id 0x%04x, gen %d]\n",
                 output_filename, device, devinfo.gen);
    }
 
@@ -254,7 +254,7 @@ dump_execbuffer2(int fd, struct drm_i915_gem_execbuffer2 *execbuffer2)
 
       if (bo->map == NULL && bo->size > 0)
          bo->map = gem_mmap(fd, obj->handle, 0, bo->size);
-      fail_if(bo->map == MAP_FAILED, "intel_aubdump: bo mmap failed\n");
+      fail_if(bo->map == MAP_FAILED, "bo mmap failed\n");
 
       if (aub_use_execlists(&aub_file))
          aub_map_ppgtt(&aub_file, bo->offset, bo->size);
@@ -310,8 +310,8 @@ add_new_bo(int handle, uint64_t size, void *map)
 {
    struct bo *bo = &bos[handle];
 
-   fail_if(handle >= MAX_BO_COUNT, "intel_aubdump: bo handle out of range\n");
-   fail_if(size == 0, "intel_aubdump: bo size is invalid\n");
+   fail_if(handle >= MAX_BO_COUNT, "bo handle out of range\n");
+   fail_if(size == 0, "bo size is invalid\n");
 
    bo->size = size;
    bo->map = map;
@@ -359,17 +359,17 @@ maybe_init(void)
          }
       } else if (!strcmp(key, "device")) {
          fail_if(sscanf(value, "%i", &device) != 1,
-                 "intel_aubdump: failed to parse device id '%s'",
+                 "failed to parse device id '%s'",
                  value);
          device_override = true;
       } else if (!strcmp(key, "file")) {
          output_filename = strdup(value);
          output_file = fopen(output_filename, "w+");
          fail_if(output_file == NULL,
-                 "intel_aubdump: failed to open file '%s'\n",
+                 "failed to open file '%s'\n",
                  output_filename);
       } else {
-         fprintf(stderr, "intel_aubdump: unknown option '%s'\n", key);
+         fprintf(stderr, "unknown option '%s'\n", key);
       }
 
       free(key);
@@ -378,7 +378,7 @@ maybe_init(void)
    fclose(config);
 
    bos = calloc(MAX_BO_COUNT, sizeof(bos[0]));
-   fail_if(bos == NULL, "intel_aubdump: out of memory\n");
+   fail_if(bos == NULL, "out of memory\n");
 }
 
 __attribute__ ((visibility ("default"))) int
@@ -398,7 +398,7 @@ ioctl(int fd, unsigned long request, ...)
        (buf.st_mode & S_IFMT) == S_IFCHR && major(buf.st_rdev) == DRM_MAJOR) {
       drm_fd = fd;
       if (verbose)
-         printf("[intel_aubdump: intercept drm ioctl on fd %d]\n", fd);
+         printf("[intercept drm ioctl on fd %d]\n", fd);
    }
 
    if (fd == drm_fd) {
@@ -428,7 +428,7 @@ ioctl(int fd, unsigned long request, ...)
       case DRM_IOCTL_I915_GEM_EXECBUFFER: {
          static bool once;
          if (!once) {
-            fprintf(stderr, "intel_aubdump: "
+            fprintf(stderr,
                     "application uses DRM_IOCTL_I915_GEM_EXECBUFFER, not handled\n");
             once = true;
          }
@@ -490,7 +490,7 @@ ioctl(int fd, unsigned long request, ...)
             off_t size;
 
             size = lseek(prime->fd, 0, SEEK_END);
-            fail_if(size == -1, "intel_aubdump: failed to get prime bo size\n");
+            fail_if(size == -1, "failed to get prime bo size\n");
             add_new_bo(prime->handle, size, NULL);
          }
 
@@ -511,7 +511,7 @@ init(void)
    libc_close = dlsym(RTLD_NEXT, "close");
    libc_ioctl = dlsym(RTLD_NEXT, "ioctl");
    fail_if(libc_close == NULL || libc_ioctl == NULL,
-           "intel_aubdump: failed to get libc ioctl or close\n");
+           "failed to get libc ioctl or close\n");
 }
 
 static int
