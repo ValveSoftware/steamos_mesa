@@ -23,7 +23,6 @@
 #
 
 import argparse
-import functools
 import math
 import os
 import xml.etree.cElementTree as et
@@ -31,7 +30,7 @@ import xml.etree.cElementTree as et
 from collections import OrderedDict, namedtuple
 from mako.template import Template
 
-from anv_extensions import *
+from anv_extensions import VkVersion, MAX_API_VERSION, EXTENSIONS
 
 # We generate a static hash table for entry point lookup
 # (vkGetProcAddress). We use a linear congruential generator for our hash

@@ -22,8 +22,9 @@
 
 import json
 import os.path
+import argparse
 
-from anv_extensions import *
+from anv_extensions import MAX_API_VERSION
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
