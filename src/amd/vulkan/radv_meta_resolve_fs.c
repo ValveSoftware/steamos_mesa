@@ -582,11 +582,6 @@ radv_cmd_buffer_resolve_subpass_fs(struct radv_cmd_buffer *cmd_buffer)
 	struct radv_meta_saved_state saved_state;
 	struct radv_subpass_barrier barrier;
 
-	radv_meta_save(&saved_state, cmd_buffer,
-		       RADV_META_SAVE_GRAPHICS_PIPELINE |
-		       RADV_META_SAVE_CONSTANTS |
-		       RADV_META_SAVE_DESCRIPTORS);
-
 	/* Resolves happen before the end-of-subpass barriers get executed,
 	 * so we have to make the attachment shader-readable */
 	barrier.src_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -596,6 +591,11 @@ radv_cmd_buffer_resolve_subpass_fs(struct radv_cmd_buffer *cmd_buffer)
 	radv_subpass_barrier(cmd_buffer, &barrier);
 
 	radv_decompress_resolve_subpass_src(cmd_buffer);
+
+	radv_meta_save(&saved_state, cmd_buffer,
+		       RADV_META_SAVE_GRAPHICS_PIPELINE |
+		       RADV_META_SAVE_CONSTANTS |
+		       RADV_META_SAVE_DESCRIPTORS);
 
 	for (uint32_t i = 0; i < subpass->color_count; ++i) {
 		struct radv_subpass_attachment src_att = subpass->color_attachments[i];
