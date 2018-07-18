@@ -260,9 +260,24 @@ static const __DRIimageLoaderExtension image_loader_extension = {
    .flushFrontBuffer = surfaceless_flush_front_buffer,
 };
 
+static const __DRIswrastLoaderExtension swrast_loader_extension = {
+   .base            = { __DRI_SWRAST_LOADER, 1 },
+   .getDrawableInfo = NULL,
+   .putImage        = NULL,
+   .getImage        = NULL,
+};
+
 #define DRM_RENDER_DEV_NAME  "%s/renderD%d"
 
 static const __DRIextension *image_loader_extensions[] = {
+   &image_loader_extension.base,
+   &image_lookup_extension.base,
+   &use_invalidate.base,
+   NULL,
+};
+
+static const __DRIextension *swrast_loader_extensions[] = {
+   &swrast_loader_extension.base,
    &image_loader_extension.base,
    &image_lookup_extension.base,
    &use_invalidate.base,
@@ -288,10 +303,13 @@ surfaceless_probe_device(_EGLDisplay *dpy, bool swrast)
       if (fd < 0)
          continue;
 
-      if (swrast)
+      if (swrast) {
          dri2_dpy->driver_name = strdup("kms_swrast");
-      else
+         dri2_dpy->loader_extensions = swrast_loader_extensions;
+      } else {
          dri2_dpy->driver_name = loader_get_driver_for_fd(fd);
+         dri2_dpy->loader_extensions = image_loader_extensions;
+      }
       if (!dri2_dpy->driver_name) {
          close(fd);
          continue;
@@ -305,6 +323,7 @@ surfaceless_probe_device(_EGLDisplay *dpy, bool swrast)
       dri2_dpy->fd = -1;
       free(dri2_dpy->driver_name);
       dri2_dpy->driver_name = NULL;
+      dri2_dpy->loader_extensions = NULL;
    }
 
    return false;
@@ -337,8 +356,6 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       err = "DRI2: failed to load driver";
       goto cleanup;
    }
-
-   dri2_dpy->loader_extensions = image_loader_extensions;
 
    if (!dri2_create_screen(disp)) {
       err = "DRI2: failed to create screen";
