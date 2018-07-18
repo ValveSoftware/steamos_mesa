@@ -375,6 +375,11 @@ virgl_get_shader_param(struct pipe_screen *screen,
             return vscreen->caps.caps.v2.max_shader_buffer_frag_compute;
          else
             return vscreen->caps.caps.v2.max_shader_buffer_other_stages;
+      case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
+         if (shader == PIPE_SHADER_FRAGMENT)
+            return vscreen->caps.caps.v2.max_shader_image_frag_compute;
+         else
+            return vscreen->caps.caps.v2.max_shader_image_other_stages;
       case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
       case PIPE_SHADER_CAP_INT64_ATOMICS:
@@ -494,6 +499,12 @@ virgl_is_format_supported( struct pipe_screen *screen,
    if (sample_count > 1) {
       if (!vscreen->caps.caps.v1.bset.texture_multisample)
          return FALSE;
+
+      if (bind & PIPE_BIND_SHADER_IMAGE) {
+         if (sample_count > vscreen->caps.caps.v2.max_image_samples)
+            return FALSE;
+      }
+
       if (sample_count > vscreen->caps.caps.v1.max_samples)
          return FALSE;
    }

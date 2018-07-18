@@ -182,6 +182,20 @@ static void virgl_attach_res_shader_buffers(struct virgl_context *vctx,
    }
 }
 
+static void virgl_attach_res_shader_images(struct virgl_context *vctx,
+                                           enum pipe_shader_type shader_type)
+{
+   struct virgl_winsys *vws = virgl_screen(vctx->base.screen)->vws;
+   struct virgl_resource *res;
+   unsigned i;
+   for (i = 0; i < PIPE_MAX_SHADER_IMAGES; i++) {
+      res = virgl_resource(vctx->images[shader_type][i]);
+      if (res) {
+         vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
+      }
+   }
+}
+
 /*
  * after flushing, the hw context still has a bunch of
  * resources bound, so we need to rebind those here.
@@ -198,6 +212,7 @@ static void virgl_reemit_res(struct virgl_context *vctx)
       virgl_attach_res_sampler_views(vctx, shader_type);
       virgl_attach_res_uniform_buffers(vctx, shader_type);
       virgl_attach_res_shader_buffers(vctx, shader_type);
+      virgl_attach_res_shader_images(vctx, shader_type);
    }
    virgl_attach_res_vertex_buffers(vctx);
    virgl_attach_res_so_targets(vctx);
@@ -954,6 +969,34 @@ static void virgl_set_shader_buffers(struct pipe_context *ctx,
    virgl_encode_set_shader_buffers(vctx, shader, start_slot, count, buffers);
 }
 
+static void virgl_set_shader_images(struct pipe_context *ctx,
+                                    enum pipe_shader_type shader,
+                                    unsigned start_slot, unsigned count,
+                                    const struct pipe_image_view *images)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *rs = virgl_screen(ctx->screen);
+
+   for (unsigned i = 0; i < count; i++) {
+      unsigned idx = start_slot + i;
+
+      if (images) {
+         if (images[i].resource) {
+            pipe_resource_reference(&vctx->images[shader][idx], images[i].resource);
+            continue;
+         }
+      }
+      pipe_resource_reference(&vctx->images[shader][idx], NULL);
+   }
+
+   uint32_t max_shader_images = shader == PIPE_SHADER_FRAGMENT ?
+     rs->caps.caps.v2.max_shader_image_frag_compute :
+     rs->caps.caps.v2.max_shader_image_other_stages;
+   if (!max_shader_images)
+      return;
+   virgl_encode_set_shader_images(vctx, shader, start_slot, count, images);
+}
+
 static void
 virgl_context_destroy( struct pipe_context *ctx )
 {
@@ -1092,6 +1135,7 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.blit =  virgl_blit;
 
    vctx->base.set_shader_buffers = virgl_set_shader_buffers;
+   vctx->base.set_shader_images = virgl_set_shader_images;
    virgl_init_context_resource_functions(&vctx->base);
    virgl_init_query_functions(vctx);
    virgl_init_so_functions(vctx);

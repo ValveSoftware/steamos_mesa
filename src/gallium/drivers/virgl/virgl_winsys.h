@@ -137,5 +137,6 @@ static inline void virgl_ws_fill_new_caps_defaults(struct virgl_drm_caps *caps)
    caps->caps.v2.shader_buffer_offset_alignment = 32;
    caps->caps.v2.capability_bits = 0;
    caps->caps.v2.max_vertex_attrib_stride = 0;
+   caps->caps.v2.max_image_samples = 0;
 }
 #endif

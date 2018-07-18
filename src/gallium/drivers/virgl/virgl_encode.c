@@ -943,3 +943,32 @@ int virgl_encode_set_shader_buffers(struct virgl_context *ctx,
    }
    return 0;
 }
+
+int virgl_encode_set_shader_images(struct virgl_context *ctx,
+                                   enum pipe_shader_type shader,
+                                   unsigned start_slot, unsigned count,
+                                   const struct pipe_image_view *images)
+{
+   int i;
+   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_SET_SHADER_IMAGES, 0, VIRGL_SET_SHADER_IMAGE_SIZE(count)));
+
+   virgl_encoder_write_dword(ctx->cbuf, shader);
+   virgl_encoder_write_dword(ctx->cbuf, start_slot);
+   for (i = 0; i < count; i++) {
+      if (images) {
+         struct virgl_resource *res = virgl_resource(images[i].resource);
+         virgl_encoder_write_dword(ctx->cbuf, images[i].format);
+         virgl_encoder_write_dword(ctx->cbuf, images[i].access);
+         virgl_encoder_write_dword(ctx->cbuf, images[i].u.buf.offset);
+         virgl_encoder_write_dword(ctx->cbuf, images[i].u.buf.size);
+         virgl_encoder_write_res(ctx, res);
+      } else {
+         virgl_encoder_write_dword(ctx->cbuf, 0);
+         virgl_encoder_write_dword(ctx->cbuf, 0);
+         virgl_encoder_write_dword(ctx->cbuf, 0);
+         virgl_encoder_write_dword(ctx->cbuf, 0);
+         virgl_encoder_write_dword(ctx->cbuf, 0);
+      }
+   }
+   return 0;
+}

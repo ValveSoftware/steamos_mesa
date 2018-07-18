@@ -307,6 +307,9 @@ struct virgl_caps_v2 {
         uint32_t max_vertex_attrib_stride;
         uint32_t max_shader_buffer_frag_compute;
         uint32_t max_shader_buffer_other_stages;
+        uint32_t max_shader_image_frag_compute;
+        uint32_t max_shader_image_other_stages;
+        uint32_t max_image_samples;
 };
 
 union virgl_caps {
