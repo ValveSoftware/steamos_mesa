@@ -207,7 +207,6 @@ VkResult radv_CreateRenderPass2KHR(
 	struct radv_render_pass *pass;
 	size_t size;
 	size_t attachments_offset;
-	VkRenderPassMultiviewCreateInfoKHR *multiview_info = NULL;
 
 	assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2_KHR);
 
