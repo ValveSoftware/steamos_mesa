@@ -150,13 +150,41 @@ static int
 fd_get_driver_query_info(struct pipe_screen *pscreen,
 		unsigned index, struct pipe_driver_query_info *info)
 {
-	if (!info)
-		return ARRAY_SIZE(sw_query_list);
+	struct fd_screen *screen = fd_screen(pscreen);
 
-	if (index >= ARRAY_SIZE(sw_query_list))
-		return 0;
+	if (!info)
+		return ARRAY_SIZE(sw_query_list) + screen->num_perfcntr_queries;
+
+	if (index >= ARRAY_SIZE(sw_query_list)) {
+		index -= ARRAY_SIZE(sw_query_list);
+		if (index >= screen->num_perfcntr_queries)
+			return 0;
+		*info = screen->perfcntr_queries[index];
+		return 1;
+	}
 
 	*info = sw_query_list[index];
+	return 1;
+}
+
+static int
+fd_get_driver_query_group_info(struct pipe_screen *pscreen, unsigned index,
+		struct pipe_driver_query_group_info *info)
+{
+	struct fd_screen *screen = fd_screen(pscreen);
+
+	if (!info)
+		return screen->num_perfcntr_groups;
+
+	if (index >= screen->num_perfcntr_groups)
+		return 0;
+
+	const struct fd_perfcntr_group *g = &screen->perfcntr_groups[index];
+
+	info->name = g->name;
+	info->max_active_queries = g->num_counters;
+	info->num_queries = g->num_countables;
+
 	return 1;
 }
 
@@ -165,10 +193,45 @@ fd_set_active_query_state(struct pipe_context *pipe, boolean enable)
 {
 }
 
+static void
+setup_perfcntr_query_info(struct fd_screen *screen)
+{
+	unsigned num_queries = 0;
+
+	for (unsigned i = 0; i < screen->num_perfcntr_groups; i++)
+		num_queries += screen->perfcntr_groups[i].num_countables;
+
+	screen->perfcntr_queries =
+		calloc(num_queries, sizeof(screen->perfcntr_queries[0]));
+	screen->num_perfcntr_queries = num_queries;
+
+	unsigned idx = 0;
+	for (unsigned i = 0; i < screen->num_perfcntr_groups; i++) {
+		const struct fd_perfcntr_group *g = &screen->perfcntr_groups[i];
+		for (unsigned j = 0; j < g->num_countables; j++) {
+			struct pipe_driver_query_info *info =
+				&screen->perfcntr_queries[idx];
+			const struct fd_perfcntr_countable *c =
+				&g->countables[j];
+
+			info->name = c->name;
+			info->query_type = FD_QUERY_FIRST_PERFCNTR + idx;
+			info->type = c->query_type;
+			info->result_type = c->result_type;
+			info->group_id = i;
+			info->flags = PIPE_DRIVER_QUERY_FLAG_BATCH;
+
+			idx++;
+		}
+	}
+}
+
 void
 fd_query_screen_init(struct pipe_screen *pscreen)
 {
 	pscreen->get_driver_query_info = fd_get_driver_query_info;
+	pscreen->get_driver_query_group_info = fd_get_driver_query_group_info;
+	setup_perfcntr_query_info(fd_screen(pscreen));
 }
 
 void

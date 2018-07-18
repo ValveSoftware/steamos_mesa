@@ -162,6 +162,7 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	ralloc_free(screen->compiler);
 
+	free(screen->perfcntr_queries);
 	free(screen);
 }
 
