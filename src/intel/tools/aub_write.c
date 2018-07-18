@@ -255,11 +255,16 @@ align_u32(uint32_t v, uint32_t a)
 }
 
 static void
-aub_ppgtt_table_finish(struct aub_ppgtt_table *table)
+aub_ppgtt_table_finish(struct aub_ppgtt_table *table, int level)
 {
+   if (level == 1)
+      return;
+
    for (unsigned i = 0; i < ARRAY_SIZE(table->subtables); i++) {
-      aub_ppgtt_table_finish(table->subtables[i]);
-      free(table->subtables[i]);
+      if (table->subtables[i]) {
+         aub_ppgtt_table_finish(table->subtables[i], level - 1);
+         free(table->subtables[i]);
+      }
    }
 }
 
@@ -280,7 +285,7 @@ aub_file_init(struct aub_file *aub, FILE *file, uint16_t pci_id)
 void
 aub_file_finish(struct aub_file *aub)
 {
-   aub_ppgtt_table_finish(&aub->pml4);
+   aub_ppgtt_table_finish(&aub->pml4, 4);
    fclose(aub->file);
 }
 
