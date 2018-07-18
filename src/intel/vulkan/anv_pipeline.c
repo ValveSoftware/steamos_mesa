@@ -684,8 +684,8 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
-      nir_lower_tes_patch_vertices(tes_nir,
-                                   tcs_nir->info.tess.tcs_vertices_out);
+      nir_lower_patch_vertices(tes_nir, tcs_nir->info.tess.tcs_vertices_out,
+                               NULL);
 
       /* Copy TCS info into the TES info */
       merge_tess_info(&tes_nir->info, &tcs_nir->info);
