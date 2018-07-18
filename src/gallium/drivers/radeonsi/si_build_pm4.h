@@ -214,4 +214,26 @@ static inline void radeon_opt_set_context_reg4(struct si_context *sctx, unsigned
 	}
 }
 
+/**
+ * Set consecutive registers if any registers value is different.
+ */
+static inline void radeon_opt_set_context_regn(struct si_context *sctx, unsigned offset,
+					       unsigned *value, unsigned *saved_val,
+					       unsigned num)
+{
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
+	int i, j;
+
+	for (i = 0; i < num; i++) {
+		if (saved_val[i] != value[i]) {
+			radeon_set_context_reg_seq(cs, offset, num);
+			for (j = 0; j < num; j++)
+				radeon_emit(cs, value[j]);
+
+			memcpy(saved_val, value, sizeof(uint32_t) * num);
+			break;
+		}
+	}
+}
+
 #endif

@@ -287,6 +287,7 @@ enum si_tracked_reg {
 struct si_tracked_regs {
 	uint32_t		reg_saved;
 	uint32_t		reg_value[SI_NUM_TRACKED_REGS];
+	uint32_t		spi_ps_input_cntl[32];
 };
 
 /* Private read-write buffer slots. */

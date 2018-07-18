@@ -353,4 +353,7 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 		/* Set all saved registers state to unknown. */
 		ctx->tracked_regs.reg_saved = 0;
 	}
+
+	/* 0xffffffff is a impossible value to register SPI_PS_INPUT_CNTL_n */
+	memset(ctx->tracked_regs.spi_ps_input_cntl, 0xff, sizeof(uint32_t) * 32);
 }

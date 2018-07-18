@@ -2634,27 +2634,25 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 
 static void si_emit_spi_map(struct si_context *sctx)
 {
-	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo = ps ? &ps->selector->info : NULL;
 	unsigned i, num_interp, num_written = 0, bcol_interp[2];
+	unsigned spi_ps_input_cntl[32];
 
 	if (!ps || !ps->selector->info.num_inputs)
 		return;
 
 	num_interp = si_get_ps_num_interp(ps);
 	assert(num_interp > 0);
-	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, num_interp);
 
 	for (i = 0; i < psinfo->num_inputs; i++) {
 		unsigned name = psinfo->input_semantic_name[i];
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
 
-		radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, name, index,
-						     interpolate));
-		num_written++;
+		spi_ps_input_cntl[num_written++] = si_get_ps_input_cntl(sctx, vs, name,
+							    index, interpolate);
 
 		if (name == TGSI_SEMANTIC_COLOR) {
 			assert(index < ARRAY_SIZE(bcol_interp));
@@ -2669,12 +2667,19 @@ static void si_emit_spi_map(struct si_context *sctx)
 			if (!(psinfo->colors_read & (0xf << (i * 4))))
 				continue;
 
-			radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, bcol,
-							     i, bcol_interp[i]));
-			num_written++;
+			spi_ps_input_cntl[num_written++] =
+			  si_get_ps_input_cntl(sctx, vs, bcol, i, bcol_interp[i]);
+
 		}
 	}
 	assert(num_interp == num_written);
+
+	/* R_028644_SPI_PS_INPUT_CNTL_0 */
+	/* Dota 2: Only ~16% of SPI map updates set different values. */
+	/* Talos: Only ~9% of SPI map updates set different values. */
+	radeon_opt_set_context_regn(sctx, R_028644_SPI_PS_INPUT_CNTL_0,
+				    spi_ps_input_cntl,
+				    sctx->tracked_regs.spi_ps_input_cntl, num_interp);
 }
 
 /**
