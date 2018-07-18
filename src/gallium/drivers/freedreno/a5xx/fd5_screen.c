@@ -116,6 +116,9 @@ fd5_screen_is_format_supported(struct pipe_screen *pscreen,
 	return retval == usage;
 }
 
+extern const struct fd_perfcntr_group a5xx_perfcntr_groups[];
+extern const unsigned a5xx_num_perfcntr_groups;
+
 void
 fd5_screen_init(struct pipe_screen *pscreen)
 {
@@ -128,4 +131,9 @@ fd5_screen_init(struct pipe_screen *pscreen)
 	screen->setup_slices = fd5_setup_slices;
 	if (fd_mesa_debug & FD_DBG_TTILE)
 		screen->tile_mode = fd5_tile_mode;
+
+	if (fd_mesa_debug & FD_DBG_PERFC) {
+		screen->perfcntr_groups = a5xx_perfcntr_groups;
+		screen->num_perfcntr_groups = a5xx_num_perfcntr_groups;
+	}
 }
