@@ -207,6 +207,7 @@ enum virgl_formats {
 #define VIRGL_CAP_TXQS                 (1 << 5)
 #define VIRGL_CAP_MEMORY_BARRIER       (1 << 6)
 #define VIRGL_CAP_COMPUTE_SHADER       (1 << 7)
+#define VIRGL_CAP_FB_NO_ATTACH         (1 << 8)
 
 #define VIRGL_BIND_DEPTH_STENCIL (1 << 0)
 #define VIRGL_BIND_RENDER_TARGET (1 << 1)

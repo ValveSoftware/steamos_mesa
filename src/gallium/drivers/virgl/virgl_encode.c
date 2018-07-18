@@ -350,6 +350,12 @@ int virgl_encoder_set_framebuffer_state(struct virgl_context *ctx,
       virgl_encoder_write_dword(ctx->cbuf, surf ? surf->handle : 0);
    }
 
+   struct virgl_screen *rs = virgl_screen(ctx->base.screen);
+   if (rs->caps.caps.v2.capability_bits & VIRGL_CAP_FB_NO_ATTACH) {
+      virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_SET_FRAMEBUFFER_STATE_NO_ATTACH, 0, VIRGL_SET_FRAMEBUFFER_STATE_NO_ATTACH_SIZE));
+      virgl_encoder_write_dword(ctx->cbuf, state->width | (state->height << 16));
+      virgl_encoder_write_dword(ctx->cbuf, state->layers | (state->samples << 16));
+   }
    return 0;
 }
 
