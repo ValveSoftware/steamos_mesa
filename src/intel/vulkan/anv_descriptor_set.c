@@ -902,15 +902,9 @@ anv_descriptor_set_write_template(struct anv_descriptor_set *set,
                                   const struct anv_descriptor_update_template *template,
                                   const void *data)
 {
-   const struct anv_descriptor_set_layout *layout = set->layout;
-
    for (uint32_t i = 0; i < template->entry_count; i++) {
       const struct anv_descriptor_template_entry *entry =
          &template->entries[i];
-      const struct anv_descriptor_set_binding_layout *bind_layout =
-         &layout->binding[entry->binding];
-      struct anv_descriptor *desc = &set->descriptors[bind_layout->descriptor_index];
-      desc += entry->array_element;
 
       switch (entry->type) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
