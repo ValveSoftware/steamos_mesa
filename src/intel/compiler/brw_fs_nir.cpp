@@ -2498,18 +2498,6 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
    case nir_intrinsic_load_base_vertex:
       unreachable("should be lowered by nir_lower_system_values()");
 
-   case nir_intrinsic_load_vertex_id_zero_base:
-   case nir_intrinsic_load_instance_id:
-   case nir_intrinsic_load_base_instance:
-   case nir_intrinsic_load_draw_id: {
-      gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
-      fs_reg val = nir_system_values[sv];
-      assert(val.file != BAD_FILE);
-      dest.type = val.type;
-      bld.MOV(dest, val);
-      break;
-   }
-
    case nir_intrinsic_load_input: {
       fs_reg src = fs_reg(ATTR, nir_intrinsic_base(instr) * 4, dest.type);
       unsigned first_component = nir_intrinsic_component(instr);
@@ -2530,6 +2518,10 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_load_vertex_id_zero_base:
+   case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_base_instance:
+   case nir_intrinsic_load_draw_id:
    case nir_intrinsic_load_first_vertex:
    case nir_intrinsic_load_is_indexed_draw:
       unreachable("lowered by brw_nir_lower_vs_inputs");
