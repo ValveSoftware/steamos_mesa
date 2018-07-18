@@ -205,6 +205,7 @@ enum virgl_formats {
 #define VIRGL_CAP_COPY_IMAGE           (1 << 3)
 #define VIRGL_CAP_TGSI_PRECISE         (1 << 4)
 #define VIRGL_CAP_TXQS                 (1 << 5)
+#define VIRGL_CAP_MEMORY_BARRIER       (1 << 6)
 
 #define VIRGL_BIND_DEPTH_STENCIL (1 << 0)
 #define VIRGL_BIND_RENDER_TARGET (1 << 1)

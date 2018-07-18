@@ -972,3 +972,11 @@ int virgl_encode_set_shader_images(struct virgl_context *ctx,
    }
    return 0;
 }
+
+int virgl_encode_memory_barrier(struct virgl_context *ctx,
+                                unsigned flags)
+{
+   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_MEMORY_BARRIER, 0, 1));
+   virgl_encoder_write_dword(ctx->cbuf, flags);
+   return 0;
+}

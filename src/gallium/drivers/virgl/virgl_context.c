@@ -997,6 +997,17 @@ static void virgl_set_shader_images(struct pipe_context *ctx,
    virgl_encode_set_shader_images(vctx, shader, start_slot, count, images);
 }
 
+static void virgl_memory_barrier(struct pipe_context *ctx,
+                                 unsigned flags)
+{
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *rs = virgl_screen(ctx->screen);
+
+   if (!(rs->caps.caps.v2.capability_bits & VIRGL_CAP_MEMORY_BARRIER))
+      return;
+   virgl_encode_memory_barrier(vctx, flags);
+}
+
 static void
 virgl_context_destroy( struct pipe_context *ctx )
 {
@@ -1136,6 +1147,8 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
 
    vctx->base.set_shader_buffers = virgl_set_shader_buffers;
    vctx->base.set_shader_images = virgl_set_shader_images;
+   vctx->base.memory_barrier = virgl_memory_barrier;
+
    virgl_init_context_resource_functions(&vctx->base);
    virgl_init_query_functions(vctx);
    virgl_init_so_functions(vctx);
