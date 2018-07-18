@@ -50,13 +50,11 @@ struct virgl_winsys {
    int (*transfer_put)(struct virgl_winsys *vws,
                        struct virgl_hw_res *res,
                        const struct pipe_box *box,
-                       uint32_t stride, uint32_t layer_stride,
                        uint32_t buf_offset, uint32_t level);
 
    int (*transfer_get)(struct virgl_winsys *vws,
                        struct virgl_hw_res *res,
                        const struct pipe_box *box,
-                       uint32_t stride, uint32_t layer_stride,
                        uint32_t buf_offset, uint32_t level);
 
    struct virgl_hw_res *(*resource_create)(struct virgl_winsys *vws,
