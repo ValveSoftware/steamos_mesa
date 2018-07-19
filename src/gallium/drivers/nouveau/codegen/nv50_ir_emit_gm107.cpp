@@ -124,6 +124,7 @@ private:
 
    void emitMOV();
    void emitS2R();
+   void emitCS2R();
    void emitF2F();
    void emitF2I();
    void emitI2F();
@@ -745,6 +746,14 @@ void
 CodeEmitterGM107::emitS2R()
 {
    emitInsn(0xf0c80000);
+   emitSYS (0x14, insn->src(0));
+   emitGPR (0x00, insn->def(0));
+}
+
+void
+CodeEmitterGM107::emitCS2R()
+{
+   emitInsn(0x50c80000);
    emitSYS (0x14, insn->src(0));
    emitGPR (0x00, insn->def(0));
 }
@@ -3192,7 +3201,10 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       emitMOV();
       break;
    case OP_RDSV:
-      emitS2R();
+      if (targGM107->isCS2RSV(insn->getSrc(0)->reg.data.sv.sv))
+         emitCS2R();
+      else
+         emitS2R();
       break;
    case OP_ABS:
    case OP_NEG:
