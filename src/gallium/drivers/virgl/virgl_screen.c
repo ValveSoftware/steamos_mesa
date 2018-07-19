@@ -223,6 +223,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v2.max_vertex_attrib_stride;
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_COPY_IMAGE;
+   case PIPE_CAP_TGSI_TXQS:
+      return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_TXQS;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -238,7 +240,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
    case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
    case PIPE_CAP_DEPTH_BOUNDS_TEST:
-   case PIPE_CAP_TGSI_TXQS:
    case PIPE_CAP_SHAREABLE_SHADERS:
    case PIPE_CAP_CLEAR_TEXTURE:
    case PIPE_CAP_DRAW_PARAMETERS:
