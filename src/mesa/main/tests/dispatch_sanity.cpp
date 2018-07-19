@@ -2419,6 +2419,19 @@ const struct function gles2_functions_possible[] = {
    { "glValidateProgramPipelineEXT", 20, -1 },
    { "glGetProgramPipelineInfoLogEXT", 20, -1 },
 
+   /* GL_AMD_performance_monitor */
+   { "glGetPerfMonitorGroupsAMD", 20, -1 },
+   { "glGetPerfMonitorCountersAMD", 20, -1 },
+   { "glGetPerfMonitorGroupStringAMD", 20, -1 },
+   { "glGetPerfMonitorCounterStringAMD", 20, -1 },
+   { "glGetPerfMonitorCounterInfoAMD", 20, -1 },
+   { "glGenPerfMonitorsAMD", 20, -1 },
+   { "glDeletePerfMonitorsAMD", 20, -1 },
+   { "glSelectPerfMonitorCountersAMD", 20, -1 },
+   { "glBeginPerfMonitorAMD", 20, -1 },
+   { "glEndPerfMonitorAMD", 20, -1 },
+   { "glGetPerfMonitorCounterDataAMD", 20, -1 },
+
    /* GL_INTEL_performance_query */
    { "glGetFirstPerfQueryIdINTEL", 20, -1 },
    { "glGetNextPerfQueryIdINTEL", 20, -1 },
