@@ -791,6 +791,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 
 	sscreen->ws = ws;
 	ws->query_info(ws, &sscreen->info);
+	si_handle_env_var_force_family(sscreen);
 
 	sscreen->debug_flags = debug_get_flags_option("R600_DEBUG",
 							debug_options, 0);
@@ -879,8 +880,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	       FREE(sscreen);
 	       return NULL;
 	}
-
-	si_handle_env_var_force_family(sscreen);
 
 	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", false))
 		si_init_perfcounters(sscreen);
