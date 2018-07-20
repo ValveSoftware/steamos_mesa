@@ -585,8 +585,7 @@ radv_cmd_buffer_resolve_subpass_fs(struct radv_cmd_buffer *cmd_buffer)
 	/* Resolves happen before the end-of-subpass barriers get executed,
 	 * so we have to make the attachment shader-readable */
 	barrier.src_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	barrier.src_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-				  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.src_access_mask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	barrier.dst_access_mask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 	radv_subpass_barrier(cmd_buffer, &barrier);
 
