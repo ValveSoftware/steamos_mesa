@@ -121,6 +121,7 @@ enum {
 	DBG_FS_CORRECT_DERIVS_AFTER_KILL,
 	DBG_UNSAFE_MATH,
 	DBG_SI_SCHED,
+	DBG_GISEL,
 
 	/* Shader compiler options (with no effect on the shader cache): */
 	DBG_CHECK_IR,
