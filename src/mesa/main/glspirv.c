@@ -238,6 +238,14 @@ _mesa_spirv_to_nir(struct gl_context *ctx,
                       prog->Name);
    nir_validate_shader(nir);
 
+   NIR_PASS_V(nir, nir_copy_prop);
+
+   /* Split member structs.  We do this before lower_io_to_temporaries so that
+    * it doesn't lower system values to temporaries by accident.
+    */
+   NIR_PASS_V(nir, nir_split_var_copies);
+   NIR_PASS_V(nir, nir_split_per_member_structs);
+
    return nir;
 }
 
