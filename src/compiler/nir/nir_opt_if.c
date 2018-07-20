@@ -44,6 +44,8 @@ find_continue_block(nir_loop *loop)
       if (pred_entry->key != prev_block)
          return (nir_block*)pred_entry->key;
    }
+
+   unreachable("Continue block not found!");
 }
 
 /**
