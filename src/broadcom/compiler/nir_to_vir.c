@@ -244,14 +244,6 @@ ntq_get_alu_src(struct v3d_compile *c, nir_alu_instr *instr,
         return r;
 };
 
-static inline struct qreg
-vir_SAT(struct v3d_compile *c, struct qreg val)
-{
-        return vir_FMAX(c,
-                        vir_FMIN(c, val, vir_uniform_f(c, 1.0)),
-                        vir_uniform_f(c, 0.0));
-}
-
 static struct qreg
 ntq_minify(struct v3d_compile *c, struct qreg size, struct qreg level)
 {
