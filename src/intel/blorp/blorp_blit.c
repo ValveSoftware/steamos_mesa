@@ -993,6 +993,8 @@ convert_color(struct nir_builder *b, nir_ssa_def *color,
       value = nir_fmul(b, nir_fsat(b, nir_channel(b, color, 0)),
                           nir_imm_float(b, factor));
    } else if (key->dst_format == ISL_FORMAT_L8_UNORM_SRGB) {
+      value = nir_format_linear_to_srgb(b, nir_channel(b, color, 0));
+   } else if (key->dst_format == ISL_FORMAT_R8G8B8_UNORM_SRGB) {
       value = nir_format_linear_to_srgb(b, color);
    } else if (key->dst_format == ISL_FORMAT_R9G9B9E5_SHAREDEXP) {
       value = nir_format_pack_r9g9b9e5(b, color);
@@ -1000,8 +1002,14 @@ convert_color(struct nir_builder *b, nir_ssa_def *color,
       unreachable("Unsupported format conversion");
    }
 
-   nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
-   return nir_vec4(b, value, u, u, u);
+   nir_ssa_def *out_comps[4];
+   for (unsigned i = 0; i < 4; i++) {
+      if (i < value->num_components)
+         out_comps[i] = nir_channel(b, value, i);
+      else
+         out_comps[i] = nir_ssa_undef(b, 1, 32);
+   }
+   return nir_vec(b, out_comps, 4);
 }
 
 /**
@@ -1956,7 +1964,7 @@ try_blorp_blit(struct blorp_batch *batch,
 
       /* If it happens to be sRGB, we need to force a conversion */
       if (params->dst.view.format == ISL_FORMAT_R8G8B8_UNORM_SRGB)
-         wm_prog_key->dst_format = ISL_FORMAT_R9G9B9E5_SHAREDEXP;
+         wm_prog_key->dst_format = ISL_FORMAT_R8G8B8_UNORM_SRGB;
 
       surf_fake_rgb_with_red(batch->blorp->isl_dev, &params->dst);
 
