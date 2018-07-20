@@ -115,6 +115,7 @@ static inline struct qreg vir_reg(enum qfile file, uint32_t index)
  */
 struct qpu_reg {
         bool magic;
+        bool smimm;
         int index;
 };
 

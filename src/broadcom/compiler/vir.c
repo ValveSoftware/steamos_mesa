@@ -1001,6 +1001,7 @@ vir_optimize(struct v3d_compile *c)
 
                 OPTPASS(vir_opt_copy_propagate);
                 OPTPASS(vir_opt_dead_code);
+                OPTPASS(vir_opt_small_immediates);
 
                 if (!progress)
                         break;

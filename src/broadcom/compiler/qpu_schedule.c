@@ -670,7 +670,8 @@ qpu_merge_inst(const struct v3d_device_info *devinfo,
 
         if (v3d_qpu_uses_mux(b, V3D_QPU_MUX_B)) {
                 if (v3d_qpu_uses_mux(a, V3D_QPU_MUX_B) &&
-                    a->raddr_b != b->raddr_b) {
+                    (a->raddr_b != b->raddr_b ||
+                     a->sig.small_imm != b->sig.small_imm)) {
                         return false;
                 }
                 merge.raddr_b = b->raddr_b;
