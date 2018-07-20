@@ -1561,6 +1561,10 @@ VkResult radv_CreateDevice(
 		if (!radv_init_trace(device))
 			goto fail;
 
+		fprintf(stderr, "*****************************************************************************\n");
+		fprintf(stderr, "* WARNING: RADV_TRACE_FILE is costly and should only be used for debugging! *\n");
+		fprintf(stderr, "*****************************************************************************\n");
+
 		fprintf(stderr, "Trace file will be dumped to %s\n", filename);
 		radv_dump_enabled_options(device, stderr);
 	}
