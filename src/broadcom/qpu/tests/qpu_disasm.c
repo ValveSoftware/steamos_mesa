@@ -112,9 +112,10 @@ main(int argc, char **argv)
         for (int i = 0; i < ARRAY_SIZE(tests); i++) {
                 devinfo.ver = tests[i].ver;
 
-                printf("Testing v%d.%d 0x%016llx... ",
+                printf("Testing v%d.%d 0x%016llx (\"%s\")... ",
                        devinfo.ver / 10, devinfo.ver % 10,
-                       (long long)tests[i].inst);
+                       (long long)tests[i].inst,
+                        tests[i].expected);
 
                 const char *disasm_output = v3d_qpu_disasm(&devinfo,
                                                            tests[i].inst);
