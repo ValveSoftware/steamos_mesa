@@ -74,6 +74,8 @@ vir_has_implicit_uniform(struct qinst *inst)
 int
 vir_get_implicit_uniform_src(struct qinst *inst)
 {
+        if (!vir_has_implicit_uniform(inst))
+                return -1;
         return vir_get_nsrc(inst) - 1;
 }
 
