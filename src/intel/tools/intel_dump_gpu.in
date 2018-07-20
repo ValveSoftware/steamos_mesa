@@ -82,7 +82,12 @@ done
 
 [ -z $file ] && add_arg "file=intel.aub"
 
+tmp_file=`mktemp`
+echo -e $args > $tmp_file
+
 LD_PRELOAD="@install_libexecdir@/libintel_dump_gpu.so${LD_PPRELOAD:+:$LD_PRELOAD}" \
-          exec -- "$@" 3<<EOF
-`echo -e $args`
-EOF
+          INTEL_DUMP_GPU_CONFIG=$tmp_file \
+          $@
+ret=$?
+rm $tmp_file
+exit $ret

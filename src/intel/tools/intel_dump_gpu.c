@@ -349,7 +349,7 @@ maybe_init(void)
 
    initialized = true;
 
-   config = fdopen(3, "r");
+   config = fopen(getenv("INTEL_DUMP_GPU_CONFIG"), "r");
    while (fscanf(config, "%m[^=]=%m[^\n]\n", &key, &value) != EOF) {
       if (!strcmp(key, "verbose")) {
          if (!strcmp(value, "1")) {
