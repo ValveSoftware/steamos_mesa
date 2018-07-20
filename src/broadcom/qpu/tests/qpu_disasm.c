@@ -40,6 +40,7 @@ static const struct {
         { 33, 0x3c002380b6edb000ull, "or  rf0, r3, r3      ; mov  vpm, r3" },
         { 33, 0x57403006bbb80000ull, "nop                  ; fmul  r0, rf0, r5 ; ldvpm; ldunif" },
         { 33, 0x9c094adef634b000ull, "ffloor.ifb  rf30.l, r3; fmul.pushz  rf43.l, r5, r1.h" },
+        { 33, 0xb0044c56ba326840ull, "flpop  rf22, rf33    ; fmul.pushz  rf49.l, r4.h, r1.abs" },
 
         /* vfmul input packing */
         { 33, 0x101e8b6e8aad4000ull, "fmax.nornn  rf46, r4.l, r2.l; vfmul.ifnb  rf45, r3, r5" },

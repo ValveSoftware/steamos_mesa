@@ -165,7 +165,7 @@ enum v3d_qpu_add_op {
         V3D_QPU_A_NEG,
         V3D_QPU_A_FLAPUSH,
         V3D_QPU_A_FLBPUSH,
-        V3D_QPU_A_FLBPOP,
+        V3D_QPU_A_FLPOP,
         V3D_QPU_A_SETMSF,
         V3D_QPU_A_SETREVF,
         V3D_QPU_A_NOP,
