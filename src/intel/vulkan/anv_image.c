@@ -764,17 +764,26 @@ void anv_GetImageSubresourceLayout(
 
    assert(__builtin_popcount(subresource->aspectMask) == 1);
 
-   /* If we are on a non-zero mip level or array slice, we need to
-    * calculate a real offset.
-    */
-   anv_assert(subresource->mipLevel == 0);
-   anv_assert(subresource->arrayLayer == 0);
-
    layout->offset = surface->offset;
    layout->rowPitch = surface->isl.row_pitch;
    layout->depthPitch = isl_surf_get_array_pitch(&surface->isl);
    layout->arrayPitch = isl_surf_get_array_pitch(&surface->isl);
-   layout->size = surface->isl.size;
+
+   if (subresource->mipLevel > 0 || subresource->arrayLayer > 0) {
+      assert(surface->isl.tiling == ISL_TILING_LINEAR);
+
+      uint32_t offset_B;
+      isl_surf_get_image_offset_B_tile_sa(&surface->isl,
+                                          subresource->mipLevel,
+                                          subresource->arrayLayer,
+                                          0 /* logical_z_offset_px */,
+                                          &offset_B, NULL, NULL);
+      layout->offset += offset_B;
+      layout->size = layout->rowPitch * anv_minify(image->extent.height,
+                                                   subresource->mipLevel);
+   } else {
+      layout->size = surface->isl.size;
+   }
 }
 
 /**
