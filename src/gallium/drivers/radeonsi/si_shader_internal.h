@@ -217,7 +217,8 @@ si_shader_context_from_abi(struct ac_shader_abi *abi)
 
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 struct ac_llvm_compiler *compiler,
-			 struct pipe_debug_callback *debug);
+			 struct pipe_debug_callback *debug,
+			 bool less_optimized);
 
 LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 			  enum tgsi_opcode_type type);

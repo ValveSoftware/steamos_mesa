@@ -82,8 +82,12 @@ static void si_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
  */
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 struct ac_llvm_compiler *compiler,
-			 struct pipe_debug_callback *debug)
+			 struct pipe_debug_callback *debug,
+			 bool less_optimized)
 {
+	struct ac_compiler_passes *passes =
+		less_optimized && compiler->low_opt_passes ?
+			compiler->low_opt_passes : compiler->passes;
 	struct si_llvm_diagnostics diag;
 	LLVMContextRef llvm_ctx;
 
@@ -96,7 +100,7 @@ unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 	LLVMContextSetDiagnosticHandler(llvm_ctx, si_diagnostic_handler, &diag);
 
 	/* Compile IR. */
-	if (!ac_compile_module_to_binary(compiler->passes, M, binary))
+	if (!ac_compile_module_to_binary(passes, M, binary))
 		diag.retval = 1;
 
 	if (diag.retval != 0)

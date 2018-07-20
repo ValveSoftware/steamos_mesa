@@ -108,22 +108,32 @@ static const struct debug_named_value debug_options[] = {
 static void si_init_compiler(struct si_screen *sscreen,
 			     struct ac_llvm_compiler *compiler)
 {
+	/* Only create the less-optimizing version of the compiler on APUs
+	 * predating Ryzen (Raven). */
+	bool create_low_opt_compiler = !sscreen->info.has_dedicated_vram &&
+				       sscreen->info.chip_class <= VI;
+
 	enum ac_target_machine_options tm_options =
 		(sscreen->debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
 		(sscreen->debug_flags & DBG(GISEL) ? AC_TM_ENABLE_GLOBAL_ISEL : 0) |
 		(sscreen->info.chip_class >= GFX9 ? AC_TM_FORCE_ENABLE_XNACK : 0) |
 		(sscreen->info.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
 		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0) |
-		(sscreen->debug_flags & DBG(CHECK_IR) ? AC_TM_CHECK_IR : 0);
+		(sscreen->debug_flags & DBG(CHECK_IR) ? AC_TM_CHECK_IR : 0) |
+		(create_low_opt_compiler ? AC_TM_CREATE_LOW_OPT : 0);
 
 	ac_init_llvm_once();
 	ac_init_llvm_compiler(compiler, true, sscreen->info.family, tm_options);
 	compiler->passes = ac_create_llvm_passes(compiler->tm);
+
+	if (compiler->low_opt_tm)
+		compiler->low_opt_passes = ac_create_llvm_passes(compiler->low_opt_tm);
 }
 
 static void si_destroy_compiler(struct ac_llvm_compiler *compiler)
 {
 	ac_destroy_llvm_passes(compiler->passes);
+	ac_destroy_llvm_passes(compiler->low_opt_passes);
 	ac_destroy_llvm_compiler(compiler);
 }
 
