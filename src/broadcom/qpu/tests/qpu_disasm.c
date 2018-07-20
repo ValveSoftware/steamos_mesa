@@ -84,6 +84,14 @@ static const struct {
         { 41, 0x3de02040f8ff7201ull, "stvpmv  1, rf8       ; mov  r1, 1" },
         { 41, 0xd8000e50bb2d3000ull, "sampid  rf16         ; fmul  rf57.h, r3, r1.l" },
 
+        /* v4.1 SFU instructions. */
+        { 41, 0xe98d60c1ba2aef80ull, "recip  rf1, rf62     ; fmul  r3.h, r2.l, r1.l; ldunifrf.rf53" },
+        { 41, 0x7d87c2debc51c000ull, "rsqrt  rf30, r4      ; fmul  rf11, r4.h, r2.h; ldunifrf.rf31" },
+        { 41, 0xb182475abc2bb000ull, "rsqrt2  rf26, r3     ; fmul  rf29.l, r2.h, r1.abs; ldunifrf.rf9" },
+        { 41, 0x79880808bc0b6900ull, "sin  rf8, rf36       ; fmul  rf32, r2.h, r0.l; ldunifrf.rf32" },
+        { 41, 0x04092094bc5a28c0ull, "exp.ifb  rf20, r2    ; add  r2, rf35, r2" },
+        { 41, 0xe00648bfbc32a000ull, "log  rf63, r2        ; fmul.andnn  rf34.h, r4.l, r1.abs" },
+
         /* v4.2 changes */
         { 42, 0x3c203192bb814000ull, "barrierid  syncb     ; nop               ; thrsw" },
 };
