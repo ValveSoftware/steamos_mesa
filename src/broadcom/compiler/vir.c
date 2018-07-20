@@ -935,6 +935,17 @@ vir_uniform(struct v3d_compile *c,
         return vir_reg(QFILE_UNIF, uniform);
 }
 
+static bool
+vir_can_set_flags(struct v3d_compile *c, struct qinst *inst)
+{
+        if (c->devinfo->ver >= 40 && (v3d_qpu_reads_vpm(&inst->qpu) ||
+                                      v3d_qpu_uses_sfu(&inst->qpu))) {
+                return false;
+        }
+
+        return true;
+}
+
 void
 vir_PF(struct v3d_compile *c, struct qreg src, enum v3d_qpu_pf pf)
 {
@@ -954,7 +965,8 @@ vir_PF(struct v3d_compile *c, struct qreg src, enum v3d_qpu_pf pf)
 
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
-            last_inst != c->defs[src.index]) {
+            last_inst != c->defs[src.index] ||
+            !vir_can_set_flags(c, last_inst)) {
                 /* XXX: Make the MOV be the appropriate type */
                 last_inst = vir_MOV_dest(c, vir_reg(QFILE_NULL, 0), src);
         }

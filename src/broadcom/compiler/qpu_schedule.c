@@ -459,7 +459,7 @@ calculate_reverse_deps(struct v3d_compile *c, struct list_head *schedule_list)
 
 struct choose_scoreboard {
         int tick;
-        int last_sfu_write_tick;
+        int last_magic_sfu_write_tick;
         int last_ldvary_tick;
         int last_uniforms_reset_tick;
         bool tlb_locked;
@@ -471,7 +471,7 @@ mux_reads_too_soon(struct choose_scoreboard *scoreboard,
 {
         switch (mux) {
         case V3D_QPU_MUX_R4:
-                if (scoreboard->tick - scoreboard->last_sfu_write_tick <= 2)
+                if (scoreboard->tick - scoreboard->last_magic_sfu_write_tick <= 2)
                         return true;
                 break;
 
@@ -536,7 +536,7 @@ writes_too_soon_after_write(const struct v3d_device_info *devinfo,
          * This would normally be prevented by dependency tracking, but might
          * occur if a dead SFU computation makes it to scheduling.
          */
-        if (scoreboard->tick - scoreboard->last_sfu_write_tick < 2 &&
+        if (scoreboard->tick - scoreboard->last_magic_sfu_write_tick < 2 &&
             v3d_qpu_writes_r4(devinfo, inst))
                 return true;
 
@@ -594,6 +594,8 @@ static bool
 qpu_accesses_peripheral(const struct v3d_qpu_instr *inst)
 {
         if (v3d_qpu_uses_vpm(inst))
+                return true;
+        if (v3d_qpu_uses_sfu(inst))
                 return true;
 
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
@@ -825,7 +827,7 @@ update_scoreboard_for_magic_waddr(struct choose_scoreboard *scoreboard,
                                   enum v3d_qpu_waddr waddr)
 {
         if (v3d_qpu_magic_waddr_is_sfu(waddr))
-                scoreboard->last_sfu_write_tick = scoreboard->tick;
+                scoreboard->last_magic_sfu_write_tick = scoreboard->tick;
 }
 
 static void
@@ -1467,7 +1469,7 @@ v3d_qpu_schedule_instructions(struct v3d_compile *c)
         struct choose_scoreboard scoreboard;
         memset(&scoreboard, 0, sizeof(scoreboard));
         scoreboard.last_ldvary_tick = -10;
-        scoreboard.last_sfu_write_tick = -10;
+        scoreboard.last_magic_sfu_write_tick = -10;
         scoreboard.last_uniforms_reset_tick = -10;
 
         if (debug) {

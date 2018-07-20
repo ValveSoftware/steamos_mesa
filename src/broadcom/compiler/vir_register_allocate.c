@@ -445,6 +445,19 @@ v3d_register_allocate(struct v3d_compile *c, bool *spilled)
                                 class_bits[inst->dst.index] &= CLASS_BIT_PHYS;
                                 break;
 
+                        case V3D_QPU_A_RECIP:
+                        case V3D_QPU_A_RSQRT:
+                        case V3D_QPU_A_EXP:
+                        case V3D_QPU_A_LOG:
+                        case V3D_QPU_A_SIN:
+                        case V3D_QPU_A_RSQRT2:
+                                /* The SFU instructions write directly to the
+                                 * phys regfile.
+                                 */
+                                assert(inst->dst.file == QFILE_TEMP);
+                                class_bits[inst->dst.index] &= CLASS_BIT_PHYS;
+                                break;
+
                         default:
                                 break;
                         }

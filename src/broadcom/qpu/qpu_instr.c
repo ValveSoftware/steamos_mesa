@@ -603,6 +603,36 @@ v3d_qpu_uses_tlb(const struct v3d_qpu_instr *inst)
 }
 
 bool
+v3d_qpu_uses_sfu(const struct v3d_qpu_instr *inst)
+{
+        if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
+                switch (inst->alu.add.op) {
+                case V3D_QPU_A_RECIP:
+                case V3D_QPU_A_RSQRT:
+                case V3D_QPU_A_EXP:
+                case V3D_QPU_A_LOG:
+                case V3D_QPU_A_SIN:
+                case V3D_QPU_A_RSQRT2:
+                        return true;
+                default:
+                        break;
+                }
+
+                if (inst->alu.add.magic_write &&
+                    v3d_qpu_magic_waddr_is_sfu(inst->alu.add.waddr)) {
+                        return true;
+                }
+
+                if (inst->alu.mul.magic_write &&
+                    v3d_qpu_magic_waddr_is_sfu(inst->alu.mul.waddr)) {
+                        return true;
+                }
+        }
+
+        return false;
+}
+
+bool
 v3d_qpu_writes_tmu(const struct v3d_qpu_instr *inst)
 {
         return (inst->type == V3D_QPU_INSTR_TYPE_ALU &&
