@@ -1617,8 +1617,14 @@ emit_3dstate_ps_extra(struct anv_pipeline *pipeline,
 #if GEN_GEN >= 9
       ps.PixelShaderComputesStencil = wm_prog_data->computed_stencil;
       ps.PixelShaderPullsBary    = wm_prog_data->pulls_bary;
-      ps.InputCoverageMaskState  = wm_prog_data->uses_sample_mask ?
-                                   ICMS_INNER_CONSERVATIVE : ICMS_NONE;
+
+      ps.InputCoverageMaskState  = ICMS_NONE;
+      if (wm_prog_data->uses_sample_mask) {
+         if (wm_prog_data->post_depth_coverage)
+            ps.InputCoverageMaskState  = ICMS_DEPTH_COVERAGE;
+         else
+            ps.InputCoverageMaskState  = ICMS_INNER_CONSERVATIVE;
+      }
 #else
       ps.PixelShaderUsesInputCoverageMask = wm_prog_data->uses_sample_mask;
 #endif

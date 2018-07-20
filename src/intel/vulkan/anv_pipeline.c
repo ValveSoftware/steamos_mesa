@@ -155,6 +155,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
          .subgroup_vote = true,
          .stencil_export = device->instance->physicalDevice.info.gen >= 9,
          .storage_8bit = device->instance->physicalDevice.info.gen >= 8,
+         .post_depth_coverage = device->instance->physicalDevice.info.gen >= 9,
       },
    };
 
