@@ -23,8 +23,10 @@ EOF
     exit 0
 }
 
+ld_preload="@install_libexecdir@/libintel_dump_gpu.so${LD_PPRELOAD:+:$LD_PRELOAD}"
 args=""
 file=""
+gdb=""
 
 function add_arg() {
     arg=$1
@@ -60,6 +62,14 @@ while true; do
             add_arg "device=${1##--device=}"
             shift
             ;;
+        --gdb)
+            gdb=1
+            shift
+            ;;
+        -g)
+            gdb=1
+            shift
+            ;;
         --help)
             show_help
             ;;
@@ -85,9 +95,12 @@ done
 tmp_file=`mktemp`
 echo -e $args > $tmp_file
 
-LD_PRELOAD="@install_libexecdir@/libintel_dump_gpu.so${LD_PPRELOAD:+:$LD_PRELOAD}" \
-          INTEL_DUMP_GPU_CONFIG=$tmp_file \
-          $@
+if [ -z $gdb ]; then
+    LD_PRELOAD="$ld_preload" INTEL_DUMP_GPU_CONFIG=$tmp_file $@
+else
+    gdb -iex "set exec-wrapper env LD_PRELOAD=$ld_preload INTEL_DUMP_GPU_CONFIG=$tmp_file" --args $@
+fi
+
 ret=$?
 rm $tmp_file
 exit $ret
