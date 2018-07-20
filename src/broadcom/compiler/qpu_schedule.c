@@ -462,7 +462,6 @@ struct choose_scoreboard {
         int last_sfu_write_tick;
         int last_ldvary_tick;
         int last_uniforms_reset_tick;
-        uint32_t last_waddr_add, last_waddr_mul;
         bool tlb_locked;
 };
 
@@ -471,20 +470,6 @@ mux_reads_too_soon(struct choose_scoreboard *scoreboard,
                    const struct v3d_qpu_instr *inst, enum v3d_qpu_mux mux)
 {
         switch (mux) {
-        case V3D_QPU_MUX_A:
-                if (scoreboard->last_waddr_add == inst->raddr_a ||
-                    scoreboard->last_waddr_mul == inst->raddr_a) {
-                        return true;
-                }
-                break;
-
-        case V3D_QPU_MUX_B:
-                if (scoreboard->last_waddr_add == inst->raddr_b ||
-                    scoreboard->last_waddr_mul == inst->raddr_b) {
-                        return true;
-                }
-                break;
-
         case V3D_QPU_MUX_R4:
                 if (scoreboard->tick - scoreboard->last_sfu_write_tick <= 2)
                         return true;
@@ -847,9 +832,6 @@ static void
 update_scoreboard_for_chosen(struct choose_scoreboard *scoreboard,
                              const struct v3d_qpu_instr *inst)
 {
-        scoreboard->last_waddr_add = ~0;
-        scoreboard->last_waddr_mul = ~0;
-
         if (inst->type == V3D_QPU_INSTR_TYPE_BRANCH)
                 return;
 
@@ -859,8 +841,6 @@ update_scoreboard_for_chosen(struct choose_scoreboard *scoreboard,
                 if (inst->alu.add.magic_write) {
                         update_scoreboard_for_magic_waddr(scoreboard,
                                                           inst->alu.add.waddr);
-                } else {
-                        scoreboard->last_waddr_add = inst->alu.add.waddr;
                 }
         }
 
@@ -868,8 +848,6 @@ update_scoreboard_for_chosen(struct choose_scoreboard *scoreboard,
                 if (inst->alu.mul.magic_write) {
                         update_scoreboard_for_magic_waddr(scoreboard,
                                                           inst->alu.mul.waddr);
-                } else {
-                        scoreboard->last_waddr_mul = inst->alu.mul.waddr;
                 }
         }
 
@@ -1488,8 +1466,6 @@ v3d_qpu_schedule_instructions(struct v3d_compile *c)
 
         struct choose_scoreboard scoreboard;
         memset(&scoreboard, 0, sizeof(scoreboard));
-        scoreboard.last_waddr_add = ~0;
-        scoreboard.last_waddr_mul = ~0;
         scoreboard.last_ldvary_tick = -10;
         scoreboard.last_sfu_write_tick = -10;
         scoreboard.last_uniforms_reset_tick = -10;
