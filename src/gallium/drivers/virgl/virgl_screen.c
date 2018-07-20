@@ -229,6 +229,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_FB_NO_ATTACH;
    case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_ROBUST_BUFFER_ACCESS;
+   case PIPE_CAP_TGSI_FS_FBFETCH:
+      return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_TGSI_FBFETCH;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -268,7 +270,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
    case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
-   case PIPE_CAP_TGSI_FS_FBFETCH:
    case PIPE_CAP_TGSI_MUL_ZERO_WINS:
    case PIPE_CAP_INT64:
    case PIPE_CAP_INT64_DIVMOD:
