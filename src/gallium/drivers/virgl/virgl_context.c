@@ -804,6 +804,12 @@ static void virgl_set_sampler_views(struct pipe_context *ctx,
    virgl_attach_res_sampler_views(vctx, shader_type);
 }
 
+static void
+virgl_texture_barrier(struct pipe_context *pctx, unsigned flags)
+{
+   /* stub */
+}
+
 static void virgl_destroy_sampler_view(struct pipe_context *ctx,
                                  struct pipe_sampler_view *view)
 {
@@ -1174,6 +1180,7 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    vctx->base.create_sampler_view = virgl_create_sampler_view;
    vctx->base.sampler_view_destroy = virgl_destroy_sampler_view;
    vctx->base.set_sampler_views = virgl_set_sampler_views;
+   vctx->base.texture_barrier = virgl_texture_barrier;
 
    vctx->base.create_sampler_state = virgl_create_sampler_state;
    vctx->base.delete_sampler_state = virgl_delete_sampler_state;
