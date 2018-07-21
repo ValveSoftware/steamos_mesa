@@ -377,10 +377,11 @@ void
 brw_disk_cache_init(struct intel_screen *screen)
 {
 #ifdef ENABLE_SHADER_CACHE
-   char renderer[10];
+   /* array length: print length + null char + 1 extra to verify it is unused */
+   char renderer[11];
    MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "i965_%04x",
                                    screen->deviceID);
-   assert(len == sizeof(renderer) - 1);
+   assert(len == sizeof(renderer) - 2);
 
    const struct build_id_note *note =
       build_id_find_nhdr_for_addr(brw_disk_cache_init);

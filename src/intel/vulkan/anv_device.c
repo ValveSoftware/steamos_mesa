@@ -278,10 +278,10 @@ static void
 anv_physical_device_init_disk_cache(struct anv_physical_device *device)
 {
 #ifdef ENABLE_SHADER_CACHE
-   char renderer[9];
+   char renderer[10];
    MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "anv_%04x",
                                    device->chipset_id);
-   assert(len == sizeof(renderer) - 1);
+   assert(len == sizeof(renderer) - 2);
 
    char timestamp[41];
    _mesa_sha1_format(timestamp, device->driver_build_sha1);
