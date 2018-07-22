@@ -155,6 +155,18 @@ namespace clover {
 		return tm.addPassesToEmitFile(pm, os, ft);
 #endif
 	}
+
+	template<typename T, typename M>
+	T get_abi_type(const T &arg_type, const M &mod) {
+#if HAVE_LLVM >= 0x0700
+          return arg_type;
+#else
+          ::llvm::DataLayout dl(&mod);
+          const unsigned arg_store_size = dl.getTypeStoreSize(arg_type);
+          return !arg_type->isIntegerTy() ? arg_type :
+            dl.getSmallestLegalIntType(mod.getContext(), arg_store_size * 8);
+#endif
+	}
       }
    }
 }
