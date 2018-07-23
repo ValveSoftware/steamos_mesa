@@ -203,7 +203,7 @@ zs_buffer_from_pipe_bits(int pipe_clear_bits)
 static void
 v3d_rcl_emit_loads(struct v3d_job *job, struct v3d_cl *cl)
 {
-        uint32_t loads_pending = job->store & ~job->clear;
+        uint32_t loads_pending = job->load;
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;

@@ -577,6 +577,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
                 v3d_job_add_bo(job, rsc->bo);
 
+                job->load |= PIPE_CLEAR_DEPTH & ~job->clear;
                 job->store |= PIPE_CLEAR_DEPTH;
                 rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
         }
@@ -588,6 +589,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
                 v3d_job_add_bo(job, rsc->bo);
 
+                job->load |= PIPE_CLEAR_STENCIL & ~job->clear;
                 job->store |= PIPE_CLEAR_STENCIL;
                 rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
         }
@@ -599,6 +601,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         continue;
                 struct v3d_resource *rsc = v3d_resource(job->cbufs[i]->texture);
 
+                job->load |= bit & ~job->clear;
                 job->store |= bit;
                 v3d_job_add_bo(job, rsc->bo);
         }
