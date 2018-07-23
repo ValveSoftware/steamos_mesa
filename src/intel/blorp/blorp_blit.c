@@ -776,6 +776,14 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        * grid of samples with in a pixel. Sample number layout shows the
        * rectangular grid of samples roughly corresponding to the real sample
        * locations with in a pixel.
+       *
+       * In the case of 2x MSAA, the layout of sample indices is reversed from
+       * the layout of sample numbers:
+       *
+       * sample index layout :  ---------    sample number layout :  ---------
+       *                        | 0 | 1 |                            | 1 | 0 |
+       *                        ---------                            ---------
+       *
        * In case of 4x MSAA, layout of sample indices matches the layout of
        * sample numbers:
        *           ---------
@@ -819,7 +827,9 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
                                             key->x_scale * key->y_scale));
       sample = nir_f2i32(b, sample);
 
-      if (tex_samples == 8) {
+      if (tex_samples == 2) {
+         sample = nir_isub(b, nir_imm_int(b, 1), sample);
+      } else if (tex_samples == 8) {
          sample = nir_iand(b, nir_ishr(b, nir_imm_int(b, 0x64210573),
                                        nir_ishl(b, sample, nir_imm_int(b, 2))),
                            nir_imm_int(b, 0xf));
