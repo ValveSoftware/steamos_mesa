@@ -111,7 +111,7 @@ align_u32(uint32_t v, uint32_t a)
 }
 
 static struct gen_device_info devinfo = {0};
-static uint32_t device;
+static uint32_t device = 0;
 static struct aub_file aub_file;
 
 static void *
@@ -419,7 +419,7 @@ ioctl(int fd, unsigned long request, ...)
           * (they typically do), we'll piggy-back on
           * their ioctl and store the id for later
           * use. */
-         if (getparam->param == I915_PARAM_CHIPSET_ID)
+         if (ret == 0 && getparam->param == I915_PARAM_CHIPSET_ID)
             device = *getparam->value;
 
          return ret;
