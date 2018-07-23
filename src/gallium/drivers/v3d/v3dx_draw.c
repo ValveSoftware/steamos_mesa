@@ -671,9 +671,11 @@ v3d_tlb_clear(struct v3d_job *job, unsigned buffers,
          * if it would be possible to need to emit a load of just one after
          * we've set up our TLB clears.
          */
-        unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
-        if (zsclear && zsclear != PIPE_CLEAR_DEPTHSTENCIL) {
-                buffers &= ~zsclear;
+        if (buffers & PIPE_CLEAR_DEPTHSTENCIL &&
+            (buffers & PIPE_CLEAR_DEPTHSTENCIL) != PIPE_CLEAR_DEPTHSTENCIL &&
+            job->zsbuf &&
+            util_format_is_depth_and_stencil(job->zsbuf->texture->format)) {
+                buffers &= ~PIPE_CLEAR_DEPTHSTENCIL;
         }
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
@@ -732,7 +734,7 @@ v3d_tlb_clear(struct v3d_job *job, unsigned buffers,
                 rsc->initialized_buffers |= bit;
         }
 
-        zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
+        unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
         if (zsclear) {
                 struct v3d_resource *rsc =
                         v3d_resource(v3d->framebuffer.zsbuf->texture);
