@@ -577,7 +577,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
                 v3d_job_add_bo(job, rsc->bo);
 
-                job->resolve |= PIPE_CLEAR_DEPTH;
+                job->store |= PIPE_CLEAR_DEPTH;
                 rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
         }
 
@@ -588,18 +588,18 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
                 v3d_job_add_bo(job, rsc->bo);
 
-                job->resolve |= PIPE_CLEAR_STENCIL;
+                job->store |= PIPE_CLEAR_STENCIL;
                 rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
         }
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
 
-                if (job->resolve & bit || !job->cbufs[i])
+                if (job->store & bit || !job->cbufs[i])
                         continue;
                 struct v3d_resource *rsc = v3d_resource(job->cbufs[i]->texture);
 
-                job->resolve |= bit;
+                job->store |= bit;
                 v3d_job_add_bo(job, rsc->bo);
         }
 
@@ -732,8 +732,8 @@ v3d_clear(struct pipe_context *pctx, unsigned buffers,
         job->draw_min_y = 0;
         job->draw_max_x = v3d->framebuffer.width;
         job->draw_max_y = v3d->framebuffer.height;
-        job->cleared |= buffers;
-        job->resolve |= buffers;
+        job->clear |= buffers;
+        job->store |= buffers;
 
         v3d_start_draw(v3d);
 }

@@ -168,11 +168,11 @@ store_general(struct v3d_job *job,
                         store.disable_colour_buffers_clear_on_write =
                                 !(((pipe_bit & PIPE_CLEAR_COLOR_BUFFERS) &&
                                    general_color_clear &&
-                                   (job->cleared & pipe_bit)));
+                                   (job->clear & pipe_bit)));
                         store.disable_z_buffer_clear_on_write =
-                                !(job->cleared & PIPE_CLEAR_DEPTH);
+                                !(job->clear & PIPE_CLEAR_DEPTH);
                         store.disable_stencil_buffer_clear_on_write =
-                                !(job->cleared & PIPE_CLEAR_STENCIL);
+                                !(job->clear & PIPE_CLEAR_STENCIL);
                 }
                 store.padded_height_of_output_image_in_uif_blocks =
                         surf->padded_height_of_output_image_in_uif_blocks;
@@ -203,7 +203,7 @@ zs_buffer_from_pipe_bits(int pipe_clear_bits)
 static void
 v3d_rcl_emit_loads(struct v3d_job *job, struct v3d_cl *cl)
 {
-        uint32_t loads_pending = job->resolve & ~job->cleared;
+        uint32_t loads_pending = job->store & ~job->clear;
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
@@ -267,9 +267,9 @@ static void
 v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
 {
 #if V3D_VERSION < 40
-        MAYBE_UNUSED bool needs_color_clear = job->cleared & PIPE_CLEAR_COLOR_BUFFERS;
-        MAYBE_UNUSED bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
-        MAYBE_UNUSED bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
+        MAYBE_UNUSED bool needs_color_clear = job->clear & PIPE_CLEAR_COLOR_BUFFERS;
+        MAYBE_UNUSED bool needs_z_clear = job->clear & PIPE_CLEAR_DEPTH;
+        MAYBE_UNUSED bool needs_s_clear = job->clear & PIPE_CLEAR_STENCIL;
 
         /* For clearing color in a TLB general on V3D 3.3:
          *
@@ -286,13 +286,13 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
          * TLB color buffers.
          */
         bool general_color_clear = (needs_color_clear &&
-                                    (job->cleared & PIPE_CLEAR_COLOR_BUFFERS) ==
-                                    (job->resolve & PIPE_CLEAR_COLOR_BUFFERS));
+                                    (job->clear & PIPE_CLEAR_COLOR_BUFFERS) ==
+                                    (job->store & PIPE_CLEAR_COLOR_BUFFERS));
 #else
         bool general_color_clear = false;
 #endif
 
-        uint32_t stores_pending = job->resolve;
+        uint32_t stores_pending = job->store;
 
         /* For V3D 4.1, use general stores for all TLB stores.
          *
@@ -305,7 +305,7 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
          */
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
-                if (!(job->resolve & bit))
+                if (!(job->store & bit))
                         continue;
 
                 struct pipe_surface *psurf = job->cbufs[i];
@@ -318,18 +318,18 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
                               &stores_pending, general_color_clear);
         }
 
-        if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL && job->zsbuf &&
+        if (job->store & PIPE_CLEAR_DEPTHSTENCIL && job->zsbuf &&
             !(V3D_VERSION < 40 && job->zsbuf->texture->nr_samples <= 1)) {
                 struct v3d_resource *rsc = v3d_resource(job->zsbuf->texture);
                 if (rsc->separate_stencil) {
-                        if (job->resolve & PIPE_CLEAR_DEPTH) {
+                        if (job->store & PIPE_CLEAR_DEPTH) {
                                 store_general(job, cl, job->zsbuf, Z,
                                               PIPE_CLEAR_DEPTH,
                                               &stores_pending,
                                               general_color_clear);
                         }
 
-                        if (job->resolve & PIPE_CLEAR_STENCIL) {
+                        if (job->store & PIPE_CLEAR_STENCIL) {
                                 store_general(job, cl, job->zsbuf, STENCIL,
                                               PIPE_CLEAR_STENCIL,
                                               &stores_pending,
@@ -337,8 +337,8 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
                         }
                 } else {
                         store_general(job, cl, job->zsbuf,
-                                      zs_buffer_from_pipe_bits(job->resolve),
-                                      job->resolve & PIPE_CLEAR_DEPTHSTENCIL,
+                                      zs_buffer_from_pipe_bits(job->store),
+                                      job->store & PIPE_CLEAR_DEPTHSTENCIL,
                                       &stores_pending, general_color_clear);
                 }
         }
@@ -379,7 +379,7 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
          * clear packet's Z/S bit is broken, but the RTs bit ends up
          * clearing Z/S.
          */
-        if (job->cleared) {
+        if (job->clear) {
                 cl_emit(cl, CLEAR_TILE_BUFFERS, clear) {
                         clear.clear_z_stencil_buffer = true;
                         clear.clear_all_render_targets = true;
@@ -475,9 +475,9 @@ v3d_emit_z_stencil_config(struct v3d_job *job, struct v3d_surface *surf,
                 zs.memory_format = surf->tiling;
         }
 
-        if (job->resolve & (is_separate_stencil ?
-                            PIPE_CLEAR_STENCIL :
-                            PIPE_CLEAR_DEPTHSTENCIL)) {
+        if (job->store & (is_separate_stencil ?
+                          PIPE_CLEAR_STENCIL :
+                          PIPE_CLEAR_DEPTHSTENCIL)) {
                 rsc->writes++;
         }
 }
@@ -509,8 +509,8 @@ v3dX(emit_rcl)(struct v3d_job *job)
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_COMMON_CONFIGURATION,
                 config) {
 #if V3D_VERSION < 40
-                config.enable_z_store = job->resolve & PIPE_CLEAR_DEPTH;
-                config.enable_stencil_store = job->resolve & PIPE_CLEAR_STENCIL;
+                config.enable_z_store = job->store & PIPE_CLEAR_DEPTH;
+                config.enable_stencil_store = job->store & PIPE_CLEAR_STENCIL;
 #else /* V3D_VERSION >= 40 */
                 if (job->zsbuf) {
                         struct v3d_surface *surf = v3d_surface(job->zsbuf);
@@ -582,7 +582,7 @@ v3dX(emit_rcl)(struct v3d_job *job)
                         rt.render_target_number = i;
                         rt.pad = config_pad;
 
-                        if (job->resolve & PIPE_CLEAR_COLOR0 << i)
+                        if (job->store & PIPE_CLEAR_COLOR0 << i)
                                 rsc->writes++;
                 }
 #endif /* V3D_VERSION < 40 */
