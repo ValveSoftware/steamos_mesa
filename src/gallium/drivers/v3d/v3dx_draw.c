@@ -578,7 +578,8 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 v3d_job_add_bo(job, rsc->bo);
 
                 job->load |= PIPE_CLEAR_DEPTH & ~job->clear;
-                job->store |= PIPE_CLEAR_DEPTH;
+                if (v3d->zsa->base.depth.writemask)
+                        job->store |= PIPE_CLEAR_DEPTH;
                 rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
         }
 
@@ -590,19 +591,24 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 v3d_job_add_bo(job, rsc->bo);
 
                 job->load |= PIPE_CLEAR_STENCIL & ~job->clear;
-                job->store |= PIPE_CLEAR_STENCIL;
+                if (v3d->zsa->base.stencil[0].writemask ||
+                    v3d->zsa->base.stencil[1].writemask) {
+                        job->store |= PIPE_CLEAR_STENCIL;
+                }
                 rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
         }
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
+                int blend_rt = v3d->blend->base.independent_blend_enable ? i : 0;
 
                 if (job->store & bit || !job->cbufs[i])
                         continue;
                 struct v3d_resource *rsc = v3d_resource(job->cbufs[i]->texture);
 
                 job->load |= bit & ~job->clear;
-                job->store |= bit;
+                if (v3d->blend->base.rt[blend_rt].colormask)
+                        job->store |= bit;
                 v3d_job_add_bo(job, rsc->bo);
         }
 
