@@ -53,7 +53,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 static void
-radeon_renderbuffer_map(struct gl_context *ctx, struct gl_renderbuffer *rb)
+radeon_renderbuffer_map(struct gl_context *ctx,
+			struct gl_renderbuffer *rb,
+			bool flip_y)
 {
 	struct radeon_renderbuffer *rrb = radeon_renderbuffer(rb);
 	GLubyte *map;
@@ -64,7 +66,7 @@ radeon_renderbuffer_map(struct gl_context *ctx, struct gl_renderbuffer *rb)
 
 	ctx->Driver.MapRenderbuffer(ctx, rb, 0, 0, rb->Width, rb->Height,
 				    GL_MAP_READ_BIT | GL_MAP_WRITE_BIT,
-				    &map, &stride);
+				    &map, &stride, flip_y);
 
 	rrb->base.Map = map;
 	rrb->base.RowStride = stride;
@@ -96,7 +98,8 @@ radeon_map_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 
 	/* check for render to textures */
 	for (i = 0; i < BUFFER_COUNT; i++)
-		radeon_renderbuffer_map(ctx, fb->Attachment[i].Renderbuffer);
+		radeon_renderbuffer_map(ctx, fb->Attachment[i].Renderbuffer,
+			fb->FlipY);
 
         if (_mesa_is_front_buffer_drawing(fb))
 		RADEON_CONTEXT(ctx)->front_buffer_dirty = true;
