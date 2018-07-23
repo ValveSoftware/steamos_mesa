@@ -138,6 +138,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
    const unsigned h = u_minify(vtex->base.u.b.height0, level);
    const unsigned nblocksy = util_format_get_nblocksy(format, h);
    bool is_depth = util_format_has_depth(util_format_description(resource->format));
+   uint32_t l_stride;
    bool doflushwait;
 
    doflushwait = virgl_res_needs_flush_wait(vctx, &vtex->base, usage);
@@ -154,6 +155,15 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
    trans->base.box = *box;
    trans->base.stride = vtex->stride[level];
    trans->base.layer_stride = trans->base.stride * nblocksy;
+
+   if (resource->target != PIPE_TEXTURE_3D &&
+       resource->target != PIPE_TEXTURE_CUBE &&
+       resource->target != PIPE_TEXTURE_1D_ARRAY &&
+       resource->target != PIPE_TEXTURE_2D_ARRAY &&
+       resource->target != PIPE_TEXTURE_CUBE_ARRAY)
+      l_stride = 0;
+   else
+      l_stride = trans->base.layer_stride;
 
    if (is_depth && resource->nr_samples > 1) {
       struct pipe_resource tmp_resource;
@@ -178,7 +188,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
 
    readback = virgl_res_needs_readback(vctx, &vtex->base, usage);
    if (readback)
-      vs->vws->transfer_get(vs->vws, hw_res, box, offset, level);
+      vs->vws->transfer_get(vs->vws, hw_res, box, trans->base.stride, l_stride, offset, level);
 
    if (doflushwait || readback)
       vs->vws->resource_wait(vs->vws, vtex->base.hw_res);
@@ -200,6 +210,16 @@ static void virgl_texture_transfer_unmap(struct pipe_context *ctx,
    struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_transfer *trans = virgl_transfer(transfer);
    struct virgl_texture *vtex = virgl_texture(transfer->resource);
+   uint32_t l_stride;
+
+   if (transfer->resource->target != PIPE_TEXTURE_3D &&
+       transfer->resource->target != PIPE_TEXTURE_CUBE &&
+       transfer->resource->target != PIPE_TEXTURE_1D_ARRAY &&
+       transfer->resource->target != PIPE_TEXTURE_2D_ARRAY &&
+       transfer->resource->target != PIPE_TEXTURE_CUBE_ARRAY)
+      l_stride = 0;
+   else
+      l_stride = trans->base.layer_stride;
 
    if (trans->base.usage & PIPE_TRANSFER_WRITE) {
       if (!(transfer->usage & PIPE_TRANSFER_FLUSH_EXPLICIT)) {
@@ -207,7 +227,7 @@ static void virgl_texture_transfer_unmap(struct pipe_context *ctx,
          vtex->base.clean = FALSE;
          vctx->num_transfers++;
          vs->vws->transfer_put(vs->vws, vtex->base.hw_res,
-                               &transfer->box, trans->offset, transfer->level);
+                               &transfer->box, trans->base.stride, l_stride, trans->offset, transfer->level);
 
       }
    }

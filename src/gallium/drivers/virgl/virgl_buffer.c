@@ -77,7 +77,7 @@ static void *virgl_buffer_transfer_map(struct pipe_context *ctx,
 
    readback = virgl_res_needs_readback(vctx, &vbuf->base, usage);
    if (readback)
-      vs->vws->transfer_get(vs->vws, vbuf->base.hw_res, box, offset, level);
+      vs->vws->transfer_get(vs->vws, vbuf->base.hw_res, box, trans->base.stride, trans->base.layer_stride, offset, level);
 
    if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED))
       doflushwait = true;
@@ -109,7 +109,7 @@ static void virgl_buffer_transfer_unmap(struct pipe_context *ctx,
          vbuf->base.clean = FALSE;
          vctx->num_transfers++;
          vs->vws->transfer_put(vs->vws, vbuf->base.hw_res,
-                               &transfer->box, trans->offset, transfer->level);
+                               &transfer->box, trans->base.stride, trans->base.layer_stride, trans->offset, transfer->level);
 
       }
    }

@@ -71,7 +71,7 @@ static void virgl_buffer_flush(struct virgl_context *vctx,
 
    vctx->num_transfers++;
    rs->vws->transfer_put(rs->vws, vbuf->base.hw_res,
-                         &box, box.x, 0);
+                         &box, 0, 0, box.x, 0);
 
    util_range_set_empty(&vbuf->valid_buffer_range);
 }
