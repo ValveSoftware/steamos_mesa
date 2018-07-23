@@ -740,7 +740,7 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    /* Account for the fact that in the system framebuffer, the origin is at
     * the lower left.
     */
-   bool mirror_y = _mesa_is_winsys_fbo(ctx->ReadBuffer);
+   bool mirror_y = ctx->ReadBuffer->FlipY;
    if (mirror_y)
       apply_y_flip(&srcY0, &srcY1, src_rb->Height);
 

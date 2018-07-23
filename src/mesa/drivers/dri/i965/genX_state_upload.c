@@ -217,7 +217,7 @@ genX(upload_polygon_stipple)(struct brw_context *brw)
        * to a FBO (i.e. any named frame buffer object), we *don't*
        * need to invert - we already match the layout.
        */
-      if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+      if (ctx->DrawBuffer->FlipY) {
          for (unsigned i = 0; i < 32; i++)
             poly.PatternRow[i] = ctx->PolygonStipple[31 - i]; /* invert */
       } else {
@@ -257,7 +257,7 @@ genX(upload_polygon_stipple_offset)(struct brw_context *brw)
        * to a user-created FBO then our native pixel coordinate system
        * works just fine, and there's no window system to worry about.
        */
-      if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
+      if (ctx->DrawBuffer->FlipY) {
          poly.PolygonStippleYOffset =
             (32 - (_mesa_geometric_height(ctx->DrawBuffer) & 31)) & 31;
       }
@@ -1468,7 +1468,7 @@ genX(upload_clip_state)(struct brw_context *brw)
 #endif
 
 #if GEN_GEN == 7
-      clip.FrontWinding = brw->polygon_front_bit == _mesa_is_user_fbo(fb);
+      clip.FrontWinding = brw->polygon_front_bit != fb->FlipY;
 
       if (ctx->Polygon.CullFlag) {
          switch (ctx->Polygon.CullFaceMode) {
@@ -1583,7 +1583,7 @@ genX(upload_sf)(struct brw_context *brw)
 
 #if GEN_GEN <= 7
    /* _NEW_BUFFERS */
-   bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   bool flip_y = ctx->DrawBuffer->FlipY;
    UNUSED const bool multisampled_fbo =
       _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 #endif
@@ -1635,7 +1635,7 @@ genX(upload_sf)(struct brw_context *brw)
 
 #if GEN_GEN <= 7
       /* _NEW_POLYGON */
-      sf.FrontWinding = brw->polygon_front_bit == render_to_fbo;
+      sf.FrontWinding = brw->polygon_front_bit != flip_y;
 #if GEN_GEN >= 6
       sf.GlobalDepthOffsetEnableSolid = ctx->Polygon.OffsetFill;
       sf.GlobalDepthOffsetEnableWireframe = ctx->Polygon.OffsetLine;
@@ -1773,7 +1773,7 @@ genX(upload_sf)(struct brw_context *brw)
        * Window coordinates in an FBO are inverted, which means point
        * sprite origin must be inverted, too.
        */
-      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) != render_to_fbo) {
+      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) == flip_y) {
          sf.PointSpriteTextureCoordinateOrigin = LOWERLEFT;
       } else {
          sf.PointSpriteTextureCoordinateOrigin = UPPERLEFT;
@@ -2379,7 +2379,7 @@ const struct brw_tracked_state genX(cc_vp) = {
 
 static void
 set_scissor_bits(const struct gl_context *ctx, int i,
-                 bool render_to_fbo, unsigned fb_width, unsigned fb_height,
+                 bool flip_y, unsigned fb_width, unsigned fb_height,
                  struct GENX(SCISSOR_RECT) *sc)
 {
    int bbox[4];
@@ -2401,7 +2401,7 @@ set_scissor_bits(const struct gl_context *ctx, int i,
       sc->ScissorRectangleXMax = 0;
       sc->ScissorRectangleYMin = 1;
       sc->ScissorRectangleYMax = 0;
-   } else if (render_to_fbo) {
+   } else if (!flip_y) {
       /* texmemory: Y=0=bottom */
       sc->ScissorRectangleXMin = bbox[0];
       sc->ScissorRectangleXMax = bbox[1] - 1;
@@ -2421,7 +2421,7 @@ static void
 genX(upload_scissor_state)(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   const bool flip_y = ctx->DrawBuffer->FlipY;
    struct GENX(SCISSOR_RECT) scissor;
    uint32_t scissor_state_offset;
    const unsigned int fb_width = _mesa_geometric_width(ctx->DrawBuffer);
@@ -2445,7 +2445,7 @@ genX(upload_scissor_state)(struct brw_context *brw)
     * inclusive but max is exclusive.
     */
    for (unsigned i = 0; i < viewport_count; i++) {
-      set_scissor_bits(ctx, i, render_to_fbo, fb_width, fb_height, &scissor);
+      set_scissor_bits(ctx, i, flip_y, fb_width, fb_height, &scissor);
       GENX(SCISSOR_RECT_pack)(
          NULL, scissor_map + i * GENX(SCISSOR_RECT_length), &scissor);
    }
@@ -2571,7 +2571,7 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
    const unsigned viewport_count = brw->clip.viewport_count;
 
    /* _NEW_BUFFERS */
-   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   const bool flip_y = ctx->DrawBuffer->FlipY;
    const uint32_t fb_width = (float)_mesa_geometric_width(ctx->DrawBuffer);
    const uint32_t fb_height = (float)_mesa_geometric_height(ctx->DrawBuffer);
 
@@ -2595,12 +2595,12 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 #endif
 
    /* _NEW_BUFFERS */
-   if (render_to_fbo) {
-      y_scale = 1.0;
-      y_bias = 0;
-   } else {
+   if (flip_y) {
       y_scale = -1.0;
       y_bias = (float)fb_height;
+   } else {
+      y_scale = 1.0;
+      y_bias = 0;
    }
 
    for (unsigned i = 0; i < brw->clip.viewport_count; i++) {
@@ -2628,7 +2628,7 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
       clv.YMaxClipGuardband = gb_ymax;
 
 #if GEN_GEN < 6
-      set_scissor_bits(ctx, i, render_to_fbo, fb_width, fb_height,
+      set_scissor_bits(ctx, i, flip_y, fb_width, fb_height,
                        &sfv.ScissorRectangle);
 #elif GEN_GEN >= 8
       /* _NEW_VIEWPORT | _NEW_BUFFERS: Screen Space Viewport
@@ -2645,16 +2645,16 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
       const float viewport_Ymax =
          MIN2(ctx->ViewportArray[i].Y + ctx->ViewportArray[i].Height, fb_height);
 
-      if (render_to_fbo) {
-         sfv.XMinViewPort = viewport_Xmin;
-         sfv.XMaxViewPort = viewport_Xmax - 1;
-         sfv.YMinViewPort = viewport_Ymin;
-         sfv.YMaxViewPort = viewport_Ymax - 1;
-      } else {
+      if (flip_y) {
          sfv.XMinViewPort = viewport_Xmin;
          sfv.XMaxViewPort = viewport_Xmax - 1;
          sfv.YMinViewPort = fb_height - viewport_Ymax;
          sfv.YMaxViewPort = fb_height - viewport_Ymin - 1;
+      } else {
+         sfv.XMinViewPort = viewport_Xmin;
+         sfv.XMaxViewPort = viewport_Xmax - 1;
+         sfv.YMinViewPort = viewport_Ymin;
+         sfv.YMaxViewPort = viewport_Ymax - 1;
       }
 #endif
 
@@ -3585,14 +3585,14 @@ genX(upload_sbe)(struct brw_context *brw)
       sbe.NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs;
 
       /* _NEW_BUFFERS */
-      bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+      bool flip_y = ctx->DrawBuffer->FlipY;
 
       /* _NEW_POINT
        *
        * Window coordinates in an FBO are inverted, which means point
        * sprite origin must be inverted.
        */
-      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) != render_to_fbo)
+      if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) == flip_y)
          sbe.PointSpriteTextureCoordinateOrigin = LOWERLEFT;
       else
          sbe.PointSpriteTextureCoordinateOrigin = UPPERLEFT;
@@ -4520,7 +4520,7 @@ genX(upload_raster)(struct brw_context *brw)
    const struct gl_context *ctx = &brw->ctx;
 
    /* _NEW_BUFFERS */
-   const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
+   const bool flip_y = ctx->DrawBuffer->FlipY;
 
    /* _NEW_POLYGON */
    const struct gl_polygon_attrib *polygon = &ctx->Polygon;
@@ -4529,7 +4529,7 @@ genX(upload_raster)(struct brw_context *brw)
    const struct gl_point_attrib *point = &ctx->Point;
 
    brw_batch_emit(brw, GENX(3DSTATE_RASTER), raster) {
-      if (brw->polygon_front_bit == render_to_fbo)
+      if (brw->polygon_front_bit != flip_y)
          raster.FrontWinding = CounterClockwise;
 
       if (polygon->CullFlag) {

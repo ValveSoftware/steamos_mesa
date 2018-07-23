@@ -115,9 +115,6 @@ intel_map_renderbuffer(struct gl_context *ctx,
    void *map;
    ptrdiff_t stride;
 
-   /* driver does not support GL_FRAMEBUFFER_FLIP_Y_MESA */
-   assert((rb->Name == 0) == flip_y);
-
    if (srb->Buffer) {
       /* this is a malloc'd renderbuffer (accum buffer), not an irb */
       GLint bpp = _mesa_get_format_bytes(rb->Format);
@@ -166,14 +163,14 @@ intel_map_renderbuffer(struct gl_context *ctx,
     * upside-down.  So we need to ask for a rectangle on flipped vertically, and
     * we then return a pointer to the bottom of it with a negative stride.
     */
-   if (rb->Name == 0) {
+   if (flip_y) {
       y = rb->Height - y - h;
    }
 
    intel_miptree_map(brw, mt, irb->mt_level, irb->mt_layer,
 		     x, y, w, h, mode, &map, &stride);
 
-   if (rb->Name == 0) {
+   if (flip_y) {
       map += (h - 1) * stride;
       stride = -stride;
    }
@@ -849,10 +846,10 @@ intel_blit_framebuffer_with_blitter(struct gl_context *ctx,
          if (!intel_miptree_blit(brw,
                                  src_irb->mt,
                                  src_irb->mt_level, src_irb->mt_layer,
-                                 srcX0, srcY0, src_rb->Name == 0,
+                                 srcX0, srcY0, readFb->FlipY,
                                  dst_irb->mt,
                                  dst_irb->mt_level, dst_irb->mt_layer,
-                                 dstX0, dstY0, dst_rb->Name == 0,
+                                 dstX0, dstY0, drawFb->FlipY,
                                  dstX1 - dstX0, dstY1 - dstY0,
                                  COLOR_LOGICOP_COPY)) {
             perf_debug("glBlitFramebuffer(): unknown blit failure.  "
