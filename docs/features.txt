@@ -259,8 +259,8 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, r600, radeonsi
   GL_ARB_texture_multisample (Multisample textures)     DONE (freedreno/a5xx, i965/gen7+, nv50, llvmpipe, softpipe, virgl)
   GL_ARB_texture_storage_multisample                    DONE (all drivers that support GL_ARB_texture_multisample)
   GL_ARB_vertex_attrib_binding                          DONE (all drivers)
-  GS5 Enhanced textureGather                            DONE (freedreno, i965/gen7+,virgl)
-  GS5 Packing/bitfield/conversion functions             DONE (freedreno/a5xx, i965/gen6+,virgl)
+  GS5 Enhanced textureGather                            DONE (freedreno, i965/gen7+, virgl)
+  GS5 Packing/bitfield/conversion functions             DONE (freedreno/a5xx, i965/gen6+, virgl)
   GL_EXT_shader_integer_mix                             DONE (all drivers that support GLSL)
 
   Additional functionality not covered above:
