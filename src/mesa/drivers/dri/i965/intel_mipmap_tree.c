@@ -3545,10 +3545,9 @@ can_blit_slice(struct intel_mipmap_tree *mt,
                const struct intel_miptree_map *map)
 {
    /* See intel_miptree_blit() for details on the 32k pitch limit. */
-   if (intel_miptree_blt_pitch(mt) >= 32768)
-      return false;
-
-   return true;
+   const unsigned src_blt_pitch = intel_miptree_blt_pitch(mt);
+   const unsigned dst_blt_pitch = ALIGN(map->w * mt->cpp, 64);
+   return src_blt_pitch < 32768 && dst_blt_pitch < 32768;
 }
 
 static bool
