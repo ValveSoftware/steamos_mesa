@@ -2659,6 +2659,7 @@ void nir_dump_cfg(nir_shader *shader, FILE *fp);
 
 int nir_gs_count_vertices(const nir_shader *shader);
 
+bool nir_split_array_vars(nir_shader *shader, nir_variable_mode modes);
 bool nir_split_var_copies(nir_shader *shader);
 bool nir_split_per_member_structs(nir_shader *shader);
 bool nir_split_struct_vars(nir_shader *shader, nir_variable_mode modes);
