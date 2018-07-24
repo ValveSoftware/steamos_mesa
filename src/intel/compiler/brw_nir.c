@@ -533,7 +533,7 @@ brw_nir_no_indirect_mask(const struct brw_compiler *compiler,
 
 nir_shader *
 brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
-                 bool is_scalar)
+                 bool is_scalar, bool allow_copies)
 {
    nir_variable_mode indirect_mask =
       brw_nir_no_indirect_mask(compiler, nir->info.stage);
@@ -544,6 +544,13 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
       OPT(nir_split_array_vars, nir_var_local);
       OPT(nir_shrink_vec_array_vars, nir_var_local);
       OPT(nir_lower_vars_to_ssa);
+      if (allow_copies) {
+         /* Only run this pass in the first call to brw_nir_optimize.  Later
+          * calls assume that we've lowered away any copy_deref instructions
+          * and we don't want to introduce any more.
+          */
+         OPT(nir_opt_find_array_copies);
+      }
       OPT(nir_opt_copy_prop_vars);
 
       if (is_scalar) {
@@ -664,7 +671,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
                         nir_lower_isign64 |
                         nir_lower_divmod64);
 
-   nir = brw_nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar, true);
 
    /* This needs to be run after the first optimization pass but before we
     * lower indirect derefs away
@@ -701,7 +708,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    nir_lower_indirect_derefs(nir, indirect_mask);
 
    /* Get rid of split copies */
-   nir = brw_nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar, false);
 
    OPT(nir_remove_dead_variables, nir_var_local);
 
@@ -715,6 +722,18 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
    nir_lower_io_arrays_to_elements(*producer, *consumer);
    nir_validate_shader(*producer);
    nir_validate_shader(*consumer);
+
+   const bool p_is_scalar =
+      compiler->scalar_stage[(*producer)->info.stage];
+   const bool c_is_scalar =
+      compiler->scalar_stage[(*consumer)->info.stage];
+
+   if (p_is_scalar && c_is_scalar) {
+      NIR_PASS_V(*producer, nir_lower_io_to_scalar_early, nir_var_shader_out);
+      NIR_PASS_V(*consumer, nir_lower_io_to_scalar_early, nir_var_shader_in);
+      *producer = brw_nir_optimize(*producer, compiler, p_is_scalar, false);
+      *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar, false);
+   }
 
    NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
    NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
@@ -732,13 +751,8 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
       NIR_PASS_V(*consumer, nir_lower_indirect_derefs,
                  brw_nir_no_indirect_mask(compiler, (*consumer)->info.stage));
 
-      const bool p_is_scalar =
-         compiler->scalar_stage[(*producer)->info.stage];
-      *producer = brw_nir_optimize(*producer, compiler, p_is_scalar);
-
-      const bool c_is_scalar =
-         compiler->scalar_stage[(*consumer)->info.stage];
-      *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar);
+      *producer = brw_nir_optimize(*producer, compiler, p_is_scalar, false);
+      *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar, false);
    }
 }
 
@@ -765,7 +779,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
       OPT(nir_opt_algebraic_before_ffma);
    } while (progress);
 
-   nir = brw_nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar, false);
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
@@ -861,7 +875,7 @@ brw_nir_apply_sampler_key(nir_shader *nir,
 
    if (nir_lower_tex(nir, &tex_options)) {
       nir_validate_shader(nir);
-      nir = brw_nir_optimize(nir, compiler, is_scalar);
+      nir = brw_nir_optimize(nir, compiler, is_scalar, false);
    }
 
    return nir;
