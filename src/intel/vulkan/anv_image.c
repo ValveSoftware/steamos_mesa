@@ -303,7 +303,7 @@ make_surface(const struct anv_device *dev,
              VkImageAspectFlagBits aspect)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
-   bool ok UNUSED;
+   bool ok;
 
    static const enum isl_surf_dim vk_to_isl_surf_dim[] = {
       [VK_IMAGE_TYPE_1D] = ISL_SURF_DIM_1D,
