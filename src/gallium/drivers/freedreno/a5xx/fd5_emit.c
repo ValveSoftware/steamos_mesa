@@ -699,39 +699,37 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A5XX_SP_FS_OUTPUT_CNTL_SAMPLEMASK_REGID(regid(63, 0)));
 	}
 
-	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */
-		ir3_emit_vs_consts(vp, ring, ctx, emit->info);
-		if (!emit->key.binning_pass)
-			ir3_emit_fs_consts(fp, ring, ctx);
+	ir3_emit_vs_consts(vp, ring, ctx, emit->info);
+	if (!emit->key.binning_pass)
+		ir3_emit_fs_consts(fp, ring, ctx);
 
-		struct pipe_stream_output_info *info = &vp->shader->stream_output;
-		if (info->num_outputs) {
-			struct fd_streamout_stateobj *so = &ctx->streamout;
+	struct pipe_stream_output_info *info = &vp->shader->stream_output;
+	if (info->num_outputs) {
+		struct fd_streamout_stateobj *so = &ctx->streamout;
 
-			for (unsigned i = 0; i < so->num_targets; i++) {
-				struct pipe_stream_output_target *target = so->targets[i];
+		for (unsigned i = 0; i < so->num_targets; i++) {
+			struct pipe_stream_output_target *target = so->targets[i];
 
-				if (!target)
-					continue;
+			if (!target)
+				continue;
 
-				unsigned offset = (so->offsets[i] * info->stride[i] * 4) +
-						target->buffer_offset;
+			unsigned offset = (so->offsets[i] * info->stride[i] * 4) +
+					target->buffer_offset;
 
-				OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_BASE_LO(i), 3);
-				/* VPC_SO[i].BUFFER_BASE_LO: */
-				OUT_RELOCW(ring, fd_resource(target->buffer)->bo, 0, 0, 0);
-				OUT_RING(ring, target->buffer_size + offset);
+			OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_BASE_LO(i), 3);
+			/* VPC_SO[i].BUFFER_BASE_LO: */
+			OUT_RELOCW(ring, fd_resource(target->buffer)->bo, 0, 0, 0);
+			OUT_RING(ring, target->buffer_size + offset);
 
-				OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_OFFSET(i), 3);
-				OUT_RING(ring, offset);
-				/* VPC_SO[i].FLUSH_BASE_LO/HI: */
-				// TODO just give hw a dummy addr for now.. we should
-				// be using this an then CP_MEM_TO_REG to set the
-				// VPC_SO[i].BUFFER_OFFSET for the next draw..
-				OUT_RELOCW(ring, fd5_context(ctx)->blit_mem, 0x100, 0, 0);
+			OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_OFFSET(i), 3);
+			OUT_RING(ring, offset);
+			/* VPC_SO[i].FLUSH_BASE_LO/HI: */
+			// TODO just give hw a dummy addr for now.. we should
+			// be using this an then CP_MEM_TO_REG to set the
+			// VPC_SO[i].BUFFER_OFFSET for the next draw..
+			OUT_RELOCW(ring, fd5_context(ctx)->blit_mem, 0x100, 0, 0);
 
-				emit->streamout_mask |= (1 << i);
-			}
+			emit->streamout_mask |= (1 << i);
 		}
 	}
 
