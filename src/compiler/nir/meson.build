@@ -158,6 +158,7 @@ files_libnir = files(
   'nir_opt_cse.c',
   'nir_opt_dce.c',
   'nir_opt_dead_cf.c',
+  'nir_opt_find_array_copies.c',
   'nir_opt_gcm.c',
   'nir_opt_global_to_local.c',
   'nir_opt_if.c',
