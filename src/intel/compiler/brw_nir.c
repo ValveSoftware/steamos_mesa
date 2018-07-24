@@ -541,6 +541,7 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
    bool progress;
    do {
       progress = false;
+      OPT(nir_split_array_vars, nir_var_local);
       OPT(nir_lower_vars_to_ssa);
       OPT(nir_opt_copy_prop_vars);
 
@@ -648,6 +649,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    OPT(nir_lower_global_vars_to_local);
 
    OPT(nir_split_var_copies);
+   OPT(nir_split_struct_vars, nir_var_local);
 
    /* Run opt_algebraic before int64 lowering so we can hopefully get rid
     * of some int64 instructions.
