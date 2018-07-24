@@ -23,6 +23,7 @@
  */
 
 #include "si_pipe.h"
+#include "sid.h"
 
 static void si_dma_emit_wait_idle(struct si_context *sctx)
 {
@@ -33,6 +34,34 @@ static void si_dma_emit_wait_idle(struct si_context *sctx)
 		radeon_emit(cs, 0x00000000); /* NOP */
 	else
 		radeon_emit(cs, 0xf0000000); /* NOP */
+}
+
+void si_dma_emit_timestamp(struct si_context *sctx, struct r600_resource *dst,
+			   uint64_t offset)
+{
+	struct radeon_cmdbuf *cs = sctx->dma_cs;
+	uint64_t va = dst->gpu_address + offset;
+
+	if (sctx->chip_class == SI) {
+		unreachable("SI DMA doesn't support the timestamp packet.");
+		return;
+	}
+
+	/* Mark the buffer range of destination as valid (initialized),
+	 * so that transfer_map knows it should wait for the GPU when mapping
+	 * that range. */
+	util_range_add(&dst->valid_buffer_range, offset, offset + 8);
+
+	assert(va % 8 == 0);
+
+	si_need_dma_space(sctx, 4, dst, NULL);
+	si_dma_emit_wait_idle(sctx);
+
+	radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_TIMESTAMP,
+					SDMA_TS_SUB_OPCODE_GET_GLOBAL_TIMESTAMP,
+					0));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
 }
 
 void si_need_dma_space(struct si_context *ctx, unsigned num_dw,

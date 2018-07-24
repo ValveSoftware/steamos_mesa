@@ -9140,6 +9140,10 @@
 #define    CIK_SDMA_PACKET_TRAP                    0x6
 #define    CIK_SDMA_PACKET_SEMAPHORE               0x7
 #define    CIK_SDMA_PACKET_CONSTANT_FILL           0xb
+#define    CIK_SDMA_OPCODE_TIMESTAMP               0xd
+#define        SDMA_TS_SUB_OPCODE_SET_LOCAL_TIMESTAMP     0x0
+#define        SDMA_TS_SUB_OPCODE_GET_LOCAL_TIMESTAMP     0x1
+#define        SDMA_TS_SUB_OPCODE_GET_GLOBAL_TIMESTAMP    0x2
 #define    CIK_SDMA_PACKET_SRBM_WRITE              0xe
 #define    CIK_SDMA_COPY_MAX_SIZE                  0x3fffe0
 
