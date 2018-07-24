@@ -269,28 +269,28 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, r600, radeonsi
       glGetBooleani_v - restrict to GLES enums
       gl_HelperInvocation support                       DONE (i965, r600)
 
-GLES3.2, GLSL ES 3.2 -- all DONE: i965/gen9+
+GLES3.2, GLSL ES 3.2 -- all DONE: i965/gen9+, radeonsi
 
   GL_EXT_color_buffer_float                             DONE (all drivers)
-  GL_KHR_blend_equation_advanced                        DONE (i965, nvc0, radeonsi)
+  GL_KHR_blend_equation_advanced                        DONE (i965, nvc0)
   GL_KHR_debug                                          DONE (all drivers)
-  GL_KHR_robustness                                     DONE (i965, nvc0, radeonsi)
+  GL_KHR_robustness                                     DONE (i965, nvc0)
   GL_KHR_texture_compression_astc_ldr                   DONE (freedreno, i965/gen9+)
   GL_OES_copy_image                                     DONE (all drivers)
   GL_OES_draw_buffers_indexed                           DONE (all drivers that support GL_ARB_draw_buffers_blend)
   GL_OES_draw_elements_base_vertex                      DONE (all drivers)
-  GL_OES_geometry_shader                                DONE (i965/hsw+, nvc0, radeonsi)
+  GL_OES_geometry_shader                                DONE (i965/hsw+, nvc0)
   GL_OES_gpu_shader5                                    DONE (all drivers that support GL_ARB_gpu_shader5)
-  GL_OES_primitive_bounding_box                         DONE (i965/gen7+, nvc0, radeonsi)
-  GL_OES_sample_shading                                 DONE (i965, nvc0, r600, radeonsi)
-  GL_OES_sample_variables                               DONE (i965, nvc0, r600, radeonsi)
+  GL_OES_primitive_bounding_box                         DONE (i965/gen7+, nvc0)
+  GL_OES_sample_shading                                 DONE (i965, nvc0, r600)
+  GL_OES_sample_variables                               DONE (i965, nvc0, r600)
   GL_OES_shader_image_atomic                            DONE (all drivers that support GL_ARB_shader_image_load_store)
   GL_OES_shader_io_blocks                               DONE (All drivers that support GLES 3.1)
-  GL_OES_shader_multisample_interpolation               DONE (i965, nvc0, r600, radeonsi)
+  GL_OES_shader_multisample_interpolation               DONE (i965, nvc0, r600)
   GL_OES_tessellation_shader                            DONE (all drivers that support GL_ARB_tessellation_shader)
   GL_OES_texture_border_clamp                           DONE (all drivers)
-  GL_OES_texture_buffer                                 DONE (freedreno, i965, nvc0, radeonsi)
-  GL_OES_texture_cube_map_array                         DONE (i965/hsw+, nvc0, radeonsi)
+  GL_OES_texture_buffer                                 DONE (freedreno, i965, nvc0)
+  GL_OES_texture_cube_map_array                         DONE (i965/hsw+, nvc0)
   GL_OES_texture_stencil8                               DONE (all drivers that support GL_ARB_texture_stencil8)
   GL_OES_texture_storage_multisample_2d_array           DONE (all drivers that support GL_ARB_texture_multisample)
 
