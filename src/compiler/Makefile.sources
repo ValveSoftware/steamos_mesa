@@ -300,6 +300,7 @@ NIR_FILES = \
 	nir/nir_serialize.h \
 	nir/nir_split_per_member_structs.c \
 	nir/nir_split_var_copies.c \
+	nir/nir_split_vars.c \
 	nir/nir_sweep.c \
 	nir/nir_to_lcssa.c \
 	nir/nir_validate.c \

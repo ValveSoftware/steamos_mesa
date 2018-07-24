@@ -184,6 +184,7 @@ files_libnir = files(
   'nir_serialize.h',
   'nir_split_per_member_structs.c',
   'nir_split_var_copies.c',
+  'nir_split_vars.c',
   'nir_sweep.c',
   'nir_to_lcssa.c',
   'nir_validate.c',
