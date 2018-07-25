@@ -2267,6 +2267,10 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 	}
 
+	case TGSI_SEMANTIC_CS_USER_DATA:
+		value = LLVMGetParam(ctx->main_fn, ctx->param_cs_user_data);
+		break;
+
 	default:
 		assert(!"unknown system value");
 		return;
@@ -4947,6 +4951,13 @@ static void create_function(struct si_shader_context *ctx)
 		if (shader->selector->info.uses_block_size &&
 		    shader->selector->info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0)
 			ctx->param_block_size = add_arg(&fninfo, ARG_SGPR, v3i32);
+
+		unsigned cs_user_data_dwords =
+			shader->selector->info.properties[TGSI_PROPERTY_CS_USER_DATA_DWORDS];
+		if (cs_user_data_dwords) {
+			ctx->param_cs_user_data = add_arg(&fninfo, ARG_SGPR,
+							  LLVMVectorType(ctx->i32, cs_user_data_dwords));
+		}
 
 		for (i = 0; i < 3; i++) {
 			ctx->abi.workgroup_ids[i] = NULL;

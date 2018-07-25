@@ -854,6 +854,7 @@ struct si_context {
 	unsigned			border_color_count;
 	unsigned			num_vs_blit_sgprs;
 	uint32_t			vs_blit_sh_data[SI_VS_BLIT_SGPRS_POS_TEXCOORD];
+	uint32_t			cs_user_data[4];
 
 	/* Vertex and index buffers. */
 	bool				vertex_buffers_dirty;

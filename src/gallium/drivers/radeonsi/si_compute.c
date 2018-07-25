@@ -128,6 +128,8 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	program->reads_variable_block_size =
 		sel.info.uses_block_size &&
 		sel.info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
+	program->num_cs_user_data_dwords =
+		sel.info.properties[TGSI_PROPERTY_CS_USER_DATA_DWORDS];
 
 	void *ir_binary = si_get_ir_binary(&sel);
 
@@ -159,7 +161,8 @@ static void si_create_compute_state_async(void *job, int thread_index)
 		bool scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
 		unsigned user_sgprs = SI_NUM_RESOURCE_SGPRS +
 				      (sel.info.uses_grid_size ? 3 : 0) +
-				      (program->reads_variable_block_size ? 3 : 0);
+				      (program->reads_variable_block_size ? 3 : 0) +
+				      program->num_cs_user_data_dwords;
 
 		shader->config.rsrc1 =
 			S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
@@ -706,7 +709,7 @@ static bool si_upload_compute_input(struct si_context *sctx,
 	return true;
 }
 
-static void si_setup_tgsi_grid(struct si_context *sctx,
+static void si_setup_tgsi_user_data(struct si_context *sctx,
                                 const struct pipe_grid_info *info)
 {
 	struct si_compute *program = sctx->cs_shader_state.program;
@@ -716,6 +719,8 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 	unsigned block_size_reg = grid_size_reg +
 				  /* 12 bytes = 3 dwords. */
 				  12 * program->uses_grid_size;
+	unsigned cs_user_data_reg = block_size_reg +
+				    12 * program->reads_variable_block_size;
 
 	if (info->indirect) {
 		if (program->uses_grid_size) {
@@ -750,6 +755,11 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 			radeon_emit(cs, info->block[1]);
 			radeon_emit(cs, info->block[2]);
 		}
+	}
+
+	if (program->num_cs_user_data_dwords) {
+		radeon_set_sh_reg_seq(cs, cs_user_data_reg, program->num_cs_user_data_dwords);
+		radeon_emit_array(cs, sctx->cs_user_data, program->num_cs_user_data_dwords);
 	}
 }
 
@@ -908,7 +918,7 @@ static void si_launch_grid(
 	}
 
 	if (program->ir_type != PIPE_SHADER_IR_NATIVE)
-		si_setup_tgsi_grid(sctx, info);
+		si_setup_tgsi_user_data(sctx, info);
 
 	si_emit_dispatch_packets(sctx, info);
 

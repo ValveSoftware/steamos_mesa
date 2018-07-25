@@ -173,6 +173,7 @@ struct si_shader_context {
 	int param_gs_vtx45_offset; /* in dwords (GFX9) */
 	/* CS */
 	int param_block_size;
+	int param_cs_user_data;
 
 	struct ac_llvm_compiler *compiler;
 

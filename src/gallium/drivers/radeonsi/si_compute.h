@@ -57,6 +57,7 @@ struct si_compute {
 	unsigned uses_bindless_samplers:1;
 	unsigned uses_bindless_images:1;
 	bool reads_variable_block_size;
+	unsigned num_cs_user_data_dwords;
 };
 
 void si_destroy_compute(struct si_compute *program);
