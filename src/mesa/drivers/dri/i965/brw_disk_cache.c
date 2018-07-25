@@ -377,6 +377,9 @@ void
 brw_disk_cache_init(struct intel_screen *screen)
 {
 #ifdef ENABLE_SHADER_CACHE
+   if (INTEL_DEBUG & DEBUG_DISK_CACHE_DISABLE_MASK)
+      return;
+
    /* array length: print length + null char + 1 extra to verify it is unused */
    char renderer[11];
    MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "i965_%04x",
