@@ -2030,15 +2030,16 @@ handle_vs_input_decl(struct radv_shader_context *ctx,
 				output[chan] = LLVMBuildBitCast(ctx->ac.builder, output[chan], ctx->ac.f32, "");
 				output[chan] = LLVMBuildFPTrunc(ctx->ac.builder, output[chan], ctx->ac.f16, "");
 			}
-			output[chan] = ac_to_integer(&ctx->ac, output[chan]);
-			if (type == GLSL_TYPE_UINT16 || type == GLSL_TYPE_INT16)
-				output[chan] = LLVMBuildTrunc(ctx->ac.builder, output[chan], ctx->ac.i16, "");
 		}
 
 		unsigned alpha_adjust = (ctx->options->key.vs.alpha_adjust >> (attrib_index * 2)) & 3;
 		output[3] = adjust_vertex_fetch_alpha(ctx, alpha_adjust, output[3]);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
+			output[chan] = ac_to_integer(&ctx->ac, output[chan]);
+			if (type == GLSL_TYPE_UINT16 || type == GLSL_TYPE_INT16)
+				output[chan] = LLVMBuildTrunc(ctx->ac.builder, output[chan], ctx->ac.i16, "");
+
 			ctx->inputs[ac_llvm_reg_index_soa(variable->data.location + i, chan)] = output[chan];
 		}
 	}
