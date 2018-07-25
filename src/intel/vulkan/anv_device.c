@@ -1833,10 +1833,12 @@ void anv_DestroyDevice(
     const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_physical_device *physical_device = &device->instance->physicalDevice;
+   struct anv_physical_device *physical_device;
 
    if (!device)
       return;
+
+   physical_device = &device->instance->physicalDevice;
 
    anv_device_finish_blorp(device);
 
