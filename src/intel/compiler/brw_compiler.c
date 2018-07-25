@@ -181,6 +181,33 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
    return compiler;
 }
 
+static void
+insert_u64_bit(uint64_t *val, bool add)
+{
+   *val = (*val << 1) | !!add;
+}
+
+uint64_t
+brw_get_compiler_config_value(const struct brw_compiler *compiler)
+{
+   uint64_t config = 0;
+   insert_u64_bit(&config, compiler->precise_trig);
+   if (compiler->devinfo->gen >= 8 && compiler->devinfo->gen < 10) {
+      insert_u64_bit(&config, compiler->scalar_stage[MESA_SHADER_VERTEX]);
+      insert_u64_bit(&config, compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
+      insert_u64_bit(&config, compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
+      insert_u64_bit(&config, compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
+   }
+   uint64_t debug_bits = INTEL_DEBUG;
+   uint64_t mask = DEBUG_DISK_CACHE_MASK;
+   while (mask != 0) {
+      const uint64_t bit = 1ULL << (ffsll(mask) - 1);
+      insert_u64_bit(&config, (debug_bits & bit) != 0);
+      mask &= ~bit;
+   }
+   return config;
+}
+
 unsigned
 brw_prog_data_size(gl_shader_stage stage)
 {

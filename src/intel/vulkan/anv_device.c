@@ -286,7 +286,8 @@ anv_physical_device_init_disk_cache(struct anv_physical_device *device)
    char timestamp[41];
    _mesa_sha1_format(timestamp, device->driver_build_sha1);
 
-   const uint64_t driver_flags = INTEL_DEBUG & DEBUG_DISK_CACHE_MASK;
+   const uint64_t driver_flags =
+      brw_get_compiler_config_value(device->compiler);
    device->disk_cache = disk_cache_create(renderer, timestamp, driver_flags);
 #else
    device->disk_cache = NULL;
