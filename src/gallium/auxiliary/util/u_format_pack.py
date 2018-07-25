@@ -36,7 +36,7 @@
 '''
 
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 from u_format_parse import *
 
@@ -240,7 +240,7 @@ def value_to_native(type, value):
             return truncate_mantissa(value, 23)
         return value
     if type.type == FIXED:
-        return int(value * (1 << (type.size/2)))
+        return int(value * (1 << (type.size // 2)))
     if not type.norm:
         return int(value)
     if type.type == UNSIGNED:
