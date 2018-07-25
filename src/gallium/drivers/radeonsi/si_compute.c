@@ -123,10 +123,10 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	program->shader.selector = &sel;
 	program->shader.is_monolithic = true;
 	program->uses_grid_size = sel.info.uses_grid_size;
-	program->uses_block_size = sel.info.uses_block_size;
 	program->uses_bindless_samplers = sel.info.uses_bindless_samplers;
 	program->uses_bindless_images = sel.info.uses_bindless_images;
-	program->variable_group_size =
+	program->reads_variable_block_size =
+		sel.info.uses_block_size &&
 		sel.info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
 
 	void *ir_binary = si_get_ir_binary(&sel);
@@ -159,7 +159,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 		bool scratch_enabled = shader->config.scratch_bytes_per_wave > 0;
 		unsigned user_sgprs = SI_NUM_RESOURCE_SGPRS +
 				      (sel.info.uses_grid_size ? 3 : 0) +
-				      (sel.info.uses_block_size ? 3 : 0);
+				      (program->reads_variable_block_size ? 3 : 0);
 
 		shader->config.rsrc1 =
 			S_00B848_VGPRS((shader->config.num_vgprs - 1) / 4) |
@@ -744,7 +744,7 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 			radeon_emit(cs, info->grid[1]);
 			radeon_emit(cs, info->grid[2]);
 		}
-		if (program->variable_group_size && program->uses_block_size) {
+		if (program->reads_variable_block_size) {
 			radeon_set_sh_reg_seq(cs, block_size_reg, 3);
 			radeon_emit(cs, info->block[0]);
 			radeon_emit(cs, info->block[1]);
