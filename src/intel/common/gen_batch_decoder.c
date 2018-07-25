@@ -128,7 +128,7 @@ static void
 ctx_disassemble_program(struct gen_batch_decode_ctx *ctx,
                         uint32_t ksp, const char *type)
 {
-   uint64_t addr = ctx->instruction_base.addr + ksp;
+   uint64_t addr = ctx->instruction_base + ksp;
    struct gen_batch_decode_bo bo = ctx_get_bo(ctx, addr);
    if (!bo.map)
       return;
@@ -203,11 +203,11 @@ handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 
    while (gen_field_iterator_next(&iter)) {
       if (strcmp(iter.name, "Surface State Base Address") == 0) {
-         ctx->surface_base = ctx_get_bo(ctx, iter.raw_value);
+         ctx->surface_base = iter.raw_value;
       } else if (strcmp(iter.name, "Dynamic State Base Address") == 0) {
-         ctx->dynamic_base = ctx_get_bo(ctx, iter.raw_value);
+         ctx->dynamic_base = iter.raw_value;
       } else if (strcmp(iter.name, "Instruction Base Address") == 0) {
-         ctx->instruction_base = ctx_get_bo(ctx, iter.raw_value);
+         ctx->instruction_base = iter.raw_value;
       }
    }
 }
@@ -231,7 +231,7 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
    }
 
    struct gen_batch_decode_bo bind_bo =
-      ctx_get_bo(ctx, ctx->surface_base.addr + offset);
+      ctx_get_bo(ctx, ctx->surface_base + offset);
 
    if (bind_bo.map == NULL) {
       fprintf(ctx->fp, "  binding table unavailable\n");
@@ -243,7 +243,7 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
       if (pointers[i] == 0)
          continue;
 
-      uint64_t addr = ctx->surface_base.addr + pointers[i];
+      uint64_t addr = ctx->surface_base + pointers[i];
       struct gen_batch_decode_bo bo = ctx_get_bo(ctx, addr);
       uint32_t size = strct->dw_length * 4;
 
@@ -266,7 +266,7 @@ dump_samplers(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
    if (count < 0)
       count = update_count(ctx, offset, strct->dw_length, 4);
 
-   uint64_t state_addr = ctx->dynamic_base.addr + offset;
+   uint64_t state_addr = ctx->dynamic_base + offset;
    struct gen_batch_decode_bo bo = ctx_get_bo(ctx, state_addr);
    const void *state_map = bo.map;
 
@@ -309,7 +309,7 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
       }
    }
 
-   uint64_t desc_addr = ctx->dynamic_base.addr + descriptor_offset;
+   uint64_t desc_addr = ctx->dynamic_base + descriptor_offset;
    struct gen_batch_decode_bo bo = ctx_get_bo(ctx, desc_addr);
    const void *desc_map = bo.map;
 
@@ -655,7 +655,7 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
       }
    }
 
-   uint64_t state_addr = ctx->dynamic_base.addr + state_offset;
+   uint64_t state_addr = ctx->dynamic_base + state_offset;
    struct gen_batch_decode_bo bo = ctx_get_bo(ctx, state_addr);
    const void *state_map = bo.map;
 

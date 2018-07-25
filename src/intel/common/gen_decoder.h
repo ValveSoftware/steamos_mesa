@@ -222,9 +222,9 @@ struct gen_batch_decode_ctx {
 
    struct gen_disasm *disasm;
 
-   struct gen_batch_decode_bo surface_base;
-   struct gen_batch_decode_bo dynamic_base;
-   struct gen_batch_decode_bo instruction_base;
+   uint64_t surface_base;
+   uint64_t dynamic_base;
+   uint64_t instruction_base;
 
    int max_vbo_decoded_lines;
 };
