@@ -1019,6 +1019,7 @@ ureg_dst_array_register(unsigned file,
    dst.DimIndIndex = 0;
    dst.DimIndSwizzle = 0;
    dst.ArrayID = array_id;
+   dst.Invariant = 0;
 
    return dst;
 }
@@ -1050,6 +1051,7 @@ ureg_dst( struct ureg_src src )
    dst.DimIndIndex = src.DimIndIndex;
    dst.DimIndSwizzle = src.DimIndSwizzle;
    dst.ArrayID = src.ArrayID;
+   dst.Invariant = 0;
 
    return dst;
 }
@@ -1141,6 +1143,7 @@ ureg_dst_undef( void )
    dst.DimIndIndex = 0;
    dst.DimIndSwizzle = 0;
    dst.ArrayID = 0;
+   dst.Invariant = 0;
 
    return dst;
 }
