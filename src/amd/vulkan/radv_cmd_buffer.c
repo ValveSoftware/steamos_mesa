@@ -482,6 +482,8 @@ radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer,
 			ptr = &cmd_buffer->gfx9_fence_idx;
 		}
 
+		radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 4);
+
 		/* Force wait for graphics or compute engines to be idle. */
 		si_cs_emit_cache_flush(cmd_buffer->cs,
 				       cmd_buffer->device->physical_device->rad_info.chip_class,
