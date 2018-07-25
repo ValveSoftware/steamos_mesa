@@ -542,6 +542,7 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
    do {
       progress = false;
       OPT(nir_split_array_vars, nir_var_local);
+      OPT(nir_shrink_vec_array_vars, nir_var_local);
       OPT(nir_lower_vars_to_ssa);
       OPT(nir_opt_copy_prop_vars);
 
