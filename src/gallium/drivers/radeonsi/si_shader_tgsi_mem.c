@@ -331,6 +331,9 @@ static unsigned get_cache_policy(struct si_shader_context *ctx,
 	     inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE)))
 		cache_policy |= ac_glc;
 
+	if (inst->Memory.Qualifier & TGSI_MEMORY_STREAM_CACHE_POLICY)
+		cache_policy |= ac_slc;
+
 	return cache_policy;
 }
 
