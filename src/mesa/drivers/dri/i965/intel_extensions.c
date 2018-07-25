@@ -315,7 +315,7 @@ intelInitExtensions(struct gl_context *ctx)
    if (devinfo->gen >= 6)
       ctx->Extensions.INTEL_performance_query = true;
 
-   if (ctx->API == API_OPENGL_CORE)
+   if (ctx->API != API_OPENGL_COMPAT)
       ctx->Extensions.ARB_base_instance = true;
    if (ctx->API != API_OPENGL_CORE)
       ctx->Extensions.ARB_color_buffer_float = true;
