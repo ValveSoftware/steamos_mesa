@@ -654,6 +654,13 @@ static void store_emit_buffer(
 	LLVMValueRef base_offset = emit_data->args[3];
 	unsigned writemask = inst->Dst[0].Register.WriteMask;
 
+	/* If this is write-only, don't keep data in L1 to prevent
+	 * evicting L1 cache lines that may be needed by other
+	 * instructions.
+	 */
+	if (writeonly_memory)
+		emit_data->args[4] = LLVMConstInt(ctx->i1, 1, 0); /* GLC = 1 */
+
 	while (writemask) {
 		int start, count;
 		const char *intrinsic_name;
@@ -769,6 +776,13 @@ static void store_emit(
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER) {
+		/* If this is write-only, don't keep data in L1 to prevent
+		 * evicting L1 cache lines that may be needed by other
+		 * instructions.
+		 */
+		if (writeonly_memory)
+			emit_data->args[4] = LLVMConstInt(ctx->i1, 1, 0); /* GLC = 1 */
+
 		emit_data->output[emit_data->chan] = ac_build_intrinsic(
 			&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32",
 			emit_data->dst_type, emit_data->args,
@@ -787,8 +801,11 @@ static void store_emit(
 		/* Workaround for 8bit/16bit TC L1 write corruption bug on SI.
 		 * All store opcodes not aligned to a dword are affected.
 		 */
-		bool force_glc = ctx->screen->info.chip_class == SI;
-		if (force_glc ||
+		if (ctx->screen->info.chip_class == SI ||
+		    /* If this is write-only, don't keep data in L1 to prevent
+		     * evicting L1 cache lines that may be needed by other
+		     * instructions. */
+		    writeonly_memory ||
 		    inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE))
 			args.cache_policy = ac_glc;
 
