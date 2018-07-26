@@ -116,9 +116,9 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		/* Invalidate the scalar cache in case a streamout buffer is
 		 * going to be used as a constant buffer.
 		 *
-		 * Invalidate TC L1, because streamout bypasses it (done by
-		 * setting GLC=1 in the store instruction), but it can contain
-		 * outdated data of streamout buffers.
+		 * Invalidate vL1, because streamout bypasses it (done by
+		 * setting GLC=1 in the store instruction), but vL1 in other
+		 * CUs can contain outdated data of streamout buffers.
 		 *
 		 * VS_PARTIAL_FLUSH is required if the buffers are going to be
 		 * used as an input immediately.
