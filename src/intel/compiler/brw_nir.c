@@ -709,6 +709,10 @@ void
 brw_nir_link_shaders(const struct brw_compiler *compiler,
                      nir_shader **producer, nir_shader **consumer)
 {
+   nir_lower_io_arrays_to_elements(*producer, *consumer);
+   nir_validate_shader(*producer);
+   nir_validate_shader(*consumer);
+
    NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
    NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
 
