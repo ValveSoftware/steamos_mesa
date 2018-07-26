@@ -760,8 +760,6 @@ v3dX(emit_rcl)(struct v3d_job *job)
 
         v3d_rcl_emit_generic_per_tile_list(job, nr_cbufs - 1);
 
-        cl_emit(&job->rcl, WAIT_ON_SEMAPHORE, sem);
-
         /* XXX: Use Morton order */
         uint32_t supertile_w_in_pixels = job->tile_width * supertile_w;
         uint32_t supertile_h_in_pixels = job->tile_height * supertile_h;

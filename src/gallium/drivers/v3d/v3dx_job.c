@@ -37,7 +37,6 @@ void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
 #if V3D_VERSION >= 41
                                                 cl_packet_length(TRANSFORM_FEEDBACK_SPECS) +
 #endif
-                                                cl_packet_length(INCREMENT_SEMAPHORE) +
                                                 cl_packet_length(FLUSH_ALL_STATE));
 
                 if (job->oq_enabled) {
@@ -60,12 +59,6 @@ void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
                         };
                 }
 #endif /* V3D_VERSION >= 41 */
-
-                /* Increment the semaphore indicating that binning is done and
-                 * unblocking the render thread.  Note that this doesn't act
-                 * until the FLUSH completes.
-                 */
-                cl_emit(&job->bcl, INCREMENT_SEMAPHORE, incr);
 
                 /* The FLUSH_ALL emits any unwritten state changes in each
                  * tile.  We can use this to reset any state that needs to be
