@@ -418,7 +418,6 @@ v3d_rcl_emit_generic_per_tile_list(struct v3d_job *job, int last_cbuf)
          * is triangles, so make sure that's the case.
          */
         cl_emit(cl, PRIMITIVE_LIST_FORMAT, fmt) {
-                fmt.data_type = LIST_INDEXED;
                 fmt.primitive_type = LIST_TRIANGLES;
         }
 
@@ -663,7 +662,7 @@ v3dX(emit_rcl)(struct v3d_job *job)
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_Z_STENCIL_CLEAR_VALUES,
                 clear) {
                 clear.z_clear_value = job->clear_z;
-                clear.stencil_vg_mask_clear_value = job->clear_s;
+                clear.stencil_clear_value = job->clear_s;
         };
 
         /* Always set initial block size before the first branch, which needs
