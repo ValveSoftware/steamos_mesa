@@ -1399,7 +1399,8 @@ genX(upload_clip_state)(struct brw_context *brw)
       clip.ScreenSpaceViewportYMax = 1;
 
       clip.ViewportXYClipTestEnable = true;
-      clip.ViewportZClipTestEnable = !ctx->Transform.DepthClamp;
+      clip.ViewportZClipTestEnable = !(ctx->Transform.DepthClampNear &&
+                                       ctx->Transform.DepthClampFar);
 
       /* _NEW_TRANSFORM */
       if (GEN_GEN == 5 || GEN_IS_G4X) {
@@ -1493,7 +1494,8 @@ genX(upload_clip_state)(struct brw_context *brw)
       clip.UserClipDistanceCullTestEnableBitmask =
          brw_vue_prog_data(brw->vs.base.prog_data)->cull_distance_mask;
 
-      clip.ViewportZClipTestEnable = !ctx->Transform.DepthClamp;
+      clip.ViewportZClipTestEnable = !(ctx->Transform.DepthClampNear &&
+                                       ctx->Transform.DepthClampFar);
 #endif
 
       /* _NEW_LIGHT */
@@ -2338,7 +2340,7 @@ genX(upload_cc_viewport)(struct brw_context *brw)
    for (unsigned i = 0; i < viewport_count; i++) {
       /* _NEW_VIEWPORT | _NEW_TRANSFORM */
       const struct gl_viewport_attrib *vp = &ctx->ViewportArray[i];
-      if (ctx->Transform.DepthClamp) {
+      if (ctx->Transform.DepthClampNear && ctx->Transform.DepthClampFar) {
          ccv.MinimumDepth = MIN2(vp->Near, vp->Far);
          ccv.MaximumDepth = MAX2(vp->Near, vp->Far);
       } else {
@@ -4605,7 +4607,8 @@ genX(upload_raster)(struct brw_context *brw)
       raster.ScissorRectangleEnable = ctx->Scissor.EnableFlags;
 
       /* _NEW_TRANSFORM */
-      if (!ctx->Transform.DepthClamp) {
+      if (!(ctx->Transform.DepthClampNear &&
+            ctx->Transform.DepthClampFar)) {
 #if GEN_GEN >= 9
          raster.ViewportZFarClipTestEnable = true;
          raster.ViewportZNearClipTestEnable = true;

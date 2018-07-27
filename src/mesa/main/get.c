@@ -698,6 +698,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       v->value_int_4[3] = GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 3);
       break;
 
+   case GL_DEPTH_CLAMP:
+      v->value_bool = ctx->Transform.DepthClampNear || ctx->Transform.DepthClampFar;
+      break;
+
    case GL_EDGE_FLAG:
       v->value_bool = ctx->Current.Attrib[VERT_ATTRIB_EDGEFLAG][0] == 1.0F;
       break;
