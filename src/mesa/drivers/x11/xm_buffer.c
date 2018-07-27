@@ -507,7 +507,7 @@ xmesa_MapRenderbuffer(struct gl_context *ctx,
 
    /* otherwise, this is an ordinary malloc-based renderbuffer */
    _swrast_map_soft_renderbuffer(ctx, rb, x, y, w, h, mode,
-                                 mapOut, rowStrideOut);
+                                 mapOut, rowStrideOut, false);
 }
 
 
