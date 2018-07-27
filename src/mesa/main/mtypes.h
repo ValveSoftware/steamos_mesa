@@ -1283,6 +1283,8 @@ struct gl_transform_attrib
    GLboolean RescaleNormals;			/**< GL_EXT_rescale_normal */
    GLboolean RasterPositionUnclipped;           /**< GL_IBM_rasterpos_clip */
    GLboolean DepthClamp;			/**< GL_ARB_depth_clamp */
+   GLboolean DepthClampNear;			/**< GL_AMD_depth_clamp_separate */
+   GLboolean DepthClampFar;			/**< GL_AMD_depth_clamp_separate */
    /** GL_ARB_clip_control */
    GLenum16 ClipOrigin;   /**< GL_LOWER_LEFT or GL_UPPER_LEFT */
    GLenum16 ClipDepthMode;/**< GL_NEGATIVE_ONE_TO_ONE or GL_ZERO_TO_ONE */
@@ -4257,6 +4259,7 @@ struct gl_extensions
    GLboolean OES_viewport_array;
    /* vendor extensions */
    GLboolean AMD_framebuffer_multisample_advanced;
+   GLboolean AMD_depth_clamp_separate;
    GLboolean AMD_performance_monitor;
    GLboolean AMD_pinned_memory;
    GLboolean AMD_seamless_cubemap_per_texture;
