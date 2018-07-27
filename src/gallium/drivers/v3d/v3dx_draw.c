@@ -425,6 +425,20 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         struct v3d_job *job = v3d_get_job_for_fbo(v3d);
 
+        /* If vertex texturing depends on the output of rendering, we need to
+         * ensure that that rendering is complete before we run a coordinate
+         * shader that depends on it.
+         *
+         * Given that doing that is unusual, for now we just block the binner
+         * on the last submitted render, rather than tracking the last
+         * rendering to each texture's BO.
+         */
+        if (v3d->verttex.num_textures) {
+                perf_debug("Blocking binner on last render "
+                           "due to vertex texturing.\n");
+                job->submit.in_sync_bcl = v3d->out_sync;
+        }
+
         /* Get space to emit our draw call into the BCL, using a branch to
          * jump to a new BO if necessary.
          */
