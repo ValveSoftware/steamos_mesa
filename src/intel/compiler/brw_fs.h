@@ -540,6 +540,12 @@ fs_reg shuffle_for_32bit_write(const brw::fs_builder &bld,
 fs_reg setup_imm_df(const brw::fs_builder &bld,
                     double v);
 
+fs_reg setup_imm_b(const brw::fs_builder &bld,
+                   int8_t v);
+
+fs_reg setup_imm_ub(const brw::fs_builder &bld,
+                   uint8_t v);
+
 enum brw_barycentric_mode brw_barycentric_mode(enum glsl_interp_mode mode,
                                                nir_intrinsic_op op);
 

@@ -5396,3 +5396,19 @@ setup_imm_df(const fs_builder &bld, double v)
 
    return component(retype(tmp, BRW_REGISTER_TYPE_DF), 0);
 }
+
+fs_reg
+setup_imm_b(const fs_builder &bld, int8_t v)
+{
+   const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_B);
+   bld.MOV(tmp, brw_imm_w(v));
+   return tmp;
+}
+
+fs_reg
+setup_imm_ub(const fs_builder &bld, uint8_t v)
+{
+   const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UB);
+   bld.MOV(tmp, brw_imm_uw(v));
+   return tmp;
+}
