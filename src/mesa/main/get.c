@@ -468,6 +468,7 @@ EXTRA_EXT(NV_texture_rectangle);
 EXTRA_EXT(EXT_stencil_two_side);
 EXTRA_EXT(EXT_depth_bounds_test);
 EXTRA_EXT(ARB_depth_clamp);
+EXTRA_EXT(AMD_depth_clamp_separate);
 EXTRA_EXT(ATI_fragment_shader);
 EXTRA_EXT(EXT_provoking_vertex);
 EXTRA_EXT(ARB_fragment_shader);

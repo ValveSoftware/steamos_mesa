@@ -989,6 +989,11 @@ descriptor=[
 
 # GL_ARB_indirect_parameters
   [ "PARAMETER_BUFFER_BINDING_ARB", "LOC_CUSTOM, TYPE_INT, 0, extra_ARB_indirect_parameters" ],
+
+# GL 4.1
+# GL_AMD_depth_clamp_separate
+  [ "DEPTH_CLAMP_NEAR_AMD", "CONTEXT_BOOL(Transform.DepthClampNear), extra_AMD_depth_clamp_separate" ],
+  [ "DEPTH_CLAMP_FAR_AMD", "CONTEXT_BOOL(Transform.DepthClampFar), extra_AMD_depth_clamp_separate" ],
 ]},
 
 ]
