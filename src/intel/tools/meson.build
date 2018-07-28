@@ -108,4 +108,16 @@ libintel_dump_gpu = shared_library(
 
 if with_tools.contains('intel-ui')
   subdir('imgui')
+
+  aubinator_viewer = executable(
+    'aubinator_viewer',
+    files('aubinator_viewer.cpp', 'aubinator_viewer_decoder.cpp'),
+    dependencies : [dep_zlib, dep_dl, dep_thread, dep_m, libintel_imgui_gtk_dep],
+    include_directories : [inc_common, inc_intel],
+    link_with : [libintel_common, libintel_compiler, libintel_dev, libmesa_util, libaub],
+    c_args : [c_vis_args, no_override_init_args],
+    cpp_args : [ '-fpermissive', '-std=c++11', '-Wno-parentheses', '-Wno-class-memaccess' ],
+    build_by_default : true,
+    install : true
+  )
 endif

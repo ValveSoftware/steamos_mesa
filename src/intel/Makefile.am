@@ -69,6 +69,9 @@ EXTRA_DIST = \
 	dev/meson.build \
 	genxml/meson.build \
 	isl/meson.build \
+	tools/aubinator_viewer.cpp \
+	tools/aubinator_viewer.h \
+	tools/aubinator_viewer_decoder.cpp \
 	tools/imgui/README \
 	tools/imgui/stb_textedit.h \
 	tools/imgui/meson.build \
@@ -82,6 +85,7 @@ EXTRA_DIST = \
 	tools/imgui/imgui_impl_gtk3.h \
 	tools/imgui/imgui_impl_opengl3.cpp \
 	tools/imgui/imgui_impl_opengl3.h \
+	tools/imgui/imgui_memory_editor.h \
 	tools/imgui/stb_truetype.h \
 	tools/imgui/stb_rect_pack.h \
 	tools/imgui/LICENSE.txt \
