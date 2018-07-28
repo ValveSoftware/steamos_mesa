@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <getopt.h>
 
 #include <unistd.h>
@@ -712,13 +713,7 @@ aub_file_open(const char *filename)
 
 #define MAKE_GEN(major, minor) ( ((major) << 8) | (minor) )
 
-enum {
-   AUB_ITEM_DECODE_OK,
-   AUB_ITEM_DECODE_FAILED,
-   AUB_ITEM_DECODE_NEED_MORE_DATA,
-};
-
-static int
+static bool
 aub_file_decode_batch(struct aub_file *file)
 {
    uint32_t *p, h, *new_cursor;
@@ -741,7 +736,7 @@ aub_file_decode_batch(struct aub_file *file)
       fprintf(outfile, "unknown opcode %d at %td/%td\n",
               OPCODE(h), file->cursor - file->map,
               file->end - file->map);
-      return AUB_ITEM_DECODE_FAILED;
+      return false;
    }
 
    new_cursor = p + header_length + bias;
@@ -782,7 +777,7 @@ aub_file_decode_batch(struct aub_file *file)
    }
    file->cursor = new_cursor;
 
-   return AUB_ITEM_DECODE_OK;
+   return true;
 }
 
 static int
@@ -914,7 +909,7 @@ int main(int argc, char *argv[])
    file = aub_file_open(input_file);
 
    while (aub_file_more_stuff(file) &&
-          aub_file_decode_batch(file) == AUB_ITEM_DECODE_OK);
+          aub_file_decode_batch(file));
 
    fflush(stdout);
    /* close the stdout which is opened to write the output */
