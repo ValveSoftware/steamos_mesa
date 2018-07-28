@@ -31,17 +31,13 @@
 
 #include "i915_drm.h"
 #include "intel_aub.h"
+#include "gen_context.h"
 
 #ifndef ALIGN
 #define ALIGN(x, y) (((x) + (y)-1) & ~((y)-1))
 #endif
 
-#define MI_LOAD_REGISTER_IMM_n(n) ((0x22 << 23) | (2 * (n) - 1))
-#define MI_LRI_FORCE_POSTED       (1<<12)
-
 #define MI_BATCH_NON_SECURE_I965 (1 << 8)
-
-#define MI_BATCH_BUFFER_END (0xA << 23)
 
 #define min(a, b) ({                            \
          __typeof(a) _a = (a);                  \
@@ -55,183 +51,33 @@
          _a > _b ? _a : _b;                     \
       })
 
-#define HWS_PGA_RCSUNIT      0x02080
-#define HWS_PGA_VCSUNIT0   0x12080
-#define HWS_PGA_BCSUNIT      0x22080
 
-#define GFX_MODE_RCSUNIT   0x0229c
-#define GFX_MODE_VCSUNIT0   0x1229c
-#define GFX_MODE_BCSUNIT   0x2229c
-
-#define EXECLIST_SUBMITPORT_RCSUNIT   0x02230
-#define EXECLIST_SUBMITPORT_VCSUNIT0   0x12230
-#define EXECLIST_SUBMITPORT_BCSUNIT   0x22230
-
-#define EXECLIST_STATUS_RCSUNIT      0x02234
-#define EXECLIST_STATUS_VCSUNIT0   0x12234
-#define EXECLIST_STATUS_BCSUNIT      0x22234
-
-#define EXECLIST_SQ_CONTENTS0_RCSUNIT   0x02510
-#define EXECLIST_SQ_CONTENTS0_VCSUNIT0   0x12510
-#define EXECLIST_SQ_CONTENTS0_BCSUNIT   0x22510
-
-#define EXECLIST_CONTROL_RCSUNIT   0x02550
-#define EXECLIST_CONTROL_VCSUNIT0   0x12550
-#define EXECLIST_CONTROL_BCSUNIT   0x22550
-
-#define MEMORY_MAP_SIZE (64 /* MiB */ * 1024 * 1024)
-
-#define PTE_SIZE 4
-#define GEN8_PTE_SIZE 8
-
-#define NUM_PT_ENTRIES (ALIGN(MEMORY_MAP_SIZE, 4096) / 4096)
-#define PT_SIZE ALIGN(NUM_PT_ENTRIES * GEN8_PTE_SIZE, 4096)
-
-#define RING_SIZE         (1 * 4096)
-#define PPHWSP_SIZE         (1 * 4096)
-#define GEN11_LR_CONTEXT_RENDER_SIZE    (14 * 4096)
-#define GEN10_LR_CONTEXT_RENDER_SIZE    (19 * 4096)
-#define GEN9_LR_CONTEXT_RENDER_SIZE     (22 * 4096)
-#define GEN8_LR_CONTEXT_RENDER_SIZE     (20 * 4096)
-#define GEN8_LR_CONTEXT_OTHER_SIZE      (2 * 4096)
-
-
-#define STATIC_GGTT_MAP_START 0
-
-#define RENDER_RING_ADDR STATIC_GGTT_MAP_START
-#define RENDER_CONTEXT_ADDR (RENDER_RING_ADDR + RING_SIZE)
-
-#define BLITTER_RING_ADDR (RENDER_CONTEXT_ADDR + PPHWSP_SIZE + GEN10_LR_CONTEXT_RENDER_SIZE)
-#define BLITTER_CONTEXT_ADDR (BLITTER_RING_ADDR + RING_SIZE)
-
-#define VIDEO_RING_ADDR (BLITTER_CONTEXT_ADDR + PPHWSP_SIZE + GEN8_LR_CONTEXT_OTHER_SIZE)
-#define VIDEO_CONTEXT_ADDR (VIDEO_RING_ADDR + RING_SIZE)
-
-#define STATIC_GGTT_MAP_END (VIDEO_CONTEXT_ADDR + PPHWSP_SIZE + GEN8_LR_CONTEXT_OTHER_SIZE)
-#define STATIC_GGTT_MAP_SIZE (STATIC_GGTT_MAP_END - STATIC_GGTT_MAP_START)
-
-#define PML4_PHYS_ADDR ((uint64_t)(STATIC_GGTT_MAP_END))
-
-#define CONTEXT_FLAGS (0x339)   /* Normal Priority | L3-LLC Coherency |
-                                 * PPGTT Enabled |
-                                 * Legacy Context with 64 bit VA support |
-                                 * Valid
-                                 */
-
-#define RENDER_CONTEXT_DESCRIPTOR  ((uint64_t)1 << 62 | RENDER_CONTEXT_ADDR  | CONTEXT_FLAGS)
-#define BLITTER_CONTEXT_DESCRIPTOR ((uint64_t)2 << 62 | BLITTER_CONTEXT_ADDR | CONTEXT_FLAGS)
-#define VIDEO_CONTEXT_DESCRIPTOR   ((uint64_t)3 << 62 | VIDEO_CONTEXT_ADDR   | CONTEXT_FLAGS)
-
-static const uint32_t render_context_init[GEN9_LR_CONTEXT_RENDER_SIZE / /* Choose the largest */
-                                          sizeof(uint32_t)] = {
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(14) | MI_LRI_FORCE_POSTED,
-   0x2244 /* CONTEXT_CONTROL */,      0x90009 /* Inhibit Synchronous Context Switch | Engine Context Restore Inhibit */,
-   0x2034 /* RING_HEAD */,         0,
-   0x2030 /* RING_TAIL */,         0,
-   0x2038 /* RING_BUFFER_START */,      RENDER_RING_ADDR,
-   0x203C /* RING_BUFFER_CONTROL */,   (RING_SIZE - 4096) | 1 /* Buffer Length | Ring Buffer Enable */,
-   0x2168 /* BB_HEAD_U */,         0,
-   0x2140 /* BB_HEAD_L */,         0,
-   0x2110 /* BB_STATE */,         0,
-   0x211C /* SECOND_BB_HEAD_U */,      0,
-   0x2114 /* SECOND_BB_HEAD_L */,      0,
-   0x2118 /* SECOND_BB_STATE */,      0,
-   0x21C0 /* BB_PER_CTX_PTR */,      0,
-   0x21C4 /* RCS_INDIRECT_CTX */,      0,
-   0x21C8 /* RCS_INDIRECT_CTX_OFFSET */,   0,
-   /* MI_NOOP */
-   0, 0,
-
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(9) | MI_LRI_FORCE_POSTED,
-   0x23A8 /* CTX_TIMESTAMP */,   0,
-   0x228C /* PDP3_UDW */,      0,
-   0x2288 /* PDP3_LDW */,      0,
-   0x2284 /* PDP2_UDW */,      0,
-   0x2280 /* PDP2_LDW */,      0,
-   0x227C /* PDP1_UDW */,      0,
-   0x2278 /* PDP1_LDW */,      0,
-   0x2274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
-   0x2270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
-   /* MI_NOOP */
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(1),
-   0x20C8 /* R_PWR_CLK_STATE */, 0x7FFFFFFF,
-   MI_BATCH_BUFFER_END
+enum gen_ring {
+   GEN_RING_RENDER,
+   GEN_RING_BLITTER,
+   GEN_RING_VIDEO,
 };
 
-static const uint32_t blitter_context_init[GEN8_LR_CONTEXT_OTHER_SIZE /
-                                           sizeof(uint32_t)] = {
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(11) | MI_LRI_FORCE_POSTED,
-   0x22244 /* CONTEXT_CONTROL */,      0x90009 /* Inhibit Synchronous Context Switch | Engine Context Restore Inhibit */,
-   0x22034 /* RING_HEAD */,      0,
-   0x22030 /* RING_TAIL */,      0,
-   0x22038 /* RING_BUFFER_START */,   BLITTER_RING_ADDR,
-   0x2203C /* RING_BUFFER_CONTROL */,   (RING_SIZE - 4096) | 1 /* Buffer Length | Ring Buffer Enable */,
-   0x22168 /* BB_HEAD_U */,      0,
-   0x22140 /* BB_HEAD_L */,      0,
-   0x22110 /* BB_STATE */,         0,
-   0x2211C /* SECOND_BB_HEAD_U */,      0,
-   0x22114 /* SECOND_BB_HEAD_L */,      0,
-   0x22118 /* SECOND_BB_STATE */,      0,
-   /* MI_NOOP */
-   0, 0, 0, 0, 0, 0, 0, 0,
+static const uint32_t *
+get_context_init(const struct gen_device_info *devinfo, enum gen_ring ring)
+{
+   static const uint32_t *gen8_contexts[] = {
+      [GEN_RING_RENDER] = gen8_render_context_init,
+      [GEN_RING_BLITTER] = gen8_blitter_context_init,
+      [GEN_RING_VIDEO] = gen8_video_context_init,
+   };
+   static const uint32_t *gen10_contexts[] = {
+      [GEN_RING_RENDER] = gen10_render_context_init,
+      [GEN_RING_BLITTER] = gen10_blitter_context_init,
+      [GEN_RING_VIDEO] = gen10_video_context_init,
+   };
 
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(9) | MI_LRI_FORCE_POSTED,
-   0x223A8 /* CTX_TIMESTAMP */,   0,
-   0x2228C /* PDP3_UDW */,      0,
-   0x22288 /* PDP3_LDW */,      0,
-   0x22284 /* PDP2_UDW */,      0,
-   0x22280 /* PDP2_LDW */,      0,
-   0x2227C /* PDP1_UDW */,      0,
-   0x22278 /* PDP1_LDW */,      0,
-   0x22274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
-   0x22270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
-   /* MI_NOOP */
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   assert(devinfo->gen >= 8);
 
-   MI_BATCH_BUFFER_END
-};
-
-static const uint32_t video_context_init[GEN8_LR_CONTEXT_OTHER_SIZE /
-                                         sizeof(uint32_t)] = {
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(11) | MI_LRI_FORCE_POSTED,
-   0x1C244 /* CONTEXT_CONTROL */,      0x90009 /* Inhibit Synchronous Context Switch | Engine Context Restore Inhibit */,
-   0x1C034 /* RING_HEAD */,      0,
-   0x1C030 /* RING_TAIL */,      0,
-   0x1C038 /* RING_BUFFER_START */,   VIDEO_RING_ADDR,
-   0x1C03C /* RING_BUFFER_CONTROL */,   (RING_SIZE - 4096) | 1 /* Buffer Length | Ring Buffer Enable */,
-   0x1C168 /* BB_HEAD_U */,      0,
-   0x1C140 /* BB_HEAD_L */,      0,
-   0x1C110 /* BB_STATE */,         0,
-   0x1C11C /* SECOND_BB_HEAD_U */,      0,
-   0x1C114 /* SECOND_BB_HEAD_L */,      0,
-   0x1C118 /* SECOND_BB_STATE */,      0,
-   /* MI_NOOP */
-   0, 0, 0, 0, 0, 0, 0, 0,
-
-   0 /* MI_NOOP */,
-   MI_LOAD_REGISTER_IMM_n(9) | MI_LRI_FORCE_POSTED,
-   0x1C3A8 /* CTX_TIMESTAMP */,   0,
-   0x1C28C /* PDP3_UDW */,      0,
-   0x1C288 /* PDP3_LDW */,      0,
-   0x1C284 /* PDP2_UDW */,      0,
-   0x1C280 /* PDP2_LDW */,      0,
-   0x1C27C /* PDP1_UDW */,      0,
-   0x1C278 /* PDP1_LDW */,      0,
-   0x1C274 /* PDP0_UDW */,      PML4_PHYS_ADDR >> 32,
-   0x1C270 /* PDP0_LDW */,      PML4_PHYS_ADDR,
-   /* MI_NOOP */
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
-   MI_BATCH_BUFFER_END
-};
+   if (devinfo->gen <= 10)
+      return gen8_contexts[ring];
+   return gen10_contexts[ring];
+}
 
 static void __attribute__ ((format(__printf__, 2, 3)))
 fail_if(int cond, const char *format, ...)
@@ -501,14 +347,14 @@ write_execlists_header(struct aub_file *aub, const char *name)
    /* RENDER_PPHWSP */
    mem_trace_memory_write_header_out(aub, RENDER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
-                                     sizeof(render_context_init),
+                                     CONTEXT_RENDER_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
                                      "RENDER PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
    /* RENDER_CONTEXT */
-   data_out(aub, render_context_init, sizeof(render_context_init));
+   data_out(aub, get_context_init(&aub->devinfo, GEN_RING_RENDER), CONTEXT_RENDER_SIZE);
 
    /* BLITTER_RING */
    mem_trace_memory_write_header_out(aub, BLITTER_RING_ADDR, RING_SIZE,
@@ -520,14 +366,14 @@ write_execlists_header(struct aub_file *aub, const char *name)
    /* BLITTER_PPHWSP */
    mem_trace_memory_write_header_out(aub, BLITTER_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
-                                     sizeof(blitter_context_init),
+                                     CONTEXT_OTHER_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
                                      "BLITTER PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
    /* BLITTER_CONTEXT */
-   data_out(aub, blitter_context_init, sizeof(blitter_context_init));
+   data_out(aub, get_context_init(&aub->devinfo, GEN_RING_BLITTER), CONTEXT_OTHER_SIZE);
 
    /* VIDEO_RING */
    mem_trace_memory_write_header_out(aub, VIDEO_RING_ADDR, RING_SIZE,
@@ -539,14 +385,14 @@ write_execlists_header(struct aub_file *aub, const char *name)
    /* VIDEO_PPHWSP */
    mem_trace_memory_write_header_out(aub, VIDEO_CONTEXT_ADDR,
                                      PPHWSP_SIZE +
-                                     sizeof(video_context_init),
+                                     CONTEXT_OTHER_SIZE,
                                      AUB_MEM_TRACE_MEMORY_ADDRESS_SPACE_GGTT,
                                      "VIDEO PPHWSP");
    for (uint32_t i = 0; i < PPHWSP_SIZE; i += sizeof(uint32_t))
       dword_out(aub, 0);
 
    /* VIDEO_CONTEXT */
-   data_out(aub, video_context_init, sizeof(video_context_init));
+   data_out(aub, get_context_init(&aub->devinfo, GEN_RING_VIDEO), CONTEXT_OTHER_SIZE);
 
    register_write_out(aub, HWS_PGA_RCSUNIT, RENDER_CONTEXT_ADDR);
    register_write_out(aub, HWS_PGA_VCSUNIT0, VIDEO_CONTEXT_ADDR);
