@@ -43,9 +43,8 @@
 #include "util/rb_tree.h"
 
 #include "common/gen_decoder.h"
-#include "common/gen_disasm.h"
-#include "common/gen_gem.h"
 #include "intel_aub.h"
+#include "aub_read.h"
 
 #ifndef HAVE_MEMFD_CREATE
 #include <sys/syscall.h>
@@ -234,7 +233,18 @@ search_phys_mem(uint64_t phys_addr)
 }
 
 static void
-handle_ggtt_entry_write(uint64_t address, const void *_data, uint32_t _size)
+handle_local_write(void *user_data, uint64_t address, const void *data, uint32_t size)
+{
+   struct gen_batch_decode_bo bo = {
+      .map = data,
+      .addr = address,
+      .size = size,
+   };
+   add_gtt_bo_map(bo, false);
+}
+
+static void
+handle_ggtt_entry_write(void *user_data, uint64_t address, const void *_data, uint32_t _size)
 {
    uint64_t virt_addr = (address / sizeof(uint64_t)) << 12;
    const uint64_t *data = _data;
@@ -248,7 +258,7 @@ handle_ggtt_entry_write(uint64_t address, const void *_data, uint32_t _size)
 }
 
 static void
-handle_physical_write(uint64_t phys_address, const void *data, uint32_t size)
+handle_physical_write(void *user_data, uint64_t phys_address, const void *data, uint32_t size)
 {
    uint32_t to_write = size;
    for (uint64_t page = phys_address & ~0xfff; page < phys_address + size; page += 4096) {
@@ -262,7 +272,7 @@ handle_physical_write(uint64_t phys_address, const void *data, uint32_t size)
 }
 
 static void
-handle_ggtt_write(uint64_t virt_address, const void *data, uint32_t size)
+handle_ggtt_write(void *user_data, uint64_t virt_address, const void *data, uint32_t size)
 {
    uint32_t to_write = size;
    for (uint64_t page = virt_address & ~0xfff; page < virt_address + size; page += 4096) {
@@ -274,7 +284,7 @@ handle_ggtt_write(uint64_t virt_address, const void *data, uint32_t size)
       to_write -= size_this_page;
 
       uint64_t phys_page = entry->phys_addr & ~0xfff; /* Clear the validity bits. */
-      handle_physical_write(phys_page + offset, data, size_this_page);
+      handle_physical_write(user_data, phys_page + offset, data, size_this_page);
       data = (const uint8_t *)data + size_this_page;
    }
 }
@@ -390,58 +400,17 @@ get_ppgtt_batch_bo(void *user_data, uint64_t address)
    return bo;
 }
 
-#define GEN_ENGINE_RENDER 1
-#define GEN_ENGINE_BLITTER 2
-
 static void
-handle_trace_block(uint32_t *p)
+aubinator_error(void *user_data, const void *aub_data, const char *msg)
 {
-   int operation = p[1] & AUB_TRACE_OPERATION_MASK;
-   int type = p[1] & AUB_TRACE_TYPE_MASK;
-   int address_space = p[1] & AUB_TRACE_ADDRESS_SPACE_MASK;
-   int header_length = p[0] & 0xffff;
-   int engine = GEN_ENGINE_RENDER;
-   struct gen_batch_decode_bo bo = {
-      .map = p + header_length + 2,
-      /* Addresses written by aubdump here are in canonical form but the batch
-       * decoder always gives us addresses with the top 16bits zeroed, so do
-       * the same here.
-       */
-      .addr = gen_48b_address((devinfo.gen >= 8 ? ((uint64_t) p[5] << 32) : 0) |
-                              ((uint64_t) p[3])),
-      .size = p[4],
-   };
-
-   switch (operation) {
-   case AUB_TRACE_OP_DATA_WRITE:
-      if (address_space == AUB_TRACE_MEMTYPE_GTT)
-         add_gtt_bo_map(bo, false);
-      break;
-   case AUB_TRACE_OP_COMMAND_WRITE:
-      switch (type) {
-      case AUB_TRACE_TYPE_RING_PRB0:
-         engine = GEN_ENGINE_RENDER;
-         break;
-      case AUB_TRACE_TYPE_RING_PRB2:
-         engine = GEN_ENGINE_BLITTER;
-         break;
-      default:
-         fprintf(outfile, "command write to unknown ring %d\n", type);
-         break;
-      }
-
-      (void)engine; /* TODO */
-      batch_ctx.get_bo = get_ggtt_batch_bo;
-      gen_print_batch(&batch_ctx, bo.map, bo.size, 0);
-
-      clear_bo_maps();
-      break;
-   }
+   fprintf(stderr, msg);
 }
 
 static void
-aubinator_init(uint16_t aub_pci_id, const char *app_name)
+aubinator_init(void *user_data, int aub_pci_id, const char *app_name)
 {
+   pci_id = aub_pci_id;
+
    if (!gen_get_device_info(pci_id, &devinfo)) {
       fprintf(stderr, "can't find device information: pci_id=0x%x\n", pci_id);
       exit(EXIT_FAILURE);
@@ -482,111 +451,8 @@ aubinator_init(uint16_t aub_pci_id, const char *app_name)
 }
 
 static void
-handle_trace_header(uint32_t *p)
+handle_execlist_write(void *user_data, enum gen_engine engine, uint64_t context_descriptor)
 {
-   /* The intel_aubdump tool from IGT is kind enough to put a PCI-ID= tag in
-    * the AUB header comment.  If the user hasn't specified a hardware
-    * generation, try to use the one from the AUB file.
-    */
-   uint32_t *end = p + (p[0] & 0xffff) + 2;
-   int aub_pci_id = 0;
-   if (end > &p[12] && p[12] > 0)
-      sscanf((char *)&p[13], "PCI-ID=%i", &aub_pci_id);
-
-   if (pci_id == 0)
-      pci_id = aub_pci_id;
-
-   char app_name[33];
-   strncpy(app_name, (char *)&p[2], 32);
-   app_name[32] = 0;
-
-   aubinator_init(aub_pci_id, app_name);
-}
-
-static void
-handle_memtrace_version(uint32_t *p)
-{
-   int header_length = p[0] & 0xffff;
-   char app_name[64];
-   int app_name_len = MIN2(4 * (header_length + 1 - 5), ARRAY_SIZE(app_name) - 1);
-   int pci_id_len = 0;
-   int aub_pci_id = 0;
-
-   strncpy(app_name, (char *)&p[5], app_name_len);
-   app_name[app_name_len] = 0;
-   sscanf(app_name, "PCI-ID=%i %n", &aub_pci_id, &pci_id_len);
-   if (pci_id == 0)
-      pci_id = aub_pci_id;
-   aubinator_init(aub_pci_id, app_name + pci_id_len);
-}
-
-static void
-handle_memtrace_reg_write(uint32_t *p)
-{
-   static struct execlist_regs {
-      uint32_t render_elsp[4];
-      int render_elsp_index;
-      uint32_t blitter_elsp[4];
-      int blitter_elsp_index;
-   } state = {};
-
-   uint32_t offset = p[1];
-   uint32_t value = p[5];
-
-   int engine;
-   uint64_t context_descriptor;
-
-   switch (offset) {
-   case 0x2230: /* render elsp */
-      state.render_elsp[state.render_elsp_index++] = value;
-      if (state.render_elsp_index < 4)
-         return;
-
-      state.render_elsp_index = 0;
-      engine = GEN_ENGINE_RENDER;
-      context_descriptor = (uint64_t)state.render_elsp[2] << 32 |
-         state.render_elsp[3];
-      break;
-   case 0x22230: /* blitter elsp */
-      state.blitter_elsp[state.blitter_elsp_index++] = value;
-      if (state.blitter_elsp_index < 4)
-         return;
-
-      state.blitter_elsp_index = 0;
-      engine = GEN_ENGINE_BLITTER;
-      context_descriptor = (uint64_t)state.blitter_elsp[2] << 32 |
-         state.blitter_elsp[3];
-      break;
-   case 0x2510: /* render elsq0 lo */
-      state.render_elsp[3] = value;
-      return;
-      break;
-   case 0x2514: /* render elsq0 hi */
-      state.render_elsp[2] = value;
-      return;
-      break;
-   case 0x22510: /* blitter elsq0 lo */
-      state.blitter_elsp[3] = value;
-      return;
-      break;
-   case 0x22514: /* blitter elsq0 hi */
-      state.blitter_elsp[2] = value;
-      return;
-      break;
-   case 0x2550: /* render elsc */
-      engine = GEN_ENGINE_RENDER;
-      context_descriptor = (uint64_t)state.render_elsp[2] << 32 |
-         state.render_elsp[3];
-      break;
-   case 0x22550: /* blitter elsc */
-      engine = GEN_ENGINE_BLITTER;
-      context_descriptor = (uint64_t)state.blitter_elsp[2] << 32 |
-         state.blitter_elsp[3];
-      break;
-   default:
-      return;
-   }
-
    const uint32_t pphwsp_size = 4096;
    uint32_t pphwsp_addr = context_descriptor & 0xfffff000;
    struct gen_batch_decode_bo pphwsp_bo = get_ggtt_batch_bo(NULL, pphwsp_addr);
@@ -618,40 +484,20 @@ handle_memtrace_reg_write(uint32_t *p)
 }
 
 static void
-handle_memtrace_mem_write(uint32_t *p)
+handle_ring_write(void *user_data, enum gen_engine engine,
+                  const void *data, uint32_t data_len)
 {
-   struct gen_batch_decode_bo bo = {
-      .map = p + 5,
-      /* Addresses written by aubdump here are in canonical form but the batch
-       * decoder always gives us addresses with the top 16bits zeroed, so do
-       * the same here.
-       */
-      .addr = gen_48b_address(*(uint64_t*)&p[1]),
-      .size = p[4],
-   };
-   uint32_t address_space = p[3] >> 28;
+   batch_ctx.get_bo = get_ggtt_batch_bo;
 
-   switch (address_space) {
-   case 0: /* GGTT */
-      handle_ggtt_write(bo.addr, bo.map, bo.size);
-      break;
-   case 1: /* Local */
-      add_gtt_bo_map(bo, false);
-      break;
-   case 2: /* Physical */
-      handle_physical_write(bo.addr, bo.map, bo.size);
-      break;
-   case 4: /* GGTT Entry */
-      handle_ggtt_entry_write(bo.addr, bo.map, bo.size);
-      break;
-   }
+   gen_print_batch(&batch_ctx, data, data_len, 0);
+
+   clear_bo_maps();
 }
 
 struct aub_file {
    FILE *stream;
 
-   uint32_t *map, *end, *cursor;
-   uint32_t *mem_end;
+   void *map, *end, *cursor;
 };
 
 static struct aub_file *
@@ -683,101 +529,9 @@ aub_file_open(const char *filename)
    close(fd);
 
    file->cursor = file->map;
-   file->end = file->map + sb.st_size / 4;
+   file->end = file->map + sb.st_size;
 
    return file;
-}
-
-#define TYPE(dw)       (((dw) >> 29) & 7)
-#define OPCODE(dw)     (((dw) >> 23) & 0x3f)
-#define SUBOPCODE(dw)  (((dw) >> 16) & 0x7f)
-
-#define MAKE_HEADER(type, opcode, subopcode) \
-                   (((type) << 29) | ((opcode) << 23) | ((subopcode) << 16))
-
-#define TYPE_AUB            0x7
-
-/* Classic AUB opcodes */
-#define OPCODE_AUB          0x01
-#define SUBOPCODE_HEADER    0x05
-#define SUBOPCODE_BLOCK     0x41
-#define SUBOPCODE_BMP       0x1e
-
-/* Newer version AUB opcode */
-#define OPCODE_NEW_AUB      0x2e
-#define SUBOPCODE_REG_POLL  0x02
-#define SUBOPCODE_REG_WRITE 0x03
-#define SUBOPCODE_MEM_POLL  0x05
-#define SUBOPCODE_MEM_WRITE 0x06
-#define SUBOPCODE_VERSION   0x0e
-
-#define MAKE_GEN(major, minor) ( ((major) << 8) | (minor) )
-
-static bool
-aub_file_decode_batch(struct aub_file *file)
-{
-   uint32_t *p, h, *new_cursor;
-   int header_length, bias;
-
-   assert(file->cursor < file->end);
-
-   p = file->cursor;
-   h = *p;
-   header_length = h & 0xffff;
-
-   switch (OPCODE(h)) {
-   case OPCODE_AUB:
-      bias = 2;
-      break;
-   case OPCODE_NEW_AUB:
-      bias = 1;
-      break;
-   default:
-      fprintf(outfile, "unknown opcode %d at %td/%td\n",
-              OPCODE(h), file->cursor - file->map,
-              file->end - file->map);
-      return false;
-   }
-
-   new_cursor = p + header_length + bias;
-   if ((h & 0xffff0000) == MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK)) {
-      assert(file->end - file->cursor >= 4);
-      new_cursor += p[4] / 4;
-   }
-
-   assert(new_cursor <= file->end);
-
-   switch (h & 0xffff0000) {
-   case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_HEADER):
-      handle_trace_header(p);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK):
-      handle_trace_block(p);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BMP):
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_VERSION):
-      handle_memtrace_version(p);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_REG_WRITE):
-      handle_memtrace_reg_write(p);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_MEM_WRITE):
-      handle_memtrace_mem_write(p);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_MEM_POLL):
-      fprintf(outfile, "memory poll block (dwords %d):\n", h & 0xffff);
-      break;
-   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_REG_POLL):
-      break;
-   default:
-      fprintf(outfile, "unknown block type=0x%x, opcode=0x%x, "
-             "subopcode=0x%x (%08x)\n", TYPE(h), OPCODE(h), SUBOPCODE(h), h);
-      break;
-   }
-   file->cursor = new_cursor;
-
-   return true;
 }
 
 static int
@@ -908,8 +662,23 @@ int main(int argc, char *argv[])
 
    file = aub_file_open(input_file);
 
+   struct aub_read aub_read = {
+      .user_data = NULL,
+      .error = aubinator_error,
+      .info = aubinator_init,
+      .local_write = handle_local_write,
+      .phys_write = handle_physical_write,
+      .ggtt_write = handle_ggtt_write,
+      .ggtt_entry_write = handle_ggtt_entry_write,
+      .execlist_write = handle_execlist_write,
+      .ring_write = handle_ring_write,
+   };
+   int consumed;
    while (aub_file_more_stuff(file) &&
-          aub_file_decode_batch(file));
+          (consumed = aub_read_command(&aub_read, file->cursor,
+                                       file->end - file->cursor)) > 0) {
+      file->cursor += consumed;
+   }
 
    fflush(stdout);
    /* close the stdout which is opened to write the output */

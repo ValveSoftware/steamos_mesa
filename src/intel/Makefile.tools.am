@@ -26,6 +26,8 @@ noinst_PROGRAMS += \
 
 
 tools_aubinator_SOURCES = \
+	tools/aub_read.c \
+	tools/aub_read.h \
 	tools/aubinator.c \
 	tools/intel_aub.h
 
