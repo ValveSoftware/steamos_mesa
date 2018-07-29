@@ -69,6 +69,22 @@ EXTRA_DIST = \
 	dev/meson.build \
 	genxml/meson.build \
 	isl/meson.build \
+	tools/imgui/README \
+	tools/imgui/stb_textedit.h \
+	tools/imgui/meson.build \
+	tools/imgui/imconfig.h \
+	tools/imgui/imgui.cpp \
+	tools/imgui/imgui.h \
+	tools/imgui/imgui_draw.cpp \
+	tools/imgui/imgui_demo.cpp \
+	tools/imgui/imgui_internal.h \
+	tools/imgui/imgui_impl_gtk3.cpp \
+	tools/imgui/imgui_impl_gtk3.h \
+	tools/imgui/imgui_impl_opengl3.cpp \
+	tools/imgui/imgui_impl_opengl3.h \
+	tools/imgui/stb_truetype.h \
+	tools/imgui/stb_rect_pack.h \
+	tools/imgui/LICENSE.txt \
 	tools/intel_sanitize_gpu.c \
 	tools/intel_sanitize_gpu.in \
 	tools/intel_dump_gpu.c \

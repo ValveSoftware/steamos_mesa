@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 libaub = static_library(
   'aub',
   files('aub_read.c', 'aub_mem.c'),
@@ -106,3 +105,7 @@ libintel_dump_gpu = shared_library(
   install_dir: get_option('libexecdir'),
   install: true
 )
+
+if with_tools.contains('intel-ui')
+  subdir('imgui')
+endif
