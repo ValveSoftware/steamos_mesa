@@ -26,6 +26,8 @@ noinst_PROGRAMS += \
 
 
 tools_aubinator_SOURCES = \
+	tools/aub_mem.c \
+	tools/aub_mem.h \
 	tools/aub_read.c \
 	tools/aub_read.h \
 	tools/aubinator.c \
