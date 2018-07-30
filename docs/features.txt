@@ -211,7 +211,7 @@ GL 4.4, GLSL 4.40 -- all DONE: i965/gen8+, nvc0, r600, radeonsi
 
 GL 4.5, GLSL 4.50 -- all DONE: nvc0, radeonsi
 
-  GL_ARB_ES3_1_compatibility                            DONE (i965/hsw+, r600)
+  GL_ARB_ES3_1_compatibility                            DONE (i965/hsw+, r600, virgl)
   GL_ARB_clip_control                                   DONE (freedreno, i965, nv50, r600, llvmpipe, softpipe, swr)
   GL_ARB_conditional_render_inverted                    DONE (freedreno, i965, nv50, r600, llvmpipe, softpipe, swr, virgl)
   GL_ARB_cull_distance                                  DONE (i965, nv50, r600, llvmpipe, softpipe, swr, virgl)
@@ -241,26 +241,26 @@ GL 4.6, GLSL 4.60
 (*) softpipe and llvmpipe advertise 16x anisotropy but simply ignore the setting
 
 These are the extensions cherry-picked to make GLES 3.1
-GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, r600, radeonsi
+GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, r600, radeonsi, virgl
 
   GL_ARB_arrays_of_arrays                               DONE (all drivers that support GLSL 1.30)
   GL_ARB_compute_shader                                 DONE (freedreno/a5xx, i965/gen7+, softpipe)
-  GL_ARB_draw_indirect                                  DONE (freedreno, i965/gen7+, llvmpipe, softpipe, swr, virgl)
+  GL_ARB_draw_indirect                                  DONE (freedreno, i965/gen7+, llvmpipe, softpipe, swr)
   GL_ARB_explicit_uniform_location                      DONE (all drivers that support GLSL)
   GL_ARB_framebuffer_no_attachments                     DONE (freedreno, i965/gen7+, softpipe)
   GL_ARB_program_interface_query                        DONE (all drivers)
-  GL_ARB_shader_atomic_counters                         DONE (freedreno/a5xx, i965/gen7+, softpipe, virgl)
-  GL_ARB_shader_image_load_store                        DONE (freedreno/a5xx, i965/gen7+, softpipe, virgl)
-  GL_ARB_shader_image_size                              DONE (freedreno/a5xx, i965/gen7+, softpipe, virgl)
-  GL_ARB_shader_storage_buffer_object                   DONE (freedreno/a5xx, i965/gen7+, softpipe, virgl)
+  GL_ARB_shader_atomic_counters                         DONE (freedreno/a5xx, i965/gen7+, softpipe)
+  GL_ARB_shader_image_load_store                        DONE (freedreno/a5xx, i965/gen7+, softpipe)
+  GL_ARB_shader_image_size                              DONE (freedreno/a5xx, i965/gen7+, softpipe)
+  GL_ARB_shader_storage_buffer_object                   DONE (freedreno/a5xx, i965/gen7+, softpipe)
   GL_ARB_shading_language_packing                       DONE (all drivers)
   GL_ARB_separate_shader_objects                        DONE (all drivers)
-  GL_ARB_stencil_texturing                              DONE (freedreno, nv50, llvmpipe, softpipe, swr, virgl)
-  GL_ARB_texture_multisample (Multisample textures)     DONE (freedreno/a5xx, i965/gen7+, nv50, llvmpipe, softpipe, virgl)
+  GL_ARB_stencil_texturing                              DONE (freedreno, nv50, llvmpipe, softpipe, swr)
+  GL_ARB_texture_multisample (Multisample textures)     DONE (freedreno/a5xx, i965/gen7+, nv50, llvmpipe, softpipe)
   GL_ARB_texture_storage_multisample                    DONE (all drivers that support GL_ARB_texture_multisample)
   GL_ARB_vertex_attrib_binding                          DONE (all drivers)
-  GS5 Enhanced textureGather                            DONE (freedreno, i965/gen7+, virgl)
-  GS5 Packing/bitfield/conversion functions             DONE (freedreno/a5xx, i965/gen6+, virgl)
+  GS5 Enhanced textureGather                            DONE (freedreno, i965/gen7+)
+  GS5 Packing/bitfield/conversion functions             DONE (freedreno/a5xx, i965/gen6+)
   GL_EXT_shader_integer_mix                             DONE (all drivers that support GLSL)
 
   Additional functionality not covered above:
@@ -269,7 +269,7 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, r600, radeonsi
       glGetBooleani_v - restrict to GLES enums
       gl_HelperInvocation support                       DONE (i965, r600)
 
-GLES3.2, GLSL ES 3.2 -- all DONE: i965/gen9+, radeonsi
+GLES3.2, GLSL ES 3.2 -- all DONE: i965/gen9+, radeonsi, virgl
 
   GL_EXT_color_buffer_float                             DONE (all drivers)
   GL_KHR_blend_equation_advanced                        DONE (i965, nvc0)
@@ -299,7 +299,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_bindless_texture                               DONE (nvc0, radeonsi)
   GL_ARB_cl_event                                       not started
   GL_ARB_compute_variable_group_size                    DONE (nvc0, radeonsi)
-  GL_ARB_ES3_2_compatibility                            DONE (i965/gen8+)
+  GL_ARB_ES3_2_compatibility                            DONE (i965/gen8+, virgl)
   GL_ARB_fragment_shader_interlock                      DONE (i965)
   GL_ARB_gpu_shader_int64                               DONE (i965/gen8+, nvc0, radeonsi, softpipe, llvmpipe)
   GL_ARB_parallel_shader_compile                        not started, but Chia-I Wu did some related work in 2014
