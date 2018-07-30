@@ -294,11 +294,11 @@ emit_rt_blend(struct v3d_context *v3d, struct v3d_job *job,
                 assert(rt == 0);
 #endif
 
-                config.colour_blend_mode = rtblend->rgb_func;
-                config.colour_blend_dst_factor =
+                config.color_blend_mode = rtblend->rgb_func;
+                config.color_blend_dst_factor =
                         v3d_factor(rtblend->rgb_dst_factor,
                                    v3d->blend_dst_alpha_one);
-                config.colour_blend_src_factor =
+                config.color_blend_src_factor =
                         v3d_factor(rtblend->rgb_src_factor,
                                    v3d->blend_dst_alpha_one);
 
@@ -597,7 +597,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
         if (v3d->dirty & VC5_DIRTY_BLEND) {
                 struct pipe_blend_state *blend = &v3d->blend->base;
 
-                cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {
+                cl_emit(&job->bcl, COLOR_WRITE_MASKS, mask) {
                         for (int i = 0; i < 4; i++) {
                                 int rt = blend->independent_blend_enable ? i : 0;
                                 int rt_mask = blend->rt[rt].colormask;
@@ -613,15 +613,15 @@ v3dX(emit_state)(struct pipe_context *pctx)
          */
         if (v3d->dirty & VC5_DIRTY_BLEND_COLOR ||
             (V3D_VERSION < 41 && (v3d->dirty & VC5_DIRTY_BLEND))) {
-                cl_emit(&job->bcl, BLEND_CONSTANT_COLOUR, colour) {
-                        colour.red_f16 = (v3d->swap_color_rb ?
+                cl_emit(&job->bcl, BLEND_CONSTANT_COLOR, color) {
+                        color.red_f16 = (v3d->swap_color_rb ?
                                           v3d->blend_color.hf[2] :
                                           v3d->blend_color.hf[0]);
-                        colour.green_f16 = v3d->blend_color.hf[1];
-                        colour.blue_f16 = (v3d->swap_color_rb ?
+                        color.green_f16 = v3d->blend_color.hf[1];
+                        color.blue_f16 = (v3d->swap_color_rb ?
                                            v3d->blend_color.hf[0] :
                                            v3d->blend_color.hf[2]);
-                        colour.alpha_f16 = v3d->blend_color.hf[3];
+                        color.alpha_f16 = v3d->blend_color.hf[3];
                 }
         }
 

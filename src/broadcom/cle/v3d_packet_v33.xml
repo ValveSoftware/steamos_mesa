@@ -92,7 +92,7 @@
     <value name="ANISOTROPIC_16_1" value="15"/>
   </enum>
 
-  <enum name="Border Colour Mode" prefix="V3D_BORDER_COLOUR" min_ver="41">
+  <enum name="Border Color Mode" prefix="V3D_BORDER_COLOR" min_ver="41">
     <value name="0000" value="0"/>
     <value name="0001" value="1"/>
     <value name="1111" value="2"/>
@@ -300,7 +300,7 @@
     <field name="Enable Z write" size="1" start="7" type="bool"/>
     <field name="Enable Stencil write" size="1" start="6" type="bool"/>
     <!-- bit 5 unused -->
-    <field name="Disable Colour buffer(s) clear on write" size="1" start="4" type="bool"/>
+    <field name="Disable Color buffer(s) clear on write" size="1" start="4" type="bool"/>
     <field name="Disable Stencil buffer clear on write" size="1" start="3" type="bool"/>
     <field name="Disable Z buffer clear on write" size="1" start="2" type="bool"/>
     <field name="Disable fast opportunistic write out in multisample mode" size="1" start="1" type="bool"/>
@@ -312,8 +312,8 @@
     <field name="Clear all Render Targets" size="1" start="0" type="bool"/>
   </packet>
 
-  <packet code="26" name="Reload Tile Colour Buffer" cl="R" max_ver="33">
-    <field name="Disable Colour Buffer load" size="8" start="8" type="uint"/>
+  <packet code="26" name="Reload Tile Color Buffer" cl="R" max_ver="33">
+    <field name="Disable Color Buffer load" size="8" start="8" type="uint"/>
     <field name="Enable Z load" size="1" start="7" type="bool"/>
     <field name="Enable Stencil load" size="1" start="6" type="bool"/>
   </packet>
@@ -327,7 +327,7 @@
     <field name="Padded height of output image in UIF blocks" size="13" start="11" type="uint"/>
     <field name="XOR UIF" size="1" start="10" type="bool"/>
     <field name="Last Tile of Frame" size="1" start="8" type="bool"/>
-    <field name="Disable Colour buffer(s) clear on write" size="1" start="7" type="bool"/>
+    <field name="Disable Color buffer(s) clear on write" size="1" start="7" type="bool"/>
     <field name="Disable Stencil buffer clear on write" size="1" start="6" type="bool"/>
     <field name="Disable Z buffer clear on write" size="1" start="5" type="bool"/>
     <field name="Raw Mode" size="1" start="4" type="bool"/>
@@ -580,9 +580,9 @@
   </packet>
 
   <packet code="84" name="Blend Config" max_ver="33">
-    <field name="Colour blend dst factor" size="4" start="20" type="Blend Factor"/>
-    <field name="Colour blend src factor" size="4" start="16" type="Blend Factor"/>
-    <field name="Colour blend mode" size="4" start="12" type="Blend Mode"/>
+    <field name="Color blend dst factor" size="4" start="20" type="Blend Factor"/>
+    <field name="Color blend src factor" size="4" start="16" type="Blend Factor"/>
+    <field name="Color blend mode" size="4" start="12" type="Blend Mode"/>
     <field name="Alpha blend dst factor" size="4" start="8" type="Blend Factor"/>
     <field name="Alpha blend src factor" size="4" start="4" type="Blend Factor"/>
     <field name="Alpha blend mode" size="4" start="0" type="Blend Mode"/>
@@ -590,22 +590,22 @@
 
   <packet code="84" name="Blend Config" min_ver="41">
     <field name="Render Target Mask" size="4" start="24" type="uint"/>
-    <field name="Colour blend dst factor" size="4" start="20" type="Blend Factor"/>
-    <field name="Colour blend src factor" size="4" start="16" type="Blend Factor"/>
-    <field name="Colour blend mode" size="4" start="12" type="Blend Mode"/>
+    <field name="Color blend dst factor" size="4" start="20" type="Blend Factor"/>
+    <field name="Color blend src factor" size="4" start="16" type="Blend Factor"/>
+    <field name="Color blend mode" size="4" start="12" type="Blend Mode"/>
     <field name="Alpha blend dst factor" size="4" start="8" type="Blend Factor"/>
     <field name="Alpha blend src factor" size="4" start="4" type="Blend Factor"/>
     <field name="Alpha blend mode" size="4" start="0" type="Blend Mode"/>
   </packet>
 
-  <packet code="86" name="Blend Constant Colour">
+  <packet code="86" name="Blend Constant Color">
     <field name="Alpha (F16)" size="16" start="48" type="uint"/>
     <field name="Blue (F16)" size="16" start="32" type="uint"/>
     <field name="Green (F16)" size="16" start="16" type="uint"/>
     <field name="Red (F16)" size="16" start="0" type="uint"/>
   </packet>
 
-  <packet code="87" name="Colour Write Masks">
+  <packet code="87" name="Color Write Masks">
     <field name="Mask" size="32" start="0" type="uint"/>
   </packet>
 
@@ -1396,7 +1396,7 @@
 
     <field name="Texture base pointer" size="32" start="0" type="address"/>
 
-    <field name="Reverse Standard Border Colour" size="1" start="5" type="bool"/>
+    <field name="Reverse Standard Border Color" size="1" start="5" type="bool"/>
     <field name="AHDR" size="1" start="4" type="bool"/>
     <field name="sRGB" size="1" start="3" type="bool"/>
     <field name="Flip S and T on incoming request" size="1" start="2" type="bool"/>
@@ -1405,13 +1405,13 @@
   </struct>
 
   <struct name="Sampler State" min_ver="41">
-    <field name="Border colour Alpha" size="32" start="160" type="uint"/>
-    <field name="Border colour Blue" size="32" start="128" type="uint"/>
-    <field name="Border colour Green" size="32" start="96" type="uint"/>
-    <field name="Border colour Red" size="32" start="64" type="uint"/>
+    <field name="Border color Alpha" size="32" start="160" type="uint"/>
+    <field name="Border color Blue" size="32" start="128" type="uint"/>
+    <field name="Border color Green" size="32" start="96" type="uint"/>
+    <field name="Border color Red" size="32" start="64" type="uint"/>
 
     <field name="Maximum Anisotropy" size="2" start="61" type="uint"/>
-    <field name="Border Colour Mode" size="3" start="58" type="Border Colour Mode"/>
+    <field name="Border Color Mode" size="3" start="58" type="Border Color Mode"/>
     <field name="Wrap I Border" size="1" start="57" type="bool"/>
     <field name="Wrap R" size="3" start="54" type="Wrap Mode"/>
     <field name="Wrap T" size="3" start="51" type="Wrap Mode"/>

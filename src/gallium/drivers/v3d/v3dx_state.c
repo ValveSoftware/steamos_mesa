@@ -603,21 +603,21 @@ v3d_create_sampler_state(struct pipe_context *pctx,
                                 sampler.maximum_anisotropy = 1;
                 }
 
-                sampler.border_colour_mode = V3D_BORDER_COLOUR_FOLLOWS;
-                /* XXX: The border colour field is in the TMU blending format
+                sampler.border_color_mode = V3D_BORDER_COLOR_FOLLOWS;
+                /* XXX: The border color field is in the TMU blending format
                  * (32, f16, or i16), and we need to customize it based on
                  * that.
                  *
                  * XXX: for compat alpha formats, we need the alpha field to
                  * be in the red channel.
                  */
-                sampler.border_colour_red =
+                sampler.border_color_red =
                         util_float_to_half(cso->border_color.f[0]);
-                sampler.border_colour_green =
+                sampler.border_color_green =
                         util_float_to_half(cso->border_color.f[1]);
-                sampler.border_colour_blue =
+                sampler.border_color_blue =
                         util_float_to_half(cso->border_color.f[2]);
-                sampler.border_colour_alpha =
+                sampler.border_color_alpha =
                         util_float_to_half(cso->border_color.f[3]);
         }
 

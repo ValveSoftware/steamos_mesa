@@ -161,11 +161,11 @@ store_general(struct v3d_job *job,
                 assert(buffer != ZSTENCIL);
                 store.raw_mode = true;
                 if (!last_store) {
-                        store.disable_colour_buffers_clear_on_write = true;
+                        store.disable_color_buffers_clear_on_write = true;
                         store.disable_z_buffer_clear_on_write = true;
                         store.disable_stencil_buffer_clear_on_write = true;
                 } else {
-                        store.disable_colour_buffers_clear_on_write =
+                        store.disable_color_buffers_clear_on_write =
                                 !(((pipe_bit & PIPE_CLEAR_COLOR_BUFFERS) &&
                                    general_color_clear &&
                                    (job->clear & pipe_bit)));
@@ -246,8 +246,8 @@ v3d_rcl_emit_loads(struct v3d_job *job, struct v3d_cl *cl)
          * tile coordinates.
          */
         if (loads_pending) {
-                cl_emit(cl, RELOAD_TILE_COLOUR_BUFFER, load) {
-                        load.disable_colour_buffer_load =
+                cl_emit(cl, RELOAD_TILE_COLOR_BUFFER, load) {
+                        load.disable_color_buffer_load =
                                 (~loads_pending &
                                  PIPE_CLEAR_COLOR_BUFFERS) >>
                                 PIPE_FIRST_COLOR_BUFFER_BIT;
@@ -356,7 +356,7 @@ v3d_rcl_emit_stores(struct v3d_job *job, struct v3d_cl *cl)
                         /* Note that when set this will clear all of the color
                          * buffers.
                          */
-                        store.disable_colour_buffers_clear_on_write =
+                        store.disable_color_buffers_clear_on_write =
                                 !needs_color_clear;
                         store.disable_z_buffer_clear_on_write =
                                 !needs_z_clear;
