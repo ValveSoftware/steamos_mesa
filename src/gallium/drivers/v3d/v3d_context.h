@@ -433,21 +433,8 @@ struct v3d_rasterizer_state {
 
         float point_size;
 
-        /**
-         * Half-float (1/8/7 bits) value of polygon offset units for
-         * VC5_PACKET_DEPTH_OFFSET
-         */
-        uint16_t offset_units;
-        /**
-         * The HW treats polygon offset units based on a Z24 buffer, so we
-         * need to scale up offset_units if we're only Z16.
-         */
-        uint16_t z16_offset_units;
-        /**
-         * Half-float (1/8/7 bits) value of polygon offset scale for
-         * VC5_PACKET_DEPTH_OFFSET
-         */
-        uint16_t offset_factor;
+        uint8_t depth_offset[9];
+        uint8_t depth_offset_z16[9];
 };
 
 struct v3d_depth_stencil_alpha_state {

@@ -243,10 +243,13 @@ cl_get_emit_space(struct v3d_cl_out **cl, size_t size)
                 _loop_terminate = NULL;                          \
         }))                                                      \
 
-#define cl_emit_prepacked(cl, packet) do {                       \
-        memcpy((cl)->next, packet, sizeof(*packet));             \
-        cl_advance(&(cl)->next, sizeof(*packet));                \
+#define cl_emit_prepacked_sized(cl, packet, size) do {                \
+        memcpy((cl)->next, packet, size);             \
+        cl_advance(&(cl)->next, size);                \
 } while (0)
+
+#define cl_emit_prepacked(cl, packet) \
+        cl_emit_prepacked_sized(cl, packet, sizeof(*(packet)))
 
 #define v3dx_pack(packed, packet, name)                          \
         for (struct cl_packet_struct(packet) name = {            \

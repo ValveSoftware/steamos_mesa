@@ -104,10 +104,23 @@ v3d_create_rasterizer_state(struct pipe_context *pctx,
          */
         so->point_size = MAX2(cso->point_size, .125f);
 
-        if (cso->offset_tri) {
-                so->offset_units = float_to_187_half(cso->offset_units);
-                so->z16_offset_units = float_to_187_half(cso->offset_units * 256.0);
-                so->offset_factor = float_to_187_half(cso->offset_scale);
+        STATIC_ASSERT(sizeof(so->depth_offset) >=
+                      cl_packet_length(DEPTH_OFFSET));
+        v3dx_pack(&so->depth_offset, DEPTH_OFFSET, depth) {
+                depth.depth_offset_factor =
+                        float_to_187_half(cso->offset_scale);
+                depth.depth_offset_units =
+                        float_to_187_half(cso->offset_units);
+        }
+
+        /* The HW treats polygon offset units based on a Z24 buffer, so we
+         * need to scale up offset_units if we're only Z16.
+         */
+        v3dx_pack(&so->depth_offset_z16, DEPTH_OFFSET, depth) {
+                depth.depth_offset_factor =
+                        float_to_187_half(cso->offset_scale);
+                depth.depth_offset_units =
+                        float_to_187_half(cso->offset_units * 256.0);
         }
 
         return so;
