@@ -426,7 +426,7 @@
 
   <packet code="31" name="Transform Feedback Flush and Count"/>
 
-  <packet code="32" name="Indexed Primitive List" cl="B" max_ver="33">
+  <packet code="32" name="Indexed Prim List" cl="B" max_ver="33">
     <field name="Minimum index" size="32" start="104" type="uint"/>
     <field name="Enable Primitive Restarts" size="1" start="103" type="bool"/>
     <field name="Maximum index" size="31" start="72" type="uint"/>
@@ -442,7 +442,7 @@
     <field name="mode" size="5" start="0" type="Primitive"/>
   </packet>
 
-  <packet code="32" name="Indexed Primitive List" cl="B" min_ver="41">
+  <packet code="32" name="Indexed Prim List" cl="B" min_ver="41">
     <field name="Index Offset" size="32" start="40" type="uint"/>
 
     <field name="Enable Primitive Restarts" size="1" start="39" type="bool"/>
@@ -457,7 +457,7 @@
     <field name="mode" size="6" start="0" type="Primitive"/>
   </packet>
 
-  <packet code="34" name="Indexed Instanced Primitive List" cl="B" max_ver="33">
+  <packet code="34" name="Indexed Instanced Prim List" cl="B" max_ver="33">
     <field name="Enable Primitive Restarts" size="1" start="135" type="bool"/>
     <field name="Maximum index" size="31" start="104" type="uint"/>
     <field name="Address of Indices List" size="32" start="72" type="address"/>
@@ -473,7 +473,7 @@
     <field name="mode" size="5" start="0" type="Primitive"/>
   </packet>
 
-  <packet code="34" name="Indexed Instanced Primitive List" cl="B" min_ver="41">
+  <packet code="34" name="Indexed Instanced Prim List" cl="B" min_ver="41">
     <field name="Index Offset" size="32" start="72" type="uint"/>
     <field name="Number of Instances" size="32" start="40" type="uint"/>
     <field name="Enable Primitive Restarts" size="1" start="39" type="bool"/>
@@ -488,14 +488,14 @@
     <field name="mode" size="6" start="0" type="Primitive"/>
   </packet>
 
-  <packet code="36" name="Vertex Array Primitives" cl="B">
+  <packet code="36" name="Vertex Array Prims" cl="B">
     <field name="Index of First Vertex" size="32" start="40" type="uint"/>
     <field name="Length" size="32" start="8" type="uint"/>
 
     <field name="mode" size="8" start="0" type="Primitive"/>
   </packet>
 
-  <packet code="38" name="Vertex Array Instanced Primitives" cl="B">
+  <packet code="38" name="Vertex Array Instanced Prims" cl="B">
     <field name="Index of First Vertex" size="32" start="72" type="uint"/>
     <field name="Number of Instances" size="32" start="40" type="uint"/>
     <field name="Instance Length" size="32" start="8" type="uint"/>
@@ -514,7 +514,7 @@
     <field name="Size" size="32" start="32" type="uint"/>
   </packet>
 
-  <packet code="56" name="Primitive List Format">
+  <packet code="56" name="Prim List Format">
     <field name="tri strip or fan" size="1" start="7" type="bool"/>
     <field name="primitive type" size="6" start="0" type="uint">
       <value name="List Points" value="0"/>

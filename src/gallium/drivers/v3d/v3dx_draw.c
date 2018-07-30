@@ -521,7 +521,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 #endif
 
                 if (info->instance_count > 1) {
-                        cl_emit(&job->bcl, INDEXED_INSTANCED_PRIMITIVE_LIST, prim) {
+                        cl_emit(&job->bcl, INDEXED_INSTANCED_PRIM_LIST, prim) {
                                 prim.index_type = ffs(info->index_size) - 1;
 #if V3D_VERSION >= 40
                                 prim.index_offset = offset;
@@ -537,7 +537,7 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                 prim.instance_length = info->count;
                         }
                 } else {
-                        cl_emit(&job->bcl, INDEXED_PRIMITIVE_LIST, prim) {
+                        cl_emit(&job->bcl, INDEXED_PRIM_LIST, prim) {
                                 prim.index_type = ffs(info->index_size) - 1;
                                 prim.length = info->count;
 #if V3D_VERSION >= 40
@@ -558,14 +558,14 @@ v3d_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         pipe_resource_reference(&prsc, NULL);
         } else {
                 if (info->instance_count > 1) {
-                        cl_emit(&job->bcl, VERTEX_ARRAY_INSTANCED_PRIMITIVES, prim) {
+                        cl_emit(&job->bcl, VERTEX_ARRAY_INSTANCED_PRIMS, prim) {
                                 prim.mode = info->mode | prim_tf_enable;
                                 prim.index_of_first_vertex = info->start;
                                 prim.number_of_instances = info->instance_count;
                                 prim.instance_length = info->count;
                         }
                 } else {
-                        cl_emit(&job->bcl, VERTEX_ARRAY_PRIMITIVES, prim) {
+                        cl_emit(&job->bcl, VERTEX_ARRAY_PRIMS, prim) {
                                 prim.mode = info->mode | prim_tf_enable;
                                 prim.length = info->count;
                                 prim.index_of_first_vertex = info->start;

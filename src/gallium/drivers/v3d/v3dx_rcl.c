@@ -417,7 +417,7 @@ v3d_rcl_emit_generic_per_tile_list(struct v3d_job *job, int last_cbuf)
         /* The binner starts out writing tiles assuming that the initial mode
          * is triangles, so make sure that's the case.
          */
-        cl_emit(cl, PRIMITIVE_LIST_FORMAT, fmt) {
+        cl_emit(cl, PRIM_LIST_FORMAT, fmt) {
                 fmt.primitive_type = LIST_TRIANGLES;
         }
 
