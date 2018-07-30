@@ -202,8 +202,6 @@ struct gen_batch_decode_bo {
    const void *map;
 };
 
-struct gen_disasm *disasm;
-
 struct gen_batch_decode_ctx {
    /**
     * Return information about the buffer containing the given address.
