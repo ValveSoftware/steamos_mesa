@@ -81,12 +81,6 @@ v3d_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
         v3d->dirty |= VC5_DIRTY_SAMPLE_STATE;
 }
 
-static uint16_t
-float_to_187_half(float f)
-{
-        return fui(f) >> 16;
-}
-
 static void *
 v3d_create_rasterizer_state(struct pipe_context *pctx,
                             const struct pipe_rasterizer_state *cso)
@@ -107,20 +101,16 @@ v3d_create_rasterizer_state(struct pipe_context *pctx,
         STATIC_ASSERT(sizeof(so->depth_offset) >=
                       cl_packet_length(DEPTH_OFFSET));
         v3dx_pack(&so->depth_offset, DEPTH_OFFSET, depth) {
-                depth.depth_offset_factor =
-                        float_to_187_half(cso->offset_scale);
-                depth.depth_offset_units =
-                        float_to_187_half(cso->offset_units);
+                depth.depth_offset_factor = cso->offset_scale;
+                depth.depth_offset_units = cso->offset_units;
         }
 
         /* The HW treats polygon offset units based on a Z24 buffer, so we
          * need to scale up offset_units if we're only Z16.
          */
         v3dx_pack(&so->depth_offset_z16, DEPTH_OFFSET, depth) {
-                depth.depth_offset_factor =
-                        float_to_187_half(cso->offset_scale);
-                depth.depth_offset_units =
-                        float_to_187_half(cso->offset_units * 256.0);
+                depth.depth_offset_factor = cso->offset_scale;
+                depth.depth_offset_units = cso->offset_units * 256.0;
         }
 
         return so;

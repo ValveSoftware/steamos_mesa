@@ -316,6 +316,8 @@ string_to_type(struct parser_context *ctx, const char *s)
                 return (struct v3d_type) { .kind = V3D_TYPE_BOOL };
         else if (strcmp(s, "float") == 0)
                 return (struct v3d_type) { .kind = V3D_TYPE_FLOAT };
+        else if (strcmp(s, "f187") == 0)
+                return (struct v3d_type) { .kind = V3D_TYPE_F187 };
         else if (strcmp(s, "address") == 0)
                 return (struct v3d_type) { .kind = V3D_TYPE_ADDRESS };
         else if (strcmp(s, "offset") == 0)
@@ -885,6 +887,11 @@ v3d_field_iterator_next(struct clif_dump *clif, struct v3d_field_iterator *iter)
         case V3D_TYPE_FLOAT:
                 snprintf(iter->value, sizeof(iter->value), "%f",
                          __gen_unpack_float(iter->p, s, e));
+                break;
+
+        case V3D_TYPE_F187:
+                snprintf(iter->value, sizeof(iter->value), "%f",
+                         __gen_unpack_f187(iter->p, s, e));
                 break;
 
         case V3D_TYPE_ADDRESS: {

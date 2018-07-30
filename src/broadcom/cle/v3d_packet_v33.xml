@@ -619,7 +619,7 @@
   </packet>
 
   <packet code="91" name="Sample State" min_ver="41">
-    <field name="Coverage" size="16" start="16" type="uint"/> <!-- float-1-8-7 -->
+    <field name="Coverage" size="16" start="16" type="f187"/>
     <field name="Mask" size="4" start="0" type="uint"/>
   </packet>
 
@@ -672,16 +672,14 @@
   </packet>
 
   <packet name="Depth Offset" code="106" max_ver="33">
-    <!-- these fields are both float-1-8-7 encoded (top 16 bits of a float32) -->
-    <field name="Depth Offset Units" size="16" start="16" type="uint"/>
-    <field name="Depth Offset Factor" size="16" start="0" type="uint"/>
+    <field name="Depth Offset Units" size="16" start="16" type="f187"/>
+    <field name="Depth Offset Factor" size="16" start="0" type="f187"/>
   </packet>
 
   <packet name="Depth Offset" code="106" min_ver="41">
     <field name="Limit" size="32" start="32" type="float"/>
-    <!-- these fields are both float-1-8-7 encoded (top 16 bits of a float32) -->
-    <field name="Depth Offset Units" size="16" start="16" type="uint"/>
-    <field name="Depth Offset Factor" size="16" start="0" type="uint"/>
+    <field name="Depth Offset Units" size="16" start="16" type="f187"/>
+    <field name="Depth Offset Factor" size="16" start="0" type="f187"/>
   </packet>
 
   <packet name="Clip Window" code="107">

@@ -787,7 +787,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         /* Note: SampleCoverage was handled at the
                          * state_tracker level by converting to sample_mask.
                          */
-                        state.coverage = fui(1.0) >> 16;
+                        state.coverage = 1.0;
                         state.mask = job->msaa ? v3d->sample_mask : 0xf;
                 }
         }
