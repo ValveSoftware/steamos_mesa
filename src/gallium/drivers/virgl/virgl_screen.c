@@ -231,6 +231,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_ROBUST_BUFFER_ACCESS;
    case PIPE_CAP_TGSI_FS_FBFETCH:
       return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_TGSI_FBFETCH;
+   case PIPE_CAP_TGSI_CLOCK:
+      return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_SHADER_CLOCK;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -274,7 +276,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_INT64:
    case PIPE_CAP_INT64_DIVMOD:
    case PIPE_CAP_TGSI_TEX_TXF_LZ:
-   case PIPE_CAP_TGSI_CLOCK:
    case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
    case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
    case PIPE_CAP_TGSI_BALLOT:

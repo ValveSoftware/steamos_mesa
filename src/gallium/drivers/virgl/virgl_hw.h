@@ -228,6 +228,7 @@ enum virgl_formats {
 #define VIRGL_CAP_FB_NO_ATTACH         (1 << 8)
 #define VIRGL_CAP_ROBUST_BUFFER_ACCESS (1 << 9)
 #define VIRGL_CAP_TGSI_FBFETCH         (1 << 10)
+#define VIRGL_CAP_SHADER_CLOCK         (1 << 11)
 
 /* virgl bind flags - these are compatible with mesa 10.5 gallium.
  * but are fixed, no other should be passed to virgl either.
