@@ -41,6 +41,7 @@ static void
 fd2_context_destroy(struct pipe_context *pctx)
 {
 	fd_context_destroy(pctx);
+	free(pctx);
 }
 
 static struct pipe_resource *

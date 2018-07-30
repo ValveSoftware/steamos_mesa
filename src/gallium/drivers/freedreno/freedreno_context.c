@@ -172,8 +172,6 @@ fd_context_destroy(struct pipe_context *pctx)
 			(uint32_t)ctx->stats.batch_gmem, (uint32_t)ctx->stats.batch_nondraw,
 			(uint32_t)ctx->stats.batch_restore);
 	}
-
-	FREE(ctx);
 }
 
 static void

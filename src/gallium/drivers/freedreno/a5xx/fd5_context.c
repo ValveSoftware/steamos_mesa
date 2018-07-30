@@ -54,6 +54,8 @@ fd5_context_destroy(struct pipe_context *pctx)
 	u_upload_destroy(fd5_ctx->border_color_uploader);
 
 	fd_context_destroy(pctx);
+
+	free(fd5_ctx);
 }
 
 static const uint8_t primtypes[] = {

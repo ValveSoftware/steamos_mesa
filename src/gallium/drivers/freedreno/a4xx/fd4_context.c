@@ -55,6 +55,8 @@ fd4_context_destroy(struct pipe_context *pctx)
 	fd_hw_query_fini(pctx);
 
 	fd_context_destroy(pctx);
+
+	free(fd4_ctx);
 }
 
 static const uint8_t primtypes[] = {
