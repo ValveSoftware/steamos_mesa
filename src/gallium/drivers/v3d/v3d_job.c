@@ -344,11 +344,12 @@ v3d_get_job_for_fbo(struct v3d_context *v3d)
 static void
 v3d_clif_dump(struct v3d_context *v3d, struct v3d_job *job)
 {
-        if (!(V3D_DEBUG & V3D_DEBUG_CL))
+        if (!(V3D_DEBUG & (V3D_DEBUG_CL | V3D_DEBUG_CLIF)))
                 return;
 
         struct clif_dump *clif = clif_dump_init(&v3d->screen->devinfo,
-                                                stderr);
+                                                stderr,
+                                                V3D_DEBUG & V3D_DEBUG_CL);
 
         struct set_entry *entry;
         set_foreach(job->bos, entry) {

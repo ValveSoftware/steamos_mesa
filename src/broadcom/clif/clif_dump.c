@@ -51,13 +51,14 @@ clif_dump_add_address_to_worklist(struct clif_dump *clif,
 
 struct clif_dump *
 clif_dump_init(const struct v3d_device_info *devinfo,
-               FILE *out)
+               FILE *out, bool pretty)
 {
         struct clif_dump *clif = rzalloc(NULL, struct clif_dump);
 
         clif->devinfo = devinfo;
         clif->out = out;
         clif->spec = v3d_spec_load(devinfo);
+        clif->pretty = pretty;
 
         list_inithead(&clif->worklist);
 

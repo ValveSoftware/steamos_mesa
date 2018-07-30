@@ -31,7 +31,7 @@ struct v3d_device_info;
 struct clif_dump;
 
 struct clif_dump *clif_dump_init(const struct v3d_device_info *devinfo,
-                                 FILE *output);
+                                 FILE *output, bool pretty);
 void clif_dump(struct clif_dump *clif);
 void clif_dump_destroy(struct clif_dump *clif);
 

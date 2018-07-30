@@ -47,6 +47,12 @@ struct clif_dump {
         struct clif_bo *bo;
         int bo_count;
         int bo_array_size;
+
+        /**
+         * Flag to switch from CLIF ABI to slightly more human-readable
+         * output.
+         */
+        bool pretty;
 };
 
 enum reloc_worklist_type {
