@@ -63,26 +63,30 @@ v3d_start_draw(struct v3d_context *v3d)
                                        tsda_per_tile_size,
                                        "TSDA");
 
-#if V3D_VERSION < 40
+#if V3D_VERSION >= 40
+        cl_emit(&job->bcl, TILE_BINNING_MODE_CFG, config) {
+                config.width_in_pixels = v3d->framebuffer.width;
+                config.height_in_pixels = v3d->framebuffer.height;
+                config.number_of_render_targets =
+                        MAX2(v3d->framebuffer.nr_cbufs, 1);
+
+                config.multisample_mode_4x = job->msaa;
+
+                config.maximum_bpp_of_all_render_targets = job->internal_bpp;
+        }
+#else /* V3D_VERSION < 40 */
         /* "Binning mode lists start with a Tile Binning Mode Configuration
          * item (120)"
          *
          * Part1 signals the end of binning config setup.
          */
-        cl_emit(&job->bcl, TILE_BINNING_MODE_CONFIGURATION_PART2, config) {
+        cl_emit(&job->bcl, TILE_BINNING_MODE_CFG_PART2, config) {
                 config.tile_allocation_memory_address =
                         cl_address(job->tile_alloc, 0);
                 config.tile_allocation_memory_size = job->tile_alloc->size;
         }
-#endif
 
-        cl_emit(&job->bcl, TILE_BINNING_MODE_CONFIGURATION_PART1, config) {
-#if V3D_VERSION >= 40
-                config.width_in_pixels = v3d->framebuffer.width;
-                config.height_in_pixels = v3d->framebuffer.height;
-                config.number_of_render_targets =
-                        MAX2(v3d->framebuffer.nr_cbufs, 1);
-#else /* V3D_VERSION < 40 */
+        cl_emit(&job->bcl, TILE_BINNING_MODE_CFG_PART1, config) {
                 config.tile_state_data_array_base_address =
                         cl_address(job->tile_state, 0);
 
@@ -91,12 +95,12 @@ v3d_start_draw(struct v3d_context *v3d)
                 /* Must be >= 1 */
                 config.number_of_render_targets =
                         MAX2(v3d->framebuffer.nr_cbufs, 1);
-#endif /* V3D_VERSION < 40 */
 
                 config.multisample_mode_4x = job->msaa;
 
                 config.maximum_bpp_of_all_render_targets = job->internal_bpp;
         }
+#endif /* V3D_VERSION < 40 */
 
         /* There's definitely nothing in the VCD cache we want. */
         cl_emit(&job->bcl, FLUSH_VCD_CACHE, bin);

@@ -284,7 +284,7 @@ emit_rt_blend(struct v3d_context *v3d, struct v3d_job *job,
                 return;
 #endif
 
-        cl_emit(&job->bcl, BLEND_CONFIG, config) {
+        cl_emit(&job->bcl, BLEND_CFG, config) {
 #if V3D_VERSION >= 40
                 if (blend->independent_blend_enable)
                         config.render_target_mask = 1 << rt;
@@ -463,7 +463,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
                           VC5_DIRTY_ZSA |
                           VC5_DIRTY_BLEND |
                           VC5_DIRTY_COMPILED_FS)) {
-                cl_emit(&job->bcl, CONFIGURATION_BITS, config) {
+                cl_emit(&job->bcl, CFG_BITS, config) {
                         config.enable_forward_facing_primitive =
                                 !rasterizer_discard &&
                                 !(v3d->rasterizer->base.cull_face &
@@ -630,7 +630,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 struct pipe_stencil_state *back = &v3d->zsa->base.stencil[1];
 
                 if (front->enabled) {
-                        cl_emit_with_prepacked(&job->bcl, STENCIL_CONFIG,
+                        cl_emit_with_prepacked(&job->bcl, STENCIL_CFG,
                                                v3d->zsa->stencil_front, config) {
                                 config.stencil_ref_value =
                                         v3d->stencil_ref.ref_value[0];
@@ -638,7 +638,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 }
 
                 if (back->enabled) {
-                        cl_emit_with_prepacked(&job->bcl, STENCIL_CONFIG,
+                        cl_emit_with_prepacked(&job->bcl, STENCIL_CFG,
                                                v3d->zsa->stencil_back, config) {
                                 config.stencil_ref_value =
                                         v3d->stencil_ref.ref_value[1];

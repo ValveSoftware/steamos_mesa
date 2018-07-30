@@ -563,7 +563,7 @@
     <field name="address" size="32" start="0" type="address"/>
   </struct>
 
-  <packet code="80" name="Stencil Config">
+  <packet code="80" name="Stencil Cfg">
     <field name="Stencil Write Mask" size="8" start="32" type="uint"/>
     <field name="Back Config" size="1" start="29" type="bool"/>
     <field name="Front Config" size="1" start="28" type="bool"/>
@@ -579,7 +579,7 @@
     <field name="Mask" size="8" start="0" type="uint"/>
   </packet>
 
-  <packet code="84" name="Blend Config" max_ver="33">
+  <packet code="84" name="Blend Cfg" max_ver="33">
     <field name="Color blend dst factor" size="4" start="20" type="Blend Factor"/>
     <field name="Color blend src factor" size="4" start="16" type="Blend Factor"/>
     <field name="Color blend mode" size="4" start="12" type="Blend Mode"/>
@@ -588,7 +588,7 @@
     <field name="Alpha blend mode" size="4" start="0" type="Blend Mode"/>
   </packet>
 
-  <packet code="84" name="Blend Config" min_ver="41">
+  <packet code="84" name="Blend Cfg" min_ver="41">
     <field name="Render Target Mask" size="4" start="24" type="uint"/>
     <field name="Color blend dst factor" size="4" start="20" type="Blend Factor"/>
     <field name="Color blend src factor" size="4" start="16" type="Blend Factor"/>
@@ -627,7 +627,7 @@
     <field name="address" size="32" start="0" type="address"/>
   </packet>
 
-  <packet code="96" name="Configuration Bits">
+  <packet code="96" name="Cfg Bits">
     <field name="Direct3D Provoking Vertex" size="1" start="21" type="bool"/>
     <field name="Direct3D 'Point-fill' mode" size="1" start="20" type="bool"/>
     <field name="Blend enable" size="1" start="19" type="bool"/>
@@ -720,7 +720,7 @@
     <field name="Number of Layers" size="8" start="0" type="uint" minus_one="true"/>
   </packet>
 
-  <packet code="120" name="Tile Binning Mode Configuration (Part1)" max_ver="33">
+  <packet code="120" name="Tile Binning Mode Cfg (Part1)" max_ver="33">
     <field name="Double-buffer in non-ms mode" size="1" start="63" type="bool"/>
     <field name="Multisample Mode (4x)" size="1" start="62" type="bool"/>
 
@@ -746,7 +746,7 @@
     <field name="sub-id" size="1" start="0" type="uint" default="0"/>
   </packet>
 
-  <packet code="120" name="Tile Binning Mode Configuration (Part1)" min_ver="41">
+  <packet code="120" name="Tile Binning Mode Cfg" min_ver="41">
 
     <field name="Height (in pixels)" size="12" start="48" type="uint" minus_one="true"/>
     <field name="Width (in pixels)" size="12" start="32" type="uint" minus_one="true"/>
@@ -774,14 +774,14 @@
     </field>
   </packet>
 
-  <packet code="120" name="Tile Binning Mode Configuration (Part2)" cl="B" max_ver="33">
+  <packet code="120" name="Tile Binning Mode Cfg (Part2)" cl="B" max_ver="33">
     <field name="Tile Allocation Memory Address" size="32" start="32" type="address"/>
     <field name="Tile Allocation Memory Size" size="32" start="0" type="uint"/>
 
     <field name="sub-id" size="1" start="0" type="uint" default="1"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Common Configuration)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Common)" cl="R" max_ver="33">
     <field name="Disable Render Target Stores" size="8" start="56" type="uint"/>
     <field name="Enable Z Store" size="1" start="55" type="bool"/>
     <field name="Enable Stencil Store" size="1" start="54" type="bool"/>
@@ -809,7 +809,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="0"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Common Configuration)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (Common)" cl="R" min_ver="41">
     <field name="Pad" size="12" start="52" type="uint"/>
 
     <field name="Early Depth/Stencil Clear" size="1" start="51" type="bool"/>
@@ -834,7 +834,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="0"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Render Target config)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Color)" cl="R" max_ver="33">
     <field name="Address" size="32" start="32" type="address"/>
 
     <field name="Pad" size="4" start="28" type="uint"/>
@@ -855,7 +855,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="2"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Render Target config)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (Color)" cl="R" min_ver="41">
 
     <field name="Pad" size="28" start="34" type="uint"/>
 
@@ -878,7 +878,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="1"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Z/Stencil config)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Z/Stencil)" cl="R" max_ver="33">
     <field name="Address" size="26" start="38" type="address"/>
 
     <field name="Padded height of output image in UIF blocks" size="13" start="25" type="uint"/>
@@ -897,7 +897,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="1"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Z Stencil Clear Values)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (ZS Clear Values)" cl="R" max_ver="33">
     <field name="unused" size="16" start="48" type="uint"/>
 
     <field name="Z Clear Value" size="32" start="16" type="float"/>
@@ -906,7 +906,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="3"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Z Stencil Clear Values)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (ZS Clear Values)" cl="R" min_ver="41">
     <field name="unused" size="16" start="48" type="uint"/>
 
     <field name="Z Clear Value" size="32" start="16" type="float"/>
@@ -915,7 +915,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="2"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part1)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part1)" cl="R" max_ver="33">
     <!-- Express this as a 56-bit field? -->
     <field name="Clear Color next 24 bits" size="24" start="40" type="uint"/>
     <field name="Clear Color low 32 bits" size="32" start="8" type="uint"/>
@@ -924,7 +924,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="4"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part1)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part1)" cl="R" min_ver="41">
     <!-- Express this as a 56-bit field? -->
     <field name="Clear Color next 24 bits" size="24" start="40" type="uint"/>
     <field name="Clear Color low 32 bits" size="32" start="8" type="uint"/>
@@ -933,7 +933,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="3"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part2)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part2)" cl="R" max_ver="33">
     <!-- Express this as a 56-bit field? -->
     <field name="Clear Color mid-high 24 bits" size="24" start="40" type="uint"/>
     <field name="Clear Color mid-low 32 bits" size="32" start="8" type="uint"/>
@@ -942,7 +942,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="5"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part2)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part2)" cl="R" min_ver="41">
     <!-- Express this as a 56-bit field? -->
     <field name="Clear Color mid-high 24 bits" size="24" start="40" type="uint"/>
     <field name="Clear Color mid-low 32 bits" size="32" start="8" type="uint"/>
@@ -951,7 +951,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="4"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part3)" cl="R" max_ver="33">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part3)" cl="R" max_ver="33">
     <field name="pad" size="11" start="53" type="uint"/>
     <field name="UIF padded height in UIF blocks" size="13" start="40" type="uint"/>
     <!-- image height is for Y flipping -->
@@ -962,7 +962,7 @@
     <field name="sub-id" size="4" start="0" type="uint" default="6"/>
   </packet>
 
-  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part3)" cl="R" min_ver="41">
+  <packet code="121" name="Tile Rendering Mode Cfg (Clear Colors Part3)" cl="R" min_ver="41">
     <field name="pad" size="11" start="53" type="uint"/>
     <field name="UIF padded height in UIF blocks" size="13" start="40" type="uint"/>
     <!-- image height is for Y flipping -->
@@ -978,7 +978,7 @@
     <field name="tile column number" size="12" start="0" type="uint"/>
   </packet>
 
-  <packet code="122" name="Multicore Rendering Supertile Configuration" cl="R">
+  <packet code="122" name="Multicore Rendering Supertile Cfg" cl="R">
     <field name="Number of Bin Tile Lists" size="3" start="61" type="uint" minus_one="true"/>
     <field name="Supertile Raster Order" size="1" start="60" type="bool"/>
     <field name="Multicore Enable" size="1" start="56" type="bool"/>

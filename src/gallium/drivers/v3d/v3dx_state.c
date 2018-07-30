@@ -210,8 +210,8 @@ v3d_create_depth_stencil_alpha_state(struct pipe_context *pctx,
 
         if (front->enabled) {
                 STATIC_ASSERT(sizeof(so->stencil_front) >=
-                              cl_packet_length(STENCIL_CONFIG));
-                v3dx_pack(&so->stencil_front, STENCIL_CONFIG, config) {
+                              cl_packet_length(STENCIL_CFG));
+                v3dx_pack(&so->stencil_front, STENCIL_CFG, config) {
                         config.front_config = true;
                         /* If !back->enabled, then the front values should be
                          * used for both front and back-facing primitives.
@@ -232,8 +232,8 @@ v3d_create_depth_stencil_alpha_state(struct pipe_context *pctx,
         }
         if (back->enabled) {
                 STATIC_ASSERT(sizeof(so->stencil_back) >=
-                              cl_packet_length(STENCIL_CONFIG));
-                v3dx_pack(&so->stencil_back, STENCIL_CONFIG, config) {
+                              cl_packet_length(STENCIL_CFG));
+                v3dx_pack(&so->stencil_back, STENCIL_CFG, config) {
                         config.front_config = false;
                         config.back_config = true;
 
