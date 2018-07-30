@@ -52,6 +52,8 @@ struct fd_texture_stateobj {
 	struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
 	unsigned num_samplers;
 	unsigned valid_samplers;
+	/* number of samples per sampler, 2 bits per sampler: */
+	uint32_t samples;
 };
 
 struct fd_program_stateobj {
