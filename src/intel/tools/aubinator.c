@@ -590,7 +590,7 @@ handle_memtrace_reg_write(uint32_t *p)
    uint32_t pphwsp_addr = context_descriptor & 0xfffff000;
    struct gen_batch_decode_bo pphwsp_bo = get_ggtt_batch_bo(NULL, pphwsp_addr);
    uint32_t *context = (uint32_t *)((uint8_t *)pphwsp_bo.map +
-                                    (pphwsp_bo.addr - pphwsp_addr) +
+                                    (pphwsp_addr - pphwsp_bo.addr) +
                                     pphwsp_size);
 
    uint32_t ring_buffer_head = context[5];
@@ -601,7 +601,7 @@ handle_memtrace_reg_write(uint32_t *p)
    struct gen_batch_decode_bo ring_bo = get_ggtt_batch_bo(NULL,
                                                           ring_buffer_start);
    assert(ring_bo.size > 0);
-   void *commands = (uint8_t *)ring_bo.map + (ring_bo.addr - ring_buffer_start);
+   void *commands = (uint8_t *)ring_bo.map + (ring_buffer_start - ring_bo.addr);
 
    if (context_descriptor & 0x100 /* ppgtt */) {
       batch_ctx.get_bo = get_ppgtt_batch_bo;
