@@ -116,7 +116,7 @@ brw_create_nir(struct brw_context *brw,
       struct gl_linked_shader *tcs =
          shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
       uint32_t static_patch_vertices =
-         tcs ? tcs->Program->info.tess.tcs_vertices_out : 0;
+         tcs ? tcs->Program->nir->info.tess.tcs_vertices_out : 0;
       static const gl_state_index16 tokens[STATE_LENGTH] =
          { STATE_INTERNAL, STATE_TES_PATCH_VERTICES_IN };
       nir_lower_patch_vertices(nir, static_patch_vertices, tokens);
