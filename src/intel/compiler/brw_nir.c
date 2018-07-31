@@ -730,7 +730,7 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
       *producer = brw_nir_optimize(*producer, compiler, p_is_scalar);
 
       const bool c_is_scalar =
-         compiler->scalar_stage[(*producer)->info.stage];
+         compiler->scalar_stage[(*consumer)->info.stage];
       *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar);
    }
 }
