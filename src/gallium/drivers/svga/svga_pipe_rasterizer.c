@@ -255,7 +255,7 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
    {
       int fill_front = templ->fill_front;
       int fill_back = templ->fill_back;
-      int fill = PIPE_POLYGON_MODE_FILL;
+      int fill;
       boolean offset_front = util_get_offset(templ, fill_front);
       boolean offset_back = util_get_offset(templ, fill_back);
       boolean offset = FALSE;
@@ -267,13 +267,13 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
          break;
 
       case PIPE_FACE_FRONT:
-         offset = offset_front;
-         fill = fill_front;
+         offset = offset_back;
+         fill = fill_back;
          break;
 
       case PIPE_FACE_BACK:
-         offset = offset_back;
-         fill = fill_back;
+         offset = offset_front;
+         fill = fill_front;
          break;
 
       case PIPE_FACE_NONE:
@@ -283,6 +283,7 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
              */
             rast->need_pipeline |= SVGA_PIPELINE_FLAG_TRIS;
             rast->need_pipeline_tris_str = "different front/back fillmodes";
+            fill = PIPE_POLYGON_MODE_FILL;
          }
          else {
             offset = offset_front;
@@ -302,8 +303,7 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
       if (fill != PIPE_POLYGON_MODE_FILL &&
           (templ->flatshade ||
            templ->light_twoside ||
-           offset ||
-           templ->cull_face != PIPE_FACE_NONE)) {
+           offset)) {
          fill = PIPE_POLYGON_MODE_FILL;
          rast->need_pipeline |= SVGA_PIPELINE_FLAG_TRIS;
          rast->need_pipeline_tris_str = "unfilled primitives with no index manipulation";
