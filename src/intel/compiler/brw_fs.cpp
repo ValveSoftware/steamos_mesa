@@ -6880,14 +6880,17 @@ brw_compute_flat_inputs(struct brw_wm_prog_data *prog_data,
    prog_data->flat_inputs = 0;
 
    nir_foreach_variable(var, &shader->inputs) {
-      int input_index = prog_data->urb_setup[var->data.location];
+      unsigned slots = glsl_count_attribute_slots(var->type, false);
+      for (unsigned s = 0; s < slots; s++) {
+         int input_index = prog_data->urb_setup[var->data.location + s];
 
-      if (input_index < 0)
-	 continue;
+         if (input_index < 0)
+            continue;
 
-      /* flat shading */
-      if (var->data.interpolation == INTERP_MODE_FLAT)
-         prog_data->flat_inputs |= (1 << input_index);
+         /* flat shading */
+         if (var->data.interpolation == INTERP_MODE_FLAT)
+            prog_data->flat_inputs |= 1 << input_index;
+      }
    }
 }
 
