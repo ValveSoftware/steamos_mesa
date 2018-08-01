@@ -235,6 +235,7 @@ optimizations = [
    (('~bcsel', ('fge', b, a), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', a), b, c), ('bcsel', a, c, b)),
    (('bcsel', a, ('bcsel', a, b, c), d), ('bcsel', a, b, d)),
+   (('bcsel', a, b, ('bcsel', a, c, d)), ('bcsel', a, b, d)),
    (('bcsel', a, True, 'b@bool'), ('ior', a, b)),
    (('fmin', a, a), a),
    (('fmax', a, a), a),
