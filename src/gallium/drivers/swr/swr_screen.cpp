@@ -1148,7 +1148,6 @@ struct pipe_screen *
 swr_create_screen_internal(struct sw_winsys *winsys)
 {
    struct swr_screen *screen = CALLOC_STRUCT(swr_screen);
-   memset(screen, 0, sizeof(struct swr_screen));
 
    if (!screen)
       return NULL;
