@@ -322,10 +322,10 @@ util_queue_init(struct util_queue *queue,
    memset(queue, 0, sizeof(*queue));
 
    if (process_len) {
-      snprintf(queue->name, sizeof(queue->name), "%.*s:%s",
-               process_len, process_name, name);
+      util_snprintf(queue->name, sizeof(queue->name), "%.*s:%s",
+                    process_len, process_name, name);
    } else {
-      snprintf(queue->name, sizeof(queue->name), "%s", name);
+      util_snprintf(queue->name, sizeof(queue->name), "%s", name);
    }
 
    queue->flags = flags;
