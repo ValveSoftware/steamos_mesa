@@ -834,7 +834,7 @@ iter_advance_field(struct v3d_field_iterator *iter)
 
         iter->field = iter->group->fields[iter->field_iter++];
         if (iter->field->name)
-                snprintf(iter->name, sizeof(iter->name), iter->field->name);
+                snprintf(iter->name, sizeof(iter->name), "%s", iter->field->name);
         else
                 memset(iter->name, 0, sizeof(iter->name));
         iter->offset = iter_group_offset_bits(iter, iter->group_iter) / 8 +
