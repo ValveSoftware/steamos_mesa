@@ -108,14 +108,14 @@ static void unpack_trit_block(int n, T in, uint8_t *out)
 {
    assert(n <= 6); /* else output will overflow uint8_t */
 
-   uint8_t T0 = (in >> (n)) & 0b1;
-   uint8_t T1 = (in >> (n+1)) & 0b1;
-   uint8_t T2 = (in >> (2*n+2)) & 0b1;
-   uint8_t T3 = (in >> (2*n+3)) & 0b1;
-   uint8_t T4 = (in >> (3*n+4)) & 0b1;
-   uint8_t T5 = (in >> (4*n+5)) & 0b1;
-   uint8_t T6 = (in >> (4*n+6)) & 0b1;
-   uint8_t T7 = (in >> (5*n+7)) & 0b1;
+   uint8_t T0 = (in >> (n)) & 0x1;
+   uint8_t T1 = (in >> (n+1)) & 0x1;
+   uint8_t T2 = (in >> (2*n+2)) & 0x1;
+   uint8_t T3 = (in >> (2*n+3)) & 0x1;
+   uint8_t T4 = (in >> (3*n+4)) & 0x1;
+   uint8_t T5 = (in >> (4*n+5)) & 0x1;
+   uint8_t T6 = (in >> (4*n+6)) & 0x1;
+   uint8_t T7 = (in >> (5*n+7)) & 0x1;
    uint8_t mmask = (1 << n) - 1;
    uint8_t m0 = (in >> (0)) & mmask;
    uint8_t m1 = (in >> (n+2)) & mmask;
@@ -125,12 +125,12 @@ static void unpack_trit_block(int n, T in, uint8_t *out)
 
    uint8_t C;
    uint8_t t4, t3, t2, t1, t0;
-   if (CAT_BITS_3(T4, T3, T2) == 0b111) {
+   if (CAT_BITS_3(T4, T3, T2) == 0x7) {
       C = CAT_BITS_5(T7, T6, T5, T1, T0);
       t4 = t3 = 2;
    } else {
       C = CAT_BITS_5(T4, T3, T2, T1, T0);
-      if (CAT_BITS_2(T6, T5) == 0b11) {
+      if (CAT_BITS_2(T6, T5) == 0x3) {
          t4 = 2;
          t3 = T7;
       } else {
@@ -139,21 +139,21 @@ static void unpack_trit_block(int n, T in, uint8_t *out)
       }
    }
 
-   if ((C & 0b11) == 0b11) {
+   if ((C & 0x3) == 0x3) {
       t2 = 2;
-      t1 = (C >> 4) & 0b1;
-      uint8_t C3 = (C >> 3) & 0b1;
-      uint8_t C2 = (C >> 2) & 0b1;
+      t1 = (C >> 4) & 0x1;
+      uint8_t C3 = (C >> 3) & 0x1;
+      uint8_t C2 = (C >> 2) & 0x1;
       t0 = (C3 << 1) | (C2 & ~C3);
-   } else if (((C >> 2) & 0b11) == 0b11) {
+   } else if (((C >> 2) & 0x3) == 0x3) {
       t2 = 2;
       t1 = 2;
-      t0 = C & 0b11;
+      t0 = C & 0x3;
    } else {
-      t2 = (C >> 4) & 0b1;
-      t1 = (C >> 2) & 0b11;
-      uint8_t C1 = (C >> 1) & 0b1;
-      uint8_t C0 = (C >> 0) & 0b1;
+      t2 = (C >> 4) & 0x1;
+      t1 = (C >> 2) & 0x3;
+      uint8_t C1 = (C >> 1) & 0x1;
+      uint8_t C0 = (C >> 0) & 0x1;
       t0 = (C1 << 1) | (C0 & ~C1);
    }
 
@@ -171,13 +171,13 @@ static void unpack_quint_block(int n, uint32_t in, uint8_t *out)
 {
    assert(n <= 5); /* else output will overflow uint8_t */
 
-   uint8_t Q0 = (in >> (n)) & 0b1;
-   uint8_t Q1 = (in >> (n+1)) & 0b1;
-   uint8_t Q2 = (in >> (n+2)) & 0b1;
-   uint8_t Q3 = (in >> (2*n+3)) & 0b1;
-   uint8_t Q4 = (in >> (2*n+4)) & 0b1;
-   uint8_t Q5 = (in >> (3*n+5)) & 0b1;
-   uint8_t Q6 = (in >> (3*n+6)) & 0b1;
+   uint8_t Q0 = (in >> (n)) & 0x1;
+   uint8_t Q1 = (in >> (n+1)) & 0x1;
+   uint8_t Q2 = (in >> (n+2)) & 0x1;
+   uint8_t Q3 = (in >> (2*n+3)) & 0x1;
+   uint8_t Q4 = (in >> (2*n+4)) & 0x1;
+   uint8_t Q5 = (in >> (3*n+5)) & 0x1;
+   uint8_t Q6 = (in >> (3*n+6)) & 0x1;
    uint8_t mmask = (1 << n) - 1;
    uint8_t m0 = (in >> (0)) & mmask;
    uint8_t m1 = (in >> (n+3)) & mmask;
@@ -185,24 +185,24 @@ static void unpack_quint_block(int n, uint32_t in, uint8_t *out)
 
    uint8_t C;
    uint8_t q2, q1, q0;
-   if (CAT_BITS_4(Q6, Q5, Q2, Q1) == 0b0011) {
+   if (CAT_BITS_4(Q6, Q5, Q2, Q1) == 0x3) {
       q2 = CAT_BITS_3(Q0, Q4 & ~Q0, Q3 & ~Q0);
       q1 = 4;
       q0 = 4;
    } else {
-      if (CAT_BITS_2(Q2, Q1) == 0b11) {
+      if (CAT_BITS_2(Q2, Q1) == 0x3) {
          q2 = 4;
-         C = CAT_BITS_5(Q4, Q3, 0b1 & ~Q6, 0b1 & ~Q5, Q0);
+         C = CAT_BITS_5(Q4, Q3, 0x1 & ~Q6, 0x1 & ~Q5, Q0);
       } else {
          q2 = CAT_BITS_2(Q6, Q5);
          C = CAT_BITS_5(Q4, Q3, Q2, Q1, Q0);
       }
-      if ((C & 0b111) == 0b101) {
+      if ((C & 0x7) == 0x5) {
          q1 = 4;
-         q0 = (C >> 3) & 0b11;
+         q0 = (C >> 3) & 0x3;
       } else {
-         q1 = (C >> 3) & 0b11;
-         q0 = C & 0b111;
+         q1 = (C >> 3) & 0x3;
+         q0 = C & 0x7;
       }
    }
    out[0] = (q0 << n) | m0;
@@ -774,19 +774,19 @@ decode_error::type Block::decode_block_mode(InputBitVector in)
       int b;
 
       switch (in.get_bits(7, 2)) {
-      case 0b00:
+      case 0x0:
          if (VERBOSE_DECODE)
             in.printf_bits(0, 11, "DH00AARRR00");
          wt_w = 12;
          wt_h = a + 2;
          break;
-      case 0b01:
+      case 0x1:
          if (VERBOSE_DECODE)
             in.printf_bits(0, 11, "DH01AARRR00");
          wt_w = a + 2;
          wt_h = 12;
          break;
-      case 0b11:
+      case 0x3:
          if (in.get_bits(5, 1) == 0) {
             if (VERBOSE_DECODE)
                in.printf_bits(0, 11, "DH1100RRR00");
@@ -799,7 +799,7 @@ decode_error::type Block::decode_block_mode(InputBitVector in)
             wt_h = 6;
          }
          break;
-      case 0b10:
+      case 0x2:
          if (VERBOSE_DECODE)
             in.printf_bits(0, 11, "BB10AARRR00");
          b = in.get_bits(9, 2);
@@ -828,7 +828,7 @@ void Block::decode_cem(InputBitVector in)
 
       uint32_t cem = in.get_bits(23, 6);
 
-      if ((cem & 0b11) == 0b00) {
+      if ((cem & 0x3) == 0x0) {
          cem >>= 2;
          cem_base_class = cem >> 2;
          is_multi_cem = false;
@@ -840,7 +840,7 @@ void Block::decode_cem(InputBitVector in)
             in.printf_bits(23, 6, "CEM (single, %d)", cem);
       } else {
 
-         cem_base_class = (cem & 0b11) - 1;
+         cem_base_class = (cem & 0x3) - 1;
          is_multi_cem = true;
 
          if (VERBOSE_DECODE)
@@ -1181,7 +1181,7 @@ void Block::unquantise_weights()
             w = v * 32;
          } else {
             uint8_t A, B, C, D;
-            A = (v & 0b1) ? 0b1111111 : 0b0000000;
+            A = (v & 0x1) ? 0x7F : 0x00;
             switch (wt_bits) {
             case 1:
                B = 0;
@@ -1189,12 +1189,12 @@ void Block::unquantise_weights()
                D = v >> 1;
                break;
             case 2:
-               B = (v & 0b10) ? 0b1000101 : 0b0000000;
+               B = (v & 0x2) ? 0x45 : 0x00;
                C = 23;
                D = v >> 2;
                break;
             case 3:
-               B = ((v & 0b110) >> 1) | ((v & 0b110) << 4);
+               B = ((v & 0x6) >> 1) | ((v & 0x6) << 4);
                C = 11;
                D = v >> 3;
                break;
@@ -1216,7 +1216,7 @@ void Block::unquantise_weights()
             w = v * 16;
          } else {
             uint8_t A, B, C, D;
-            A = (v & 0b1) ? 0b1111111 : 0b0000000;
+            A = (v & 0x1) ? 0x7F : 0x00;
             switch (wt_bits) {
             case 1:
                B = 0;
@@ -1224,7 +1224,7 @@ void Block::unquantise_weights()
                D = v >> 1;
                break;
             case 2:
-               B = (v & 0b10) ? 0b1000010 : 0b0000000;
+               B = (v & 0x2) ? 0x42 : 0x00;
                C = 13;
                D = v >> 2;
                break;
@@ -1244,7 +1244,7 @@ void Block::unquantise_weights()
       } else {
 
          switch (wt_bits) {
-         case 1: w = v ? 0b111111 : 0b000000; break;
+         case 1: w = v ? 0x3F : 0x00; break;
          case 2: w = v | (v << 2) | (v << 4); break;
          case 3: w = v | (v << 3); break;
          case 4: w = (v >> 2) | (v << 2); break;
@@ -1337,7 +1337,7 @@ void Block::unquantise_colour_endpoints()
       if (ce_trits) {
          uint16_t A, B, C, D;
          uint16_t t;
-         A = (v & 0b1) ? 0b111111111 : 0b000000000;
+         A = (v & 0x1) ? 0x1FF : 0x000;
          switch (ce_bits) {
          case 1:
             B = 0;
@@ -1345,30 +1345,30 @@ void Block::unquantise_colour_endpoints()
             D = v >> 1;
             break;
          case 2:
-            B = (v & 0b10) ? 0b100010110 : 0b000000000;
+            B = (v & 0x2) ? 0x116 : 0x000;
             C = 93;
             D = v >> 2;
             break;
          case 3:
-            t = ((v >> 1) & 0b11);
+            t = ((v >> 1) & 0x3);
             B = t | (t << 2) | (t << 7);
             C = 44;
             D = v >> 3;
             break;
          case 4:
-            t = ((v >> 1) & 0b111);
+            t = ((v >> 1) & 0x7);
             B = t | (t << 6);
             C = 22;
             D = v >> 4;
             break;
          case 5:
-            t = ((v >> 1) & 0b1111);
+            t = ((v >> 1) & 0xF);
             B = (t >> 2) | (t << 5);
             C = 11;
             D = v >> 5;
             break;
          case 6:
-            B = ((v & 0b111110) << 3) | ((v >> 5) & 0b1);
+            B = ((v & 0x3E) << 3) | ((v >> 5) & 0x1);
             C = 5;
             D = v >> 6;
             break;
@@ -1383,7 +1383,7 @@ void Block::unquantise_colour_endpoints()
       } else if (ce_quints) {
          uint16_t A, B, C, D;
          uint16_t t;
-         A = (v & 0b1) ? 0b111111111 : 0b000000000;
+         A = (v & 0x1) ? 0x1FF : 0x000;
          switch (ce_bits) {
          case 1:
             B = 0;
@@ -1391,24 +1391,24 @@ void Block::unquantise_colour_endpoints()
             D = v >> 1;
             break;
          case 2:
-            B = (v & 0b10) ? 0b100001100 : 0b000000000;
+            B = (v & 0x2) ? 0x10C : 0x000;
             C = 54;
             D = v >> 2;
             break;
          case 3:
-            t = ((v >> 1) & 0b11);
+            t = ((v >> 1) & 0x3);
             B = (t >> 1) | (t << 1) | (t << 7);
             C = 26;
             D = v >> 3;
             break;
          case 4:
-            t = ((v >> 1) & 0b111);
+            t = ((v >> 1) & 0x7);
             B = (t >> 1) | (t << 6);
             C = 13;
             D = v >> 4;
             break;
          case 5:
-            t = ((v >> 1) & 0b1111);
+            t = ((v >> 1) & 0xF);
             B = (t >> 4) | (t << 5);
             C = 6;
             D = v >> 5;
@@ -1423,7 +1423,7 @@ void Block::unquantise_colour_endpoints()
          colour_endpoints[i] = T;
       } else {
          switch (ce_bits) {
-         case 1: v = v ? 0b11111111 : 0b00000000; break;
+         case 1: v = v ? 0xFF : 0x00; break;
          case 2: v = (v << 6) | (v << 4) | (v << 2) | v; break;
          case 3: v = (v << 5) | (v << 2) | (v >> 1); break;
          case 4: v = (v << 4) | v; break;
