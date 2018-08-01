@@ -102,12 +102,16 @@ v3d_choose_spill_node(struct v3d_compile *c, struct ra_graph *g,
                                 started_last_seg = true;
 
                         /* Track when we're in between a TMU setup and the
-                         * final LDTMU from that TMU setup.  We can't
+                         * final LDTMU or TMUWT from that TMU setup.  We can't
                          * spill/fill any temps during that time, because that
                          * involves inserting a new TMU setup/LDTMU sequence.
                          */
                         if (inst->qpu.sig.ldtmu &&
                             is_last_ldtmu(inst, block))
+                                in_tmu_operation = false;
+
+                        if (inst->qpu.type == V3D_QPU_INSTR_TYPE_ALU &&
+                            inst->qpu.alu.add.op == V3D_QPU_A_TMUWT)
                                 in_tmu_operation = false;
 
                         if (v3d_qpu_writes_tmu(&inst->qpu))
@@ -206,6 +210,7 @@ v3d_spill_reg(struct v3d_compile *c, int spill_temp)
                                      inst->dst);
                         v3d_emit_spill_tmua(c, spill_offset);
                         vir_emit_thrsw(c);
+                        vir_TMUWT(c);
                         c->spills++;
                 }
 
