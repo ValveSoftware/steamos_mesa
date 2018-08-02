@@ -784,6 +784,14 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 		 */
 		if (num_cu_per_se % 4 && waves_per_threadgroup == 1)
 			compute_resource_limits |= S_00B854_FORCE_SIMD_DIST(1);
+
+		compute_resource_limits |= S_00B854_WAVES_PER_SH(sctx->cs_max_waves_per_sh);
+	} else {
+		/* SI */
+		if (sctx->cs_max_waves_per_sh) {
+			unsigned limit_div16 = DIV_ROUND_UP(sctx->cs_max_waves_per_sh, 16);
+			compute_resource_limits |= S_00B854_WAVES_PER_SH_SI(limit_div16);
+		}
 	}
 
 	radeon_set_sh_reg(cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
