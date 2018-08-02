@@ -1206,7 +1206,7 @@ void si_resume_queries(struct si_context *sctx);
 void si_test_dma(struct si_screen *sscreen);
 
 /* si_test_clearbuffer.c */
-void si_test_clearbuffer(struct si_screen *sscreen);
+void si_test_clearbuffer_perf(struct si_screen *sscreen);
 
 /* si_uvd.c */
 struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,

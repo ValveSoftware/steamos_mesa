@@ -127,7 +127,7 @@ analyze_clearbuf_perf_rng(struct pipe_context *ctx)
 	}
 }
 
-void si_test_clearbuffer(struct si_screen *sscreen)
+void si_test_clearbuffer_perf(struct si_screen *sscreen)
 {
 	struct pipe_screen *screen = &sscreen->b;
 	struct pipe_context *ctx = screen->context_create(screen, NULL, 0);
@@ -137,4 +137,3 @@ void si_test_clearbuffer(struct si_screen *sscreen)
 
 	exit(0);
 }
-

@@ -215,7 +215,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum si_coherency coher, enum si_method xfer )
+		     enum si_coherency coher, enum si_method xfer)
 {
 	struct radeon_winsys *ws = sctx->ws;
 	struct r600_resource *rdst = r600_resource(dst);

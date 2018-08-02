@@ -1071,7 +1071,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		si_test_dma(sscreen);
 
 	if (sscreen->debug_flags & DBG(TEST_CLEARBUF_PERF)) {
-		si_test_clearbuffer(sscreen);
+		si_test_clearbuffer_perf(sscreen);
 	}
 
 	if (sscreen->debug_flags & (DBG(TEST_VMFAULT_CP) |
