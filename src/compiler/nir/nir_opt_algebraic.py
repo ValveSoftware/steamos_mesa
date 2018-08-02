@@ -183,6 +183,9 @@ optimizations = [
    (('feq', ('fmul', ('b2f', a), ('b2f', b)), 0.0), ('inot', ('iand', a, b))),
    (('feq', ('fmin', ('b2f', a), ('b2f', b)), 0.0), ('inot', ('iand', a, b))),
    (('feq', ('bcsel', a, ('b2f', b), 0.0)   , 0.0), ('inot', ('iand', a, b))),
+   (('feq', ('fadd', ('b2f', a), ('fneg', ('b2f', b))), 0.0), ('ieq', a, b)),
+   (('feq',          ('b2f', a) ,          ('b2f', b) ),      ('ieq', a, b)),
+   (('feq', ('fneg', ('b2f', a)), ('fneg', ('b2f', b))),      ('ieq', a, b)),
 
    # -(b2f(a) + b2f(b)) < 0
    # 0 < b2f(a) + b2f(b)
