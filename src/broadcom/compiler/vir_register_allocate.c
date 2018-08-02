@@ -94,6 +94,15 @@ v3d_choose_spill_node(struct v3d_compile *c, struct ra_graph *g,
                                 }
                         }
 
+                        /* Refuse to spill a ldvary's dst, because that means
+                         * that ldvary's r5 would end up being used across a
+                         * thrsw.
+                         */
+                        if (inst->qpu.sig.ldvary) {
+                                assert(inst->dst.file == QFILE_TEMP);
+                                BITSET_CLEAR(c->spillable, inst->dst.index);
+                        }
+
                         if (inst->is_last_thrsw)
                                 started_last_seg = true;
 
