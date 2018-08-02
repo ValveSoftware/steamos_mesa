@@ -306,6 +306,13 @@ v3d_emit_gl_shader_state(struct v3d_context *v3d,
                 }
         }
 
+        cl_emit(&job->bcl, VCM_CACHE_SIZE, vcm) {
+                vcm.number_of_16_vertex_batches_for_binning =
+                        v3d->prog.cs->prog_data.vs->vcm_cache_size;
+                vcm.number_of_16_vertex_batches_for_rendering =
+                        v3d->prog.vs->prog_data.vs->vcm_cache_size;
+        }
+
         cl_emit(&job->bcl, GL_SHADER_STATE, state) {
                 state.address = cl_address(job->indirect.bo, shader_rec_offset);
                 state.number_of_attribute_arrays = num_elements_to_emit;

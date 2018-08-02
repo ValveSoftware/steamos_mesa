@@ -648,6 +648,9 @@ struct v3d_vs_prog_data {
 
         /* Total number of components written, for the shader state record. */
         uint32_t vpm_output_size;
+
+        /* Value to be programmed in VCM_CACHE_SIZE. */
+        uint8_t vcm_cache_size;
 };
 
 struct v3d_fs_prog_data {
