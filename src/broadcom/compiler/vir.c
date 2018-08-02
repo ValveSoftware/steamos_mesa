@@ -452,6 +452,16 @@ vir_emit_def(struct v3d_compile *c, struct qinst *inst)
 {
         assert(inst->dst.file == QFILE_NULL);
 
+        /* If we're emitting an instruction that's a def, it had better be
+         * writing a register.
+         */
+        if (inst->qpu.type == V3D_QPU_INSTR_TYPE_ALU) {
+                assert(inst->qpu.alu.add.op == V3D_QPU_A_NOP ||
+                       v3d_qpu_add_op_has_dst(inst->qpu.alu.add.op));
+                assert(inst->qpu.alu.mul.op == V3D_QPU_M_NOP ||
+                       v3d_qpu_mul_op_has_dst(inst->qpu.alu.mul.op));
+        }
+
         inst->dst = vir_get_temp(c);
 
         if (inst->dst.file == QFILE_TEMP)
