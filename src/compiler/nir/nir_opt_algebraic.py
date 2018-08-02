@@ -235,6 +235,15 @@ optimizations = [
    # fabs(a) > 0.0
    (('~flt', ('fneg', ('fabs', a)), 0.0), ('fne', a, 0.0)),
 
+   # 0.0 >= fabs(a)
+   # 0.0 == fabs(a)   because fabs(a) must be >= 0
+   # 0.0 == a
+   (('fge', 0.0, ('fabs', a)), ('feq', a, 0.0)),
+
+   # -fabs(a) >= 0.0
+   # 0.0 >= fabs(a)
+   (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
+
    (('fmax',                        ('b2f(is_used_once)', a),           ('b2f', b)),           ('b2f', ('ior', a, b))),
    (('fmax', ('fneg(is_used_once)', ('b2f(is_used_once)', a)), ('fneg', ('b2f', b))), ('fneg', ('b2f', ('ior', a, b)))),
    (('fmin',                        ('b2f(is_used_once)', a),           ('b2f', b)),           ('b2f', ('iand', a, b))),
