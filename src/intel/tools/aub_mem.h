@@ -65,6 +65,12 @@ void aub_mem_local_write(void *mem, uint64_t virt_address,
 struct gen_batch_decode_bo aub_mem_get_ggtt_bo(void *mem, uint64_t address);
 struct gen_batch_decode_bo aub_mem_get_ppgtt_bo(void *mem, uint64_t address);
 
+struct gen_batch_decode_bo aub_mem_get_phys_addr_data(struct aub_mem *mem, uint64_t phys_addr);
+struct gen_batch_decode_bo aub_mem_get_ppgtt_addr_data(struct aub_mem *mem, uint64_t virt_addr);
+
+struct gen_batch_decode_bo aub_mem_get_ppgtt_addr_aub_data(struct aub_mem *mem, uint64_t virt_addr);
+
+
 #ifdef __cplusplus
 }
 #endif

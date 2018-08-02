@@ -55,6 +55,7 @@ struct phys_mem {
    uint64_t fd_offset;
    uint64_t phys_addr;
    uint8_t *data;
+   const uint8_t *aub_data;
 };
 
 static void
@@ -220,6 +221,7 @@ aub_mem_phys_write(void *_mem, uint64_t phys_address,
       uint32_t size_this_page = MIN2(to_write, 4096 - offset);
       to_write -= size_this_page;
       memcpy(pmem->data + offset, data, size_this_page);
+      pmem->aub_data = data - offset;
       data = (const uint8_t *)data + size_this_page;
    }
 }
@@ -388,4 +390,31 @@ aub_mem_fini(struct aub_mem *mem)
 
    close(mem->mem_fd);
    mem->mem_fd = -1;
+}
+
+struct gen_batch_decode_bo
+aub_mem_get_phys_addr_data(struct aub_mem *mem, uint64_t phys_addr)
+{
+   struct phys_mem *page = search_phys_mem(mem, phys_addr);
+   return page ?
+      (struct gen_batch_decode_bo) { .map = page->data, .addr = page->phys_addr, .size = 4096 } :
+      (struct gen_batch_decode_bo) {};
+}
+
+struct gen_batch_decode_bo
+aub_mem_get_ppgtt_addr_data(struct aub_mem *mem, uint64_t virt_addr)
+{
+   struct phys_mem *page = ppgtt_walk(mem, mem->pml4, virt_addr);
+   return page ?
+      (struct gen_batch_decode_bo) { .map = page->data, .addr = virt_addr & ~((1ULL << 12) - 1), .size = 4096 } :
+      (struct gen_batch_decode_bo) {};
+}
+
+struct gen_batch_decode_bo
+aub_mem_get_ppgtt_addr_aub_data(struct aub_mem *mem, uint64_t virt_addr)
+{
+   struct phys_mem *page = ppgtt_walk(mem, mem->pml4, virt_addr);
+   return page ?
+      (struct gen_batch_decode_bo) { .map = page->aub_data, .addr = virt_addr & ~((1ULL << 12) - 1), .size = 4096 } :
+      (struct gen_batch_decode_bo) {};
 }
