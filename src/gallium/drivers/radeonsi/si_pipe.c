@@ -101,7 +101,7 @@ static const struct debug_named_value debug_options[] = {
 	{ "testvmfaultcp", DBG(TEST_VMFAULT_CP), "Invoke a CP VM fault test and exit." },
 	{ "testvmfaultsdma", DBG(TEST_VMFAULT_SDMA), "Invoke a SDMA VM fault test and exit." },
 	{ "testvmfaultshader", DBG(TEST_VMFAULT_SHADER), "Invoke a shader VM fault test and exit." },
-	{ "testclearbufperf", DBG(TEST_CLEARBUF_PERF), "Test Clearbuffer Performance" },
+	{ "testdmaperf", DBG(TEST_DMA_PERF), "Test DMA performance" },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -730,7 +730,7 @@ static void si_test_vmfault(struct si_screen *sscreen)
 	r600_resource(buf)->gpu_address = 0; /* cause a VM fault */
 
 	if (sscreen->debug_flags & DBG(TEST_VMFAULT_CP)) {
-		si_copy_buffer(sctx, buf, buf, 0, 4, 4, 0);
+		si_copy_buffer(sctx, buf, buf, 0, 4, 4, 0, -1);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: CP - done.");
 	}
@@ -1070,8 +1070,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	if (sscreen->debug_flags & DBG(TEST_DMA))
 		si_test_dma(sscreen);
 
-	if (sscreen->debug_flags & DBG(TEST_CLEARBUF_PERF)) {
-		si_test_clearbuffer_perf(sscreen);
+	if (sscreen->debug_flags & DBG(TEST_DMA_PERF)) {
+		si_test_dma_perf(sscreen);
 	}
 
 	if (sscreen->debug_flags & (DBG(TEST_VMFAULT_CP) |

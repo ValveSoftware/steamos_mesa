@@ -119,6 +119,111 @@ void *si_create_fixed_func_tcs(struct si_context *sctx)
 	return ureg_create_shader_and_destroy(ureg, &sctx->b);
 }
 
+/* Create a compute shader implementing clear_buffer or copy_buffer. */
+void *si_create_dma_compute_shader(struct pipe_context *ctx,
+				   unsigned num_dwords_per_thread,
+				   bool dst_stream_cache_policy, bool is_copy)
+{
+	assert(util_is_power_of_two_nonzero(num_dwords_per_thread));
+
+	unsigned store_qualifier = TGSI_MEMORY_COHERENT | TGSI_MEMORY_RESTRICT;
+	if (dst_stream_cache_policy)
+		store_qualifier |= TGSI_MEMORY_STREAM_CACHE_POLICY;
+
+	/* Don't cache loads, because there is no reuse. */
+	unsigned load_qualifier = store_qualifier | TGSI_MEMORY_STREAM_CACHE_POLICY;
+
+	unsigned num_mem_ops = MAX2(1, num_dwords_per_thread / 4);
+	unsigned *inst_dwords = alloca(num_mem_ops * sizeof(unsigned));
+
+	for (unsigned i = 0; i < num_mem_ops; i++) {
+		if (i*4 < num_dwords_per_thread)
+			inst_dwords[i] = MIN2(4, num_dwords_per_thread - i*4);
+	}
+
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_COMPUTE);
+	if (!ureg)
+		return NULL;
+
+	ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH, 64);
+	ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT, 1);
+	ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH, 1);
+
+	struct ureg_src value;
+	if (!is_copy) {
+		ureg_property(ureg, TGSI_PROPERTY_CS_USER_DATA_DWORDS, inst_dwords[0]);
+		value = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_CS_USER_DATA, 0);
+	}
+
+	struct ureg_src tid = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_THREAD_ID, 0);
+	struct ureg_src blk = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_BLOCK_ID, 0);
+	struct ureg_dst store_addr = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_X);
+	struct ureg_dst load_addr = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_X);
+	struct ureg_dst dstbuf = ureg_dst(ureg_DECL_buffer(ureg, 0, false));
+	struct ureg_src srcbuf;
+	struct ureg_src *values = NULL;
+
+	if (is_copy) {
+		srcbuf = ureg_DECL_buffer(ureg, 1, false);
+		values = malloc(num_mem_ops * sizeof(struct ureg_src));
+	}
+
+	/* If there are multiple stores, the first store writes into 0+tid,
+	 * the 2nd store writes into 64+tid, the 3rd store writes into 128+tid, etc.
+	 */
+	ureg_UMAD(ureg, store_addr, blk, ureg_imm1u(ureg, 64 * num_mem_ops), tid);
+	/* Convert from a "store size unit" into bytes. */
+	ureg_UMUL(ureg, store_addr, ureg_src(store_addr),
+		  ureg_imm1u(ureg, 4 * inst_dwords[0]));
+	ureg_MOV(ureg, load_addr, ureg_src(store_addr));
+
+	/* Distance between a load and a store for latency hiding. */
+	unsigned load_store_distance = is_copy ? 8 : 0;
+
+	for (unsigned i = 0; i < num_mem_ops + load_store_distance; i++) {
+		int d = i - load_store_distance;
+
+		if (is_copy && i < num_mem_ops) {
+			if (i) {
+				ureg_UADD(ureg, load_addr, ureg_src(load_addr),
+					  ureg_imm1u(ureg, 4 * inst_dwords[i] * 64));
+			}
+
+			values[i] = ureg_src(ureg_DECL_temporary(ureg));
+			struct ureg_dst dst =
+				ureg_writemask(ureg_dst(values[i]),
+					       u_bit_consecutive(0, inst_dwords[i]));
+			struct ureg_src srcs[] = {srcbuf, ureg_src(load_addr)};
+			ureg_memory_insn(ureg, TGSI_OPCODE_LOAD, &dst, 1, srcs, 2,
+					 load_qualifier, TGSI_TEXTURE_BUFFER, 0);
+		}
+
+		if (d >= 0) {
+			if (d) {
+				ureg_UADD(ureg, store_addr, ureg_src(store_addr),
+					  ureg_imm1u(ureg, 4 * inst_dwords[d] * 64));
+			}
+
+			struct ureg_dst dst =
+				ureg_writemask(dstbuf, u_bit_consecutive(0, inst_dwords[d]));
+			struct ureg_src srcs[] =
+				{ureg_src(store_addr), is_copy ? values[d] : value};
+			ureg_memory_insn(ureg, TGSI_OPCODE_STORE, &dst, 1, srcs, 2,
+					 store_qualifier, TGSI_TEXTURE_BUFFER, 0);
+		}
+	}
+	ureg_END(ureg);
+
+	struct pipe_compute_state state = {};
+	state.ir_type = PIPE_SHADER_IR_TGSI;
+	state.prog = ureg_get_tokens(ureg, NULL);
+
+	void *cs = ctx->create_compute_state(ctx, &state);
+	ureg_destroy(ureg);
+	free(values);
+	return cs;
+}
+
 /* Create the compute shader that is used to collect the results.
  *
  * One compute grid with a single thread is launched for every query result

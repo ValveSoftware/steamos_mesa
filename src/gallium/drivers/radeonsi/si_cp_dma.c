@@ -436,17 +436,19 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
-		    unsigned user_flags)
+		    unsigned user_flags, enum si_cache_policy cache_policy)
 {
 	uint64_t main_dst_offset, main_src_offset;
 	unsigned skipped_size = 0;
 	unsigned realign_size = 0;
 	enum si_coherency coher = SI_COHERENCY_SHADER;
-	enum si_cache_policy cache_policy = get_cache_policy(sctx, coher);
 	bool is_first = true;
 
 	if (!size)
 		return;
+
+	if (cache_policy == -1)
+		cache_policy = get_cache_policy(sctx, coher);
 
 	if (dst != src || dst_offset != src_offset) {
 		/* Mark the buffer range of destination as valid (initialized),
@@ -539,7 +541,7 @@ void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf
 {
 	assert(sctx->chip_class >= CIK);
 
-	si_copy_buffer(sctx, buf, buf, offset, offset, size, SI_CPDMA_SKIP_ALL);
+	si_copy_buffer(sctx, buf, buf, offset, offset, size, SI_CPDMA_SKIP_ALL, L2_LRU);
 }
 
 static void cik_prefetch_shader_async(struct si_context *sctx,
