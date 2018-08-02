@@ -538,7 +538,7 @@ _eglParseConfigAttribList(_EGLConfig *conf, _EGLDisplay *dpy,
       val = attrib_list[i + 1];
 
       if (!_eglIsConfigAttribValid(conf, attr))
-	 return EGL_FALSE;
+         return EGL_FALSE;
 
       _eglSetConfigKey(conf, attr, val);
    }
