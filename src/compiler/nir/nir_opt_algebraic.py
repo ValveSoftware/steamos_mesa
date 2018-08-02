@@ -166,6 +166,25 @@ optimizations = [
 
    (('fge', ('fneg', ('b2f', a)), 0.0), ('inot', a)),
 
+   (('fne', ('fadd', ('b2f', a), ('b2f', b)), 0.0), ('ior', a, b)),
+   (('fne', ('fmax', ('b2f', a), ('b2f', b)), 0.0), ('ior', a, b)),
+   (('fne', ('bcsel', a, 1.0, ('b2f', b))   , 0.0), ('ior', a, b)),
+   (('fne', ('b2f', a), ('fneg', ('b2f', b))),      ('ior', a, b)),
+
+   # -(b2f(a) + b2f(b)) < 0
+   # 0 < b2f(a) + b2f(b)
+   # 0 != b2f(a) + b2f(b)       b2f must be 0 or 1, so the sum is non-negative
+   # a || b
+   (('flt', ('fneg', ('fadd', ('b2f', a), ('b2f', b))), 0.0), ('ior', a, b)),
+   (('flt', 0.0, ('fadd', ('b2f', a), ('b2f', b))), ('ior', a, b)),
+
+   # Some optimizations (below) convert things like (a < b || c < b) into
+   # (min(a, c) < b).  However, this interfers with the previous optimizations
+   # that try to remove comparisons with negated sums of b2f.  This just
+   # breaks that apart.
+   (('flt', ('fmin', c, ('fneg', ('fadd', ('b2f', a), ('b2f', b)))), 0.0),
+    ('ior', ('flt', c, 0.0), ('ior', a, b))),
+
    (('~flt', ('fadd', a, b), a), ('flt', b, 0.0)),
    (('~fge', ('fadd', a, b), a), ('fge', b, 0.0)),
    (('~feq', ('fadd', a, b), a), ('feq', b, 0.0)),
