@@ -46,7 +46,7 @@ v3d_screen_get_name(struct pipe_screen *pscreen)
 
         if (!screen->name) {
                 screen->name = ralloc_asprintf(screen,
-                                               "VC5 V3D %d.%d",
+                                               "V3D %d.%d",
                                                screen->devinfo.ver / 10,
                                                screen->devinfo.ver % 10);
         }
