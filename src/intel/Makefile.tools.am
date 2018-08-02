@@ -21,7 +21,9 @@
 
 noinst_PROGRAMS += \
 	tools/aubinator \
-	tools/aubinator_error_decode
+	tools/aubinator_error_decode \
+	tools/error2aub
+
 
 tools_aubinator_SOURCES = \
 	tools/aubinator.c \
@@ -59,3 +61,23 @@ tools_aubinator_error_decode_LDADD = \
 tools_aubinator_error_decode_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(ZLIB_CFLAGS)
+
+
+tools_error2aub_SOURCES = \
+	tools/gen_context.h \
+	tools/gen8_context.h \
+	tools/gen10_context.h \
+	tools/aub_write.h \
+	tools/aub_write.c \
+	tools/error2aub.c
+
+tools_error2aub_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(ZLIB_CFLAGS)
+
+tools_error2aub_LDADD = \
+	dev/libintel_dev.la \
+	$(PTHREAD_LIBS) \
+	$(DLOPEN_LIBS) \
+	$(ZLIB_LIBS) \
+	-lm
