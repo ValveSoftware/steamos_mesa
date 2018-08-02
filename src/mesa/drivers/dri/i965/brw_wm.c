@@ -35,6 +35,7 @@
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
 #include "intel_image.h"
+#include "intel_fbo.h"
 #include "compiler/brw_nir.h"
 #include "brw_program.h"
 
@@ -456,6 +457,9 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    /* Build the index for table lookup
     */
    if (devinfo->gen < 6) {
+      struct intel_renderbuffer *depth_irb =
+         intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
+
       /* _NEW_COLOR */
       if (prog->info.fs.uses_discard || ctx->Color.AlphaEnabled) {
          lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
@@ -466,11 +470,12 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       }
 
       /* _NEW_DEPTH */
-      if (ctx->Depth.Test)
+      if (depth_irb && ctx->Depth.Test) {
          lookup |= BRW_WM_IZ_DEPTH_TEST_ENABLE_BIT;
 
-      if (brw_depth_writes_enabled(brw))
-         lookup |= BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT;
+         if (brw_depth_writes_enabled(brw))
+            lookup |= BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT;
+      }
 
       /* _NEW_STENCIL | _NEW_BUFFERS */
       if (brw->stencil_enabled) {
