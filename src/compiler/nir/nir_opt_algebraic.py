@@ -170,6 +170,10 @@ optimizations = [
    (('fne', ('fmax', ('b2f', a), ('b2f', b)), 0.0), ('ior', a, b)),
    (('fne', ('bcsel', a, 1.0, ('b2f', b))   , 0.0), ('ior', a, b)),
    (('fne', ('b2f', a), ('fneg', ('b2f', b))),      ('ior', a, b)),
+   (('feq', ('fadd', ('b2f', a), ('b2f', b)), 0.0), ('inot', ('ior', a, b))),
+   (('feq', ('fmax', ('b2f', a), ('b2f', b)), 0.0), ('inot', ('ior', a, b))),
+   (('feq', ('bcsel', a, 1.0, ('b2f', b))   , 0.0), ('inot', ('ior', a, b))),
+   (('feq', ('b2f', a), ('fneg', ('b2f', b))),      ('inot', ('ior', a, b))),
 
    # -(b2f(a) + b2f(b)) < 0
    # 0 < b2f(a) + b2f(b)
@@ -177,6 +181,13 @@ optimizations = [
    # a || b
    (('flt', ('fneg', ('fadd', ('b2f', a), ('b2f', b))), 0.0), ('ior', a, b)),
    (('flt', 0.0, ('fadd', ('b2f', a), ('b2f', b))), ('ior', a, b)),
+
+   # -(b2f(a) + b2f(b)) >= 0
+   # 0 >= b2f(a) + b2f(b)
+   # 0 == b2f(a) + b2f(b)       b2f must be 0 or 1, so the sum is non-negative
+   # !(a || b)
+   (('fge', ('fneg', ('fadd', ('b2f', a), ('b2f', b))), 0.0), ('inot', ('ior', a, b))),
+   (('fge', 0.0, ('fadd', ('b2f', a), ('b2f', b))), ('inot', ('ior', a, b))),
 
    # Some optimizations (below) convert things like (a < b || c < b) into
    # (min(a, c) < b).  However, this interfers with the previous optimizations
