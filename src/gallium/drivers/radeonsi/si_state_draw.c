@@ -1543,7 +1543,7 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	case UTIL_BLITTER_ATTRIB_NONE:;
 	}
 
-	pipe->bind_vs_state(pipe, si_get_blit_vs(sctx, type, num_instances));
+	pipe->bind_vs_state(pipe, si_get_blitter_vs(sctx, type, num_instances));
 
 	struct pipe_draw_info info = {};
 	info.mode = SI_PRIM_RECTANGLE_LIST;

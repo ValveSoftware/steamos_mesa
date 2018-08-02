@@ -27,7 +27,6 @@
 
 #include "compiler/nir/nir_serialize.h"
 #include "tgsi/tgsi_parse.h"
-#include "tgsi/tgsi_ureg.h"
 #include "util/hash_table.h"
 #include "util/crc32.h"
 #include "util/u_async_debug.h"
@@ -3100,38 +3099,6 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	si_flush_gfx_cs(sctx, RADEON_FLUSH_ASYNC_START_NEXT_GFX_IB_NOW, NULL);
 }
 
-/**
- * This is used when TCS is NULL in the VS->TCS->TES chain. In this case,
- * VS passes its outputs to TES directly, so the fixed-function shader only
- * has to write TESSOUTER and TESSINNER.
- */
-static void si_generate_fixed_func_tcs(struct si_context *sctx)
-{
-	struct ureg_src outer, inner;
-	struct ureg_dst tessouter, tessinner;
-	struct ureg_program *ureg = ureg_create(PIPE_SHADER_TESS_CTRL);
-
-	if (!ureg)
-		return; /* if we get here, we're screwed */
-
-	assert(!sctx->fixed_func_tcs_shader.cso);
-
-	outer = ureg_DECL_system_value(ureg,
-				       TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI, 0);
-	inner = ureg_DECL_system_value(ureg,
-				       TGSI_SEMANTIC_DEFAULT_TESSINNER_SI, 0);
-
-	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
-	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
-
-	ureg_MOV(ureg, tessouter, outer);
-	ureg_MOV(ureg, tessinner, inner);
-	ureg_END(ureg);
-
-	sctx->fixed_func_tcs_shader.cso =
-		ureg_create_shader_and_destroy(ureg, &sctx->b);
-}
-
 static void si_update_vgt_shader_config(struct si_context *sctx)
 {
 	/* Calculate the index of the config.
@@ -3209,7 +3176,8 @@ bool si_update_shaders(struct si_context *sctx)
 			si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
 		} else {
 			if (!sctx->fixed_func_tcs_shader.cso) {
-				si_generate_fixed_func_tcs(sctx);
+				sctx->fixed_func_tcs_shader.cso =
+					si_create_fixed_func_tcs(sctx);
 				if (!sctx->fixed_func_tcs_shader.cso)
 					return false;
 			}
@@ -3386,70 +3354,6 @@ static void si_emit_scratch_state(struct si_context *sctx)
 				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
 				      RADEON_PRIO_SCRATCH_BUFFER);
 	}
-}
-
-void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
-		     unsigned num_layers)
-{
-	unsigned vs_blit_property;
-	void **vs;
-
-	switch (type) {
-	case UTIL_BLITTER_ATTRIB_NONE:
-		vs = num_layers > 1 ? &sctx->vs_blit_pos_layered :
-				      &sctx->vs_blit_pos;
-		vs_blit_property = SI_VS_BLIT_SGPRS_POS;
-		break;
-	case UTIL_BLITTER_ATTRIB_COLOR:
-		vs = num_layers > 1 ? &sctx->vs_blit_color_layered :
-				      &sctx->vs_blit_color;
-		vs_blit_property = SI_VS_BLIT_SGPRS_POS_COLOR;
-		break;
-	case UTIL_BLITTER_ATTRIB_TEXCOORD_XY:
-	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
-		assert(num_layers == 1);
-		vs = &sctx->vs_blit_texcoord;
-		vs_blit_property = SI_VS_BLIT_SGPRS_POS_TEXCOORD;
-		break;
-	default:
-		assert(0);
-		return NULL;
-	}
-	if (*vs)
-		return *vs;
-
-	struct ureg_program *ureg = ureg_create(PIPE_SHADER_VERTEX);
-	if (!ureg)
-		return NULL;
-
-	/* Tell the shader to load VS inputs from SGPRs: */
-	ureg_property(ureg, TGSI_PROPERTY_VS_BLIT_SGPRS, vs_blit_property);
-	ureg_property(ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, true);
-
-	/* This is just a pass-through shader with 1-3 MOV instructions. */
-	ureg_MOV(ureg,
-		 ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0),
-		 ureg_DECL_vs_input(ureg, 0));
-
-	if (type != UTIL_BLITTER_ATTRIB_NONE) {
-		ureg_MOV(ureg,
-			 ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 0),
-			 ureg_DECL_vs_input(ureg, 1));
-	}
-
-	if (num_layers > 1) {
-		struct ureg_src instance_id =
-			ureg_DECL_system_value(ureg, TGSI_SEMANTIC_INSTANCEID, 0);
-		struct ureg_dst layer =
-			ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
-
-		ureg_MOV(ureg, ureg_writemask(layer, TGSI_WRITEMASK_X),
-			 ureg_scalar(instance_id, TGSI_SWIZZLE_X));
-	}
-	ureg_END(ureg);
-
-	*vs = ureg_create_shader_and_destroy(ureg, &sctx->b);
-	return *vs;
 }
 
 void si_init_shader_functions(struct si_context *sctx)

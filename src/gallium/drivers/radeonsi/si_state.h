@@ -514,8 +514,6 @@ void si_schedule_initial_compile(struct si_context *sctx, unsigned processor,
 void si_get_active_slot_masks(const struct tgsi_shader_info *info,
 			      uint32_t *const_and_shader_buffers,
 			      uint64_t *samplers_and_images);
-void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
-		     unsigned num_layers);
 
 /* si_state_draw.c */
 void si_init_ia_multi_vgt_param_table(struct si_context *sctx);

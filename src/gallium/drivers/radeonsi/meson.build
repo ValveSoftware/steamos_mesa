@@ -51,6 +51,7 @@ files_libradeonsi = files(
   'si_shader_tgsi_alu.c',
   'si_shader_tgsi_mem.c',
   'si_shader_tgsi_setup.c',
+  'si_shaderlib_tgsi.c',
   'si_state.c',
   'si_state.h',
   'si_state_binning.c',

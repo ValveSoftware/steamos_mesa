@@ -1205,6 +1205,12 @@ void si_init_query_functions(struct si_context *sctx);
 void si_suspend_queries(struct si_context *sctx);
 void si_resume_queries(struct si_context *sctx);
 
+/* si_shaderlib_tgsi.c */
+void *si_get_blitter_vs(struct si_context *sctx, enum blitter_attrib_type type,
+			unsigned num_layers);
+void *si_create_fixed_func_tcs(struct si_context *sctx);
+void *si_create_query_result_cs(struct si_context *sctx);
+
 /* si_test_dma.c */
 void si_test_dma(struct si_screen *sscreen);
 
