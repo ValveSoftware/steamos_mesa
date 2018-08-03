@@ -88,15 +88,19 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 
 	/* Src and dst flags. */
 	if (sctx->chip_class >= GFX9 && !(flags & CP_DMA_CLEAR) &&
-	    src_va == dst_va)
+	    src_va == dst_va) {
 		header |= S_411_DST_SEL(V_411_NOWHERE); /* prefetch only */
-	else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS)
-		header |= S_411_DST_SEL(V_411_DST_ADDR_TC_L2);
+	} else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS) {
+		header |= S_411_DST_SEL(V_411_DST_ADDR_TC_L2) |
+			  S_500_DST_CACHE_POLICY(cache_policy == L2_STREAM);
+	}
 
-	if (flags & CP_DMA_CLEAR)
+	if (flags & CP_DMA_CLEAR) {
 		header |= S_411_SRC_SEL(V_411_DATA);
-	else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS)
-		header |= S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2);
+	} else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS) {
+		header |= S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2) |
+			  S_500_SRC_CACHE_POLICY(cache_policy == L2_STREAM);
+	}
 
 	if (sctx->chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));

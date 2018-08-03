@@ -1111,6 +1111,7 @@ void si_init_clear_functions(struct si_context *sctx);
 enum si_cache_policy {
 	L2_BYPASS,
 	L2_LRU,    /* same as SLC=0 */
+	L2_STREAM, /* same as SLC=1 */
 };
 
 enum si_coherency {

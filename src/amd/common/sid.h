@@ -294,11 +294,13 @@
 #define       V_500_GDS			1 /* program SAS to 1 as well */
 #define       V_500_DATA		2
 #define       V_500_SRC_ADDR_TC_L2	3 /* new for CIK */
+#define     S_500_DST_CACHE_POLICY(x)	(((unsigned)(x) & 0x3) << 25) /* CIK+ */
 #define     S_500_DST_SEL(x)		(((unsigned)(x) & 0x3) << 20)
 #define       V_500_DST_ADDR		0
 #define       V_500_GDS			1 /* program DAS to 1 as well */
 #define       V_500_NOWHERE		2 /* new for GFX9 */
 #define       V_500_DST_ADDR_TC_L2	3 /* new for CIK */
+#define     S_500_SRC_CACHE_POLICY(x)	(((unsigned)(x) & 0x3) << 13) /* CIK+ */
 #define     S_500_ENGINE(x)		((x) & 0x1)
 #define       V_500_ME			0
 #define       V_500_PFP			1
