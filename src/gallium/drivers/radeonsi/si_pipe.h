@@ -1119,15 +1119,14 @@ enum si_coherency {
 	SI_COHERENCY_CB_META,
 };
 
-enum si_method {
-	SI_METHOD_CP_DMA,
-	SI_METHOD_BEST,
-};
-
 void si_cp_dma_wait_for_idle(struct si_context *sctx);
+void si_cp_dma_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
+			    uint64_t offset, uint64_t size, unsigned value,
+			    enum si_coherency coher,
+			    enum si_cache_policy cache_policy);
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum si_coherency coher, enum si_method xfer);
+		     enum si_coherency coher);
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,

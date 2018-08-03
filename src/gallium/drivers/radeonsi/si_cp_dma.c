@@ -224,27 +224,62 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	}
 }
 
+void si_cp_dma_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
+			    uint64_t offset, uint64_t size, unsigned value,
+			    enum si_coherency coher,
+			    enum si_cache_policy cache_policy)
+{
+	struct r600_resource *rdst = r600_resource(dst);
+	uint64_t va = rdst->gpu_address + offset;
+	bool is_first = true;
+
+	assert(size && size % 4 == 0);
+
+	/* Mark the buffer range of destination as valid (initialized),
+	 * so that transfer_map knows it should wait for the GPU when mapping
+	 * that range. */
+	util_range_add(&rdst->valid_buffer_range, offset, offset + size);
+
+	/* Flush the caches. */
+	sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+		       SI_CONTEXT_CS_PARTIAL_FLUSH |
+		       get_flush_flags(sctx, coher, cache_policy);
+
+	while (size) {
+		unsigned byte_count = MIN2(size, cp_dma_max_byte_count(sctx));
+		unsigned dma_flags = CP_DMA_CLEAR;
+
+		si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, 0, coher,
+				  &is_first, &dma_flags);
+
+		/* Emit the clear packet. */
+		si_emit_cp_dma(sctx, va, value, byte_count, dma_flags, cache_policy);
+
+		size -= byte_count;
+		va += byte_count;
+	}
+
+	if (cache_policy != L2_BYPASS)
+		rdst->TC_L2_dirty = true;
+
+	/* If it's not a framebuffer fast clear... */
+	if (coher == SI_COHERENCY_SHADER)
+		sctx->num_cp_dma_calls++;
+}
+
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum si_coherency coher, enum si_method xfer)
+		     enum si_coherency coher)
 {
 	struct radeon_winsys *ws = sctx->ws;
 	struct r600_resource *rdst = r600_resource(dst);
 	enum si_cache_policy cache_policy = get_cache_policy(sctx, coher);
-	unsigned flush_flags = get_flush_flags(sctx, coher, cache_policy);
 	uint64_t dma_clear_size;
-	bool is_first = true;
 
 	if (!size)
 		return;
 
 	dma_clear_size = size & ~3ull;
-
-	/* Mark the buffer range of destination as valid (initialized),
-	 * so that transfer_map knows it should wait for the GPU when mapping
-	 * that range. */
-	util_range_add(&rdst->valid_buffer_range, offset,
-		       offset + dma_clear_size);
 
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
@@ -261,44 +296,17 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 	      * For example, DeusEx:MD has 21 buffer clears per frame and all
 	      * of them are moved to SDMA thanks to this. */
 	     !ws->cs_is_buffer_referenced(sctx->gfx_cs, rdst->buf,
-				          RADEON_USAGE_READWRITE)) &&
-	    /* bypass sdma transfer with param xfer */
-	    (xfer != SI_METHOD_CP_DMA)) {
+				          RADEON_USAGE_READWRITE))) {
 		sctx->dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
 
 		offset += dma_clear_size;
 		size -= dma_clear_size;
 	} else if (dma_clear_size >= 4) {
-		uint64_t va = rdst->gpu_address + offset;
+		si_cp_dma_clear_buffer(sctx, dst, offset, dma_clear_size, value,
+				       coher, cache_policy);
 
 		offset += dma_clear_size;
 		size -= dma_clear_size;
-
-		/* Flush the caches. */
-		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-			       SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
-
-		while (dma_clear_size) {
-			unsigned byte_count = MIN2(dma_clear_size, cp_dma_max_byte_count(sctx));
-			unsigned dma_flags = CP_DMA_CLEAR;
-
-			si_cp_dma_prepare(sctx, dst, NULL, byte_count, dma_clear_size, 0,
-					  coher, &is_first, &dma_flags);
-
-			/* Emit the clear packet. */
-			si_emit_cp_dma(sctx, va, value, byte_count, dma_flags,
-				       cache_policy);
-
-			dma_clear_size -= byte_count;
-			va += byte_count;
-		}
-
-		if (cache_policy != L2_BYPASS)
-			rdst->TC_L2_dirty = true;
-
-		/* If it's not a framebuffer fast clear... */
-		if (coher == SI_COHERENCY_SHADER)
-			sctx->num_cp_dma_calls++;
 	}
 
 	if (size) {
@@ -370,7 +378,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 	}
 
 	si_clear_buffer(sctx, dst, offset, size, dword_value,
-			SI_COHERENCY_SHADER, SI_METHOD_BEST);
+			SI_COHERENCY_SHADER);
 }
 
 /**

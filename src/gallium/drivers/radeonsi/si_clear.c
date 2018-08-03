@@ -256,7 +256,7 @@ void vi_dcc_clear_level(struct si_context *sctx,
 	}
 
 	si_clear_buffer(sctx, dcc_buffer, dcc_offset, clear_size,
-			clear_value, SI_COHERENCY_CB_META, SI_METHOD_BEST);
+			clear_value, SI_COHERENCY_CB_META);
 }
 
 /* Set the same micro tile mode as the destination of the last MSAA resolve.
@@ -489,7 +489,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 				si_clear_buffer(sctx, &tex->cmask_buffer->b.b,
 						tex->cmask_offset, tex->surface.cmask_size,
-						0xCCCCCCCC, SI_COHERENCY_CB_META, SI_METHOD_BEST);
+						0xCCCCCCCC, SI_COHERENCY_CB_META);
 				need_decompress_pass = true;
 			}
 
@@ -520,7 +520,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			/* Do the fast clear. */
 			si_clear_buffer(sctx, &tex->cmask_buffer->b.b,
 					tex->cmask_offset, tex->surface.cmask_size, 0,
-					SI_COHERENCY_CB_META, SI_METHOD_BEST);
+					SI_COHERENCY_CB_META);
 			need_decompress_pass = true;
 		}
 

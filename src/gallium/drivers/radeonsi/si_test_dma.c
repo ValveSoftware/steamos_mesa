@@ -308,7 +308,7 @@ void si_test_dma(struct si_screen *sscreen)
 
 		/* clear dst pixels */
 		si_clear_buffer(sctx, dst, 0, sdst->surface.surf_size, 0,
-		                SI_COHERENCY_SHADER, SI_METHOD_BEST);
+		                SI_COHERENCY_SHADER);
 		memset(dst_cpu.ptr, 0, dst_cpu.layer_stride * tdst.array_size);
 
 		/* preparation */

@@ -48,8 +48,8 @@ measure_clearbuf_time(struct pipe_context *ctx,
 
 	ctx->begin_query(ctx, query_te);
 	/* operation  */
-	si_clear_buffer(sctx, buf, 0, memory_size, 0x00,
-			SI_COHERENCY_SHADER, SI_METHOD_CP_DMA);
+	si_cp_dma_clear_buffer(sctx, buf, 0, memory_size, 0x00,
+			       SI_COHERENCY_SHADER, L2_LRU);
 	ctx->end_query(ctx, query_te);
 	ctx->get_query_result(ctx, query_te, true, &qresult);
 
