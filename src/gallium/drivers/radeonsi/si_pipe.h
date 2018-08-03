@@ -1108,6 +1108,11 @@ void si_init_clear_functions(struct si_context *sctx);
 			   SI_CPDMA_SKIP_GFX_SYNC | \
 			   SI_CPDMA_SKIP_BO_LIST_UPDATE)
 
+enum si_cache_policy {
+	L2_BYPASS,
+	L2_LRU,    /* same as SLC=0 */
+};
+
 enum si_coherency {
 	SI_COHERENCY_NONE, /* no cache flushes needed */
 	SI_COHERENCY_SHADER,

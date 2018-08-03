@@ -39,7 +39,6 @@
  * packet. It's for preventing a read-after-write (RAW) hazard between two
  * CP DMA packets. */
 #define CP_DMA_RAW_WAIT		(1 << 1)
-#define CP_DMA_USE_L2		(1 << 2) /* CIK+ */
 #define CP_DMA_CLEAR		(1 << 3)
 #define CP_DMA_PFP_SYNC_ME	(1 << 4)
 
@@ -60,12 +59,14 @@ static inline unsigned cp_dma_max_byte_count(struct si_context *sctx)
  * clear value.
  */
 static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
-			   uint64_t src_va, unsigned size, unsigned flags)
+			   uint64_t src_va, unsigned size, unsigned flags,
+			   enum si_cache_policy cache_policy)
 {
 	struct radeon_cmdbuf *cs = sctx->gfx_cs;
 	uint32_t header = 0, command = 0;
 
 	assert(size <= cp_dma_max_byte_count(sctx));
+	assert(sctx->chip_class != SI || cache_policy == L2_BYPASS);
 
 	if (sctx->chip_class >= GFX9)
 		command |= S_414_BYTE_COUNT_GFX9(size);
@@ -89,12 +90,12 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	if (sctx->chip_class >= GFX9 && !(flags & CP_DMA_CLEAR) &&
 	    src_va == dst_va)
 		header |= S_411_DST_SEL(V_411_NOWHERE); /* prefetch only */
-	else if (flags & CP_DMA_USE_L2)
+	else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS)
 		header |= S_411_DST_SEL(V_411_DST_ADDR_TC_L2);
 
 	if (flags & CP_DMA_CLEAR)
 		header |= S_411_SRC_SEL(V_411_DATA);
-	else if (flags & CP_DMA_USE_L2)
+	else if (sctx->chip_class >= CIK && cache_policy != L2_BYPASS)
 		header |= S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2);
 
 	if (sctx->chip_class >= CIK) {
@@ -135,31 +136,36 @@ void si_cp_dma_wait_for_idle(struct si_context *sctx)
 	 * DMA request, however, the CP will see the sync flag and still wait
 	 * for all DMAs to complete.
 	 */
-	si_emit_cp_dma(sctx, 0, 0, 0, CP_DMA_SYNC);
+	si_emit_cp_dma(sctx, 0, 0, 0, CP_DMA_SYNC, L2_BYPASS);
 }
 
-static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher)
+static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher,
+				enum si_cache_policy cache_policy)
 {
 	switch (coher) {
 	default:
 	case SI_COHERENCY_NONE:
 		return 0;
 	case SI_COHERENCY_SHADER:
+		assert(sctx->chip_class != SI || cache_policy == L2_BYPASS);
 		return SI_CONTEXT_INV_SMEM_L1 |
 		       SI_CONTEXT_INV_VMEM_L1 |
-		       (sctx->chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
+		       (cache_policy == L2_BYPASS ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
 	case SI_COHERENCY_CB_META:
+		assert(sctx->chip_class >= GFX9 ? cache_policy != L2_BYPASS :
+						  cache_policy == L2_BYPASS);
 		return SI_CONTEXT_FLUSH_AND_INV_CB;
 	}
 }
 
-static unsigned get_tc_l2_flag(struct si_context *sctx, enum si_coherency coher)
+static enum si_cache_policy get_cache_policy(struct si_context *sctx,
+					     enum si_coherency coher)
 {
 	if ((sctx->chip_class >= GFX9 && coher == SI_COHERENCY_CB_META) ||
 	    (sctx->chip_class >= CIK && coher == SI_COHERENCY_SHADER))
-		return CP_DMA_USE_L2;
+		return L2_LRU;
 
-	return 0;
+	return L2_BYPASS;
 }
 
 static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst,
@@ -224,8 +230,8 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 {
 	struct radeon_winsys *ws = sctx->ws;
 	struct r600_resource *rdst = r600_resource(dst);
-	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
-	unsigned flush_flags = get_flush_flags(sctx, coher);
+	enum si_cache_policy cache_policy = get_cache_policy(sctx, coher);
+	unsigned flush_flags = get_flush_flags(sctx, coher, cache_policy);
 	uint64_t dma_clear_size;
 	bool is_first = true;
 
@@ -274,19 +280,20 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 
 		while (dma_clear_size) {
 			unsigned byte_count = MIN2(dma_clear_size, cp_dma_max_byte_count(sctx));
-			unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
+			unsigned dma_flags = CP_DMA_CLEAR;
 
 			si_cp_dma_prepare(sctx, dst, NULL, byte_count, dma_clear_size, 0,
 					  coher, &is_first, &dma_flags);
 
 			/* Emit the clear packet. */
-			si_emit_cp_dma(sctx, va, value, byte_count, dma_flags);
+			si_emit_cp_dma(sctx, va, value, byte_count, dma_flags,
+				       cache_policy);
 
 			dma_clear_size -= byte_count;
 			va += byte_count;
 		}
 
-		if (tc_l2_flag)
+		if (cache_policy != L2_BYPASS)
 			rdst->TC_L2_dirty = true;
 
 		/* If it's not a framebuffer fast clear... */
@@ -374,6 +381,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
  */
 static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 				     unsigned user_flags, enum si_coherency coher,
+				     enum si_cache_policy cache_policy,
 				     bool *is_first)
 {
 	uint64_t va;
@@ -404,7 +412,8 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 			  coher, is_first, &dma_flags);
 
 	va = sctx->scratch_buffer->gpu_address;
-	si_emit_cp_dma(sctx, va, va + SI_CPDMA_ALIGNMENT, size, dma_flags);
+	si_emit_cp_dma(sctx, va, va + SI_CPDMA_ALIGNMENT, size, dma_flags,
+		       cache_policy);
 }
 
 /**
@@ -421,8 +430,7 @@ void si_copy_buffer(struct si_context *sctx,
 	unsigned skipped_size = 0;
 	unsigned realign_size = 0;
 	enum si_coherency coher = SI_COHERENCY_SHADER;
-	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
-	unsigned flush_flags = get_flush_flags(sctx, coher);
+	enum si_cache_policy cache_policy = get_cache_policy(sctx, coher);
 	bool is_first = true;
 
 	if (!size)
@@ -462,24 +470,26 @@ void si_copy_buffer(struct si_context *sctx,
 	}
 
 	/* Flush the caches. */
-	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC))
+	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC)) {
 		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
+			       SI_CONTEXT_CS_PARTIAL_FLUSH |
+			       get_flush_flags(sctx, coher, cache_policy);
+	}
 
 	/* This is the main part doing the copying. Src is always aligned. */
 	main_dst_offset = dst_offset + skipped_size;
 	main_src_offset = src_offset + skipped_size;
 
 	while (size) {
-		unsigned dma_flags = tc_l2_flag;
 		unsigned byte_count = MIN2(size, cp_dma_max_byte_count(sctx));
+		unsigned dma_flags = 0;
 
 		si_cp_dma_prepare(sctx, dst, src, byte_count,
 				  size + skipped_size + realign_size,
 				  user_flags, coher, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, main_dst_offset, main_src_offset,
-			       byte_count, dma_flags);
+			       byte_count, dma_flags, cache_policy);
 
 		size -= byte_count;
 		main_src_offset += byte_count;
@@ -488,23 +498,23 @@ void si_copy_buffer(struct si_context *sctx,
 
 	/* Copy the part we skipped because src wasn't aligned. */
 	if (skipped_size) {
-		unsigned dma_flags = tc_l2_flag;
+		unsigned dma_flags = 0;
 
 		si_cp_dma_prepare(sctx, dst, src, skipped_size,
 				  skipped_size + realign_size, user_flags,
 				  coher, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, dst_offset, src_offset, skipped_size,
-			       dma_flags);
+			       dma_flags, cache_policy);
 	}
 
 	/* Finally, realign the engine if the size wasn't aligned. */
 	if (realign_size) {
 		si_cp_dma_realign_engine(sctx, realign_size, user_flags, coher,
-					 &is_first);
+					 cache_policy, &is_first);
 	}
 
-	if (tc_l2_flag)
+	if (cache_policy != L2_BYPASS)
 		r600_resource(dst)->TC_L2_dirty = true;
 
 	/* If it's not a prefetch... */
