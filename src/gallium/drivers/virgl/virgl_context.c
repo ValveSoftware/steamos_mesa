@@ -805,9 +805,14 @@ static void virgl_set_sampler_views(struct pipe_context *ctx,
 }
 
 static void
-virgl_texture_barrier(struct pipe_context *pctx, unsigned flags)
+virgl_texture_barrier(struct pipe_context *ctx, unsigned flags)
 {
-   /* stub */
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_screen *rs = virgl_screen(ctx->screen);
+
+   if (!(rs->caps.caps.v2.capability_bits & VIRGL_CAP_TEXTURE_BARRIER))
+      return;
+   virgl_encode_texture_barrier(vctx, flags);
 }
 
 static void virgl_destroy_sampler_view(struct pipe_context *ctx,

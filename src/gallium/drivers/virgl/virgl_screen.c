@@ -124,7 +124,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_CONDITIONAL_RENDER:
       return vscreen->caps.caps.v1.bset.conditional_render;
    case PIPE_CAP_TEXTURE_BARRIER:
-      return 0;
+      return vscreen->caps.caps.v2.capability_bits & VIRGL_CAP_TEXTURE_BARRIER;
    case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
       return 1;
    case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:

@@ -272,4 +272,6 @@ int virgl_encode_memory_barrier(struct virgl_context *ctx,
                                 unsigned flags);
 int virgl_encode_launch_grid(struct virgl_context *ctx,
                              const struct pipe_grid_info *grid_info);
+int virgl_encode_texture_barrier(struct virgl_context *ctx,
+                                 unsigned flags);
 #endif

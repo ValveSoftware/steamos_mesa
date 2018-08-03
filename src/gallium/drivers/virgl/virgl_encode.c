@@ -1009,3 +1009,11 @@ int virgl_encode_launch_grid(struct virgl_context *ctx,
    virgl_encoder_write_dword(ctx->cbuf, grid_info->indirect_offset);
    return 0;
 }
+
+int virgl_encode_texture_barrier(struct virgl_context *ctx,
+                                 unsigned flags)
+{
+   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_TEXTURE_BARRIER, 0, 1));
+   virgl_encoder_write_dword(ctx->cbuf, flags);
+   return 0;
+}
