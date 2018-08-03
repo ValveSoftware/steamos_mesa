@@ -182,7 +182,12 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
 #include "pci_ids/r600_pci_ids.h"
 #undef CHIPSET
 
-#define CHIPSET(pci_id, cfamily) case pci_id: ws->info.family = CHIP_##cfamily; ws->gen = DRV_SI; break;
+#define CHIPSET(pci_id, cfamily) \
+    case pci_id: \
+        ws->info.family = CHIP_##cfamily; \
+        ws->info.name = #cfamily; \
+        ws->gen = DRV_SI; \
+        break;
 #include "pci_ids/radeonsi_pci_ids.h"
 #undef CHIPSET
 
