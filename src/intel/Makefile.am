@@ -72,6 +72,7 @@ EXTRA_DIST = \
 	tools/aubinator_viewer.cpp \
 	tools/aubinator_viewer.h \
 	tools/aubinator_viewer_decoder.cpp \
+	tools/aubinator_viewer_urb.h \
 	tools/imgui/README \
 	tools/imgui/stb_textedit.h \
 	tools/imgui/meson.build \

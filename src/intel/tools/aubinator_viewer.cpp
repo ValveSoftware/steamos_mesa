@@ -226,6 +226,7 @@ update_mem_for_exec(struct aub_mem *mem, struct aub_file *file, int exec_idx)
 #include "imgui_impl_opengl3.h"
 
 #include "aubinator_viewer.h"
+#include "aubinator_viewer_urb.h"
 #include "imgui_memory_editor.h"
 
 struct window {
@@ -272,6 +273,15 @@ struct shader_window {
    uint64_t address;
    char *shader;
    size_t shader_size;
+};
+
+struct urb_window {
+   struct window base;
+
+   uint32_t end_urb_offset;
+   struct aub_decode_urb_stage_state urb_stages[AUB_DECODE_N_STAGE];
+
+   AubinatorViewerUrb urb_view;
 };
 
 struct batch_window {
@@ -390,6 +400,61 @@ new_shader_window(struct aub_mem *mem, uint64_t address, const char *desc)
          fclose(f);
       }
    }
+
+   list_addtail(&window->base.link, &context.windows);
+
+   return window;
+}
+
+/* URB windows */
+
+static void
+display_urb_window(struct window *win)
+{
+   struct urb_window *window = (struct urb_window *) win;
+   static const char *stages[] = {
+      [AUB_DECODE_STAGE_VS] = "VS",
+      [AUB_DECODE_STAGE_HS] = "HS",
+      [AUB_DECODE_STAGE_DS] = "DS",
+      [AUB_DECODE_STAGE_GS] = "GS",
+      [AUB_DECODE_STAGE_PS] = "PS",
+      [AUB_DECODE_STAGE_CS] = "CS",
+   };
+
+   ImGui::Text("URB allocation:");
+   window->urb_view.DrawAllocation("##urb",
+                                   ARRAY_SIZE(window->urb_stages),
+                                   window->end_urb_offset,
+                                   stages,
+                                   &window->urb_stages[0]);
+}
+
+static void
+destroy_urb_window(struct window *win)
+{
+   struct urb_window *window = (struct urb_window *) win;
+
+   free(window);
+}
+
+static struct urb_window *
+new_urb_window(struct aub_viewer_decode_ctx *decode_ctx, uint64_t address)
+{
+   struct urb_window *window = xtzalloc(*window);
+
+   snprintf(window->base.name, sizeof(window->base.name),
+            "URB view (0x%lx)##%p", address, window);
+
+   list_inithead(&window->base.parent_link);
+   window->base.position = ImVec2(-1, -1);
+   window->base.size = ImVec2(700, 300);
+   window->base.opened = true;
+   window->base.display = display_urb_window;
+   window->base.destroy = destroy_urb_window;
+
+   window->end_urb_offset = decode_ctx->end_urb_offset;
+   memcpy(window->urb_stages, decode_ctx->urb_stages, sizeof(window->urb_stages));
+   window->urb_view = AubinatorViewerUrb();
 
    list_addtail(&window->base.link, &context.windows);
 
@@ -589,6 +654,15 @@ batch_display_shader(void *user_data, const char *shader_desc, uint64_t address)
 }
 
 static void
+batch_display_urb(void *user_data, const struct aub_decode_urb_stage_state *stages)
+{
+   struct batch_window *window = (struct batch_window *) user_data;
+   struct urb_window *urb_window = new_urb_window(&window->decode_ctx, 0);
+
+   list_add(&urb_window->base.parent_link, &window->base.children_windows);
+}
+
+static void
 batch_edit_address(void *user_data, uint64_t address, uint32_t len)
 {
    struct batch_window *window = (struct batch_window *) user_data;
@@ -747,6 +821,7 @@ new_batch_window(int exec_idx)
                               NULL,
                               window);
    window->decode_ctx.display_shader = batch_display_shader;
+   window->decode_ctx.display_urb = batch_display_urb;
    window->decode_ctx.edit_address = batch_edit_address;
 
    update_batch_window(window, false, exec_idx);
