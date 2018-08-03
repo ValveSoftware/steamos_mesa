@@ -492,7 +492,7 @@ svga_set_sampler_views(struct pipe_context *pipe,
       if (util_format_is_srgb(views[i]->format))
          flag_srgb |= 1 << (start + i);
 
-      target = views[i]->texture->target;
+      target = views[i]->target;
       if (target == PIPE_TEXTURE_1D)
          flag_1d |= 1 << (start + i);
       else if (target == PIPE_TEXTURE_RECT)
