@@ -420,8 +420,9 @@ void si_copy_buffer(struct si_context *sctx,
 	uint64_t main_dst_offset, main_src_offset;
 	unsigned skipped_size = 0;
 	unsigned realign_size = 0;
-	unsigned tc_l2_flag = get_tc_l2_flag(sctx, SI_COHERENCY_SHADER);
-	unsigned flush_flags = get_flush_flags(sctx, SI_COHERENCY_SHADER);
+	enum si_coherency coher = SI_COHERENCY_SHADER;
+	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
+	unsigned flush_flags = get_flush_flags(sctx, coher);
 	bool is_first = true;
 
 	if (!size)
@@ -475,8 +476,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 		si_cp_dma_prepare(sctx, dst, src, byte_count,
 				  size + skipped_size + realign_size,
-				  user_flags, SI_COHERENCY_SHADER, &is_first,
-				  &dma_flags);
+				  user_flags, coher, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, main_dst_offset, main_src_offset,
 			       byte_count, dma_flags);
@@ -492,8 +492,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 		si_cp_dma_prepare(sctx, dst, src, skipped_size,
 				  skipped_size + realign_size, user_flags,
-				  SI_COHERENCY_SHADER,
-				  &is_first, &dma_flags);
+				  coher, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, dst_offset, src_offset, skipped_size,
 			       dma_flags);
@@ -501,8 +500,8 @@ void si_copy_buffer(struct si_context *sctx,
 
 	/* Finally, realign the engine if the size wasn't aligned. */
 	if (realign_size) {
-		si_cp_dma_realign_engine(sctx, realign_size, user_flags,
-					 SI_COHERENCY_SHADER, &is_first);
+		si_cp_dma_realign_engine(sctx, realign_size, user_flags, coher,
+					 &is_first);
 	}
 
 	if (tc_l2_flag)
