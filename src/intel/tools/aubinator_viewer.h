@@ -33,12 +33,35 @@ struct aub_viewer_decode_cfg {
     show_dwords(true) {}
 };
 
+enum aub_decode_stage {
+   AUB_DECODE_STAGE_VS,
+   AUB_DECODE_STAGE_HS,
+   AUB_DECODE_STAGE_DS,
+   AUB_DECODE_STAGE_GS,
+   AUB_DECODE_STAGE_PS,
+   AUB_DECODE_STAGE_CS,
+   AUB_DECODE_N_STAGE,
+};
+
+struct aub_decode_urb_stage_state {
+   uint32_t start;
+   uint32_t size;
+   uint32_t n_entries;
+
+   uint32_t const_rd_length;
+   uint32_t rd_offset;
+   uint32_t rd_length;
+   uint32_t wr_offset;
+   uint32_t wr_length;
+};
+
 struct aub_viewer_decode_ctx {
    struct gen_batch_decode_bo (*get_bo)(void *user_data, uint64_t address);
    unsigned (*get_state_size)(void *user_data,
                               uint32_t offset_from_dynamic_state_base_addr);
 
    void (*display_shader)(void *user_data, const char *shader_desc, uint64_t address);
+   void (*display_urb)(void *user_data, const struct aub_decode_urb_stage_state *stages);
    void (*edit_address)(void *user_data, uint64_t address, uint32_t length);
 
    void *user_data;
@@ -53,6 +76,9 @@ struct aub_viewer_decode_ctx {
    uint64_t dynamic_base;
    uint64_t instruction_base;
 
+   enum aub_decode_stage stage;
+   uint32_t end_urb_offset;
+   struct aub_decode_urb_stage_state urb_stages[AUB_DECODE_N_STAGE];
 };
 
 void aub_viewer_decode_ctx_init(struct aub_viewer_decode_ctx *ctx,

@@ -695,38 +695,125 @@ decode_load_register_imm(struct aub_viewer_decode_ctx *ctx,
    }
 }
 
+static void
+decode_3dprimitive(struct aub_viewer_decode_ctx *ctx,
+                   struct gen_group *inst,
+                   const uint32_t *p)
+{
+   if (ctx->display_urb) {
+      if (ImGui::Button("Show URB"))
+         ctx->display_urb(ctx->user_data, ctx->urb_stages);
+   }
+}
+
+static void
+handle_urb(struct aub_viewer_decode_ctx *ctx,
+           struct gen_group *inst,
+           const uint32_t *p)
+{
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   while (gen_field_iterator_next(&iter)) {
+      if (strstr(iter.name, "URB Starting Address")) {
+         ctx->urb_stages[ctx->stage].start = iter.raw_value * 8192;
+      } else if (strstr(iter.name, "URB Entry Allocation Size")) {
+         ctx->urb_stages[ctx->stage].size = (iter.raw_value + 1) * 64;
+      } else if (strstr(iter.name, "Number of URB Entries")) {
+         ctx->urb_stages[ctx->stage].n_entries = iter.raw_value;
+      }
+   }
+
+   ctx->end_urb_offset = MAX2(ctx->urb_stages[ctx->stage].start +
+                              ctx->urb_stages[ctx->stage].n_entries *
+                              ctx->urb_stages[ctx->stage].size,
+                              ctx->end_urb_offset);
+}
+
+static void
+handle_urb_read(struct aub_viewer_decode_ctx *ctx,
+                struct gen_group *inst,
+                const uint32_t *p)
+{
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   while (gen_field_iterator_next(&iter)) {
+      /* Workaround the "Force * URB Entry Read Length" fields */
+      if (iter.end_bit - iter.start_bit < 2)
+         continue;
+
+      if (strstr(iter.name, "URB Entry Read Offset")) {
+         ctx->urb_stages[ctx->stage].rd_offset = iter.raw_value * 32;
+      } else if (strstr(iter.name, "URB Entry Read Length")) {
+         ctx->urb_stages[ctx->stage].rd_length = iter.raw_value * 32;
+      } else if (strstr(iter.name, "URB Entry Output Read Offset")) {
+         ctx->urb_stages[ctx->stage].wr_offset = iter.raw_value * 32;
+      } else if (strstr(iter.name, "URB Entry Output Length")) {
+         ctx->urb_stages[ctx->stage].wr_length = iter.raw_value * 32;
+      }
+   }
+}
+
+static void
+handle_urb_constant(struct aub_viewer_decode_ctx *ctx,
+                    struct gen_group *inst,
+                    const uint32_t *p)
+{
+   struct gen_group *body =
+      gen_spec_find_struct(ctx->spec, "3DSTATE_CONSTANT_BODY");
+
+   struct gen_field_iterator outer;
+   gen_field_iterator_init(&outer, inst, p, 0, false);
+   while (gen_field_iterator_next(&outer)) {
+      if (outer.struct_desc != body)
+         continue;
+
+      struct gen_field_iterator iter;
+      gen_field_iterator_init(&iter, body, &outer.p[outer.start_bit / 32],
+                              0, false);
+
+      ctx->urb_stages[ctx->stage].const_rd_length = 0;
+      while (gen_field_iterator_next(&iter)) {
+         int idx;
+         if (sscanf(iter.name, "Read Length[%d]", &idx) == 1) {
+            ctx->urb_stages[ctx->stage].const_rd_length += iter.raw_value * 32;
+         }
+      }
+   }
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct aub_viewer_decode_ctx *ctx,
                   struct gen_group *inst,
                   const uint32_t *p);
+   enum aub_decode_stage stage;
 } display_decoders[] = {
    { "STATE_BASE_ADDRESS", handle_state_base_address },
    { "MEDIA_INTERFACE_DESCRIPTOR_LOAD", handle_media_interface_descriptor_load },
    { "3DSTATE_VERTEX_BUFFERS", handle_3dstate_vertex_buffers },
    { "3DSTATE_INDEX_BUFFER", handle_3dstate_index_buffer },
-   { "3DSTATE_VS", decode_single_ksp },
-   { "3DSTATE_GS", decode_single_ksp },
-   { "3DSTATE_DS", decode_single_ksp },
-   { "3DSTATE_HS", decode_single_ksp },
-   { "3DSTATE_PS", decode_ps_kernels },
-   { "3DSTATE_CONSTANT_VS", decode_3dstate_constant },
-   { "3DSTATE_CONSTANT_GS", decode_3dstate_constant },
-   { "3DSTATE_CONSTANT_PS", decode_3dstate_constant },
-   { "3DSTATE_CONSTANT_HS", decode_3dstate_constant },
-   { "3DSTATE_CONSTANT_DS", decode_3dstate_constant },
+   { "3DSTATE_VS", decode_single_ksp, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_GS", decode_single_ksp, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_DS", decode_single_ksp, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_HS", decode_single_ksp, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_PS", decode_ps_kernels, AUB_DECODE_STAGE_PS, },
+   { "3DSTATE_CONSTANT_VS", decode_3dstate_constant, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_CONSTANT_GS", decode_3dstate_constant, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_CONSTANT_DS", decode_3dstate_constant, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_CONSTANT_HS", decode_3dstate_constant, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_CONSTANT_PS", decode_3dstate_constant, AUB_DECODE_STAGE_PS, },
 
-   { "3DSTATE_BINDING_TABLE_POINTERS_VS", decode_3dstate_binding_table_pointers },
-   { "3DSTATE_BINDING_TABLE_POINTERS_HS", decode_3dstate_binding_table_pointers },
-   { "3DSTATE_BINDING_TABLE_POINTERS_DS", decode_3dstate_binding_table_pointers },
-   { "3DSTATE_BINDING_TABLE_POINTERS_GS", decode_3dstate_binding_table_pointers },
-   { "3DSTATE_BINDING_TABLE_POINTERS_PS", decode_3dstate_binding_table_pointers },
+   { "3DSTATE_BINDING_TABLE_POINTERS_VS", decode_3dstate_binding_table_pointers, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_BINDING_TABLE_POINTERS_GS", decode_3dstate_binding_table_pointers, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_BINDING_TABLE_POINTERS_HS", decode_3dstate_binding_table_pointers, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_BINDING_TABLE_POINTERS_DS", decode_3dstate_binding_table_pointers, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_BINDING_TABLE_POINTERS_PS", decode_3dstate_binding_table_pointers, AUB_DECODE_STAGE_PS, },
 
-   { "3DSTATE_SAMPLER_STATE_POINTERS_VS", decode_3dstate_sampler_state_pointers },
-   { "3DSTATE_SAMPLER_STATE_POINTERS_HS", decode_3dstate_sampler_state_pointers },
-   { "3DSTATE_SAMPLER_STATE_POINTERS_DS", decode_3dstate_sampler_state_pointers },
-   { "3DSTATE_SAMPLER_STATE_POINTERS_GS", decode_3dstate_sampler_state_pointers },
-   { "3DSTATE_SAMPLER_STATE_POINTERS_PS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_VS", decode_3dstate_sampler_state_pointers, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_GS", decode_3dstate_sampler_state_pointers, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_DS", decode_3dstate_sampler_state_pointers, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_HS", decode_3dstate_sampler_state_pointers, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_PS", decode_3dstate_sampler_state_pointers, AUB_DECODE_STAGE_PS, },
    { "3DSTATE_SAMPLER_STATE_POINTERS", decode_3dstate_sampler_state_pointers_gen6 },
 
    { "3DSTATE_VIEWPORT_STATE_POINTERS_CC", decode_3dstate_viewport_state_pointers_cc },
@@ -734,11 +821,26 @@ struct custom_decoder {
    { "3DSTATE_BLEND_STATE_POINTERS", decode_3dstate_blend_state_pointers },
    { "3DSTATE_CC_STATE_POINTERS", decode_3dstate_cc_state_pointers },
    { "3DSTATE_SCISSOR_STATE_POINTERS", decode_3dstate_scissor_state_pointers },
-   { "MI_LOAD_REGISTER_IMM", decode_load_register_imm }
+   { "MI_LOAD_REGISTER_IMM", decode_load_register_imm },
+   { "3DPRIMITIVE", decode_3dprimitive },
 };
 
 struct custom_decoder info_decoders[] = {
    { "STATE_BASE_ADDRESS", handle_state_base_address },
+   { "3DSTATE_URB_VS", handle_urb, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_URB_GS", handle_urb, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_URB_DS", handle_urb, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_URB_HS", handle_urb, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_VS", handle_urb_read, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_GS", handle_urb_read, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_DS", handle_urb_read, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_HS", handle_urb_read, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_PS", handle_urb_read, AUB_DECODE_STAGE_PS, },
+   { "3DSTATE_CONSTANT_VS", handle_urb_constant, AUB_DECODE_STAGE_VS, },
+   { "3DSTATE_CONSTANT_GS", handle_urb_constant, AUB_DECODE_STAGE_GS, },
+   { "3DSTATE_CONSTANT_DS", handle_urb_constant, AUB_DECODE_STAGE_DS, },
+   { "3DSTATE_CONSTANT_HS", handle_urb_constant, AUB_DECODE_STAGE_HS, },
+   { "3DSTATE_CONSTANT_PS", handle_urb_constant, AUB_DECODE_STAGE_PS, },
 };
 
 static inline uint64_t
@@ -790,6 +892,7 @@ aub_viewer_render_batch(struct aub_viewer_decode_ctx *ctx,
 
       for (unsigned i = 0; i < ARRAY_SIZE(info_decoders); i++) {
          if (strcmp(inst_name, info_decoders[i].cmd_name) == 0) {
+            ctx->stage = info_decoders[i].stage;
             info_decoders[i].decode(ctx, inst, p);
             break;
          }
@@ -804,6 +907,7 @@ aub_viewer_render_batch(struct aub_viewer_decode_ctx *ctx,
 
          for (unsigned i = 0; i < ARRAY_SIZE(display_decoders); i++) {
             if (strcmp(inst_name, display_decoders[i].cmd_name) == 0) {
+               ctx->stage = display_decoders[i].stage;
                display_decoders[i].decode(ctx, inst, p);
                break;
             }
