@@ -29,6 +29,11 @@
 #include "tgsi/tgsi_util.h"
 #include "ac_llvm_util.h"
 
+static void tex_fetch_ptrs(struct lp_build_tgsi_context *bld_base,
+			   struct lp_build_emit_data *emit_data,
+			   LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr,
+			   LLVMValueRef *fmask_ptr);
+
 /**
  * Given a v8i32 resource descriptor for a buffer, extract the size of the
  * buffer in number of elements and return it as an i32.
@@ -1023,7 +1028,8 @@ static void resq_emit(
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	const struct tgsi_full_src_register *reg = &inst->Src[0];
+	const struct tgsi_full_src_register *reg =
+		&inst->Src[inst->Instruction.Opcode == TGSI_OPCODE_TXQ ? 1 : 0];
 
 	if (reg->Register.File == TGSI_FILE_BUFFER) {
 		LLVMValueRef rsrc = shader_buffer_fetch_rsrc(ctx, reg, false);
@@ -1034,8 +1040,19 @@ static void resq_emit(
 		return;
 	}
 
-	/* Images */
-	if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ &&
+	    inst->Texture.Texture == TGSI_TEXTURE_BUFFER) {
+		LLVMValueRef rsrc;
+
+		tex_fetch_ptrs(bld_base, emit_data, &rsrc, NULL, NULL);
+		/* Read the size from the buffer descriptor directly. */
+		emit_data->output[emit_data->chan] =
+			get_buffer_size(bld_base, rsrc);
+		return;
+	}
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_RESQ &&
+	    inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
 		LLVMValueRef rsrc;
 
 		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture, &rsrc);
@@ -1044,24 +1061,32 @@ static void resq_emit(
 		return;
 	}
 
+	unsigned target;
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ) {
+		target = inst->Texture.Texture;
+	} else {
+		if (inst->Memory.Texture == TGSI_TEXTURE_3D)
+			target = TGSI_TEXTURE_2D_ARRAY;
+		else
+			target = inst->Memory.Texture;
+	}
+
 	struct ac_image_args args = {};
-	unsigned image_target;
-
-	if (inst->Memory.Texture == TGSI_TEXTURE_3D)
-		image_target = TGSI_TEXTURE_2D_ARRAY;
-	else
-		image_target = inst->Memory.Texture;
-
-	image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
-			 &args.resource);
 	args.opcode = ac_image_get_resinfo;
-	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, image_target);
-	args.lod = ctx->i32_0;
+	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
 	args.dmask = 0xf;
 
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ) {
+		tex_fetch_ptrs(bld_base, emit_data, &args.resource, NULL, NULL);
+		args.lod = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
+	} else {
+		image_fetch_rsrc(bld_base, reg, false, target, &args.resource);
+		args.lod = ctx->i32_0;
+	}
+
 	emit_data->output[emit_data->chan] =
-		fix_resinfo(ctx, inst->Memory.Texture,
-			    ac_build_image_opcode(&ctx->ac, &args));
+		fix_resinfo(ctx, target, ac_build_image_opcode(&ctx->ac, &args));
 }
 
 /**
@@ -1130,10 +1155,10 @@ static LLVMValueRef sici_fix_sampler_aniso(struct si_shader_context *ctx,
 				      ctx->i32_0, "");
 }
 
-static void tex_fetch_ptrs(
-	struct lp_build_tgsi_context *bld_base,
-	struct lp_build_emit_data *emit_data,
-	LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr, LLVMValueRef *fmask_ptr)
+static void tex_fetch_ptrs(struct lp_build_tgsi_context *bld_base,
+			   struct lp_build_emit_data *emit_data,
+			   LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr,
+			   LLVMValueRef *fmask_ptr)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef list = LLVMGetParam(ctx->main_fn, ctx->param_samplers_and_images);
@@ -1190,34 +1215,6 @@ static void tex_fetch_ptrs(
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 		}
 	}
-}
-
-static void txq_emit(const struct lp_build_tgsi_action *action,
-		     struct lp_build_tgsi_context *bld_base,
-		     struct lp_build_emit_data *emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	unsigned target = inst->Texture.Texture;
-	struct ac_image_args args = {};
-
-	tex_fetch_ptrs(bld_base, emit_data, &args.resource, NULL, NULL);
-
-	if (target == TGSI_TEXTURE_BUFFER) {
-		/* Read the size from the buffer descriptor directly. */
-		emit_data->output[emit_data->chan] =
-			get_buffer_size(bld_base, args.resource);
-		return;
-	}
-
-	args.opcode = ac_image_get_resinfo;
-	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
-	args.lod = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
-	args.dmask = 0xf;
-
-	LLVMValueRef result = ac_build_image_opcode(&ctx->ac, &args);
-
-	emit_data->output[emit_data->chan] = fix_resinfo(ctx, target, result);
 }
 
 /* Gather4 should follow the same rules as bilinear filtering, but the hardware
@@ -1841,7 +1838,7 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 	bld_base->op_actions[TGSI_OPCODE_TXL].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXL2].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXP].emit = build_tex_intrinsic;
-	bld_base->op_actions[TGSI_OPCODE_TXQ].emit = txq_emit;
+	bld_base->op_actions[TGSI_OPCODE_TXQ].emit = resq_emit;
 	bld_base->op_actions[TGSI_OPCODE_TG4].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_LODQ].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
