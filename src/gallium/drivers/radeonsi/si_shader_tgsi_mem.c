@@ -1219,9 +1219,9 @@ static void tex_fetch_ptrs(
 	}
 }
 
-static void txq_fetch_args(
-	struct lp_build_tgsi_context *bld_base,
-	struct lp_build_emit_data *emit_data)
+static void txq_emit(const struct lp_build_tgsi_action *action,
+		     struct lp_build_tgsi_context *bld_base,
+		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
@@ -1232,34 +1232,16 @@ static void txq_fetch_args(
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		/* Read the size from the buffer descriptor directly. */
-		emit_data->args[0] = get_buffer_size(bld_base, args.resource);
+		emit_data->output[emit_data->chan] =
+			get_buffer_size(bld_base, args.resource);
 		return;
 	}
 
-	/* Textures - set the mip level. */
+	args.opcode = ac_image_get_resinfo;
+	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
 	args.lod = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
 	args.dmask = 0xf;
 
-	set_tex_fetch_args(ctx, emit_data, &args, target);
-}
-
-static void txq_emit(const struct lp_build_tgsi_action *action,
-		     struct lp_build_tgsi_context *bld_base,
-		     struct lp_build_emit_data *emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct ac_image_args args;
-	unsigned target = emit_data->inst->Texture.Texture;
-
-	if (target == TGSI_TEXTURE_BUFFER) {
-		/* Just return the buffer size. */
-		emit_data->output[emit_data->chan] = emit_data->args[0];
-		return;
-	}
-
-	memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
-
-	args.opcode = ac_image_get_resinfo;
 	LLVMValueRef result = ac_build_image_opcode(&ctx->ac, &args);
 
 	emit_data->output[emit_data->chan] = fix_resinfo(ctx, target, result);
@@ -1886,7 +1868,6 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 	bld_base->op_actions[TGSI_OPCODE_TXL].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXL2].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXP].emit = build_tex_intrinsic;
-	bld_base->op_actions[TGSI_OPCODE_TXQ].fetch_args = txq_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_TXQ].emit = txq_emit;
 	bld_base->op_actions[TGSI_OPCODE_TG4].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_LODQ].emit = build_tex_intrinsic;
