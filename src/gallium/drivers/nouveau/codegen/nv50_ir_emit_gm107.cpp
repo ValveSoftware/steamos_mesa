@@ -1409,6 +1409,7 @@ CodeEmitterGM107::emitMUFU()
    case OP_LG2: mufu = 3; break;
    case OP_RCP: mufu = 4 + 2 * insn->subOp; break;
    case OP_RSQ: mufu = 5 + 2 * insn->subOp; break;
+   case OP_SQRT: mufu = 8; break;
    default:
       assert(!"invalid mufu");
       break;
@@ -1418,7 +1419,7 @@ CodeEmitterGM107::emitMUFU()
    emitSAT  (0x32);
    emitNEG  (0x30, insn->src(0));
    emitABS  (0x2e, insn->src(0));
-   emitField(0x14, 3, mufu);
+   emitField(0x14, 4, mufu);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));
 }
@@ -3342,6 +3343,7 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_LG2:
    case OP_RCP:
    case OP_RSQ:
+   case OP_SQRT:
       emitMUFU();
       break;
    case OP_AND:

@@ -57,10 +57,13 @@ TargetGM107::isOpSupported(operation op, DataType ty) const
    switch (op) {
    case OP_SAD:
    case OP_POW:
-   case OP_SQRT:
    case OP_DIV:
    case OP_MOD:
       return false;
+   case OP_SQRT:
+      if (ty == TYPE_F64)
+         return false;
+      return chipset >= NVISA_GM200_CHIPSET;
    default:
       break;
    }
@@ -125,6 +128,7 @@ TargetGM107::isBarrierRequired(const Instruction *insn) const
       case OP_RCP:
       case OP_RSQ:
       case OP_SIN:
+      case OP_SQRT:
          return true;
       default:
          break;
@@ -256,6 +260,7 @@ TargetGM107::getLatency(const Instruction *insn) const
    case OP_RCP:
    case OP_RSQ:
    case OP_SIN:
+   case OP_SQRT:
       return 13;
    default:
       break;
@@ -284,6 +289,7 @@ TargetGM107::getReadLatency(const Instruction *insn) const
    case OP_RSQ:
    case OP_SAT:
    case OP_SIN:
+   case OP_SQRT:
    case OP_SULDB:
    case OP_SULDP:
    case OP_SUREDB:

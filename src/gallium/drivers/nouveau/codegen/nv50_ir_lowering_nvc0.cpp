@@ -2752,6 +2752,9 @@ NVC0LoweringPass::handleMOD(Instruction *i)
 bool
 NVC0LoweringPass::handleSQRT(Instruction *i)
 {
+   if (targ->isOpSupported(OP_SQRT, i->dType))
+      return true;
+
    if (i->dType == TYPE_F64) {
       Value *pred = bld.getSSA(1, FILE_PREDICATE);
       Value *zero = bld.loadImm(NULL, 0.0);
