@@ -4002,12 +4002,24 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 	return ac_build_gather_values(&ctx->ac, result, 4);
 }
 
-static void interp_fetch_args(
-	struct lp_build_tgsi_context *bld_base,
-	struct lp_build_emit_data *emit_data)
+static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
+				struct lp_build_tgsi_context *bld_base,
+				struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader *shader = ctx->shader;
+	const struct tgsi_shader_info *info = &shader->selector->info;
+	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
+	const struct tgsi_full_src_register *input = &inst->Src[0];
+	int input_base, input_array_size;
+	int chan;
+	int i;
+	LLVMValueRef prim_mask = ctx->abi.prim_mask;
+	LLVMValueRef array_idx;
+	int interp_param_idx;
+	unsigned interp;
+	unsigned location;
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET) {
 		/* offset is in second src, first two channels */
@@ -4068,26 +4080,6 @@ static void interp_fetch_args(
 		emit_data->args[1] = LLVMBuildFSub(ctx->ac.builder, emit_data->args[1], halfval, "");
 		emit_data->arg_count = 2;
 	}
-}
-
-static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
-				struct lp_build_tgsi_context *bld_base,
-				struct lp_build_emit_data *emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct si_shader *shader = ctx->shader;
-	const struct tgsi_shader_info *info = &shader->selector->info;
-	LLVMValueRef interp_param;
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	const struct tgsi_full_src_register *input = &inst->Src[0];
-	int input_base, input_array_size;
-	int chan;
-	int i;
-	LLVMValueRef prim_mask = ctx->abi.prim_mask;
-	LLVMValueRef array_idx;
-	int interp_param_idx;
-	unsigned interp;
-	unsigned location;
 
 	assert(input->Register.File == TGSI_FILE_INPUT);
 
@@ -4244,25 +4236,22 @@ static void ballot_emit(
 	emit_data->output[1] = LLVMBuildExtractElement(builder, tmp, ctx->i32_1, "");
 }
 
-static void read_invoc_fetch_args(
-	struct lp_build_tgsi_context *bld_base,
-	struct lp_build_emit_data *emit_data)
-{
-	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
-						 0, emit_data->src_chan);
-
-	/* Always read the source invocation (= lane) from the X channel. */
-	emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst,
-						 1, TGSI_CHAN_X);
-	emit_data->arg_count = 2;
-}
-
 static void read_lane_emit(
 	const struct lp_build_tgsi_action *action,
 	struct lp_build_tgsi_context *bld_base,
 	struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_READ_INVOC) {
+		emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
+							 0, emit_data->src_chan);
+
+		/* Always read the source invocation (= lane) from the X channel. */
+		emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst,
+							 1, TGSI_CHAN_X);
+		emit_data->arg_count = 2;
+	}
 
 	/* We currently have no other way to prevent LLVM from lifting the icmp
 	 * calls to a dominating basic block.
@@ -4425,11 +4414,6 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 			   "llvm.amdgcn.s.barrier",
 			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
-
-static const struct lp_build_tgsi_action interp_action = {
-	.fetch_args = interp_fetch_args,
-	.emit = build_interp_intrinsic,
-};
 
 static void si_create_function(struct si_shader_context *ctx,
 			       const char *name,
@@ -5989,9 +5973,9 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base = &ctx->bld_base;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
-	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;
-	bld_base->op_actions[TGSI_OPCODE_INTERP_SAMPLE] = interp_action;
-	bld_base->op_actions[TGSI_OPCODE_INTERP_OFFSET] = interp_action;
+	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID].emit = build_interp_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_INTERP_SAMPLE].emit = build_interp_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_INTERP_OFFSET].emit = build_interp_intrinsic;
 
 	bld_base->op_actions[TGSI_OPCODE_MEMBAR].emit = membar_emit;
 
@@ -6009,7 +5993,6 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_READ_FIRST].intr_name = "llvm.amdgcn.readfirstlane";
 	bld_base->op_actions[TGSI_OPCODE_READ_FIRST].emit = read_lane_emit;
 	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].intr_name = "llvm.amdgcn.readlane";
-	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].fetch_args = read_invoc_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].emit = read_lane_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_tgsi_emit_vertex;
