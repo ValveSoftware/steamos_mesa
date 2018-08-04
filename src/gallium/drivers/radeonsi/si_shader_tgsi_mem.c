@@ -1330,9 +1330,7 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 		assert(!wa_8888);
 		half_texel[0] = half_texel[1] = LLVMConstReal(ctx->f32, -0.5);
 	} else {
-		struct tgsi_full_instruction txq_inst = {};
-		struct ac_image_args txq_args = {};
-		struct lp_build_emit_data txq_emit_data = {};
+		struct ac_image_args resinfo = {};
 		struct lp_build_if_state if_ctx;
 
 		if (wa_8888) {
@@ -1341,20 +1339,21 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 		}
 
 		/* Query the texture size. */
-		txq_inst.Texture.Texture = target;
-		txq_emit_data.inst = &txq_inst;
-		txq_emit_data.dst_type = ctx->v4i32;
-		txq_args.resource = args->resource;
-		txq_args.sampler = args->sampler;
-		txq_args.lod = ctx->ac.i32_0;
-		txq_args.dmask = 0xf;
-		set_tex_fetch_args(ctx, &txq_emit_data, &txq_args, target);
-		txq_emit(NULL, &ctx->bld_base, &txq_emit_data);
+		resinfo.opcode = ac_image_get_resinfo;
+		resinfo.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
+		resinfo.resource = args->resource;
+		resinfo.sampler = args->sampler;
+		resinfo.lod = ctx->ac.i32_0;
+		resinfo.dmask = 0xf;
+
+		LLVMValueRef texsize =
+			fix_resinfo(ctx, target,
+				    ac_build_image_opcode(&ctx->ac, &resinfo));
 
 		/* Compute -0.5 / size. */
 		for (unsigned c = 0; c < 2; c++) {
 			half_texel[c] =
-				LLVMBuildExtractElement(builder, txq_emit_data.output[0],
+				LLVMBuildExtractElement(builder, texsize,
 							LLVMConstInt(ctx->i32, c, 0), "");
 			half_texel[c] = LLVMBuildUIToFP(builder, half_texel[c], ctx->f32, "");
 			half_texel[c] = ac_build_fdiv(&ctx->ac, ctx->ac.f32_1, half_texel[c]);
