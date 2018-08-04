@@ -29,12 +29,6 @@
 #include "tgsi/tgsi_util.h"
 #include "ac_llvm_util.h"
 
-static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
-				struct lp_build_tgsi_context *bld_base,
-				struct lp_build_emit_data *emit_data);
-
-static const struct lp_build_tgsi_action tex_action;
-
 /**
  * Given a v8i32 resource descriptor for a buffer, extract the size of the
  * buffer in number of elements and return it as an i32.
@@ -1271,9 +1265,163 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = fix_resinfo(ctx, target, result);
 }
 
-static void tex_fetch_args(
-	struct lp_build_tgsi_context *bld_base,
-	struct lp_build_emit_data *emit_data)
+/* Gather4 should follow the same rules as bilinear filtering, but the hardware
+ * incorrectly forces nearest filtering if the texture format is integer.
+ * The only effect it has on Gather4, which always returns 4 texels for
+ * bilinear filtering, is that the final coordinates are off by 0.5 of
+ * the texel size.
+ *
+ * The workaround is to subtract 0.5 from the unnormalized coordinates,
+ * or (0.5 / size) from the normalized coordinates.
+ *
+ * However, cube textures with 8_8_8_8 data formats require a different
+ * workaround of overriding the num format to USCALED/SSCALED. This would lose
+ * precision in 32-bit data formats, so it needs to be applied dynamically at
+ * runtime. In this case, return an i1 value that indicates whether the
+ * descriptor was overridden (and hence a fixup of the sampler result is needed).
+ */
+static LLVMValueRef
+si_lower_gather4_integer(struct si_shader_context *ctx,
+			 struct ac_image_args *args,
+			 unsigned target,
+			 enum tgsi_return_type return_type)
+{
+	LLVMBuilderRef builder = ctx->ac.builder;
+	LLVMValueRef wa_8888 = NULL;
+	LLVMValueRef half_texel[2];
+
+	assert(return_type == TGSI_RETURN_TYPE_SINT ||
+	       return_type == TGSI_RETURN_TYPE_UINT);
+
+	if (target == TGSI_TEXTURE_CUBE ||
+	    target == TGSI_TEXTURE_CUBE_ARRAY) {
+		LLVMValueRef formats;
+		LLVMValueRef data_format;
+		LLVMValueRef wa_formats;
+
+		formats = LLVMBuildExtractElement(builder, args->resource, ctx->i32_1, "");
+
+		data_format = LLVMBuildLShr(builder, formats,
+					    LLVMConstInt(ctx->i32, 20, false), "");
+		data_format = LLVMBuildAnd(builder, data_format,
+					   LLVMConstInt(ctx->i32, (1u << 6) - 1, false), "");
+		wa_8888 = LLVMBuildICmp(
+			builder, LLVMIntEQ, data_format,
+			LLVMConstInt(ctx->i32, V_008F14_IMG_DATA_FORMAT_8_8_8_8, false),
+			"");
+
+		uint32_t wa_num_format =
+			return_type == TGSI_RETURN_TYPE_UINT ?
+			S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_USCALED) :
+			S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_SSCALED);
+		wa_formats = LLVMBuildAnd(builder, formats,
+					  LLVMConstInt(ctx->i32, C_008F14_NUM_FORMAT_GFX6, false),
+					  "");
+		wa_formats = LLVMBuildOr(builder, wa_formats,
+					LLVMConstInt(ctx->i32, wa_num_format, false), "");
+
+		formats = LLVMBuildSelect(builder, wa_8888, wa_formats, formats, "");
+		args->resource = LLVMBuildInsertElement(
+			builder, args->resource, formats, ctx->i32_1, "");
+	}
+
+	if (target == TGSI_TEXTURE_RECT ||
+	    target == TGSI_TEXTURE_SHADOWRECT) {
+		assert(!wa_8888);
+		half_texel[0] = half_texel[1] = LLVMConstReal(ctx->f32, -0.5);
+	} else {
+		struct tgsi_full_instruction txq_inst = {};
+		struct ac_image_args txq_args = {};
+		struct lp_build_emit_data txq_emit_data = {};
+		struct lp_build_if_state if_ctx;
+
+		if (wa_8888) {
+			/* Skip the texture size query entirely if we don't need it. */
+			lp_build_if(&if_ctx, &ctx->gallivm, LLVMBuildNot(builder, wa_8888, ""));
+		}
+
+		/* Query the texture size. */
+		txq_inst.Texture.Texture = target;
+		txq_emit_data.inst = &txq_inst;
+		txq_emit_data.dst_type = ctx->v4i32;
+		txq_args.resource = args->resource;
+		txq_args.sampler = args->sampler;
+		txq_args.lod = ctx->ac.i32_0;
+		txq_args.dmask = 0xf;
+		set_tex_fetch_args(ctx, &txq_emit_data, &txq_args, target);
+		txq_emit(NULL, &ctx->bld_base, &txq_emit_data);
+
+		/* Compute -0.5 / size. */
+		for (unsigned c = 0; c < 2; c++) {
+			half_texel[c] =
+				LLVMBuildExtractElement(builder, txq_emit_data.output[0],
+							LLVMConstInt(ctx->i32, c, 0), "");
+			half_texel[c] = LLVMBuildUIToFP(builder, half_texel[c], ctx->f32, "");
+			half_texel[c] = ac_build_fdiv(&ctx->ac, ctx->ac.f32_1, half_texel[c]);
+			half_texel[c] = LLVMBuildFMul(builder, half_texel[c],
+						      LLVMConstReal(ctx->f32, -0.5), "");
+		}
+
+		if (wa_8888) {
+			lp_build_endif(&if_ctx);
+
+			LLVMBasicBlockRef bb[2] = { if_ctx.true_block, if_ctx.entry_block };
+
+			for (unsigned c = 0; c < 2; c++) {
+				LLVMValueRef values[2] = { half_texel[c], ctx->ac.f32_0 };
+				half_texel[c] = ac_build_phi(&ctx->ac, ctx->f32, 2,
+							     values, bb);
+			}
+		}
+	}
+
+	for (unsigned c = 0; c < 2; c++) {
+		LLVMValueRef tmp;
+		tmp = ac_to_float(&ctx->ac, args->coords[c]);
+		tmp = LLVMBuildFAdd(builder, tmp, half_texel[c], "");
+		args->coords[c] = ac_to_integer(&ctx->ac, tmp);
+	}
+
+	return wa_8888;
+}
+
+/* The second half of the cube texture 8_8_8_8 integer workaround: adjust the
+ * result after the gather operation.
+ */
+static LLVMValueRef
+si_fix_gather4_integer_result(struct si_shader_context *ctx,
+			   LLVMValueRef result,
+			   enum tgsi_return_type return_type,
+			   LLVMValueRef wa)
+{
+	LLVMBuilderRef builder = ctx->ac.builder;
+
+	assert(return_type == TGSI_RETURN_TYPE_SINT ||
+	       return_type == TGSI_RETURN_TYPE_UINT);
+
+	for (unsigned chan = 0; chan < 4; ++chan) {
+		LLVMValueRef chanv = LLVMConstInt(ctx->i32, chan, false);
+		LLVMValueRef value;
+		LLVMValueRef wa_value;
+
+		value = LLVMBuildExtractElement(builder, result, chanv, "");
+
+		if (return_type == TGSI_RETURN_TYPE_UINT)
+			wa_value = LLVMBuildFPToUI(builder, value, ctx->i32, "");
+		else
+			wa_value = LLVMBuildFPToSI(builder, value, ctx->i32, "");
+		wa_value = ac_to_float(&ctx->ac, wa_value);
+		value = LLVMBuildSelect(builder, wa, wa_value, value, "");
+
+		result = LLVMBuildInsertElement(builder, result, value, chanv, "");
+	}
+
+	return result;
+}
+
+static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
+				struct lp_build_tgsi_context *bld_base,
+				struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	const struct tgsi_full_instruction *inst = emit_data->inst;
@@ -1288,20 +1436,24 @@ static void tex_fetch_args(
 	tex_fetch_ptrs(bld_base, emit_data, &args.resource, &args.sampler, &fmask_ptr);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		emit_data->dst_type = ctx->v4f32;
-		emit_data->args[0] = args.resource;
-		emit_data->args[1] = ctx->i32_0;
-		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
-		emit_data->arg_count = 3;
+		LLVMValueRef vindex = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
+		unsigned num_channels =
+			util_last_bit(inst->Dst[0].Register.WriteMask);
+		LLVMValueRef result =
+			ac_build_buffer_load_format(&ctx->ac,
+						    args.resource,
+						    vindex,
+						    ctx->i32_0,
+						    num_channels, false, true);
+		emit_data->output[emit_data->chan] =
+			ac_build_expand_to_vec4(&ctx->ac, result, num_channels);
 		return;
 	}
 
 	/* Fetch and project texture coordinates */
-	args.coords[3] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_W);
+	args.coords[3] = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_W);
 	for (chan = 0; chan < 3; chan++) {
-		args.coords[chan] = lp_build_emit_fetch(bld_base,
-						   emit_data->inst, 0,
-						   chan);
+		args.coords[chan] = lp_build_emit_fetch(bld_base, inst, 0, chan);
 		if (opcode == TGSI_OPCODE_TXP)
 			args.coords[chan] = ac_build_fdiv(&ctx->ac,
 				args.coords[chan], args.coords[3]);
@@ -1322,8 +1474,7 @@ static void tex_fetch_args(
 		assert(inst->Texture.NumOffsets == 1);
 
 		for (chan = 0; chan < 3; chan++) {
-			offset[chan] = lp_build_emit_fetch_texoffset(bld_base,
-								     emit_data->inst, 0, chan);
+			offset[chan] = lp_build_emit_fetch_texoffset(bld_base, inst, 0, chan);
 			offset[chan] = LLVMBuildAnd(ctx->ac.builder, offset[chan],
 						    LLVMConstInt(ctx->i32, 0x3f, 0), "");
 			if (chan)
@@ -1533,8 +1684,6 @@ static void tex_fetch_args(
 		}
 	}
 
-	args.dmask = 0xf;
-
 	if (opcode == TGSI_OPCODE_TG4) {
 		unsigned gather_comp = 0;
 
@@ -1559,191 +1708,13 @@ static void tex_fetch_args(
 		}
 
 		args.dmask = 1 << gather_comp;
-	}
-
-	set_tex_fetch_args(ctx, emit_data, &args, target);
-}
-
-/* Gather4 should follow the same rules as bilinear filtering, but the hardware
- * incorrectly forces nearest filtering if the texture format is integer.
- * The only effect it has on Gather4, which always returns 4 texels for
- * bilinear filtering, is that the final coordinates are off by 0.5 of
- * the texel size.
- *
- * The workaround is to subtract 0.5 from the unnormalized coordinates,
- * or (0.5 / size) from the normalized coordinates.
- *
- * However, cube textures with 8_8_8_8 data formats require a different
- * workaround of overriding the num format to USCALED/SSCALED. This would lose
- * precision in 32-bit data formats, so it needs to be applied dynamically at
- * runtime. In this case, return an i1 value that indicates whether the
- * descriptor was overridden (and hence a fixup of the sampler result is needed).
- */
-static LLVMValueRef
-si_lower_gather4_integer(struct si_shader_context *ctx,
-			 struct ac_image_args *args,
-			 unsigned target,
-			 enum tgsi_return_type return_type)
-{
-	LLVMBuilderRef builder = ctx->ac.builder;
-	LLVMValueRef wa_8888 = NULL;
-	LLVMValueRef half_texel[2];
-
-	assert(return_type == TGSI_RETURN_TYPE_SINT ||
-	       return_type == TGSI_RETURN_TYPE_UINT);
-
-	if (target == TGSI_TEXTURE_CUBE ||
-	    target == TGSI_TEXTURE_CUBE_ARRAY) {
-		LLVMValueRef formats;
-		LLVMValueRef data_format;
-		LLVMValueRef wa_formats;
-
-		formats = LLVMBuildExtractElement(builder, args->resource, ctx->i32_1, "");
-
-		data_format = LLVMBuildLShr(builder, formats,
-					    LLVMConstInt(ctx->i32, 20, false), "");
-		data_format = LLVMBuildAnd(builder, data_format,
-					   LLVMConstInt(ctx->i32, (1u << 6) - 1, false), "");
-		wa_8888 = LLVMBuildICmp(
-			builder, LLVMIntEQ, data_format,
-			LLVMConstInt(ctx->i32, V_008F14_IMG_DATA_FORMAT_8_8_8_8, false),
-			"");
-
-		uint32_t wa_num_format =
-			return_type == TGSI_RETURN_TYPE_UINT ?
-			S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_USCALED) :
-			S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_SSCALED);
-		wa_formats = LLVMBuildAnd(builder, formats,
-					  LLVMConstInt(ctx->i32, C_008F14_NUM_FORMAT_GFX6, false),
-					  "");
-		wa_formats = LLVMBuildOr(builder, wa_formats,
-					LLVMConstInt(ctx->i32, wa_num_format, false), "");
-
-		formats = LLVMBuildSelect(builder, wa_8888, wa_formats, formats, "");
-		args->resource = LLVMBuildInsertElement(
-			builder, args->resource, formats, ctx->i32_1, "");
-	}
-
-	if (target == TGSI_TEXTURE_RECT ||
-	    target == TGSI_TEXTURE_SHADOWRECT) {
-		assert(!wa_8888);
-		half_texel[0] = half_texel[1] = LLVMConstReal(ctx->f32, -0.5);
 	} else {
-		struct tgsi_full_instruction txq_inst = {};
-		struct ac_image_args txq_args = {};
-		struct lp_build_emit_data txq_emit_data = {};
-		struct lp_build_if_state if_ctx;
-
-		if (wa_8888) {
-			/* Skip the texture size query entirely if we don't need it. */
-			lp_build_if(&if_ctx, &ctx->gallivm, LLVMBuildNot(builder, wa_8888, ""));
-		}
-
-		/* Query the texture size. */
-		txq_inst.Texture.Texture = target;
-		txq_emit_data.inst = &txq_inst;
-		txq_emit_data.dst_type = ctx->v4i32;
-		txq_args.resource = args->resource;
-		txq_args.sampler = args->sampler;
-		txq_args.lod = ctx->ac.i32_0;
-		txq_args.dmask = 0xf;
-		set_tex_fetch_args(ctx, &txq_emit_data, &txq_args, target);
-		txq_emit(NULL, &ctx->bld_base, &txq_emit_data);
-
-		/* Compute -0.5 / size. */
-		for (unsigned c = 0; c < 2; c++) {
-			half_texel[c] =
-				LLVMBuildExtractElement(builder, txq_emit_data.output[0],
-							LLVMConstInt(ctx->i32, c, 0), "");
-			half_texel[c] = LLVMBuildUIToFP(builder, half_texel[c], ctx->f32, "");
-			half_texel[c] = ac_build_fdiv(&ctx->ac, ctx->ac.f32_1, half_texel[c]);
-			half_texel[c] = LLVMBuildFMul(builder, half_texel[c],
-						      LLVMConstReal(ctx->f32, -0.5), "");
-		}
-
-		if (wa_8888) {
-			lp_build_endif(&if_ctx);
-
-			LLVMBasicBlockRef bb[2] = { if_ctx.true_block, if_ctx.entry_block };
-
-			for (unsigned c = 0; c < 2; c++) {
-				LLVMValueRef values[2] = { half_texel[c], ctx->ac.f32_0 };
-				half_texel[c] = ac_build_phi(&ctx->ac, ctx->f32, 2,
-							     values, bb);
-			}
-		}
+		args.dmask = 0xf;
 	}
 
-	for (unsigned c = 0; c < 2; c++) {
-		LLVMValueRef tmp;
-		tmp = ac_to_float(&ctx->ac, args->coords[c]);
-		tmp = LLVMBuildFAdd(builder, tmp, half_texel[c], "");
-		args->coords[c] = ac_to_integer(&ctx->ac, tmp);
-	}
-
-	return wa_8888;
-}
-
-/* The second half of the cube texture 8_8_8_8 integer workaround: adjust the
- * result after the gather operation.
- */
-static LLVMValueRef
-si_fix_gather4_integer_result(struct si_shader_context *ctx,
-			   LLVMValueRef result,
-			   enum tgsi_return_type return_type,
-			   LLVMValueRef wa)
-{
-	LLVMBuilderRef builder = ctx->ac.builder;
-
-	assert(return_type == TGSI_RETURN_TYPE_SINT ||
-	       return_type == TGSI_RETURN_TYPE_UINT);
-
-	for (unsigned chan = 0; chan < 4; ++chan) {
-		LLVMValueRef chanv = LLVMConstInt(ctx->i32, chan, false);
-		LLVMValueRef value;
-		LLVMValueRef wa_value;
-
-		value = LLVMBuildExtractElement(builder, result, chanv, "");
-
-		if (return_type == TGSI_RETURN_TYPE_UINT)
-			wa_value = LLVMBuildFPToUI(builder, value, ctx->i32, "");
-		else
-			wa_value = LLVMBuildFPToSI(builder, value, ctx->i32, "");
-		wa_value = ac_to_float(&ctx->ac, wa_value);
-		value = LLVMBuildSelect(builder, wa, wa_value, value, "");
-
-		result = LLVMBuildInsertElement(builder, result, value, chanv, "");
-	}
-
-	return result;
-}
-
-static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
-				struct lp_build_tgsi_context *bld_base,
-				struct lp_build_emit_data *emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	struct ac_image_args args;
-	unsigned opcode = inst->Instruction.Opcode;
-	unsigned target = inst->Texture.Texture;
-
-	if (target == TGSI_TEXTURE_BUFFER) {
-		unsigned num_channels =
-			util_last_bit(inst->Dst[0].Register.WriteMask);
-		LLVMValueRef result =
-			ac_build_buffer_load_format(&ctx->ac,
-						    emit_data->args[0],
-						    emit_data->args[2],
-						    emit_data->args[1],
-						    num_channels, false, true);
-		emit_data->output[emit_data->chan] =
-			ac_build_expand_to_vec4(&ctx->ac, result, num_channels);
-		return;
-	}
-
-	memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
-
+	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
+	args.unorm = target == TGSI_TEXTURE_RECT ||
+		     target == TGSI_TEXTURE_SHADOWRECT;
 	args.opcode = ac_image_sample;
 
 	switch (opcode) {
@@ -1895,11 +1866,6 @@ static void si_llvm_emit_fbfetch(const struct lp_build_tgsi_action *action,
 		ac_build_image_opcode(&ctx->ac, &args);
 }
 
-static const struct lp_build_tgsi_action tex_action = {
-	.fetch_args = tex_fetch_args,
-	.emit = build_tex_intrinsic,
-};
-
 /**
  * Setup actions for TGSI memory opcode, including texture opcodes.
  */
@@ -1910,21 +1876,21 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 
 	bld_base = &ctx->bld_base;
 
-	bld_base->op_actions[TGSI_OPCODE_TEX] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TEX_LZ] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TEX2] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXB] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXB2] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXD] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXF] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXF_LZ] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXL] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXL2] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_TXP] = tex_action;
+	bld_base->op_actions[TGSI_OPCODE_TEX].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TEX_LZ].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TEX2].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXB].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXB2].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXD].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXF].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXF_LZ].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXL].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXL2].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_TXP].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXQ].fetch_args = txq_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_TXQ].emit = txq_emit;
-	bld_base->op_actions[TGSI_OPCODE_TG4] = tex_action;
-	bld_base->op_actions[TGSI_OPCODE_LODQ] = tex_action;
+	bld_base->op_actions[TGSI_OPCODE_TG4].emit = build_tex_intrinsic;
+	bld_base->op_actions[TGSI_OPCODE_LODQ].emit = build_tex_intrinsic;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
 
 	bld_base->op_actions[TGSI_OPCODE_FBFETCH].emit = si_llvm_emit_fbfetch;
