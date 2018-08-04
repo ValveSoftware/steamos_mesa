@@ -313,38 +313,6 @@ static void image_fetch_coords(
 	}
 }
 
-/**
- * Append the resource and indexing arguments for buffer intrinsics.
- *
- * \param rsrc the v4i32 buffer resource
- * \param index index into the buffer (stride-based)
- * \param offset byte offset into the buffer
- */
-static void buffer_append_args(
-		struct si_shader_context *ctx,
-		struct lp_build_emit_data *emit_data,
-		LLVMValueRef rsrc,
-		LLVMValueRef index,
-		LLVMValueRef offset,
-		bool atomic,
-		bool force_glc)
-{
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
-	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
-
-	emit_data->args[emit_data->arg_count++] = rsrc;
-	emit_data->args[emit_data->arg_count++] = index; /* vindex */
-	emit_data->args[emit_data->arg_count++] = offset; /* voffset */
-	if (!atomic) {
-		emit_data->args[emit_data->arg_count++] =
-			force_glc ||
-			inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
-			i1true : i1false; /* glc */
-	}
-	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
-}
-
 static unsigned get_cache_policy(struct si_shader_context *ctx,
 				 const struct tgsi_full_instruction *inst,
 				 bool atomic, bool may_store_unaligned,
@@ -366,38 +334,6 @@ static unsigned get_cache_policy(struct si_shader_context *ctx,
 		cache_policy |= ac_glc;
 
 	return cache_policy;
-}
-
-static void load_emit_buffer(struct si_shader_context *ctx,
-			     struct lp_build_emit_data *emit_data,
-			     bool can_speculate, bool allow_smem)
-{
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	uint writemask = inst->Dst[0].Register.WriteMask;
-	uint count = util_last_bit(writemask);
-	LLVMValueRef *args = emit_data->args;
-
-	/* Don't use SMEM for shader buffer loads, because LLVM doesn't
-	 * select SMEM for SI.load.const with a non-constant offset, and
-	 * constant offsets practically don't exist with shader buffers.
-	 *
-	 * Also, SI.load.const doesn't use inst_offset when it's lowered
-	 * to VMEM, so we just end up with more VALU instructions in the end
-	 * and no benefit.
-	 *
-	 * TODO: Remove this line once LLVM can select SMEM with a non-constant
-	 *       offset, and can derive inst_offset when VMEM is selected.
-	 *       After that, si_memory_barrier should invalidate sL1 for shader
-	 *       buffers.
-	 */
-
-	assert(LLVMConstIntGetZExtValue(args[1]) == 0); /* vindex */
-	emit_data->output[emit_data->chan] =
-		ac_build_buffer_load(&ctx->ac, args[0], count, NULL,
-				     args[2], NULL, 0,
-				     LLVMConstIntGetZExtValue(args[3]),
-				     LLVMConstIntGetZExtValue(args[4]),
-				     can_speculate, allow_smem);
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -515,6 +451,9 @@ static void load_emit(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	bool can_speculate = false;
+	LLVMValueRef vindex = ctx->i32_0;
+	LLVMValueRef voffset = ctx->i32_0;
+	struct ac_image_args args = {};
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
@@ -523,34 +462,23 @@ static void load_emit(
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
 	    inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
-		LLVMValueRef offset, tmp, rsrc;
-
 		bool ubo = inst->Src[0].Register.File == TGSI_FILE_CONSTBUF;
-		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
-
-		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = ac_to_integer(&ctx->ac, tmp);
-
-		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
-				   offset, false, false);
+		args.resource = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
+		voffset = ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 1, 0));
 	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
 		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
-		LLVMValueRef rsrc;
 		unsigned target = inst->Memory.Texture;
 
-		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &rsrc);
-		image_fetch_coords(bld_base, inst, 1, rsrc, &emit_data->args[1]);
-
-		if (target == TGSI_TEXTURE_BUFFER) {
-			buffer_append_args(ctx, emit_data, rsrc, emit_data->args[1],
-					   ctx->i32_0, false, false);
-		} else {
-			emit_data->args[0] = rsrc;
-		}
+		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &args.resource);
+		image_fetch_coords(bld_base, inst, 1, args.resource, args.coords);
+		vindex = args.coords[0]; /* for buffers only */
 	}
 
 	if (inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
-		load_emit_buffer(ctx, emit_data, true, true);
+		emit_data->output[emit_data->chan] =
+			ac_build_buffer_load(&ctx->ac, args.resource,
+					     util_last_bit(inst->Dst[0].Register.WriteMask),
+					     NULL, voffset, NULL, 0, 0, 0, true, true);
 		return;
 	}
 
@@ -563,9 +491,29 @@ static void load_emit(
 						info->shader_buffers_atomic,
 						info->images_store |
 						info->images_atomic);
+	args.cache_policy = get_cache_policy(ctx, inst, false, false, false);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		load_emit_buffer(ctx, emit_data, can_speculate, false);
+		/* Don't use SMEM for shader buffer loads, because LLVM doesn't
+		 * select SMEM for SI.load.const with a non-constant offset, and
+		 * constant offsets practically don't exist with shader buffers.
+		 *
+		 * Also, SI.load.const doesn't use inst_offset when it's lowered
+		 * to VMEM, so we just end up with more VALU instructions in the end
+		 * and no benefit.
+		 *
+		 * TODO: Remove this line once LLVM can select SMEM with a non-constant
+		 *       offset, and can derive inst_offset when VMEM is selected.
+		 *       After that, si_memory_barrier should invalidate sL1 for shader
+		 *       buffers.
+		 */
+		emit_data->output[emit_data->chan] =
+			ac_build_buffer_load(&ctx->ac, args.resource,
+					     util_last_bit(inst->Dst[0].Register.WriteMask),
+					     NULL, voffset, NULL, 0,
+					     !!(args.cache_policy & ac_glc),
+					     !!(args.cache_policy & ac_slc),
+					     can_speculate, false);
 		return;
 	}
 
@@ -573,22 +521,17 @@ static void load_emit(
 		unsigned num_channels = util_last_bit(inst->Dst[0].Register.WriteMask);
 		LLVMValueRef result =
 			ac_build_buffer_load_format(&ctx->ac,
-						    emit_data->args[0],
-						    emit_data->args[1],
-						    emit_data->args[2],
+						    args.resource,
+						    vindex,
+						    ctx->i32_0,
 						    num_channels,
-						    LLVMConstIntGetZExtValue(emit_data->args[3]),
+						    !!(args.cache_policy & ac_glc),
 						    can_speculate);
 		emit_data->output[emit_data->chan] =
 			ac_build_expand_to_vec4(&ctx->ac, result, num_channels);
 	} else {
-		struct ac_image_args args = {};
 		args.opcode = ac_image_load;
-		args.resource = emit_data->args[0];
-		memcpy(args.coords, &emit_data->args[1], sizeof(args.coords));
 		args.dim = ac_image_dim_from_tgsi_target(ctx->screen, inst->Memory.Texture);
-		if (inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE))
-			args.cache_policy = ac_glc;
 		args.attributes = ac_get_load_intr_attribs(can_speculate);
 		args.dmask = 0xf;
 
