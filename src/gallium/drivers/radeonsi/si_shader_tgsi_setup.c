@@ -1021,6 +1021,8 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 
 	ctx->i32_0 = LLVMConstInt(ctx->i32, 0, 0);
 	ctx->i32_1 = LLVMConstInt(ctx->i32, 1, 0);
+	ctx->i1false = LLVMConstInt(ctx->i1, 0, 0);
+	ctx->i1true = LLVMConstInt(ctx->i1, 1, 0);
 }
 
 /* Set the context to a certain TGSI shader. Can be called repeatedly

@@ -345,6 +345,20 @@ static void buffer_append_args(
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
+static unsigned get_cache_policy(struct si_shader_context *ctx,
+				 const struct tgsi_full_instruction *inst,
+				 bool atomic, bool force_glc)
+{
+	unsigned cache_policy = 0;
+
+	if (!atomic &&
+	    (force_glc ||
+	     inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE)))
+		cache_policy |= ac_glc;
+
+	return cache_policy;
+}
+
 static void load_emit_buffer(struct si_shader_context *ctx,
 			     struct lp_build_emit_data *emit_data,
 			     bool can_speculate, bool allow_smem)
@@ -859,6 +873,10 @@ static void atomic_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	const struct tgsi_full_instruction * inst = emit_data->inst;
+	struct ac_image_args args = {};
+	unsigned num_data = 0;
+	LLVMValueRef vindex = ctx->i32_0;
+	LLVMValueRef voffset = ctx->i32_0;
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		atomic_emit_memory(ctx, emit_data);
@@ -869,52 +887,47 @@ static void atomic_emit(
 		/* llvm.amdgcn.image/buffer.atomic.cmpswap reflect the hardware order
 		 * of arguments, which is reversed relative to TGSI (and GLSL)
 		 */
-		emit_data->args[emit_data->arg_count++] =
+		args.data[num_data++] =
 			ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 3, 0));
 	}
 
-	emit_data->args[emit_data->arg_count++] =
+	args.data[num_data++] =
 		ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 2, 0));
+	args.cache_policy = get_cache_policy(ctx, inst, true, false);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		LLVMValueRef rsrc, offset;
-
-		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], false);
-		offset = ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 1, 0));
-
-		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
-				   offset, true, false);
+		args.resource = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], false);
+		voffset = ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 1, 0));
 	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
 		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
-		unsigned target = inst->Memory.Texture;
-		LLVMValueRef rsrc;
-
-		image_fetch_rsrc(bld_base, &inst->Src[0], true, target, &rsrc);
-		image_fetch_coords(bld_base, inst, 1, rsrc,
-				   &emit_data->args[emit_data->arg_count + 1]);
-
-		if (target == TGSI_TEXTURE_BUFFER) {
-			buffer_append_args(ctx, emit_data, rsrc,
-					   emit_data->args[emit_data->arg_count + 1],
-					   ctx->i32_0, true, false);
-		} else {
-			emit_data->args[emit_data->arg_count] = rsrc;
-		}
+		image_fetch_rsrc(bld_base, &inst->Src[0], true,
+				inst->Memory.Texture, &args.resource);
+		image_fetch_coords(bld_base, inst, 1, args.resource, args.coords);
+		vindex = args.coords[0]; /* for buffers only */
 	}
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
 	    inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		LLVMValueRef buf_args[7];
+		unsigned num_args = 0;
+
+		buf_args[num_args++] = args.data[0];
+		if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+			buf_args[num_args++] = args.data[1];
+
+		buf_args[num_args++] = args.resource;
+		buf_args[num_args++] = vindex;
+		buf_args[num_args++] = voffset;
+		buf_args[num_args++] = args.cache_policy & ac_slc ? ctx->i1true : ctx->i1false;
+
 		char intrinsic_name[40];
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.buffer.atomic.%s", action->intr_name);
-		LLVMValueRef tmp = ac_build_intrinsic(
-			&ctx->ac, intrinsic_name, ctx->i32,
-			emit_data->args, emit_data->arg_count, 0);
-		emit_data->output[emit_data->chan] = ac_to_float(&ctx->ac, tmp);
+		emit_data->output[emit_data->chan] =
+			ac_to_float(&ctx->ac,
+				    ac_build_intrinsic(&ctx->ac, intrinsic_name,
+						       ctx->i32, buf_args, num_args, 0));
 	} else {
-		unsigned num_data = inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS ? 2 : 1;
-		struct ac_image_args args = {};
-
 		if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
 			args.opcode = ac_image_atomic_cmpswap;
 		} else {
@@ -933,13 +946,7 @@ static void atomic_emit(
 			}
 		}
 
-		for (unsigned i = 0; i < num_data; ++i)
-			args.data[i] = emit_data->args[i];
-
-		args.resource = emit_data->args[num_data];
-		memcpy(args.coords, &emit_data->args[num_data + 1], sizeof(args.coords));
 		args.dim = ac_image_dim_from_tgsi_target(ctx->screen, inst->Memory.Texture);
-
 		emit_data->output[emit_data->chan] =
 			ac_to_float(&ctx->ac, ac_build_image_opcode(&ctx->ac, &args));
 	}
