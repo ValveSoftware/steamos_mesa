@@ -347,12 +347,21 @@ static void buffer_append_args(
 
 static unsigned get_cache_policy(struct si_shader_context *ctx,
 				 const struct tgsi_full_instruction *inst,
-				 bool atomic, bool force_glc)
+				 bool atomic, bool may_store_unaligned,
+				 bool writeonly_memory)
 {
 	unsigned cache_policy = 0;
 
 	if (!atomic &&
-	    (force_glc ||
+	    /* SI has a TC L1 bug causing corruption of 8bit/16bit stores.
+	     * All store opcodes not aligned to a dword are affected.
+	     * The only way to get unaligned stores in radeonsi is through
+	     * shader images. */
+	    ((may_store_unaligned && ctx->screen->info.chip_class == SI) ||
+	     /* If this is write-only, don't keep data in L1 to prevent
+	      * evicting L1 cache lines that may be needed by other
+	      * instructions. */
+	     writeonly_memory ||
 	     inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE)))
 		cache_policy |= ac_glc;
 
@@ -588,30 +597,22 @@ static void load_emit(
 	}
 }
 
-static void store_emit_buffer(
-		struct si_shader_context *ctx,
-		struct lp_build_emit_data *emit_data,
-		bool writeonly_memory)
+static void store_emit_buffer(struct si_shader_context *ctx,
+			      LLVMValueRef resource,
+			      unsigned writemask,
+			      LLVMValueRef value,
+			      LLVMValueRef voffset,
+			      unsigned cache_policy,
+			      bool writeonly_memory)
 {
-	const struct tgsi_full_instruction *inst = emit_data->inst;
 	LLVMBuilderRef builder = ctx->ac.builder;
-	LLVMValueRef base_data = emit_data->args[0];
-	LLVMValueRef base_offset = emit_data->args[3];
-	unsigned writemask = inst->Dst[0].Register.WriteMask;
-
-	/* If this is write-only, don't keep data in L1 to prevent
-	 * evicting L1 cache lines that may be needed by other
-	 * instructions.
-	 */
-	if (writeonly_memory)
-		emit_data->args[4] = LLVMConstInt(ctx->i1, 1, 0); /* GLC = 1 */
+	LLVMValueRef base_data = value;
+	LLVMValueRef base_offset = voffset;
 
 	while (writemask) {
 		int start, count;
 		const char *intrinsic_name;
-		LLVMValueRef data;
-		LLVMValueRef offset;
-		LLVMValueRef tmp;
+		LLVMValueRef data, voff, tmp;
 
 		u_bit_scan_consecutive_range(&writemask, &start, &count);
 
@@ -650,20 +651,23 @@ static void store_emit_buffer(
 			intrinsic_name = "llvm.amdgcn.buffer.store.f32";
 		}
 
-		offset = base_offset;
+		voff = base_offset;
 		if (start != 0) {
-			offset = LLVMBuildAdd(
-				builder, offset,
+			voff = LLVMBuildAdd(
+				builder, voff,
 				LLVMConstInt(ctx->i32, start * 4, 0), "");
 		}
 
-		emit_data->args[0] = data;
-		emit_data->args[3] = offset;
-
-		ac_build_intrinsic(
-			&ctx->ac, intrinsic_name, ctx->voidt,
-			emit_data->args, emit_data->arg_count,
-			ac_get_store_intr_attribs(writeonly_memory));
+		LLVMValueRef args[] = {
+			data,
+			resource,
+			ctx->i32_0, /* vindex */
+			voff,
+			LLVMConstInt(ctx->i1, !!(cache_policy & ac_glc), 0),
+			LLVMConstInt(ctx->i1, !!(cache_policy & ac_slc), 0),
+		};
+		ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->voidt, args, 6,
+				   ac_get_store_intr_attribs(writeonly_memory));
 	}
 }
 
@@ -701,8 +705,17 @@ static void store_emit(
 	struct tgsi_full_src_register resource_reg =
 		tgsi_full_src_register_from_dst(&inst->Dst[0]);
 	unsigned target = inst->Memory.Texture;
-	bool writeonly_memory = false;
-	LLVMValueRef chans[4], rsrc;
+	bool writeonly_memory = is_oneway_access_only(inst, info,
+						      info->shader_buffers_load |
+						      info->shader_buffers_atomic,
+						      info->images_load |
+						      info->images_atomic);
+	bool is_image = inst->Dst[0].Register.File == TGSI_FILE_IMAGE ||
+			tgsi_is_bindless_image_file(inst->Dst[0].Register.File);
+	LLVMValueRef chans[4], value;
+	LLVMValueRef vindex = ctx->i32_0;
+	LLVMValueRef voffset = ctx->i32_0;
+	struct ac_image_args args = {};
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
 		store_emit_memory(ctx, emit_data);
@@ -712,87 +725,53 @@ static void store_emit(
 	for (unsigned chan = 0; chan < 4; ++chan)
 		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);
 
-	emit_data->args[emit_data->arg_count++] =
-		ac_build_gather_values(&ctx->ac, chans, 4);
+	value = ac_build_gather_values(&ctx->ac, chans, 4);
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
-		LLVMValueRef offset, tmp;
-
-		rsrc = shader_buffer_fetch_rsrc(ctx, &resource_reg, false);
-
-		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
-		offset = ac_to_integer(&ctx->ac, tmp);
-
-		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
-				   offset, false, false);
-	} else if (inst->Dst[0].Register.File == TGSI_FILE_IMAGE ||
-		   tgsi_is_bindless_image_file(inst->Dst[0].Register.File)) {
-		/* 8bit/16bit TC L1 write corruption bug on SI.
-		 * All store opcodes not aligned to a dword are affected.
-		 *
-		 * The only way to get unaligned stores in radeonsi is through
-		 * shader images.
-		 */
-		bool force_glc = ctx->screen->info.chip_class == SI;
-
-		image_fetch_rsrc(bld_base, &resource_reg, true, target, &rsrc);
-		image_fetch_coords(bld_base, inst, 0, rsrc, &emit_data->args[2]);
-
-		if (target == TGSI_TEXTURE_BUFFER) {
-			buffer_append_args(ctx, emit_data, rsrc, emit_data->args[2],
-					   ctx->i32_0, false, force_glc);
-		} else {
-			emit_data->args[1] = rsrc;
-		}
+		args.resource = shader_buffer_fetch_rsrc(ctx, &resource_reg, false);
+		voffset = ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 0, 0));
+	} else if (is_image) {
+		image_fetch_rsrc(bld_base, &resource_reg, true, target, &args.resource);
+		image_fetch_coords(bld_base, inst, 0, args.resource, args.coords);
+		vindex = args.coords[0]; /* for buffers only */
+	} else {
+		unreachable("unexpected register file");
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		ac_build_waitcnt(&ctx->ac, VM_CNT);
 
-	writeonly_memory = is_oneway_access_only(inst, info,
-						 info->shader_buffers_load |
-						 info->shader_buffers_atomic,
-						 info->images_load |
-						 info->images_atomic);
+	args.cache_policy = get_cache_policy(ctx, inst,
+					     false, /* atomic */
+					     is_image, /* may_store_unaligned */
+					     writeonly_memory);
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
-		store_emit_buffer(ctx, emit_data, writeonly_memory);
+		store_emit_buffer(ctx, args.resource, inst->Dst[0].Register.WriteMask,
+				  value, voffset, args.cache_policy, writeonly_memory);
 		return;
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		/* If this is write-only, don't keep data in L1 to prevent
-		 * evicting L1 cache lines that may be needed by other
-		 * instructions.
-		 */
-		if (writeonly_memory)
-			emit_data->args[4] = LLVMConstInt(ctx->i1, 1, 0); /* GLC = 1 */
+		LLVMValueRef buf_args[] = {
+			value,
+			args.resource,
+			vindex,
+			ctx->i32_0, /* voffset */
+			LLVMConstInt(ctx->i1, !!(args.cache_policy & ac_glc), 0),
+			LLVMConstInt(ctx->i1, !!(args.cache_policy & ac_slc), 0),
+		};
 
 		emit_data->output[emit_data->chan] = ac_build_intrinsic(
 			&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32",
-			ctx->voidt, emit_data->args,
-			emit_data->arg_count,
+			ctx->voidt, buf_args, 6,
 			ac_get_store_intr_attribs(writeonly_memory));
 	} else {
-		struct ac_image_args args = {};
 		args.opcode = ac_image_store;
-		args.data[0] = emit_data->args[0];
-		args.resource = emit_data->args[1];
-		memcpy(args.coords, &emit_data->args[2], sizeof(args.coords));
+		args.data[0] = value;
 		args.dim = ac_image_dim_from_tgsi_target(ctx->screen, inst->Memory.Texture);
 		args.attributes = ac_get_store_intr_attribs(writeonly_memory);
 		args.dmask = 0xf;
-
-		/* Workaround for 8bit/16bit TC L1 write corruption bug on SI.
-		 * All store opcodes not aligned to a dword are affected.
-		 */
-		if (ctx->screen->info.chip_class == SI ||
-		    /* If this is write-only, don't keep data in L1 to prevent
-		     * evicting L1 cache lines that may be needed by other
-		     * instructions. */
-		    writeonly_memory ||
-		    inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE))
-			args.cache_policy = ac_glc;
 
 		emit_data->output[emit_data->chan] =
 			ac_build_image_opcode(&ctx->ac, &args);
@@ -893,7 +872,7 @@ static void atomic_emit(
 
 	args.data[num_data++] =
 		ac_to_integer(&ctx->ac, lp_build_emit_fetch(bld_base, inst, 2, 0));
-	args.cache_policy = get_cache_policy(ctx, inst, true, false);
+	args.cache_policy = get_cache_policy(ctx, inst, true, false, false);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		args.resource = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], false);
