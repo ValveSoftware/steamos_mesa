@@ -4016,20 +4016,17 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	int chan;
 	int i;
 	LLVMValueRef prim_mask = ctx->abi.prim_mask;
-	LLVMValueRef array_idx;
+	LLVMValueRef array_idx, offset_x = NULL, offset_y = NULL;
 	int interp_param_idx;
 	unsigned interp;
 	unsigned location;
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET) {
 		/* offset is in second src, first two channels */
-		emit_data->args[0] = lp_build_emit_fetch(bld_base,
-							 emit_data->inst, 1,
-							 TGSI_CHAN_X);
-		emit_data->args[1] = lp_build_emit_fetch(bld_base,
-							 emit_data->inst, 1,
-							 TGSI_CHAN_Y);
-		emit_data->arg_count = 2;
+		offset_x = lp_build_emit_fetch(bld_base, emit_data->inst, 1,
+					       TGSI_CHAN_X);
+		offset_y = lp_build_emit_fetch(bld_base, emit_data->inst, 1,
+					       TGSI_CHAN_Y);
 	} else if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
 		LLVMValueRef sample_position;
 		LLVMValueRef sample_id;
@@ -4069,16 +4066,13 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 			sample_position = load_sample_position(&ctx->abi, sample_id);
 		}
 
-		emit_data->args[0] = LLVMBuildExtractElement(ctx->ac.builder,
-							     sample_position,
-							     ctx->i32_0, "");
+		offset_x = LLVMBuildExtractElement(ctx->ac.builder, sample_position,
+						   ctx->i32_0, "");
 
-		emit_data->args[0] = LLVMBuildFSub(ctx->ac.builder, emit_data->args[0], halfval, "");
-		emit_data->args[1] = LLVMBuildExtractElement(ctx->ac.builder,
-							     sample_position,
-							     ctx->i32_1, "");
-		emit_data->args[1] = LLVMBuildFSub(ctx->ac.builder, emit_data->args[1], halfval, "");
-		emit_data->arg_count = 2;
+		offset_x = LLVMBuildFSub(ctx->ac.builder, offset_x, halfval, "");
+		offset_y = LLVMBuildExtractElement(ctx->ac.builder, sample_position,
+						   ctx->i32_1, "");
+		offset_y = LLVMBuildFSub(ctx->ac.builder, offset_y, halfval, "");
 	}
 
 	assert(input->Register.File == TGSI_FILE_INPUT);
@@ -4144,11 +4138,11 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 
 			interp_el = ac_to_float(&ctx->ac, interp_el);
 
-			temp1 = LLVMBuildFMul(ctx->ac.builder, ddx_el, emit_data->args[0], "");
+			temp1 = LLVMBuildFMul(ctx->ac.builder, ddx_el, offset_x, "");
 
 			temp1 = LLVMBuildFAdd(ctx->ac.builder, temp1, interp_el, "");
 
-			temp2 = LLVMBuildFMul(ctx->ac.builder, ddy_el, emit_data->args[1], "");
+			temp2 = LLVMBuildFMul(ctx->ac.builder, ddy_el, offset_y, "");
 
 			ij_out[i] = LLVMBuildFAdd(ctx->ac.builder, temp2, temp1, "");
 		}
