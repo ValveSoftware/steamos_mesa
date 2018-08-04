@@ -345,44 +345,6 @@ static void buffer_append_args(
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
-static void load_fetch_args(
-		struct lp_build_tgsi_context * bld_base,
-		struct lp_build_emit_data * emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	const struct tgsi_full_instruction * inst = emit_data->inst;
-	unsigned target = inst->Memory.Texture;
-	LLVMValueRef rsrc;
-
-	emit_data->dst_type = ctx->v4f32;
-
-	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
-		   inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
-		LLVMValueRef offset;
-		LLVMValueRef tmp;
-
-		bool ubo = inst->Src[0].Register.File == TGSI_FILE_CONSTBUF;
-		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
-
-		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = ac_to_integer(&ctx->ac, tmp);
-
-		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
-				   offset, false, false);
-	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
-		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
-		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &rsrc);
-		image_fetch_coords(bld_base, inst, 1, rsrc, &emit_data->args[1]);
-
-		if (target == TGSI_TEXTURE_BUFFER) {
-			buffer_append_args(ctx, emit_data, rsrc, emit_data->args[1],
-					   ctx->i32_0, false, false);
-		} else {
-			emit_data->args[0] = rsrc;
-		}
-	}
-}
-
 static void load_emit_buffer(struct si_shader_context *ctx,
 			     struct lp_build_emit_data *emit_data,
 			     bool can_speculate, bool allow_smem)
@@ -534,6 +496,34 @@ static void load_emit(
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
 		return;
+	}
+
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
+	    inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
+		LLVMValueRef offset, tmp, rsrc;
+
+		bool ubo = inst->Src[0].Register.File == TGSI_FILE_CONSTBUF;
+		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
+
+		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		offset = ac_to_integer(&ctx->ac, tmp);
+
+		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
+				   offset, false, false);
+	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE ||
+		   tgsi_is_bindless_image_file(inst->Src[0].Register.File)) {
+		LLVMValueRef rsrc;
+		unsigned target = inst->Memory.Texture;
+
+		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &rsrc);
+		image_fetch_coords(bld_base, inst, 1, rsrc, &emit_data->args[1]);
+
+		if (target == TGSI_TEXTURE_BUFFER) {
+			buffer_append_args(ctx, emit_data, rsrc, emit_data->args[1],
+					   ctx->i32_0, false, false);
+		} else {
+			emit_data->args[0] = rsrc;
+		}
 	}
 
 	if (inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
@@ -1845,7 +1835,6 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 
 	bld_base->op_actions[TGSI_OPCODE_FBFETCH].emit = si_llvm_emit_fbfetch;
 
-	bld_base->op_actions[TGSI_OPCODE_LOAD].fetch_args = load_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_LOAD].emit = load_emit;
 	bld_base->op_actions[TGSI_OPCODE_STORE].fetch_args = store_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_STORE].emit = store_emit;
