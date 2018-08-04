@@ -1848,15 +1848,24 @@ AlgebraicOpt::handleMINMAX(Instruction *minmax)
    }
 }
 
+// rcp(rcp(a)) = a
+// rcp(sqrt(a)) = rsq(a)
 void
 AlgebraicOpt::handleRCP(Instruction *rcp)
 {
    Instruction *si = rcp->getSrc(0)->getUniqueInsn();
 
-   if (si && si->op == OP_RCP) {
+   if (!si)
+      return;
+
+   if (si->op == OP_RCP) {
       Modifier mod = rcp->src(0).mod * si->src(0).mod;
       rcp->op = mod.getOp();
       rcp->setSrc(0, si->getSrc(0));
+   } else if (si->op == OP_SQRT) {
+      rcp->op = OP_RSQ;
+      rcp->setSrc(0, si->getSrc(0));
+      rcp->src(0).mod = rcp->src(0).mod * si->src(0).mod;
    }
 }
 
