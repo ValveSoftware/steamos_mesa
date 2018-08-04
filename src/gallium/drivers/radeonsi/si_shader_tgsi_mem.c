@@ -986,20 +986,6 @@ static void atomic_emit(
 	}
 }
 
-static void set_tex_fetch_args(struct si_shader_context *ctx,
-			       struct lp_build_emit_data *emit_data,
-			       struct ac_image_args *args,
-			       unsigned target)
-{
-	args->dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
-	args->unorm = target == TGSI_TEXTURE_RECT ||
-		      target == TGSI_TEXTURE_SHADOWRECT;
-
-	/* Ugly, but we seem to have no other choice right now. */
-	STATIC_ASSERT(sizeof(*args) <= sizeof(emit_data->args));
-	memcpy(emit_data->args, args, sizeof(*args));
-}
-
 static LLVMValueRef fix_resinfo(struct si_shader_context *ctx,
 				unsigned target, LLVMValueRef out)
 {
@@ -1029,40 +1015,6 @@ static LLVMValueRef fix_resinfo(struct si_shader_context *ctx,
 	return out;
 }
 
-static void resq_fetch_args(
-		struct lp_build_tgsi_context * bld_base,
-		struct lp_build_emit_data * emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	const struct tgsi_full_src_register *reg = &inst->Src[0];
-
-	emit_data->dst_type = ctx->v4i32;
-
-	if (reg->Register.File == TGSI_FILE_BUFFER) {
-		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg, false);
-		emit_data->arg_count = 1;
-	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
-		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
-				 &emit_data->args[0]);
-		emit_data->arg_count = 1;
-	} else {
-		struct ac_image_args args = {};
-		unsigned image_target;
-
-		if (inst->Memory.Texture == TGSI_TEXTURE_3D)
-			image_target = TGSI_TEXTURE_2D_ARRAY;
-		else
-			image_target = inst->Memory.Texture;
-
-		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
-				 &args.resource);
-		args.lod = ctx->i32_0;
-		args.dmask = 0xf;
-		set_tex_fetch_args(ctx, emit_data, &args, image_target);
-	}
-}
-
 static void resq_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -1071,24 +1023,45 @@ static void resq_emit(
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	LLVMValueRef out;
+	const struct tgsi_full_src_register *reg = &inst->Src[0];
 
-	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		out = LLVMBuildExtractElement(builder, emit_data->args[0],
-					      LLVMConstInt(ctx->i32, 2, 0), "");
-	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
-		out = get_buffer_size(bld_base, emit_data->args[0]);
-	} else {
-		struct ac_image_args args;
+	if (reg->Register.File == TGSI_FILE_BUFFER) {
+		LLVMValueRef rsrc = shader_buffer_fetch_rsrc(ctx, reg, false);
 
-		memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
-		args.opcode = ac_image_get_resinfo;
-		out = ac_build_image_opcode(&ctx->ac, &args);
-
-		out = fix_resinfo(ctx, inst->Memory.Texture, out);
+		emit_data->output[emit_data->chan] =
+			LLVMBuildExtractElement(builder, rsrc,
+						LLVMConstInt(ctx->i32, 2, 0), "");
+		return;
 	}
 
-	emit_data->output[emit_data->chan] = out;
+	/* Images */
+	if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		LLVMValueRef rsrc;
+
+		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture, &rsrc);
+		emit_data->output[emit_data->chan] =
+			get_buffer_size(bld_base, rsrc);
+		return;
+	}
+
+	struct ac_image_args args = {};
+	unsigned image_target;
+
+	if (inst->Memory.Texture == TGSI_TEXTURE_3D)
+		image_target = TGSI_TEXTURE_2D_ARRAY;
+	else
+		image_target = inst->Memory.Texture;
+
+	image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
+			 &args.resource);
+	args.opcode = ac_image_get_resinfo;
+	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, image_target);
+	args.lod = ctx->i32_0;
+	args.dmask = 0xf;
+
+	emit_data->output[emit_data->chan] =
+		fix_resinfo(ctx, inst->Memory.Texture,
+			    ac_build_image_opcode(&ctx->ac, &args));
 }
 
 /**
@@ -1879,7 +1852,6 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 	bld_base->op_actions[TGSI_OPCODE_LOAD].emit = load_emit;
 	bld_base->op_actions[TGSI_OPCODE_STORE].fetch_args = store_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_STORE].emit = store_emit;
-	bld_base->op_actions[TGSI_OPCODE_RESQ].fetch_args = resq_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_RESQ].emit = resq_emit;
 
 	tmpl.fetch_args = atomic_fetch_args;
