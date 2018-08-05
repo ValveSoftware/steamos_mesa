@@ -1192,6 +1192,10 @@ const struct function common_desktop_functions_possible[] = {
    { "glMultiDrawArraysIndirectCountARB", 11, -1 },
    { "glMultiDrawElementsIndirectCountARB", 11, -1 },
 
+   /* GL_AMD_framebuffer_multisample_advanced */
+   { "glRenderbufferStorageMultisampleAdvancedAMD", 11, -1 },
+   { "glNamedRenderbufferStorageMultisampleAdvancedAMD", 11, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2681,6 +2685,10 @@ const struct function gles3_functions_possible[] = {
 
    /* GL_EXT_window_rectangles */
    { "glWindowRectanglesEXT", 30, -1 },
+
+   /* GL_AMD_framebuffer_multisample_advanced */
+   { "glRenderbufferStorageMultisampleAdvancedAMD", 11, -1 },
+   { "glNamedRenderbufferStorageMultisampleAdvancedAMD", 11, -1 },
 
    { NULL, 0, -1 }
 };
