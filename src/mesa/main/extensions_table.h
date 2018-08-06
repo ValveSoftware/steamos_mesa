@@ -304,6 +304,7 @@ EXT(EXT_transform_feedback                  , EXT_transform_feedback            
 EXT(EXT_unpack_subimage                     , dummy_true                             ,  x ,  x ,  x , ES2, 2011)
 EXT(EXT_vertex_array                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_vertex_array_bgra                   , EXT_vertex_array_bgra                  , GLL, GLC,  x ,  x , 2008)
+EXT(EXT_vertex_attrib_64bit                 , ARB_vertex_attrib_64bit                ,  32, GLC,  x ,  x , 2010)
 EXT(EXT_window_rectangles                   , EXT_window_rectangles                  , GLL, GLC,  x ,  30, 2016)
 
 EXT(GREMEDY_string_marker                   , GREMEDY_string_marker                  , GLL, GLC,  x ,  x , 2007)
