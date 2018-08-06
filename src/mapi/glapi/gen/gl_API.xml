@@ -12957,6 +12957,8 @@
     <enum name="GPU_MEMORY_INFO_EVICTED_MEMORY_NVX"           value="0x904B" />
 </category>
 
+<xi:include href="AMD_gpu_shader_int64.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
 <category name="GL_NV_fill_rectangle" number="466">
     <enum name="FILL_RECTANGLE_NV" value="0x933C"/>
 </category>
