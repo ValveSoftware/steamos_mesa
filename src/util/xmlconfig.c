@@ -37,6 +37,8 @@
 #include <math.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
+#include <fnmatch.h>
 #include "xmlconfig.h"
 #include "u_process.h"
 
@@ -929,8 +931,47 @@ parseOneConfigFile(struct OptConfData *data, const char *filename)
     XML_ParserFree (p);
 }
 
+static int
+scandir_filter(const struct dirent *ent)
+{
+    if (ent->d_type != DT_REG && ent->d_type != DT_LNK)
+       return 0;
+
+    if (fnmatch("*.conf", ent->d_name, 0))
+       return 0;
+
+    return 1;
+}
+
+/** \brief Parse configuration files in a directory */
+static void
+parseConfigDir(struct OptConfData *data, const char *dirname)
+{
+    int i, count;
+    struct dirent **entries = NULL;
+
+    count = scandir(dirname, &entries, scandir_filter, alphasort);
+    if (count < 0)
+        return;
+
+    for (i = 0; i < count; i++) {
+        char filename[PATH_MAX];
+
+        snprintf(filename, PATH_MAX, "%s/%s", dirname, entries[i]->d_name);
+        free(entries[i]);
+
+        parseOneConfigFile(data, filename);
+    }
+
+    free(entries);
+}
+
 #ifndef SYSCONFDIR
 #define SYSCONFDIR "/etc"
+#endif
+
+#ifndef DATADIR
+#define DATADIR "/usr/share"
 #endif
 
 void
@@ -947,6 +988,7 @@ driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
     userData.driverName = driverName;
     userData.execName = util_get_process_name();
 
+    parseConfigDir(&userData, DATADIR "/drirc.d");
     parseOneConfigFile(&userData, SYSCONFDIR "/drirc");
 
     if ((home = getenv ("HOME"))) {

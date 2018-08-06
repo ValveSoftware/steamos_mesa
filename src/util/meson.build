@@ -123,6 +123,9 @@ libxmlconfig = static_library(
     '-DSYSCONFDIR="@0@"'.format(
       join_paths(get_option('prefix'), get_option('sysconfdir'))
     ),
+    '-DDATADIR="@0@"'.format(
+      join_paths(get_option('prefix'), get_option('datadir'))
+    ),
   ],
   build_by_default : false,
 )
