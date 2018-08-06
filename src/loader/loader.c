@@ -108,8 +108,32 @@ static const char __driConfigOptionsLoader[] =
 DRI_CONF_BEGIN
     DRI_CONF_SECTION_INITIALIZATION
         DRI_CONF_DEVICE_ID_PATH_TAG()
+        DRI_CONF_DRI_DRIVER()
     DRI_CONF_SECTION_END
 DRI_CONF_END;
+
+static char *loader_get_dri_config_driver(int fd)
+{
+   driOptionCache defaultInitOptions;
+   driOptionCache userInitOptions;
+   char *dri_driver = NULL;
+   char *kernel_driver = loader_get_kernel_driver_name(fd);
+
+   driParseOptionInfo(&defaultInitOptions, __driConfigOptionsLoader);
+   driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0,
+                       "loader", kernel_driver);
+   if (driCheckOption(&userInitOptions, "dri_driver", DRI_STRING)) {
+      char *opt = driQueryOptionstr(&userInitOptions, "dri_driver");
+      /* not an empty string */
+      if (*opt)
+         dri_driver = strdup(opt);
+   }
+   driDestroyOptionCache(&userInitOptions);
+   driDestroyOptionInfo(&defaultInitOptions);
+
+   free(kernel_driver);
+   return dri_driver;
+}
 
 static char *loader_get_dri_config_device_id(void)
 {
@@ -357,6 +381,12 @@ loader_get_driver_for_fd(int fd)
       if (driver)
          return strdup(driver);
    }
+
+#if defined(HAVE_LIBDRM) && defined(USE_DRICONF)
+   driver = loader_get_dri_config_driver(fd);
+   if (driver)
+      return driver;
+#endif
 
    if (!loader_get_pci_id_for_fd(fd, &vendor_id, &chip_id)) {
       driver = loader_get_kernel_driver_name(fd);

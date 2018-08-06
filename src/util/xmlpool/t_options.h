@@ -411,6 +411,11 @@ DRI_CONF_OPT_BEGIN(device_id, string, def) \
         DRI_CONF_DESC(en,gettext("Define the graphic device to use if possible")) \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_DRI_DRIVER(def) \
+DRI_CONF_OPT_BEGIN(dri_driver, string, def) \
+        DRI_CONF_DESC(en,gettext("Override the DRI driver to load")) \
+DRI_CONF_OPT_END
+
 /**
  * \brief Gallium-Nine specific configuration options
  */
