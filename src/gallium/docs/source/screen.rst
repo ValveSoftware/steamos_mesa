@@ -454,6 +454,8 @@ subpixel precision bias in bits during conservative rasterization.
   ```set_sample_locations```.
 * ``PIPE_CAP_MAX_GS_INVOCATIONS``: Maximum supported value of
   TGSI_PROPERTY_GS_INVOCATIONS.
+* ``PIPE_CAP_MAX_SHADER_BUFFER_SIZE``: Maximum supported size for binding
+  with set_shader_buffers.
 
 .. _pipe_capf:
 

@@ -189,6 +189,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 420;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
+	case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
 		return MIN2(sscreen->info.max_alloc_size, INT_MAX);
 
 	case PIPE_CAP_VERTEX_BUFFER_OFFSET_4BYTE_ALIGNED_ONLY:

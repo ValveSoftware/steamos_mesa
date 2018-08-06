@@ -340,6 +340,9 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_MAX_GS_INVOCATIONS:
       return 32;
 
+   case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
+      return 1 << 27;
+
    case PIPE_CAP_MAX_VIEWPORTS:
       return 1;
 

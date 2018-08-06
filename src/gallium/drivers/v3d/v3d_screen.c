@@ -279,6 +279,8 @@ v3d_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS:
 	case PIPE_CAP_MAX_GS_INVOCATIONS:
                 return 0;
+	case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
+		return 1 << 27;
 
                 /* Texturing. */
         case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:

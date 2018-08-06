@@ -468,7 +468,8 @@ void st_init_limits(struct pipe_screen *screen,
             c->MaxCombinedAtomicBuffers;
       c->MaxCombinedShaderOutputResources +=
          c->MaxCombinedShaderStorageBlocks;
-      c->MaxShaderStorageBlockSize = 1 << 27;
+      c->MaxShaderStorageBlockSize =
+         screen->get_param(screen, PIPE_CAP_MAX_SHADER_BUFFER_SIZE);
       extensions->ARB_shader_storage_buffer_object = GL_TRUE;
    }
 
