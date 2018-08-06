@@ -709,6 +709,7 @@ void st_init_extensions(struct pipe_screen *screen,
 
       { o(EXT_blend_equation_separate),      PIPE_CAP_BLEND_EQUATION_SEPARATE          },
       { o(EXT_depth_bounds_test),            PIPE_CAP_DEPTH_BOUNDS_TEST                },
+      { o(EXT_disjoint_timer_query),         PIPE_CAP_QUERY_TIMESTAMP                  },
       { o(EXT_draw_buffers2),                PIPE_CAP_INDEP_BLEND_ENABLE               },
       { o(EXT_memory_object),                PIPE_CAP_MEMOBJ                           },
       { o(EXT_memory_object_fd),             PIPE_CAP_MEMOBJ                           },
