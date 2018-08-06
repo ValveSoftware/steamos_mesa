@@ -804,6 +804,9 @@ struct si_context {
 	struct si_scissors		scissors;
 	struct si_streamout		streamout;
 	struct si_viewports		viewports;
+	unsigned			num_window_rectangles;
+	bool				window_rectangles_include;
+	struct pipe_scissor_state	window_rectangles[4];
 
 	/* Precomputed states. */
 	struct si_pm4_state		*init_config;

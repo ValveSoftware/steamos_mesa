@@ -435,12 +435,92 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 	    si_mark_atom_dirty(ctx, &ctx->atoms.s.viewports);
 }
 
+static void si_emit_window_rectangles(struct si_context *sctx)
+{
+	/* There are four clipping rectangles. Their corner coordinates are inclusive.
+	 * Every pixel is assigned a number from 0 and 15 by setting bits 0-3 depending
+	 * on whether the pixel is inside cliprects 0-3, respectively. For example,
+	 * if a pixel is inside cliprects 0 and 1, but outside 2 and 3, it is assigned
+	 * the number 3 (binary 0011).
+	 *
+	 * If CLIPRECT_RULE & (1 << number), the pixel is rasterized.
+	 */
+	struct radeon_cmdbuf *cs = sctx->gfx_cs;
+	static const unsigned outside[4] = {
+		/* outside rectangle 0 */
+		V_02820C_OUT |
+		V_02820C_IN_1 |
+		V_02820C_IN_2 |
+		V_02820C_IN_21 |
+		V_02820C_IN_3 |
+		V_02820C_IN_31 |
+		V_02820C_IN_32 |
+		V_02820C_IN_321,
+		/* outside rectangles 0, 1 */
+		V_02820C_OUT |
+		V_02820C_IN_2 |
+		V_02820C_IN_3 |
+		V_02820C_IN_32,
+		/* outside rectangles 0, 1, 2 */
+		V_02820C_OUT |
+		V_02820C_IN_3,
+		/* outside rectangles 0, 1, 2, 3 */
+		V_02820C_OUT,
+	};
+	const unsigned disabled = 0xffff; /* all inside and outside cases */
+	unsigned num_rectangles = sctx->num_window_rectangles;
+	struct pipe_scissor_state *rects = sctx->window_rectangles;
+	unsigned rule;
+
+	assert(num_rectangles <= 4);
+
+	if (num_rectangles == 0)
+		rule = disabled;
+	else if (sctx->window_rectangles_include)
+		rule = ~outside[num_rectangles - 1];
+	else
+		rule = outside[num_rectangles - 1];
+
+	radeon_opt_set_context_reg(sctx, R_02820C_PA_SC_CLIPRECT_RULE,
+				   SI_TRACKED_PA_SC_CLIPRECT_RULE, rule);
+	if (num_rectangles == 0)
+		return;
+
+	radeon_set_context_reg_seq(cs, R_028210_PA_SC_CLIPRECT_0_TL,
+				   num_rectangles * 2);
+	for (unsigned i = 0; i < num_rectangles; i++) {
+		radeon_emit(cs, S_028210_TL_X(rects[i].minx) |
+				S_028210_TL_Y(rects[i].miny));
+		radeon_emit(cs, S_028214_BR_X(rects[i].maxx) |
+				S_028214_BR_Y(rects[i].maxy));
+	}
+}
+
+static void si_set_window_rectangles(struct pipe_context *ctx,
+				     boolean include,
+				     unsigned num_rectangles,
+				     const struct pipe_scissor_state *rects)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	sctx->num_window_rectangles = num_rectangles;
+	sctx->window_rectangles_include = include;
+	if (num_rectangles) {
+		memcpy(sctx->window_rectangles, rects,
+		       sizeof(*rects) * num_rectangles);
+	}
+
+	si_mark_atom_dirty(sctx, &sctx->atoms.s.window_rectangles);
+}
+
 void si_init_viewport_functions(struct si_context *ctx)
 {
 	ctx->atoms.s.guardband.emit = si_emit_guardband;
 	ctx->atoms.s.scissors.emit = si_emit_scissors;
 	ctx->atoms.s.viewports.emit = si_emit_viewport_states;
+	ctx->atoms.s.window_rectangles.emit = si_emit_window_rectangles;
 
 	ctx->b.set_scissor_states = si_set_scissor_states;
 	ctx->b.set_viewport_states = si_set_viewport_states;
+	ctx->b.set_window_rectangles = si_set_window_rectangles;
 }

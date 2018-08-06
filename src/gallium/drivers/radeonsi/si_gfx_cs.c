@@ -278,6 +278,9 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.spi_map);
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.streamout_enable);
 	si_mark_atom_dirty(ctx, &ctx->atoms.s.render_cond);
+	/* CLEAR_STATE disables all window rectangles. */
+	if (!has_clear_state || ctx->num_window_rectangles > 0)
+		si_mark_atom_dirty(ctx, &ctx->atoms.s.window_rectangles);
 	si_all_descriptors_begin_new_cs(ctx);
 	si_all_resident_buffers_begin_new_cs(ctx);
 
@@ -346,6 +349,7 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 		ctx->tracked_regs.reg_value[SI_TRACKED_PA_CL_GB_VERT_DISC_ADJ]	= 0x3f800000;
 		ctx->tracked_regs.reg_value[SI_TRACKED_PA_CL_GB_HORZ_CLIP_ADJ]	= 0x3f800000;
 		ctx->tracked_regs.reg_value[SI_TRACKED_PA_CL_GB_HORZ_DISC_ADJ]	= 0x3f800000;
+		ctx->tracked_regs.reg_value[SI_TRACKED_PA_SC_CLIPRECT_RULE]	= 0xffff;
 
 		/* Set all saved registers state to saved. */
 		ctx->tracked_regs.reg_saved = 0xffffffff;

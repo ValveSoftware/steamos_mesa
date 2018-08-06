@@ -4872,7 +4872,6 @@ static void si_init_config(struct si_context *sctx)
 	}
 
 	if (!has_clear_state) {
-		si_pm4_set_reg(pm4, R_02820C_PA_SC_CLIPRECT_RULE, 0xFFFF);
 		si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE,
 			       S_028230_ER_TRI(0xA) |
 			       S_028230_ER_POINT(0xA) |

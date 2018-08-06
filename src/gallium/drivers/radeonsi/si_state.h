@@ -213,6 +213,7 @@ union si_state_atoms {
 		struct si_atom stencil_ref;
 		struct si_atom spi_map;
 		struct si_atom scratch_state;
+		struct si_atom window_rectangles;
 	} s;
 	struct si_atom array[0];
 };
@@ -280,6 +281,8 @@ enum si_tracked_reg {
 	SI_TRACKED_PA_CL_GB_VERT_DISC_ADJ,
 	SI_TRACKED_PA_CL_GB_HORZ_CLIP_ADJ,
 	SI_TRACKED_PA_CL_GB_HORZ_DISC_ADJ,
+
+	SI_TRACKED_PA_SC_CLIPRECT_RULE,
 
 	SI_NUM_TRACKED_REGS,
 };
