@@ -36,17 +36,19 @@ matrix:
         - LABEL="meson Vulkan"
         - BUILD=meson
         - MESON_OPTIONS="-Ddri-drivers=[] -Dgallium-drivers=[]"
-        - LLVM_VERSION=5.0
+        - LLVM_VERSION=6.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
       addons:
         apt:
           sources:
-            - llvm-toolchain-trusty-5.0
+            - llvm-toolchain-trusty-6.0
+            # llvm-6 depends on gcc-4.9 which is not in main repo
+            - ubuntu-toolchain-r-test
           packages:
             # LLVM packaging is broken and misses these dependencies
             - libedit-dev
             # From sources above
-            - llvm-5.0-dev
+            - llvm-6.0-dev
             # Common
             - xz-utils
             - libexpat1-dev
