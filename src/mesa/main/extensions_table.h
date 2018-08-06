@@ -99,7 +99,7 @@ EXT(ARB_pixel_buffer_object                 , EXT_pixel_buffer_object           
 EXT(ARB_point_parameters                    , EXT_point_parameters                   , GLL,  x ,  x ,  x , 1997)
 EXT(ARB_point_sprite                        , ARB_point_sprite                       , GLL, GLC,  x ,  x , 2003)
 EXT(ARB_polygon_offset_clamp                , ARB_polygon_offset_clamp               , GLL, GLC,  x ,  x , 2017)
-EXT(ARB_post_depth_coverage                 , ARB_post_depth_coverage                ,  x , GLC,  x ,  x,  2015)
+EXT(ARB_post_depth_coverage                 , ARB_post_depth_coverage                , GLL, GLC,  x ,  x,  2015)
 EXT(ARB_program_interface_query             , dummy_true                             , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_query_buffer_object                 , ARB_query_buffer_object                , GLL, GLC,  x ,  x , 2013)
