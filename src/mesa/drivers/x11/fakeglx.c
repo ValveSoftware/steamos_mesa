@@ -2716,16 +2716,6 @@ Fake_glXReleaseBuffersMESA( Display *dpy, GLXDrawable d )
 
 
 
-/*** GLX_MESA_agp_offset ***/
-
-static GLuint
-Fake_glXGetAGPOffsetMESA( const GLvoid *pointer )
-{
-   (void) pointer;
-   return ~0;
-}
-
-
 /*** GLX_EXT_texture_from_pixmap ***/
 
 static void
