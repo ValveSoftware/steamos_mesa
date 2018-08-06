@@ -142,8 +142,12 @@ vc4_fence_context_init(struct vc4_context *vc4)
         /* Since we initialize the in_fence_fd to -1 (no wait necessary),
          * we also need to initialize our in_syncobj as signaled.
          */
-        return drmSyncobjCreate(vc4->fd, DRM_SYNCOBJ_CREATE_SIGNALED,
-                                &vc4->in_syncobj);
+        if (vc4->screen->has_syncobj) {
+                return drmSyncobjCreate(vc4->fd, DRM_SYNCOBJ_CREATE_SIGNALED,
+                                        &vc4->in_syncobj);
+        } else {
+                return 0;
+        }
 }
 
 void
