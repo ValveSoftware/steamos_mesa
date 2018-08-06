@@ -42,6 +42,7 @@ struct bo_map {
    struct list_head link;
    struct gen_batch_decode_bo bo;
    bool unmap_after_use;
+   bool ppgtt;
 };
 
 struct ggtt_entry {
@@ -59,10 +60,11 @@ struct phys_mem {
 };
 
 static void
-add_gtt_bo_map(struct aub_mem *mem, struct gen_batch_decode_bo bo, bool unmap_after_use)
+add_gtt_bo_map(struct aub_mem *mem, struct gen_batch_decode_bo bo, bool ppgtt, bool unmap_after_use)
 {
    struct bo_map *m = calloc(1, sizeof(*m));
 
+   m->ppgtt = ppgtt;
    m->bo = bo;
    m->unmap_after_use = unmap_after_use;
    list_add(&m->link, &mem->maps);
@@ -190,7 +192,7 @@ aub_mem_local_write(void *_mem, uint64_t address,
       .addr = address,
       .size = size,
    };
-   add_gtt_bo_map(mem, bo, false);
+   add_gtt_bo_map(mem, bo, false, false);
 }
 
 void
@@ -253,7 +255,7 @@ aub_mem_get_ggtt_bo(void *_mem, uint64_t address)
    struct gen_batch_decode_bo bo = {0};
 
    list_for_each_entry(struct bo_map, i, &mem->maps, link)
-      if (i->bo.addr <= address && i->bo.addr + i->bo.size > address)
+      if (!i->ppgtt && i->bo.addr <= address && i->bo.addr + i->bo.size > address)
          return i->bo;
 
    address &= ~0xfff;
@@ -292,7 +294,7 @@ aub_mem_get_ggtt_bo(void *_mem, uint64_t address)
       assert(res != MAP_FAILED);
    }
 
-   add_gtt_bo_map(mem, bo, true);
+   add_gtt_bo_map(mem, bo, false, true);
 
    return bo;
 }
@@ -328,6 +330,10 @@ aub_mem_get_ppgtt_bo(void *_mem, uint64_t address)
    struct aub_mem *mem = _mem;
    struct gen_batch_decode_bo bo = {0};
 
+   list_for_each_entry(struct bo_map, i, &mem->maps, link)
+      if (i->ppgtt && i->bo.addr <= address && i->bo.addr + i->bo.size > address)
+         return i->bo;
+
    address &= ~0xfff;
 
    if (!ppgtt_mapped(mem, mem->pml4, address))
@@ -353,7 +359,7 @@ aub_mem_get_ppgtt_bo(void *_mem, uint64_t address)
       assert(res != MAP_FAILED);
    }
 
-   add_gtt_bo_map(mem, bo, true);
+   add_gtt_bo_map(mem, bo, true, true);
 
    return bo;
 }
