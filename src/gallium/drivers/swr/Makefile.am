@@ -375,7 +375,7 @@ include $(top_srcdir)/install-gallium-links.mk
 dist-hook:
 if SWR_INVALID_LLVM_VERSION
 	@echo "*****************************************"
-	@echo "LLVM 5.0.x required to create the tarball"
+	@echo "LLVM 6.0.x required to create the tarball"
 	@echo "*****************************************"
 	@test
 endif
