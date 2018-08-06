@@ -263,7 +263,9 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS:
 		return 4095;
 	case PIPE_CAP_MAX_GS_INVOCATIONS:
-		return 32;
+		/* The closed driver exposes 127, but 125 is the greatest
+		 * number that works. */
+		return 125;
 
 	case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
 		return 2048;

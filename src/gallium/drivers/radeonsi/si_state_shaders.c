@@ -657,8 +657,6 @@ static void gfx9_get_gs_info(struct si_shader_selector *es,
 	unsigned max_gs_prims, gs_prims;
 	unsigned min_es_verts, es_verts, worst_case_es_verts;
 
-	assert(gs_num_invocations <= 32); /* GL maximum */
-
 	if (uses_adjacency || gs_num_invocations > 1)
 		max_gs_prims = 127 / gs_num_invocations;
 	else
