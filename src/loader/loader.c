@@ -82,6 +82,26 @@ loader_open_device(const char *device_name)
    return fd;
 }
 
+static char *loader_get_kernel_driver_name(int fd)
+{
+#if HAVE_LIBDRM
+   char *driver;
+   drmVersionPtr version = drmGetVersion(fd);
+
+   if (!version) {
+      log_(_LOADER_WARNING, "failed to get driver name for fd %d\n", fd);
+      return NULL;
+   }
+
+   driver = strndup(version->name, version->name_len);
+
+   drmFreeVersion(version);
+   return driver;
+#else
+   return NULL;
+#endif
+}
+
 #if defined(HAVE_LIBDRM)
 #ifdef USE_DRICONF
 static const char __driConfigOptionsLoader[] =
@@ -339,22 +359,9 @@ loader_get_driver_for_fd(int fd)
    }
 
    if (!loader_get_pci_id_for_fd(fd, &vendor_id, &chip_id)) {
-
-#if HAVE_LIBDRM
-      /* fallback to drmGetVersion(): */
-      drmVersionPtr version = drmGetVersion(fd);
-
-      if (!version) {
-         log_(_LOADER_WARNING, "failed to get driver name for fd %d\n", fd);
-         return NULL;
-      }
-
-      driver = strndup(version->name, version->name_len);
-      log_(_LOADER_INFO, "using driver %s for %d\n", driver, fd);
-
-      drmFreeVersion(version);
-#endif
-
+      driver = loader_get_kernel_driver_name(fd);
+      if (driver)
+         log_(_LOADER_INFO, "using driver %s for %d\n", driver, fd);
       return driver;
    }
 
