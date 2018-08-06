@@ -261,6 +261,8 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 1024;
 	case PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS:
 		return 4095;
+	case PIPE_CAP_MAX_GS_INVOCATIONS:
+		return 32;
 
 	case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
 		return 2048;

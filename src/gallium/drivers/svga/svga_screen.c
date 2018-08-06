@@ -471,6 +471,8 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PACKED_UNIFORMS:
    case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
       return 0;
+   case PIPE_CAP_MAX_GS_INVOCATIONS:
+      return 32;
    }
 
    debug_printf("Unexpected PIPE_CAP_ query %u\n", param);

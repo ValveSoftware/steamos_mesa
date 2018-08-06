@@ -376,6 +376,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES:
 		return 8;
 
+	case PIPE_CAP_MAX_GS_INVOCATIONS:
+		return 32;
+
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
 	case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:

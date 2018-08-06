@@ -361,6 +361,8 @@ void st_init_limits(struct pipe_screen *screen,
       screen->get_param(screen, PIPE_CAP_MAX_GEOMETRY_OUTPUT_VERTICES);
    c->MaxGeometryTotalOutputComponents =
       screen->get_param(screen, PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS);
+   c->MaxGeometryShaderInvocations =
+      screen->get_param(screen, PIPE_CAP_MAX_GS_INVOCATIONS);
    c->MaxTessPatchComponents =
       MIN2(screen->get_param(screen, PIPE_CAP_MAX_SHADER_PATCH_VARYINGS),
            MAX_VARYING) * 4;

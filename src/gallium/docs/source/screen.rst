@@ -452,7 +452,8 @@ subpixel precision bias in bits during conservative rasterization.
 * ``PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS``: True is the driver supports
   programmable sample location through ```get_sample_pixel_grid``` and
   ```set_sample_locations```.
-
+* ``PIPE_CAP_MAX_GS_INVOCATIONS``: Maximum supported value of
+  TGSI_PROPERTY_GS_INVOCATIONS.
 
 .. _pipe_capf:
 

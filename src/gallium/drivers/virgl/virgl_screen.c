@@ -308,6 +308,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_CONSERVATIVE_RASTER_SUBPIXEL_PRECISION_BIAS:
    case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
       return 0;
+   case PIPE_CAP_MAX_GS_INVOCATIONS:
+      return 32;
    case PIPE_CAP_VENDOR_ID:
       return 0x1af4;
    case PIPE_CAP_DEVICE_ID:

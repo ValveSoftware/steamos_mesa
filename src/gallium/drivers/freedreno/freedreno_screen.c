@@ -372,6 +372,9 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
 		return 0;
 
+	case PIPE_CAP_MAX_GS_INVOCATIONS:
+		return 32;
+
 	case PIPE_CAP_CONTEXT_PRIORITY_MASK:
 		return screen->priority_mask;
 
