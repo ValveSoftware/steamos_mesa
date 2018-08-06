@@ -27,6 +27,7 @@
  * \author Felix Kuehling
  */
 
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -866,9 +867,8 @@ initOptionCache(driOptionCache *cache, const driOptionCache *info)
     }
 }
 
-/** \brief Parse the named configuration file */
 static void
-parseOneConfigFile(XML_Parser p)
+_parseOneConfigFile(XML_Parser p)
 {
 #define BUF_SIZE 0x1000
     struct OptConfData *data = (struct OptConfData *)XML_GetUserData (p);
@@ -907,6 +907,28 @@ parseOneConfigFile(XML_Parser p)
 #undef BUF_SIZE
 }
 
+/** \brief Parse the named configuration file */
+static void
+parseOneConfigFile(struct OptConfData *data, const char *filename)
+{
+    XML_Parser p;
+
+    p = XML_ParserCreate (NULL); /* use encoding specified by file */
+    XML_SetElementHandler (p, optConfStartElem, optConfEndElem);
+    XML_SetUserData (p, data);
+    data->parser = p;
+    data->name = filename;
+    data->ignoringDevice = 0;
+    data->ignoringApp = 0;
+    data->inDriConf = 0;
+    data->inDevice = 0;
+    data->inApp = 0;
+    data->inOption = 0;
+
+    _parseOneConfigFile (p);
+    XML_ParserFree (p);
+}
+
 #ifndef SYSCONFDIR
 #define SYSCONFDIR "/etc"
 #endif
@@ -915,9 +937,7 @@ void
 driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
                     int screenNum, const char *driverName)
 {
-    char *filenames[2] = { SYSCONFDIR "/drirc", NULL};
     char *home;
-    uint32_t i;
     struct OptConfData userData;
 
     initOptionCache (cache, info);
@@ -927,39 +947,14 @@ driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
     userData.driverName = driverName;
     userData.execName = util_get_process_name();
 
+    parseOneConfigFile(&userData, SYSCONFDIR "/drirc");
+
     if ((home = getenv ("HOME"))) {
-        uint32_t len = strlen (home);
-        filenames[1] = malloc(len + 7+1);
-        if (filenames[1] == NULL)
-            __driUtilMessage ("Can't allocate memory for %s/.drirc.", home);
-        else {
-            memcpy (filenames[1], home, len);
-            memcpy (filenames[1] + len, "/.drirc", 7+1);
-        }
+        char filename[PATH_MAX];
+
+        snprintf(filename, PATH_MAX, "%s/.drirc", home);
+        parseOneConfigFile(&userData, filename);
     }
-
-    for (i = 0; i < 2; ++i) {
-        XML_Parser p;
-        if (filenames[i] == NULL)
-            continue;
-
-        p = XML_ParserCreate (NULL); /* use encoding specified by file */
-        XML_SetElementHandler (p, optConfStartElem, optConfEndElem);
-        XML_SetUserData (p, &userData);
-        userData.parser = p;
-        userData.name = filenames[i];
-        userData.ignoringDevice = 0;
-        userData.ignoringApp = 0;
-        userData.inDriConf = 0;
-        userData.inDevice = 0;
-        userData.inApp = 0;
-        userData.inOption = 0;
-
-        parseOneConfigFile (p);
-        XML_ParserFree (p);
-    }
-
-    free(filenames[1]);
 }
 
 void
