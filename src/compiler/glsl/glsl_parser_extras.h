@@ -493,6 +493,7 @@ struct _mesa_glsl_parse_state {
       unsigned MaxVertexOutputComponents;
       unsigned MaxGeometryInputComponents;
       unsigned MaxGeometryOutputComponents;
+      unsigned MaxGeometryShaderInvocations;
       unsigned MaxFragmentInputComponents;
       unsigned MaxGeometryTextureImageUnits;
       unsigned MaxGeometryOutputVertices;

@@ -2451,7 +2451,7 @@ struct gl_shader_info
       GLint VerticesOut;
       /**
        * 0 - Invocations count not declared in shader, or
-       * 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS
+       * 1 .. Const.MaxGeometryShaderInvocations
        */
       GLint Invocations;
       /**
@@ -3713,6 +3713,7 @@ struct gl_constants
    /** geometry shader */
    GLuint MaxGeometryOutputVertices;
    GLuint MaxGeometryTotalOutputComponents;
+   GLuint MaxGeometryShaderInvocations;
 
    GLuint GLSLVersion;  /**< Desktop GLSL version supported (ex: 120 = 1.20) */
    GLuint GLSLVersionCompat;  /**< Desktop compat GLSL version supported  */

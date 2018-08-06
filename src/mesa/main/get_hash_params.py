@@ -642,7 +642,7 @@ descriptor=[
   [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM16(Const.LayerAndVPIndexProvokingVertex), extra_ARB_viewport_array_or_oes_geometry_shader" ],
 
 # GL_ARB_gpu_shader5 / GL_OES_geometry_shader
-  [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONST(MAX_GEOMETRY_SHADER_INVOCATIONS), extra_ARB_gpu_shader5_or_oes_geometry_shader" ],
+  [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONTEXT_INT(Const.MaxGeometryShaderInvocations), extra_ARB_gpu_shader5_or_oes_geometry_shader" ],
 
 # GL_OES_primitive_bounding_box
   [ "PRIMITIVE_BOUNDING_BOX_ARB", "CONTEXT_FLOAT8(PrimitiveBoundingBox), extra_OES_primitive_bounding_box" ],
