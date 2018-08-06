@@ -810,7 +810,8 @@ void st_init_extensions(struct pipe_screen *screen,
           PIPE_FORMAT_BPTC_RGB_FLOAT,
           PIPE_FORMAT_BPTC_RGB_UFLOAT } },
 
-      { { o(KHR_texture_compression_astc_ldr) },
+      { { o(KHR_texture_compression_astc_ldr),
+          o(KHR_texture_compression_astc_sliced_3d) },
         { PIPE_FORMAT_ASTC_4x4,
           PIPE_FORMAT_ASTC_5x4,
           PIPE_FORMAT_ASTC_5x5,
@@ -841,7 +842,8 @@ void st_init_extensions(struct pipe_screen *screen,
           PIPE_FORMAT_ASTC_12x12_SRGB } },
 
       /* ASTC software fallback support. */
-      { { o(KHR_texture_compression_astc_ldr) },
+      { { o(KHR_texture_compression_astc_ldr),
+          o(KHR_texture_compression_astc_sliced_3d) },
         { PIPE_FORMAT_R8G8B8A8_UNORM,
           PIPE_FORMAT_R8G8B8A8_SRGB } },
 
