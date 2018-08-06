@@ -691,6 +691,7 @@ struct OptConfData {
     driOptionCache *cache;
     int screenNum;
     const char *driverName, *execName;
+    const char *kernelDriverName;
     uint32_t ignoringDevice;
     uint32_t ignoringApp;
     uint32_t inDriConf;
@@ -715,13 +716,16 @@ static void
 parseDeviceAttr(struct OptConfData *data, const XML_Char **attr)
 {
     uint32_t i;
-    const XML_Char *driver = NULL, *screen = NULL;
+    const XML_Char *driver = NULL, *screen = NULL, *kernel = NULL;
     for (i = 0; attr[i]; i += 2) {
         if (!strcmp (attr[i], "driver")) driver = attr[i+1];
         else if (!strcmp (attr[i], "screen")) screen = attr[i+1];
+        else if (!strcmp (attr[i], "kernel_driver")) kernel = attr[i+1];
         else XML_WARNING("unknown device attribute: %s.", attr[i]);
     }
     if (driver && strcmp (driver, data->driverName))
+        data->ignoringDevice = data->inDevice;
+    else if (kernel && (!data->kernelDriverName || strcmp (kernel, data->kernelDriverName)))
         data->ignoringDevice = data->inDevice;
     else if (screen) {
         driOptionValue screenNum;
@@ -976,7 +980,8 @@ parseConfigDir(struct OptConfData *data, const char *dirname)
 
 void
 driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
-                    int screenNum, const char *driverName)
+                    int screenNum, const char *driverName,
+                    const char *kernelDriverName)
 {
     char *home;
     struct OptConfData userData;
@@ -986,6 +991,7 @@ driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
     userData.cache = cache;
     userData.screenNum = screenNum;
     userData.driverName = driverName;
+    userData.kernelDriverName = kernelDriverName;
     userData.execName = util_get_process_name();
 
     parseConfigDir(&userData, DATADIR "/drirc.d");

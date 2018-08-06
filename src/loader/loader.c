@@ -118,7 +118,7 @@ static char *loader_get_dri_config_device_id(void)
    char *prime = NULL;
 
    driParseOptionInfo(&defaultInitOptions, __driConfigOptionsLoader);
-   driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0, "loader");
+   driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0, "loader", NULL);
    if (driCheckOption(&userInitOptions, "device_id", DRI_STRING))
       prime = strdup(driQueryOptionstr(&userInitOptions, "device_id"));
    driDestroyOptionCache(&userInitOptions);

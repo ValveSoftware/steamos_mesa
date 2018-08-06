@@ -790,7 +790,8 @@ brw_process_driconf_options(struct brw_context *brw)
 
    driOptionCache *options = &brw->optionCache;
    driParseConfigFiles(options, &brw->screen->optionCache,
-                       brw->driContext->driScreenPriv->myNum, "i965");
+                       brw->driContext->driScreenPriv->myNum,
+                       "i965", NULL);
 
    int bo_reuse_mode = driQueryOptioni(options, "bo_reuse");
    switch (bo_reuse_mode) {
