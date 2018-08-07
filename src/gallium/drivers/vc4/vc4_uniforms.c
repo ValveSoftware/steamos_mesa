@@ -360,11 +360,18 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                         cl_aligned_u32(&uniforms, 0xd0d0d0d0);
                         break;
                 }
-#if 0
-                uint32_t written_val = *((uint32_t *)uniforms - 1);
-                fprintf(stderr, "%p: %d / 0x%08x (%f)\n",
-                        shader, i, written_val, uif(written_val));
-#endif
+
+                if (false) {
+                        uint32_t written_val = *((uint32_t *)uniforms - 1);
+                        char *desc = qir_describe_uniform(uinfo->contents[i],
+                                                          uinfo->data[i],
+                                                          gallium_uniforms);
+
+                        fprintf(stderr, "%p/%d: 0x%08x %s\n",
+                                shader, i, written_val, desc);
+
+                        ralloc_free(desc);
+                }
         }
 
         cl_end(&job->uniforms, uniforms);
