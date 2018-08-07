@@ -644,19 +644,10 @@ anv_pipeline_link_tcs(const struct brw_compiler *compiler,
     */
    tcs_stage->key.tcs.tes_primitive_mode =
       tes_stage->nir->info.tess.primitive_mode;
-   tcs_stage->key.tcs.outputs_written =
-      tcs_stage->nir->info.outputs_written;
-   tcs_stage->key.tcs.patch_outputs_written =
-      tcs_stage->nir->info.patch_outputs_written;
    tcs_stage->key.tcs.quads_workaround =
       compiler->devinfo->gen < 9 &&
       tes_stage->nir->info.tess.primitive_mode == 7 /* GL_QUADS */ &&
       tes_stage->nir->info.tess.spacing == TESS_SPACING_EQUAL;
-
-   tes_stage->key.tes.inputs_read =
-      tcs_stage->nir->info.outputs_written;
-   tes_stage->key.tes.patch_inputs_read =
-      tcs_stage->nir->info.patch_outputs_written;
 }
 
 static const unsigned *
@@ -665,6 +656,11 @@ anv_pipeline_compile_tcs(const struct brw_compiler *compiler,
                          struct anv_pipeline_stage *tcs_stage,
                          struct anv_pipeline_stage *prev_stage)
 {
+   tcs_stage->key.tcs.outputs_written =
+      tcs_stage->nir->info.outputs_written;
+   tcs_stage->key.tcs.patch_outputs_written =
+      tcs_stage->nir->info.patch_outputs_written;
+
    return brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_stage->key.tcs,
                           &tcs_stage->prog_data.tcs, tcs_stage->nir,
                           -1, NULL);
@@ -687,6 +683,11 @@ anv_pipeline_compile_tes(const struct brw_compiler *compiler,
                          struct anv_pipeline_stage *tes_stage,
                          struct anv_pipeline_stage *tcs_stage)
 {
+   tes_stage->key.tes.inputs_read =
+      tcs_stage->nir->info.outputs_written;
+   tes_stage->key.tes.patch_inputs_read =
+      tcs_stage->nir->info.patch_outputs_written;
+
    return brw_compile_tes(compiler, NULL, mem_ctx, &tes_stage->key.tes,
                           &tcs_stage->prog_data.tcs.base.vue_map,
                           &tes_stage->prog_data.tes, tes_stage->nir,
