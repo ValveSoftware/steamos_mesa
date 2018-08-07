@@ -446,8 +446,6 @@ struct r600_shader_state {
 };
 
 struct r600_atomic_buffer_state {
-	uint32_t enabled_mask;
-	uint32_t dirty_mask;
 	struct pipe_shader_buffer buffer[EG_MAX_ATOMIC_BUFFERS];
 };
 
@@ -773,7 +771,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 			    struct pipe_fence_handle **fence);
 void r600_begin_new_cs(struct r600_context *ctx);
 void r600_flush_emit(struct r600_context *ctx);
-void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw, boolean count_draw_in);
+void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw, boolean count_draw_in, unsigned num_atomics);
 void r600_emit_pfp_sync_me(struct r600_context *rctx);
 void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 			     struct pipe_resource *dst, uint64_t dst_offset,
@@ -1067,10 +1065,14 @@ void r600_delete_shader_selector(struct pipe_context *ctx,
 				 struct r600_pipe_shader_selector *sel);
 
 struct r600_shader_atomic;
-bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
-					struct r600_pipe_shader *cs_shader,
+void evergreen_emit_atomic_buffer_setup_count(struct r600_context *rctx,
+					      struct r600_pipe_shader *cs_shader,
+					      struct r600_shader_atomic *combined_atomics,
+					      uint8_t *atomic_used_mask_p);
+void evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
+					bool is_compute,
 					struct r600_shader_atomic *combined_atomics,
-					uint8_t *atomic_used_mask_p);
+					uint8_t atomic_used_mask);
 void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 				       bool is_compute,
 				       struct r600_shader_atomic *combined_atomics,

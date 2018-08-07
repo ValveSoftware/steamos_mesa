@@ -2085,8 +2085,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		: (rctx->tes_shader)? rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE]
 		: info->mode;
 
-	if (rctx->b.chip_class >= EVERGREEN)
-		evergreen_emit_atomic_buffer_setup(rctx, NULL, combined_atomics, &atomic_used_mask);
+	if (rctx->b.chip_class >= EVERGREEN) {
+		evergreen_emit_atomic_buffer_setup_count(rctx, NULL, combined_atomics, &atomic_used_mask);
+	}
 
 	if (index_size) {
 		index_offset += info->start * index_size;
@@ -2172,7 +2173,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		evergreen_setup_tess_constants(rctx, info, &num_patches);
 
 	/* Emit states. */
-	r600_need_cs_space(rctx, has_user_indices ? 5 : 0, TRUE);
+	r600_need_cs_space(rctx, has_user_indices ? 5 : 0, TRUE, util_bitcount(atomic_used_mask));
 	r600_flush_emit(rctx);
 
 	mask = rctx->dirty_atoms;
@@ -2180,6 +2181,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		r600_emit_atom(rctx, rctx->atoms[u_bit_scan64(&mask)]);
 	}
 
+	if (rctx->b.chip_class >= EVERGREEN) {
+		evergreen_emit_atomic_buffer_setup(rctx, false, combined_atomics, atomic_used_mask);
+	}
+		
 	if (rctx->b.chip_class == CAYMAN) {
 		/* Copied from radeonsi. */
 		unsigned primgroup_size = 128; /* recommended without a GS */
@@ -3284,7 +3289,7 @@ static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable
 static void r600_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
                                    bool include_draw_vbo)
 {
-	r600_need_cs_space((struct r600_context*)ctx, num_dw, include_draw_vbo);
+	r600_need_cs_space((struct r600_context*)ctx, num_dw, include_draw_vbo, 0);
 }
 
 /* keep this at the end of this file, please */

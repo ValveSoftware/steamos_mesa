@@ -715,7 +715,6 @@ static void compute_emit_cs(struct r600_context *rctx,
 		rctx->cmd_buf_is_compute = true;
 	}
 
-	r600_need_cs_space(rctx, 0, true);
 	if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI) {
 		r600_shader_select(&rctx->b.b, rctx->cs_shader_state.shader->sel, &compute_dirty);
 		current = rctx->cs_shader_state.shader->sel->current;
@@ -742,16 +741,22 @@ static void compute_emit_cs(struct r600_context *rctx,
 		}
 		rctx->cs_block_grid_sizes[3] = rctx->cs_block_grid_sizes[7] = 0;
 		rctx->driver_consts[PIPE_SHADER_COMPUTE].cs_block_grid_size_dirty = true;
+
+		evergreen_emit_atomic_buffer_setup_count(rctx, current, combined_atomics, &atomic_used_mask);
+		r600_need_cs_space(rctx, 0, true, util_bitcount(atomic_used_mask));
+
 		if (need_buf_const) {
 			eg_setup_buffer_constants(rctx, PIPE_SHADER_COMPUTE);
 		}
 		r600_update_driver_const_buffers(rctx, true);
 
-		if (evergreen_emit_atomic_buffer_setup(rctx, current, combined_atomics, &atomic_used_mask)) {
+		evergreen_emit_atomic_buffer_setup(rctx, true, combined_atomics, atomic_used_mask);
+		if (atomic_used_mask) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 		}
-	}
+	} else
+		r600_need_cs_space(rctx, 0, true, 0);
 
 	/* Initialize all the compute-related registers.
 	 *

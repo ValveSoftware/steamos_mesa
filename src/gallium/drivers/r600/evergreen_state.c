@@ -4030,7 +4030,6 @@ static void evergreen_set_hw_atomic_buffers(struct pipe_context *ctx,
 
 		if (!buffers || !buffers[idx].buffer) {
 			pipe_resource_reference(&abuf->buffer, NULL);
-			astate->enabled_mask &= ~(1 << i);
 			continue;
 		}
 		buf = &buffers[idx];
@@ -4038,7 +4037,6 @@ static void evergreen_set_hw_atomic_buffers(struct pipe_context *ctx,
 		pipe_resource_reference(&abuf->buffer, buf->buffer);
 		abuf->buffer_offset = buf->buffer_offset;
 		abuf->buffer_size = buf->buffer_size;
-		astate->enabled_mask |= (1 << i);
 	}
 }
 
@@ -4868,19 +4866,14 @@ static void cayman_write_count_to_gds(struct r600_context *rctx,
 	radeon_emit(cs, reloc);
 }
 
-bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
-					struct r600_pipe_shader *cs_shader,
-					struct r600_shader_atomic *combined_atomics,
-					uint8_t *atomic_used_mask_p)
+void evergreen_emit_atomic_buffer_setup_count(struct r600_context *rctx,
+					      struct r600_pipe_shader *cs_shader,
+					      struct r600_shader_atomic *combined_atomics,
+					      uint8_t *atomic_used_mask_p)
 {
-	struct r600_atomic_buffer_state *astate = &rctx->atomic_buffer_state;
-	unsigned pkt_flags = 0;
 	uint8_t atomic_used_mask = 0;
 	int i, j, k;
 	bool is_compute = cs_shader ? true : false;
-
-	if (is_compute)
-		pkt_flags = RADEON_CP_PACKET3_COMPUTE_MODE;
 
 	for (i = 0; i < (is_compute ? 1 : EG_NUM_HW_STAGES); i++) {
 		uint8_t num_atomic_stage;
@@ -4914,8 +4907,25 @@ bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 			}
 		}
 	}
+	*atomic_used_mask_p = atomic_used_mask;
+}
 
-	uint32_t mask = atomic_used_mask;
+void evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
+					bool is_compute,
+					struct r600_shader_atomic *combined_atomics,
+					uint8_t atomic_used_mask)
+{
+	struct r600_atomic_buffer_state *astate = &rctx->atomic_buffer_state;
+	unsigned pkt_flags = 0;
+	uint32_t mask;
+
+	if (is_compute)
+		pkt_flags = RADEON_CP_PACKET3_COMPUTE_MODE;
+
+	mask = atomic_used_mask;
+	if (!mask)
+		return;
+
 	while (mask) {
 		unsigned atomic_index = u_bit_scan(&mask);
 		struct r600_shader_atomic *atomic = &combined_atomics[atomic_index];
@@ -4927,8 +4937,6 @@ bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 		else
 			evergreen_emit_set_append_cnt(rctx, atomic, resource, pkt_flags);
 	}
-	*atomic_used_mask_p = atomic_used_mask;
-	return true;
 }
 
 void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
@@ -4940,7 +4948,7 @@ void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 	struct r600_atomic_buffer_state *astate = &rctx->atomic_buffer_state;
 	uint32_t pkt_flags = 0;
 	uint32_t event = EVENT_TYPE_PS_DONE;
-	uint32_t mask = astate->enabled_mask;
+	uint32_t mask;
 	uint64_t dst_offset;
 	unsigned reloc;
 

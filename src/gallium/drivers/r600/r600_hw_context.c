@@ -31,7 +31,7 @@
 
 
 void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
-			boolean count_draw_in)
+			boolean count_draw_in, unsigned num_atomics)
 {
 	/* Flush the DMA IB if it's not empty. */
 	if (radeon_emitted(ctx->b.dma.cs, 0))
@@ -60,6 +60,9 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 		/* The upper-bound of how much space a draw command would take. */
 		num_dw += R600_MAX_FLUSH_CS_DWORDS + R600_MAX_DRAW_CS_DWORDS;
 	}
+
+	/* add atomic counters, 8 pre + 8 post per counter + 16 post if any counters */
+	num_dw += (num_atomics * 16) + (num_atomics ? 16 : 0);
 
 	/* Count in r600_suspend_queries. */
 	num_dw += ctx->b.num_cs_dw_queries_suspend;
@@ -526,7 +529,7 @@ void r600_cp_dma_copy_buffer(struct r600_context *rctx,
 
 		r600_need_cs_space(rctx,
 				   10 + (rctx->b.flags ? R600_MAX_FLUSH_CS_DWORDS : 0) +
-				   3 + R600_MAX_PFP_SYNC_ME_DWORDS, FALSE);
+				   3 + R600_MAX_PFP_SYNC_ME_DWORDS, FALSE, 0);
 
 		/* Flush the caches for the first copy only. */
 		if (rctx->b.flags) {
