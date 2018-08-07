@@ -121,7 +121,8 @@ vc4_fence_server_sync(struct pipe_context *pctx,
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_fence *fence = vc4_fence(pfence);
 
-        sync_accumulate("vc4", &vc4->in_fence_fd, fence->fd);
+        if (fence->fd >= 0)
+                sync_accumulate("vc4", &vc4->in_fence_fd, fence->fd);
 }
 
 static int
