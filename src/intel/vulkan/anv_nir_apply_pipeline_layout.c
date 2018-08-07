@@ -379,37 +379,11 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          get_used_bindings_block(block, &state);
    }
 
-   if (state.uses_constants)
-      map->surface_count++;
-
-   for (uint32_t set = 0; set < layout->num_sets; set++) {
-      struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
-
-      BITSET_WORD b, _tmp;
-      BITSET_FOREACH_SET(b, _tmp, state.set[set].used,
-                         set_layout->binding_count) {
-         if (set_layout->binding[b].stage[stage].surface_index >= 0) {
-            map->surface_count +=
-               anv_descriptor_set_binding_layout_get_hw_size(&set_layout->binding[b]);
-         }
-         if (set_layout->binding[b].stage[stage].sampler_index >= 0) {
-            map->sampler_count +=
-               anv_descriptor_set_binding_layout_get_hw_size(&set_layout->binding[b]);
-         }
-         if (set_layout->binding[b].stage[stage].image_index >= 0)
-            map->image_count += set_layout->binding[b].array_size;
-      }
-   }
-
-   unsigned surface = 0;
-   unsigned sampler = 0;
-   unsigned image = 0;
-
    if (state.uses_constants) {
-      state.constants_offset = surface;
-      map->surface_to_descriptor[surface].set =
+      state.constants_offset = map->surface_count;
+      map->surface_to_descriptor[map->surface_count].set =
          ANV_DESCRIPTOR_SET_SHADER_CONSTANTS;
-      surface++;
+      map->surface_count++;
    }
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
@@ -422,38 +396,42 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
             &set_layout->binding[b];
 
          if (binding->stage[stage].surface_index >= 0) {
-            state.set[set].surface_offsets[b] = surface;
+            state.set[set].surface_offsets[b] = map->surface_count;
             struct anv_sampler **samplers = binding->immutable_samplers;
             for (unsigned i = 0; i < binding->array_size; i++) {
                uint8_t planes = samplers ? samplers[i]->n_planes : 1;
                for (uint8_t p = 0; p < planes; p++) {
-                  map->surface_to_descriptor[surface].set = set;
-                  map->surface_to_descriptor[surface].binding = b;
-                  map->surface_to_descriptor[surface].index = i;
-                  map->surface_to_descriptor[surface].plane = p;
-                  surface++;
+                  map->surface_to_descriptor[map->surface_count++] =
+                     (struct anv_pipeline_binding) {
+                        .set = set,
+                        .binding = b,
+                        .index = i,
+                        .plane = p,
+                     };
                }
             }
          }
 
          if (binding->stage[stage].sampler_index >= 0) {
-            state.set[set].sampler_offsets[b] = sampler;
+            state.set[set].sampler_offsets[b] = map->sampler_count;
             struct anv_sampler **samplers = binding->immutable_samplers;
             for (unsigned i = 0; i < binding->array_size; i++) {
                uint8_t planes = samplers ? samplers[i]->n_planes : 1;
                for (uint8_t p = 0; p < planes; p++) {
-                  map->sampler_to_descriptor[sampler].set = set;
-                  map->sampler_to_descriptor[sampler].binding = b;
-                  map->sampler_to_descriptor[sampler].index = i;
-                  map->sampler_to_descriptor[sampler].plane = p;
-                  sampler++;
+                  map->sampler_to_descriptor[map->sampler_count++] =
+                     (struct anv_pipeline_binding) {
+                        .set = set,
+                        .binding = b,
+                        .index = i,
+                        .plane = p,
+                     };
                }
             }
          }
 
          if (binding->stage[stage].image_index >= 0) {
-            state.set[set].image_offsets[b] = image;
-            image += binding->array_size;
+            state.set[set].image_offsets[b] = map->image_count;
+            map->image_count += binding->array_size;
          }
       }
    }

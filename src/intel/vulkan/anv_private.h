@@ -1542,9 +1542,6 @@ struct anv_descriptor_update_template {
 };
 
 size_t
-anv_descriptor_set_binding_layout_get_hw_size(const struct anv_descriptor_set_binding_layout *binding);
-
-size_t
 anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
 
 void
