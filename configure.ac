@@ -1415,6 +1415,7 @@ AM_CONDITIONAL(NEED_OPENGL_COMMON, test "x$enable_opengl" = xyes -o \
                                         "x$enable_gles1" = xyes -o \
                                         "x$enable_gles2" = xyes)
 AM_CONDITIONAL(NEED_KHRPLATFORM, test "x$enable_egl" = xyes -o \
+                                      "x$enable_opengl" = xyes -o \
                                       "x$enable_gles1" = xyes -o \
                                       "x$enable_gles2" = xyes)
 
