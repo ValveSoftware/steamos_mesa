@@ -18,8 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-build_intel_tools = with_tools.contains('intel')
-
 aubinator = executable(
   'aubinator',
   files('aubinator.c', 'intel_aub.h'),
@@ -27,8 +25,8 @@ aubinator = executable(
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libintel_dev, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : build_intel_tools,
-  install : build_intel_tools
+  build_by_default : true,
+  install : true
 )
 
 aubinator_error_decode = executable(
@@ -38,8 +36,8 @@ aubinator_error_decode = executable(
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libintel_dev, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : build_intel_tools,
-  install : build_intel_tools
+  build_by_default : true,
+  install : true
 )
 
 error2aub = executable(
@@ -49,8 +47,8 @@ error2aub = executable(
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
   link_with : [libintel_dev],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : build_intel_tools,
-  install : build_intel_tools
+  build_by_default : true,
+  install : true
 )
 
 sanitize_data = configuration_data()
@@ -62,7 +60,7 @@ configure_file(
   input: 'intel_sanitize_gpu.in',
   output: '@BASENAME@',
   install_dir: get_option('bindir'),
-  install: build_intel_tools,
+  install: true,
   configuration: sanitize_data
 )
 
@@ -73,9 +71,9 @@ libintel_sanitize_gpu = shared_library(
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
   link_with : [libintel_common, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : build_intel_tools,
+  build_by_default : true,
   install_dir: get_option('libexecdir'),
-  install: build_intel_tools
+  install: true
 )
 
 configure_file(
@@ -83,7 +81,7 @@ configure_file(
   output : '@BASENAME@',
   install_dir: get_option('bindir'),
   configuration: sanitize_data,
-  install: build_intel_tools
+  install: true
 )
 
 libintel_dump_gpu = shared_library(
@@ -94,7 +92,7 @@ libintel_dump_gpu = shared_library(
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
   link_with : libintel_dev,
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : build_intel_tools,
+  build_by_default : true,
   install_dir: get_option('libexecdir'),
-  install: build_intel_tools
+  install: true
 )

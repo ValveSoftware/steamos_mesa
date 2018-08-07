@@ -26,7 +26,9 @@ subdir('genxml')
 subdir('isl')
 subdir('common')
 subdir('compiler')
-subdir('tools')
+if with_tools.contains('intel')
+  subdir('tools')
+endif
 if with_intel_vk
   subdir('vulkan')
 endif
