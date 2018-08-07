@@ -1322,6 +1322,11 @@ upload_buffer_surface(struct brw_context *brw,
       if (!binding->AutomaticSize)
          size = MIN2(size, binding->Size);
 
+      if (size == 0) {
+         emit_null_surface_state(brw, NULL, out_offset);
+         return;
+      }
+
       struct intel_buffer_object *iobj =
          intel_buffer_object(binding->BufferObject);
       struct brw_bo *bo =
