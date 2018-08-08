@@ -1404,31 +1404,20 @@ error:
    return false;
 }
 
-typedef enum {
-   probe_fail = -1,
-   probe_success = 0,
-   probe_filtered_out = 1,
-} probe_ret_t;
-
-static probe_ret_t
-droid_probe_device(_EGLDisplay *disp, int fd, const char *vendor)
+static int
+droid_filter_device(_EGLDisplay *disp, int fd, const char *vendor)
 {
-   int ret;
-
    drmVersionPtr ver = drmGetVersion(fd);
    if (!ver)
-      return probe_fail;
+      return -1;
 
-   if (vendor && strcmp(vendor, ver->name) != 0) {
-      ret = probe_filtered_out;
-      goto cleanup;
+   if (strcmp(vendor, ver->name) != 0) {
+      drmFreeVersion(ver);
+      return -1;
    }
 
-   ret = probe_success;
-
-cleanup:
    drmFreeVersion(ver);
-   return ret;
+   return 0;
 }
 
 static int
@@ -1462,25 +1451,20 @@ droid_open_device(_EGLDisplay *disp)
          continue;
       }
 
-      int ret = droid_probe_device(disp, fd, vendor_name);
-      switch (ret) {
-      case probe_success:
-         goto success;
-      case probe_filtered_out:
-         /* Set as fallback */
-         if (fallback_fd == -1)
+      if (vendor_name && droid_filter_device(disp, fd, vendor_name)) {
+         /* Match requested, but not found - set as fallback */
+         if (fallback_fd == -1) {
             fallback_fd = fd;
-         break;
-      case probe_fail:
-         break;
+         } else {
+            close(fd);
+            fd = -1;
+         }
+
+         continue;
       }
-
-      if (fallback_fd != fd)
-         close(fd);
-      fd = -1;
+      /* Found a device */
+      break;
    }
-
-success:
    drmFreeDevices(devices, num_devices);
 
    if (fallback_fd < 0 && fd < 0) {
