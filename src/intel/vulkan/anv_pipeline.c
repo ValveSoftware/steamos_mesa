@@ -979,8 +979,10 @@ anv_pipeline_compile_graphics(struct anv_pipeline *pipeline,
                                            &stages[s],
                                            &stages[s].prog_data.base,
                                            &stages[s].bind_map);
-      if (stages[s].nir == NULL)
+      if (stages[s].nir == NULL) {
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
          goto fail;
+      }
    }
 
    /* Walk backwards to link */
