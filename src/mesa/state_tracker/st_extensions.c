@@ -154,6 +154,11 @@ void st_init_limits(struct pipe_screen *screen,
    c->MaxUniformBlockSize =
       screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
                                PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE);
+   /* GL45-CTS.enhanced_layouts.ssb_member_invalid_offset_alignment fails if
+    * this is larger than INT_MAX - 100. Use a nicely aligned limit.
+    */
+   c->MaxUniformBlockSize = MIN2(c->MaxUniformBlockSize, INT_MAX - 127);
+
    if (c->MaxUniformBlockSize < 16384) {
       can_ubo = FALSE;
    }
@@ -210,17 +215,20 @@ void st_init_limits(struct pipe_screen *screen,
          screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_TEMPS);
       pc->MaxAddressRegs =
       pc->MaxNativeAddressRegs = sh == PIPE_SHADER_VERTEX ? 1 : 0;
-      pc->MaxParameters =
-      pc->MaxNativeParameters =
+
+      pc->MaxUniformComponents =
          screen->get_shader_param(screen, sh,
-                   PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) / sizeof(float[4]);
+                                  PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE) / 4;
+      pc->MaxUniformComponents = MIN2(pc->MaxUniformComponents,
+                                      MAX_UNIFORMS * 4);
+
+      pc->MaxParameters =
+      pc->MaxNativeParameters = pc->MaxUniformComponents / 4;
       pc->MaxInputComponents =
          screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_INPUTS) * 4;
       pc->MaxOutputComponents =
          screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_OUTPUTS) * 4;
 
-      pc->MaxUniformComponents =
-         4 * MIN2(pc->MaxNativeParameters, MAX_UNIFORMS);
 
       pc->MaxUniformBlocks =
          screen->get_shader_param(screen, sh,
@@ -229,9 +237,9 @@ void st_init_limits(struct pipe_screen *screen,
          pc->MaxUniformBlocks -= 1; /* The first one is for ordinary uniforms. */
       pc->MaxUniformBlocks = _min(pc->MaxUniformBlocks, MAX_UNIFORM_BUFFERS);
 
-      pc->MaxCombinedUniformComponents = (pc->MaxUniformComponents +
-                                          c->MaxUniformBlockSize / 4 *
-                                          pc->MaxUniformBlocks);
+      pc->MaxCombinedUniformComponents =
+         pc->MaxUniformComponents +
+         (uint64_t)c->MaxUniformBlockSize / 4 * pc->MaxUniformBlocks;
 
       temp = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS);
       if (temp) {
@@ -309,6 +317,13 @@ void st_init_limits(struct pipe_screen *screen,
       options->LowerCombinedClipCullDistance = true;
       options->LowerBufferInterfaceBlocks = true;
    }
+
+   c->MaxUserAssignableUniformLocations =
+      c->Program[MESA_SHADER_VERTEX].MaxUniformComponents +
+      c->Program[MESA_SHADER_TESS_CTRL].MaxUniformComponents +
+      c->Program[MESA_SHADER_TESS_EVAL].MaxUniformComponents +
+      c->Program[MESA_SHADER_GEOMETRY].MaxUniformComponents +
+      c->Program[MESA_SHADER_FRAGMENT].MaxUniformComponents;
 
    c->GLSLOptimizeConservatively =
       screen->get_param(screen, PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY);
