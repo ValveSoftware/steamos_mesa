@@ -1117,6 +1117,9 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       .module = module,
       .entrypoint = entrypoint,
       .spec_info = spec_info,
+      .cache_key = {
+         .stage = MESA_SHADER_COMPUTE,
+      }
    };
 
    struct anv_shader_bin *bin = NULL;
@@ -1125,13 +1128,11 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, info->layout);
 
-   unsigned char sha1[20];
-   anv_pipeline_hash_compute(pipeline, layout, &stage, sha1);
-   bin = anv_device_search_for_kernel(pipeline->device, cache, sha1, 20);
+   anv_pipeline_hash_compute(pipeline, layout, &stage, stage.cache_key.sha1);
+   bin = anv_device_search_for_kernel(pipeline->device, cache, &stage.cache_key,
+                                      sizeof(stage.cache_key));
 
    if (bin == NULL) {
-      struct brw_cs_prog_data prog_data = {};
-
       stage.bind_map = (struct anv_pipeline_bind_map) {
          .surface_to_descriptor = stage.surface_to_descriptor,
          .sampler_to_descriptor = stage.sampler_to_descriptor
@@ -1139,31 +1140,35 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
       void *mem_ctx = ralloc_context(NULL);
 
-      nir_shader *nir = anv_pipeline_compile(pipeline, mem_ctx, layout, &stage,
-                                             &prog_data.base, &stage.bind_map);
-      if (nir == NULL) {
+      stage.nir = anv_pipeline_compile(pipeline, mem_ctx, layout, &stage,
+                                       &stage.prog_data.base,
+                                       &stage.bind_map);
+      if (stage.nir == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
-      NIR_PASS_V(nir, anv_nir_add_base_work_group_id, &prog_data);
+      NIR_PASS_V(stage.nir, anv_nir_add_base_work_group_id,
+                 &stage.prog_data.cs);
 
-      anv_fill_binding_table(&prog_data.base, 1);
+      anv_fill_binding_table(&stage.prog_data.cs.base, 1);
 
       const unsigned *shader_code =
          brw_compile_cs(compiler, NULL, mem_ctx, &stage.key.cs,
-                        &prog_data, nir, -1, NULL);
+                        &stage.prog_data.cs, stage.nir, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
-      const unsigned code_size = prog_data.base.program_size;
-      bin = anv_device_upload_kernel(pipeline->device, cache, sha1, 20,
+      const unsigned code_size = stage.prog_data.base.program_size;
+      bin = anv_device_upload_kernel(pipeline->device, cache,
+                                     &stage.cache_key, sizeof(stage.cache_key),
                                      shader_code, code_size,
-                                     nir->constant_data,
-                                     nir->constant_data_size,
-                                     &prog_data.base, sizeof(prog_data),
+                                     stage.nir->constant_data,
+                                     stage.nir->constant_data_size,
+                                     &stage.prog_data.base,
+                                     sizeof(stage.prog_data.cs),
                                      &stage.bind_map);
       if (!bin) {
          ralloc_free(mem_ctx);
