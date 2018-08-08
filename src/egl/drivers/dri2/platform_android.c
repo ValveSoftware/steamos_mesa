@@ -1437,7 +1437,7 @@ droid_probe_device(_EGLDisplay *disp, int fd, const char *vendor)
       goto cleanup;
    }
 
-   if (vendor && strncmp(vendor, ver->name, PROPERTY_VALUE_MAX) != 0) {
+   if (vendor && strcmp(vendor, ver->name) != 0) {
       ret = probe_filtered_out;
       goto cleanup;
    }
