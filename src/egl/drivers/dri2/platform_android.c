@@ -1404,19 +1404,6 @@ error:
    return false;
 }
 
-static bool
-droid_probe_driver(int fd)
-{
-   char *driver_name;
-
-   driver_name = loader_get_driver_for_fd(fd);
-   if (driver_name == NULL)
-      return false;
-
-   free(driver_name);
-   return true;
-}
-
 typedef enum {
    probe_fail = -1,
    probe_success = 0,
@@ -1439,11 +1426,6 @@ droid_probe_device(_EGLDisplay *disp, int fd, const char *vendor)
 
    if (vendor && strcmp(vendor, ver->name) != 0) {
       ret = probe_filtered_out;
-      goto cleanup;
-   }
-
-   if (!droid_probe_driver(fd)) {
-      ret = probe_fail;
       goto cleanup;
    }
 
