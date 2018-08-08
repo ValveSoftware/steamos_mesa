@@ -1457,7 +1457,8 @@ cleanup:
 static int
 droid_open_device(_EGLDisplay *disp)
 {
-   const int MAX_DRM_DEVICES = 32;
+#define MAX_DRM_DEVICES 32
+   drmDevicePtr device, devices[MAX_DRM_DEVICES] = { NULL };
    int prop_set, num_devices;
    int fd = -1, fallback_fd = -1;
 
@@ -1467,26 +1468,20 @@ droid_open_device(_EGLDisplay *disp)
    if (property_get("drm.gpu.vendor_name", vendor_buf, NULL) > 0)
       vendor_name = vendor_buf;
 
-   const char *drm_dir_name = "/dev/dri";
-   DIR *sysdir = opendir(drm_dir_name);
+   num_devices = drmGetDevices2(0, devices, ARRAY_SIZE(devices));
+   if (num_devices < 0)
+      return num_devices;
 
-   if (!sysdir)
-       return -errno;
+   for (int i = 0; i < num_devices; i++) {
+      device = devices[i];
 
-   struct dirent *dent;
-   while ((dent = readdir(sysdir))) {
-      char dev_path[128];
-      const char render_dev_prefix[] = "renderD";
-      size_t prefix_len = sizeof(render_dev_prefix) - 1;
-
-      if (strncmp(render_dev_prefix, dent->d_name, prefix_len) != 0)
+      if (!(device->available_nodes & (1 << DRM_NODE_RENDER)))
          continue;
 
-      snprintf(dev_path, sizeof(dev_path), "%s/%s", drm_dir_name, dent->d_name);
-      fd = loader_open_device(dev_path);
+      fd = loader_open_device(device->nodes[DRM_NODE_RENDER]);
       if (fd < 0) {
          _eglLog(_EGL_WARNING, "%s() Failed to open DRM device %s",
-                 __func__, dev_path);
+                 __func__, device->nodes[DRM_NODE_RENDER]);
          continue;
       }
 
@@ -1509,7 +1504,7 @@ droid_open_device(_EGLDisplay *disp)
    }
 
 success:
-   closedir(sysdir);
+   drmFreeDevices(devices, num_devices);
 
    if (fallback_fd < 0 && fd < 0) {
       _eglLog(_EGL_WARNING, "Failed to open any DRM device");
@@ -1523,6 +1518,7 @@ success:
 
    close(fallback_fd);
    return fd;
+#undef MAX_DRM_DEVICES
 }
 
 EGLBoolean
