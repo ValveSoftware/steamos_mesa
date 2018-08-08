@@ -35,7 +35,9 @@ matrix:
     - env:
         - LABEL="meson Vulkan"
         - BUILD=meson
-        - MESON_OPTIONS="-Ddri-drivers=[] -Dgallium-drivers=[]"
+        - DRI_DRIVERS=""
+        - GALLIUM_DRIVERS=""
+        - VULKAN_DRIVERS="intel,amd"
         - LLVM_VERSION=6.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
       addons:
@@ -55,7 +57,9 @@ matrix:
     - env:
         - LABEL="meson loaders/classic DRI"
         - BUILD=meson
-        - MESON_OPTIONS="-Dvulkan-drivers=[] -Dgallium-drivers=[]"
+        - DRI_DRIVERS="i915,i965,r100,r200,swrast,nouveau"
+        - GALLIUM_DRIVERS=""
+        - VULKAN_DRIVERS=""
       addons:
         apt:
           packages:
@@ -463,7 +467,6 @@ matrix:
     - env:
         - LABEL="macOS meson"
         - BUILD=meson
-        - MESON_OPTIONS="-Degl=false"
       os: osx
 
 before_install:
@@ -646,6 +649,14 @@ script:
 
   - |
     if test "x$BUILD" = xmeson; then
+
+      if test "x$TRAVIS_OS_NAME" == xosx; then
+        MESON_OPTIONS="-Degl=false"
+      fi
+
+      if test "x$TRAVIS_OS_NAME" == xlinux; then
+        MESON_OPTIONS="-Ddri-drivers=${DRI_DRIVERS:-[]} -Dgallium-drivers=${GALLIUM_DRIVERS:-[]} -Dvulkan-drivers=${VULKAN_DRIVERS:-[]}"
+      fi
 
       # Travis CI has moved to LLVM 5.0, and meson is detecting
       # automatically the available version in /usr/local/bin based on
