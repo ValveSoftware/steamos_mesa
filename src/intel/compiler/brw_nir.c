@@ -713,18 +713,6 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
    nir_validate_shader(*producer);
    nir_validate_shader(*consumer);
 
-   const bool p_is_scalar =
-      compiler->scalar_stage[(*producer)->info.stage];
-   const bool c_is_scalar =
-      compiler->scalar_stage[(*consumer)->info.stage];
-
-   if (p_is_scalar && c_is_scalar) {
-      NIR_PASS_V(*producer, nir_lower_io_to_scalar_early, nir_var_shader_out);
-      NIR_PASS_V(*consumer, nir_lower_io_to_scalar_early, nir_var_shader_in);
-      *producer = brw_nir_optimize(*producer, compiler, p_is_scalar);
-      *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar);
-   }
-
    NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
    NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
 
@@ -741,7 +729,12 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
       NIR_PASS_V(*consumer, nir_lower_indirect_derefs,
                  brw_nir_no_indirect_mask(compiler, (*consumer)->info.stage));
 
+      const bool p_is_scalar =
+         compiler->scalar_stage[(*producer)->info.stage];
       *producer = brw_nir_optimize(*producer, compiler, p_is_scalar);
+
+      const bool c_is_scalar =
+         compiler->scalar_stage[(*consumer)->info.stage];
       *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar);
    }
 }
