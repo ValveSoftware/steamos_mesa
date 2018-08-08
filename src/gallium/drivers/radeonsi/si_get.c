@@ -397,7 +397,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_TEMPS:
 		return 256; /* Max native temporaries. */
 	case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
-		return 4096 * sizeof(float[4]); /* actually only memory limits this */
+		return MIN2(sscreen->info.max_alloc_size, INT_MAX - 3); /* aligned to 4 */
 	case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
 		return SI_NUM_CONST_BUFFERS;
 	case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
