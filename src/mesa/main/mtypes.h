@@ -3587,7 +3587,7 @@ struct gl_program_constants
    struct gl_precision LowInt, MediumInt, HighInt;
    /* GL_ARB_uniform_buffer_object */
    GLuint MaxUniformBlocks;
-   GLuint MaxCombinedUniformComponents;
+   uint64_t MaxCombinedUniformComponents;
    GLuint MaxTextureImageUnits;
 
    /* GL_ARB_shader_atomic_counters */
