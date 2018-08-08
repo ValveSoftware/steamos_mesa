@@ -289,12 +289,40 @@ vc4_lt_image_helper(void *gpu, uint32_t gpu_stride,
         }
 }
 
+static inline void
+vc4_lt_image_cpp_helper(void *gpu, uint32_t gpu_stride,
+                        void *cpu, uint32_t cpu_stride,
+                        int cpp, const struct pipe_box *box, bool to_cpu)
+{
+        switch (cpp) {
+        case 1:
+                vc4_lt_image_helper(gpu, gpu_stride, cpu, cpu_stride, 1, box,
+                                    to_cpu);
+                break;
+        case 2:
+                vc4_lt_image_helper(gpu, gpu_stride, cpu, cpu_stride, 2, box,
+                                    to_cpu);
+                break;
+        case 4:
+                vc4_lt_image_helper(gpu, gpu_stride, cpu, cpu_stride, 4, box,
+                                    to_cpu);
+                break;
+        case 8:
+                vc4_lt_image_helper(gpu, gpu_stride, cpu, cpu_stride, 8, box,
+                                    to_cpu);
+                break;
+        default:
+                unreachable("bad cpp");
+        }
+}
+
 void
 NEON_TAG(vc4_load_lt_image)(void *dst, uint32_t dst_stride,
                             void *src, uint32_t src_stride,
                             int cpp, const struct pipe_box *box)
 {
-        vc4_lt_image_helper(src, src_stride, dst, dst_stride, cpp, box, true);
+        vc4_lt_image_cpp_helper(src, src_stride, dst, dst_stride, cpp, box,
+                                true);
 }
 
 void
@@ -302,5 +330,6 @@ NEON_TAG(vc4_store_lt_image)(void *dst, uint32_t dst_stride,
                              void *src, uint32_t src_stride,
                              int cpp, const struct pipe_box *box)
 {
-        vc4_lt_image_helper(dst, dst_stride, src, src_stride, cpp, box, false);
+        vc4_lt_image_cpp_helper(dst, dst_stride, src, src_stride, cpp, box,
+                                false);
 }
