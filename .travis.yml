@@ -45,8 +45,6 @@ matrix:
             # llvm-6 depends on gcc-4.9 which is not in main repo
             - ubuntu-toolchain-r-test
           packages:
-            # LLVM packaging is broken and misses these dependencies
-            - libedit-dev
             # From sources above
             - llvm-6.0-dev
             # Common
@@ -142,8 +140,6 @@ matrix:
             # llvm-6 depends on gcc-4.9 which is not in main repo
             - ubuntu-toolchain-r-test
           packages:
-            # LLVM packaging is broken and misses these dependencies
-            - libedit-dev
             # From sources above
             - llvm-6.0-dev
             # Common
@@ -385,8 +381,6 @@ matrix:
             # llvm-6 depends on gcc-4.9 which is not in main repo
             - ubuntu-toolchain-r-test
           packages:
-            # LLVM packaging is broken and misses these dependencies
-            - libedit-dev
             # From sources above
             - llvm-6.0-dev
             # Common
