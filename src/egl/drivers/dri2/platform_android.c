@@ -1419,11 +1419,6 @@ droid_probe_device(_EGLDisplay *disp, int fd, const char *vendor)
    if (!ver)
       return probe_fail;
 
-   if (!ver->name) {
-      ret = probe_fail;
-      goto cleanup;
-   }
-
    if (vendor && strcmp(vendor, ver->name) != 0) {
       ret = probe_filtered_out;
       goto cleanup;
