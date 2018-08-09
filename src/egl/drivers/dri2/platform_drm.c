@@ -305,7 +305,7 @@ back_bo_to_dri_buffer(struct dri2_egl_surface *dri2_surf, __DRIbuffer *buffer)
    struct gbm_dri_bo *bo;
    int name, pitch;
 
-   bo = (struct gbm_dri_bo *) dri2_surf->back->bo;
+   bo = gbm_dri_bo(dri2_surf->back->bo);
 
    dri2_dpy->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_NAME, &name);
    dri2_dpy->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_STRIDE, &pitch);
@@ -409,7 +409,7 @@ dri2_drm_image_get_buffers(__DRIdrawable *driDrawable,
    if (get_back_bo(dri2_surf) < 0)
       return 0;
 
-   bo = (struct gbm_dri_bo *) dri2_surf->back->bo;
+   bo = gbm_dri_bo(dri2_surf->back->bo);
    buffers->image_mask = __DRI_IMAGE_BUFFER_BACK;
    buffers->back = bo->image;
 
