@@ -170,7 +170,7 @@ i965_oa_sources = custom_target(
   input : i965_hw_metrics_xml_files,
   output : [ 'brw_oa_metrics.c', 'brw_oa_metrics.h' ],
   command : [
-    prog_python2, files('brw_oa.py'),
+    prog_python, files('brw_oa.py'),
     '--code', '@OUTPUT0@', '--header', '@OUTPUT1@',
     '@INPUT@',
   ],

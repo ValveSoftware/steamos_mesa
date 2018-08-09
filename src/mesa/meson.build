@@ -664,7 +664,7 @@ format_fallback_c = custom_target(
   'format_fallback.c',
   input : ['main/format_fallback.py', 'main/formats.csv'],
   output : 'format_fallback.c',
-  command : [prog_python2, '@INPUT0@', '@INPUT1@', '@OUTPUT@'],
+  command : [prog_python, '@INPUT0@', '@INPUT1@', '@OUTPUT@'],
   depend_files : files('main/format_parser.py'),
 )
 
@@ -672,7 +672,7 @@ get_hash_h = custom_target(
   'get_hash.h',
   input : ['main/get_hash_generator.py', gl_and_es_api_files],
   output : 'get_hash.h',
-  command : [prog_python2, '@INPUT0@', '-f', '@INPUT1@'],
+  command : [prog_python, '@INPUT0@', '-f', '@INPUT1@'],
   depend_files : files('main/get_hash_params.py'),
   capture : true,
 )
@@ -684,7 +684,7 @@ foreach x : [['format_info.h', 'format_info.py'],
     x[0],
     input : ['main/@0@'.format(x[1]), 'main/formats.csv'],
     output : x[0],
-    command : [prog_python2, '@INPUT0@', '@INPUT1@'],
+    command : [prog_python, '@INPUT0@', '@INPUT1@'],
     depend_files : files('main/format_parser.py'),
     capture : true,
   )

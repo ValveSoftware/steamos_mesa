@@ -65,7 +65,7 @@ g_egldispatchstubs_c = custom_target(
   ],
   output : 'g_egldispatchstubs.c',
   command : [
-    prog_python2, '@INPUT0@', 'source', '@INPUT1@', '@INPUT2@', '@INPUT3@'
+    prog_python, '@INPUT0@', 'source', '@INPUT1@', '@INPUT2@', '@INPUT3@'
   ],
   depend_files : files('generate/genCommon.py'),
   capture : true,
@@ -79,7 +79,7 @@ g_egldispatchstubs_h = custom_target(
   ],
   output : 'g_egldispatchstubs.h',
   command : [
-    prog_python2, '@INPUT0@', 'header', '@INPUT1@', '@INPUT2@', '@INPUT3@'
+    prog_python, '@INPUT0@', 'header', '@INPUT1@', '@INPUT2@', '@INPUT3@'
   ],
   depend_files : files('generate/genCommon.py'),
   capture : true,

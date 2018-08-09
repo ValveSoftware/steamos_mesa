@@ -25,7 +25,7 @@ anv_entrypoints = custom_target(
   input : ['anv_entrypoints_gen.py', vk_api_xml],
   output : ['anv_entrypoints.h', 'anv_entrypoints.c'],
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
     '--outdir', meson.current_build_dir(),
   ],
   depend_files : anv_extensions_py,
@@ -36,7 +36,7 @@ anv_extensions_c = custom_target(
   input : ['anv_extensions_gen.py', vk_api_xml],
   output : 'anv_extensions.c',
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
     '--out-c', '@OUTPUT@',
   ],
   depend_files : anv_extensions_py,
@@ -47,7 +47,7 @@ anv_extensions_h = custom_target(
   input : ['anv_extensions_gen.py', vk_api_xml],
   output : 'anv_extensions.h',
   command : [
-    prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
+    prog_python, '@INPUT0@', '--xml', '@INPUT1@',
     '--out-h', '@OUTPUT@',
   ],
   depend_files : anv_extensions_py,
@@ -58,7 +58,7 @@ intel_icd = custom_target(
   input : 'anv_icd.py',
   output : 'intel_icd.@0@.json'.format(host_machine.cpu()),
   command : [
-    prog_python2, '@INPUT@',
+    prog_python, '@INPUT@',
     '--lib-path', join_paths(get_option('prefix'), get_option('libdir')),
     '--out', '@OUTPUT@',
   ],
@@ -73,7 +73,7 @@ dev_icd = custom_target(
   input : 'anv_icd.py',
   output : 'dev_icd.@0@.json'.format(host_machine.cpu()),
   command : [
-    prog_python2, '@INPUT@', '--lib-path', meson.current_build_dir(),
+    prog_python, '@INPUT@', '--lib-path', meson.current_build_dir(),
     '--out', '@OUTPUT@'
   ],
   depend_files : files('anv_extensions.py'),

@@ -23,7 +23,7 @@ ir3_nir_trig_c = custom_target(
   input : 'ir3/ir3_nir_trig.py',
   output : 'ir3_nir_trig.c',
   command : [
-    prog_python2, '@INPUT@',
+    prog_python, '@INPUT@',
     '-p', join_paths(meson.source_root(), 'src/compiler/nir/'),
   ],
   capture : true,

@@ -91,7 +91,7 @@ si_driinfo_h = custom_target(
     '../../auxiliary/pipe-loader/driinfo_gallium.h', 'driinfo_radeonsi.h'
   ),
   output : 'si_driinfo.h',
-  command : [prog_python2, '@INPUT@'],
+  command : [prog_python, '@INPUT@'],
   capture : true,
 )
 
