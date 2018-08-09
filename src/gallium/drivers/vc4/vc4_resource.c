@@ -232,6 +232,44 @@ fail:
 }
 
 static void
+vc4_texture_subdata(struct pipe_context *pctx,
+                    struct pipe_resource *prsc,
+                    unsigned level,
+                    unsigned usage,
+                    const struct pipe_box *box,
+                    const void *data,
+                    unsigned stride,
+                    unsigned layer_stride)
+{
+        struct vc4_resource *rsc = vc4_resource(prsc);
+        struct vc4_resource_slice *slice = &rsc->slices[level];
+
+        /* For a direct mapping, we can just take the u_transfer path. */
+        if (!rsc->tiled ||
+            box->depth != 1 ||
+            (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE)) {
+                return u_default_texture_subdata(pctx, prsc, level, usage, box,
+                                                 data, stride, layer_stride);
+        }
+
+        /* Otherwise, map and store the texture data directly into the tiled
+         * texture.
+         */
+        void *buf;
+        if (usage & PIPE_TRANSFER_UNSYNCHRONIZED)
+                buf = vc4_bo_map_unsynchronized(rsc->bo);
+        else
+                buf = vc4_bo_map(rsc->bo);
+
+        vc4_store_tiled_image(buf + slice->offset +
+                              box->z * rsc->cube_map_stride,
+                              slice->stride,
+                              (void *)data, stride,
+                              slice->tiling, rsc->cpp,
+                              box);
+}
+
+static void
 vc4_resource_destroy(struct pipe_screen *pscreen,
                      struct pipe_resource *prsc)
 {
@@ -1112,7 +1150,7 @@ vc4_resource_context_init(struct pipe_context *pctx)
         pctx->transfer_flush_region = u_transfer_helper_transfer_flush_region;
         pctx->transfer_unmap = u_transfer_helper_transfer_unmap;
         pctx->buffer_subdata = u_default_buffer_subdata;
-        pctx->texture_subdata = u_default_texture_subdata;
+        pctx->texture_subdata = vc4_texture_subdata;
         pctx->create_surface = vc4_create_surface;
         pctx->surface_destroy = vc4_surface_destroy;
         pctx->resource_copy_region = util_resource_copy_region;
