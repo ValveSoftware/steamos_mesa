@@ -45,7 +45,7 @@ lock_front_buffer(struct gbm_surface *_surf)
 {
    struct gbm_dri_surface *surf = (struct gbm_dri_surface *) _surf;
    struct dri2_egl_surface *dri2_surf = surf->dri_private;
-   struct gbm_dri_device *device = (struct gbm_dri_device *) _surf->gbm;
+   struct gbm_dri_device *device = gbm_dri_device(_surf->gbm);
    struct gbm_bo *bo;
 
    if (dri2_surf->current == NULL) {
