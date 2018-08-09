@@ -35,6 +35,12 @@ import traceback
 
 from nir_opcodes import opcodes
 
+if sys.version_info < (3, 0):
+    string_type = unicode
+
+else:
+    string_type = str
+
 _type_re = re.compile(r"(?P<type>int|uint|bool|float)?(?P<bits>\d+)?")
 
 def type_bits(type_str):
@@ -66,11 +72,14 @@ class VarSet(object):
 class Value(object):
    @staticmethod
    def create(val, name_base, varset):
+      if isinstance(val, bytes):
+         val = val.decode('utf-8')
+
       if isinstance(val, tuple):
          return Expression(val, name_base, varset)
       elif isinstance(val, Expression):
          return val
-      elif isinstance(val, (str, unicode)):
+      elif isinstance(val, string_type):
          return Variable(val, name_base, varset)
       elif isinstance(val, (bool, int, long, float)):
          return Constant(val, name_base)
