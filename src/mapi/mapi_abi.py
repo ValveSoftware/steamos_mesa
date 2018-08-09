@@ -32,6 +32,7 @@ import os
 GLAPI = os.path.join(".", os.path.dirname(sys.argv[0]), "glapi/gen")
 sys.path.append(GLAPI)
 
+from operator import attrgetter
 import re
 from optparse import OptionParser
 import gl_XML
@@ -291,7 +292,7 @@ class ABIPrinter(object):
 
         # sort entries by their names
         self.entries_sorted_by_names = self.entries[:]
-        self.entries_sorted_by_names.sort(lambda x, y: cmp(x.name, y.name))
+        self.entries_sorted_by_names.sort(key=attrgetter('name'))
 
         self.indent = ' ' * 3
         self.noop_warn = 'noop_warn'
@@ -441,7 +442,7 @@ class ABIPrinter(object):
         """Return the string pool for use by stubs."""
         # sort entries by their names
         sorted_entries = self.entries[:]
-        sorted_entries.sort(lambda x, y: cmp(x.name, y.name))
+        sorted_entries.sort(key=attrgetter('name'))
 
         pool = []
         offsets = {}
