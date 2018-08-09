@@ -36,9 +36,11 @@ import traceback
 from nir_opcodes import opcodes
 
 if sys.version_info < (3, 0):
+    integer_types = (int, long)
     string_type = unicode
 
 else:
+    integer_types = (int, )
     string_type = str
 
 _type_re = re.compile(r"(?P<type>int|uint|bool|float)?(?P<bits>\d+)?")
@@ -81,7 +83,7 @@ class Value(object):
          return val
       elif isinstance(val, string_type):
          return Variable(val, name_base, varset)
-      elif isinstance(val, (bool, int, long, float)):
+      elif isinstance(val, (bool, float) + integer_types):
          return Constant(val, name_base)
 
    __template = mako.template.Template("""
@@ -145,7 +147,7 @@ class Constant(Value):
    def hex(self):
       if isinstance(self.value, (bool)):
          return 'NIR_TRUE' if self.value else 'NIR_FALSE'
-      if isinstance(self.value, (int, long)):
+      if isinstance(self.value, integer_types):
          return hex(self.value)
       elif isinstance(self.value, float):
          i = struct.unpack('Q', struct.pack('d', self.value))[0]
@@ -164,7 +166,7 @@ class Constant(Value):
    def type(self):
       if isinstance(self.value, (bool)):
          return "nir_type_bool32"
-      elif isinstance(self.value, (int, long)):
+      elif isinstance(self.value, integer_types):
          return "nir_type_int"
       elif isinstance(self.value, float):
          return "nir_type_float"
