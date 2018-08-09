@@ -291,8 +291,7 @@ class ABIPrinter(object):
         self.entries = entries
 
         # sort entries by their names
-        self.entries_sorted_by_names = self.entries[:]
-        self.entries_sorted_by_names.sort(key=attrgetter('name'))
+        self.entries_sorted_by_names = sorted(self.entries, key=attrgetter('name'))
 
         self.indent = ' ' * 3
         self.noop_warn = 'noop_warn'
@@ -441,8 +440,7 @@ class ABIPrinter(object):
     def c_stub_string_pool(self):
         """Return the string pool for use by stubs."""
         # sort entries by their names
-        sorted_entries = self.entries[:]
-        sorted_entries.sort(key=attrgetter('name'))
+        sorted_entries = sorted(self.entries, key=attrgetter('name'))
 
         pool = []
         offsets = {}
