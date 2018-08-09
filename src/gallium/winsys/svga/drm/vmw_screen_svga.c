@@ -158,8 +158,13 @@ vmw_svga_winsys_fence_server_sync(struct svga_winsys_screen *sws,
                                   int32_t *context_fd,
                                   struct pipe_fence_handle *fence)
 {
-   return sync_accumulate("vmwgfx", context_fd,
-                          sws->fence_get_fd(sws, fence, FALSE));
+   int32_t fd = sws->fence_get_fd(sws, fence, FALSE);
+
+   /* If we don't have fd, we don't need to merge fd into the context's fd. */
+   if (fd == -1)
+      return 0;
+
+   return sync_accumulate("vmwgfx", context_fd, fd);
 }
 
 
