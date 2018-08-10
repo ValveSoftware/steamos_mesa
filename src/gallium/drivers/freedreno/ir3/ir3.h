@@ -1004,7 +1004,7 @@ void ir3_sched_add_deps(struct ir3 *ir);
 int ir3_sched(struct ir3 *ir);
 
 /* register assignment: */
-struct ir3_ra_reg_set * ir3_ra_alloc_reg_set(void *memctx);
+struct ir3_ra_reg_set * ir3_ra_alloc_reg_set(struct ir3_compiler *compiler);
 int ir3_ra(struct ir3 *ir3, enum shader_t type,
 		bool frag_coord, bool frag_face);
 

@@ -194,9 +194,9 @@ build_q_values(unsigned int **q_values, unsigned off,
  * really just four scalar registers.  Don't let that confuse you.)
  */
 struct ir3_ra_reg_set *
-ir3_ra_alloc_reg_set(void *memctx)
+ir3_ra_alloc_reg_set(struct ir3_compiler *compiler)
 {
-	struct ir3_ra_reg_set *set = rzalloc(memctx, struct ir3_ra_reg_set);
+	struct ir3_ra_reg_set *set = rzalloc(compiler, struct ir3_ra_reg_set);
 	unsigned ra_reg_count, reg, first_half_reg, first_high_reg, base;
 	unsigned int **q_values;
 
@@ -365,23 +365,18 @@ size_to_class(unsigned sz, bool half, bool high)
 }
 
 static bool
-is_temp(struct ir3_register *reg)
+writes_gpr(struct ir3_instruction *instr)
 {
+	if (is_store(instr))
+		return false;
+	/* is dest a normal temp register: */
+	struct ir3_register *reg = instr->regs[0];
 	if (reg->flags & (IR3_REG_CONST | IR3_REG_IMMED))
 		return false;
 	if ((reg->num == regid(REG_A0, 0)) ||
 			(reg->num == regid(REG_P0, 0)))
 		return false;
 	return true;
-}
-
-static bool
-writes_gpr(struct ir3_instruction *instr)
-{
-	if (is_store(instr))
-		return false;
-	/* is dest a normal temp register: */
-	return is_temp(instr->regs[0]);
 }
 
 static bool
