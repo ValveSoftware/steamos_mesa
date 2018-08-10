@@ -32,6 +32,7 @@
 #include "pipe/p_shader_tokens.h"
 #include "util/u_debug.h"
 #include "util/u_memory.h"
+#include "util/u_screen.h"
 #include "util/u_simple_shaders.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
@@ -544,8 +545,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return rscreen->b.info.pci_dev;
 	case PIPE_CAP_PCI_FUNCTION:
 		return rscreen->b.info.pci_func;
+	default:
+		return u_pipe_screen_get_param_defaults(pscreen, param);
 	}
-	return 0;
 }
 
 static int r600_get_shader_param(struct pipe_screen* pscreen,

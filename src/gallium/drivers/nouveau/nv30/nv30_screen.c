@@ -27,6 +27,7 @@
 #include <nouveau_drm.h>
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 
 #include "nv_object.xml.h"
 #include "nv_m2mf.xml.h"
@@ -261,10 +262,9 @@ nv30_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return dev->vram_size >> 20;
    case PIPE_CAP_UMA:
       return 0;
+   default:
+      return u_pipe_screen_get_param_defaults(pscreen, param);
    }
-
-   debug_printf("unknown param %d\n", param);
-   return 0;
 }
 
 static float

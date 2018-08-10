@@ -23,6 +23,7 @@
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 #include "util/u_video.h"
 #include "util/u_math.h"
 #include "util/os_time.h"
@@ -332,10 +333,9 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 0;
    case PIPE_CAP_NATIVE_FENCE_FD:
       return 0;
+   default:
+      return u_pipe_screen_get_param_defaults(screen, param);
    }
-   /* should only get here on unhandled cases */
-   debug_printf("Unexpected PIPE_CAP %d query\n", param);
-   return 0;
 }
 
 static int

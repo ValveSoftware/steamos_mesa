@@ -25,6 +25,7 @@
 #include <nouveau_drm.h>
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 #include "pipe/p_screen.h"
 
 #include "nv50/nv50_context.h"
@@ -315,10 +316,9 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return dev->vram_size >> 20;
    case PIPE_CAP_UMA:
       return 0;
+   default:
+      return u_pipe_screen_get_param_defaults(pscreen, param);
    }
-
-   NOUVEAU_ERR("unknown PIPE_CAP %d\n", param);
-   return 0;
 }
 
 static int

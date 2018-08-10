@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_hash_table.h"
+#include "util/u_screen.h"
 #include "util/ralloc.h"
 
 #include <xf86drm.h>
@@ -327,8 +328,7 @@ v3d_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
                 return 1;
 
         default:
-                fprintf(stderr, "unknown param %d\n", param);
-                return 0;
+                return u_pipe_screen_get_param_defaults(pscreen, param);
         }
 }
 

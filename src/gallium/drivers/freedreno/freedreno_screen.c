@@ -35,6 +35,7 @@
 #include "util/u_inlines.h"
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 #include "util/u_string.h"
 #include "util/u_debug.h"
 
@@ -488,9 +489,9 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 1;
 	case PIPE_CAP_NATIVE_FENCE_FD:
 		return fd_device_version(screen->dev) >= FD_VERSION_FENCE_FD;
+	default:
+		return u_pipe_screen_get_param_defaults(pscreen, param);
 	}
-	debug_printf("unknown param %d\n", param);
-	return 0;
 }
 
 static float

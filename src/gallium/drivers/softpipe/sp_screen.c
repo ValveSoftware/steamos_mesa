@@ -29,6 +29,7 @@
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 #include "util/u_video.h"
 #include "os/os_misc.h"
 #include "util/os_time.h"
@@ -332,10 +333,9 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1 << 27;
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
       return 4;
+   default:
+      return u_pipe_screen_get_param_defaults(screen, param);
    }
-   /* should only get here on unhandled cases */
-   debug_printf("Unexpected PIPE_CAP %d query\n", param);
-   return 0;
 }
 
 static int

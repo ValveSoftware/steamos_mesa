@@ -23,6 +23,7 @@
 
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_screen.h"
 #include "util/u_memory.h"
 #include "util/os_time.h"
 #include "vl/vl_decoder.h"
@@ -319,8 +320,9 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
             return r300screen->info.pci_dev;
         case PIPE_CAP_PCI_FUNCTION:
             return r300screen->info.pci_func;
+        default:
+            return u_pipe_screen_get_param_defaults(pscreen, param);
     }
-    return 0;
 }
 
 static int r300_get_shader_param(struct pipe_screen *pscreen,

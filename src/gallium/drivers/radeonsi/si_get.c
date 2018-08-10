@@ -29,6 +29,7 @@
 #include "ac_llvm_util.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
+#include "util/u_screen.h"
 #include "util/u_video.h"
 #include "compiler/nir/nir.h"
 
@@ -315,8 +316,10 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return sscreen->info.pci_dev;
 	case PIPE_CAP_PCI_FUNCTION:
 		return sscreen->info.pci_func;
+
+	default:
+		return u_pipe_screen_get_param_defaults(pscreen, param);
 	}
-	return 0;
 }
 
 static float si_get_paramf(struct pipe_screen* pscreen, enum pipe_capf param)

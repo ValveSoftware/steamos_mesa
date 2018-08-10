@@ -41,6 +41,7 @@
 #include "util/os_time.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
+#include "util/u_screen.h"
 #include "util/u_string.h"
 
 #include "state_tracker/drm_driver.h"
@@ -369,10 +370,9 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 0;
    case PIPE_CAP_UMA:
       return 1;
+   default:
+      return u_pipe_screen_get_param_defaults(pscreen, param);
    }
-
-   debug_printf("unknown param %d", param);
-   return 0;
 }
 
 static float

@@ -27,6 +27,7 @@
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
+#include "util/u_screen.h"
 #include "util/u_string.h"
 #include "util/u_math.h"
 
@@ -476,10 +477,9 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 32;
    case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
       return 1 << 27;
+   default:
+      return u_pipe_screen_get_param_defaults(screen, param);
    }
-
-   debug_printf("Unexpected PIPE_CAP_ query %u\n", param);
-   return 0;
 }
 
 

@@ -32,6 +32,7 @@
 #include "util/u_format_s3tc.h"
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
+#include "util/u_screen.h"
 #include "util/u_string.h"
 
 #include "i915_reg.h"
@@ -425,9 +426,9 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_COMPUTE:
    case PIPE_CAP_QUERY_BUFFER_OBJECT:
       return 0;
+
    default:
-      debug_printf("%s: Unknown cap %u.\n", __FUNCTION__, cap);
-      return 0;
+      return u_pipe_screen_get_param_defaults(screen, cap);
    }
 }
 
