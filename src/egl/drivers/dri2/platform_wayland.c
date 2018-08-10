@@ -202,7 +202,7 @@ resize_callback(struct wl_egl_window *wl_win, void *data)
       dri2_egl_display(dri2_surf->base.Resource.Display);
 
    /* Update the surface size as soon as native window is resized; from user
-    * pov, this makes the effect that resize is done inmediately after native
+    * pov, this makes the effect that resize is done immediately after native
     * window resize, without requiring to wait until the first draw.
     *
     * A more detailed and lengthy explanation can be found at
@@ -227,7 +227,7 @@ get_wl_surface_proxy(struct wl_egl_window *window)
 {
     /* Version 3 of wl_egl_window introduced a version field at the same
      * location where a pointer to wl_surface was stored. Thus, if
-     * window->version is dereferencable, we've been given an older version of
+     * window->version is dereferenceable, we've been given an older version of
      * wl_egl_window, and window->version points to wl_surface */
    if (_eglPointerIsDereferencable((void *)(window->version))) {
       return wl_proxy_create_wrapper((void *)(window->version));
@@ -469,7 +469,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
 
    while (dri2_surf->back == NULL) {
       for (int i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
-         /* Get an unlocked buffer, preferrably one with a dri_buffer
+         /* Get an unlocked buffer, preferably one with a dri_buffer
           * already allocated. */
          if (dri2_surf->color_buffers[i].locked)
             continue;
@@ -1555,7 +1555,7 @@ create_tmpfile_cloexec(char *tmpname)
  *
  * If the C library implements posix_fallocate(), it is used to
  * guarantee that disk space is available for the file at the
- * given size. If disk space is insufficent, errno is set to ENOSPC.
+ * given size. If disk space is insufficient, errno is set to ENOSPC.
  * If posix_fallocate() is not supported, program may receive
  * SIGBUS on accessing mmap()'ed file contents instead.
  */
@@ -1613,7 +1613,7 @@ dri2_wl_swrast_allocate_buffer(struct dri2_egl_surface *dri2_surf,
    stride = dri2_wl_swrast_get_stride_for_format(format, w);
    size_map = h * stride;
 
-   /* Create a sharable buffer */
+   /* Create a shareable buffer */
    fd = os_create_anonymous_file(size_map);
    if (fd < 0)
       return EGL_FALSE;
