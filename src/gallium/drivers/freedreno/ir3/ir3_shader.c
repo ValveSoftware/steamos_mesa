@@ -97,18 +97,6 @@ fixup_regfootprint(struct ir3_shader_variant *v)
 		int32_t regid = (v->outputs[i].regid + 3) >> 2;
 		v->info.max_reg = MAX2(v->info.max_reg, regid);
 	}
-
-	if (v->type == SHADER_FRAGMENT) {
-		/* NOTE: not sure how to turn pos_regid off..  but this could
-		 * be, for example, r1.x while max reg used by the shader is
-		 * r0.*, in which case we need to fixup the reg footprint:
-		 */
-		v->info.max_reg = MAX2(v->info.max_reg, v->pos_regid >> 2);
-		if (v->frag_coord)
-			debug_assert(v->info.max_reg >= 0); /* hard coded r0.x */
-		if (v->frag_face)
-			debug_assert(v->info.max_half_reg >= 0); /* hr0.x */
-	}
 }
 
 /* wrapper for ir3_assemble() which does some info fixup based on
@@ -518,7 +506,8 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin, FILE *out)
 		dump_output(out, so, VARYING_SLOT_PSIZ, "psize");
 		break;
 	case SHADER_FRAGMENT:
-		dump_reg(out, "pos (bary)", so->pos_regid);
+		dump_reg(out, "pos (bary)",
+			ir3_find_sysval_regid(so, SYSTEM_VALUE_VARYING_COORD));
 		dump_output(out, so, FRAG_RESULT_DEPTH, "posz");
 		if (so->color0_mrt) {
 			dump_output(out, so, FRAG_RESULT_COLOR, "color");

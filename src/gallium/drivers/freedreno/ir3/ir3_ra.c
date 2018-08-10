@@ -1047,49 +1047,10 @@ ra_block_alloc(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 static int
 ra_alloc(struct ir3_ra_ctx *ctx)
 {
-	unsigned n = 0;
-
-	/* frag shader inputs get pre-assigned, since we have some
-	 * constraints/unknowns about setup for some of these regs:
-	 */
-	if (ctx->type == SHADER_FRAGMENT) {
-		struct ir3 *ir = ctx->ir;
-		unsigned i = 0, j;
-		if (ctx->frag_face && (i < ir->ninputs) && ir->inputs[i]) {
-			struct ir3_instruction *instr = ir->inputs[i];
-			int cls = size_to_class(1, true, false);
-			unsigned name = __ra_name(ctx, cls, instr);
-			unsigned reg = ctx->set->gpr_to_ra_reg[cls][0];
-
-			/* if we have frag_face, it gets hr0.x */
-			ra_set_node_reg(ctx->g, name, reg);
-			i += 4;
-		}
-
-		j = 0;
-		for (; i < ir->ninputs; i++) {
-			struct ir3_instruction *instr = ir->inputs[i];
-			if (instr) {
-				struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
-
-				if (id->defn == instr) {
-					unsigned name, reg;
-
-					name = ra_name(ctx, id);
-					reg = ctx->set->gpr_to_ra_reg[id->cls][j];
-
-					ra_set_node_reg(ctx->g, name, reg);
-					j += id->sz;
-				}
-			}
-		}
-		n = j;
-	}
-
 	/* pre-assign array elements:
 	 */
 	list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
-		unsigned base = n;
+		unsigned base = 0;
 
 		if (arr->end_ip == 0)
 			continue;

@@ -202,7 +202,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 {
 	struct stage s[MAX_STAGES];
 	uint32_t pos_regid, posz_regid, psize_regid, color_regid[8];
-	uint32_t face_regid, coord_regid, zwcoord_regid;
+	uint32_t face_regid, coord_regid, zwcoord_regid, vcoord_regid;
 	enum a3xx_threadsize fssz;
 	int constmode;
 	int i, j;
@@ -244,10 +244,10 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 		color_regid[7] = ir3_find_output_regid(s[FS].v, FRAG_RESULT_DATA7);
 	}
 
-	/* TODO get these dynamically: */
-	face_regid = s[FS].v->frag_face ? regid(0,0) : regid(63,0);
-	coord_regid = s[FS].v->frag_coord ? regid(0,0) : regid(63,0);
-	zwcoord_regid = s[FS].v->frag_coord ? regid(0,2) : regid(63,0);
+	face_regid      = ir3_find_sysval_regid(s[FS].v, SYSTEM_VALUE_FRONT_FACE);
+	coord_regid     = ir3_find_sysval_regid(s[FS].v, SYSTEM_VALUE_FRAG_COORD);
+	zwcoord_regid   = (coord_regid == regid(63,0)) ? regid(63,0) : (coord_regid + 2);
+	vcoord_regid    = ir3_find_sysval_regid(s[FS].v, SYSTEM_VALUE_VARYING_COORD);
 
 	/* we could probably divide this up into things that need to be
 	 * emitted if frag-prog is dirty vs if vert-prog is dirty..
@@ -273,7 +273,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	OUT_RING(ring, A4XX_HLSQ_CONTROL_2_REG_PRIMALLOCTHRESHOLD(63) |
 			0x3f3f000 |           /* XXX */
 			A4XX_HLSQ_CONTROL_2_REG_FACEREGID(face_regid));
-	OUT_RING(ring, A4XX_HLSQ_CONTROL_3_REG_REGID(s[FS].v->pos_regid) |
+	OUT_RING(ring, A4XX_HLSQ_CONTROL_3_REG_REGID(vcoord_regid) |
 			0xfcfcfc00);
 	OUT_RING(ring, 0x00fcfcfc);   /* XXX HLSQ_CONTROL_4 */
 
