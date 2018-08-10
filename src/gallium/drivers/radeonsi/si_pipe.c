@@ -782,7 +782,7 @@ static void si_disk_cache_create(struct si_screen *sscreen)
 			shader_debug_flags |= (uint64_t)sscreen->info.address32_hi << 32;
 
 			sscreen->disk_shader_cache =
-				disk_cache_create(si_get_family_name(sscreen),
+				disk_cache_create(sscreen->info.name,
 						  timestamp_str,
 						  shader_debug_flags);
 			free(timestamp_str);
