@@ -294,6 +294,9 @@ nir_compare_deref_paths(nir_deref_path *a_path,
       nir_deref_instr *a_tail = *(a_p++);
       nir_deref_instr *b_tail = *(b_p++);
 
+      if (a_tail == b_tail)
+         continue;
+
       switch (a_tail->deref_type) {
       case nir_deref_type_array:
       case nir_deref_type_array_wildcard: {
