@@ -56,17 +56,22 @@ struct ir3_context {
 
 	nir_function_impl *impl;
 
-	/* For fragment shaders, from the hw perspective the only
-	 * actual input is r0.xy position register passed to bary.f.
-	 * But TGSI doesn't know that, it still declares things as
-	 * IN[] registers.  So we do all the input tracking normally
-	 * and fix things up after compile_instructions()
+	/* For fragment shaders, varyings are not actual shader inputs,
+	 * instead the hw passes a varying-coord which is used with
+	 * bary.f.
 	 *
-	 * NOTE that frag_pos is the hardware position (possibly it
+	 * But NIR doesn't know that, it still declares varyings as
+	 * inputs.  So we do all the input tracking normally and fix
+	 * things up after compile_instructions()
+	 *
+	 * NOTE that frag_vcoord is the hardware position (possibly it
 	 * is actually an index or tag or some such.. it is *not*
 	 * values that can be directly used for gl_FragCoord..)
 	 */
-	struct ir3_instruction *frag_pos, *frag_face, *frag_coord[4];
+	struct ir3_instruction *frag_vcoord;
+
+	/* for fragment shaders, for gl_FrontFacing and gl_FragCoord: */
+	struct ir3_instruction *frag_face, *frag_coord[4];
 
 	/* For vertex shaders, keep track of the system values sources */
 	struct ir3_instruction *vertex_id, *basevertex, *instance_id;
@@ -768,7 +773,7 @@ create_frag_input(struct ir3_context *ctx, bool use_ldlv)
 		instr->cat6.type = TYPE_U32;
 		instr->cat6.iim_val = 1;
 	} else {
-		instr = ir3_BARY_F(block, inloc, 0, ctx->frag_pos, 0);
+		instr = ir3_BARY_F(block, inloc, 0, ctx->frag_vcoord, 0);
 		instr->regs[2]->wrmask = 0x3;
 	}
 
@@ -3438,7 +3443,7 @@ emit_instructions(struct ir3_context *ctx)
 		ir3_reg_create(instr, 0, 0);
 		ir3_reg_create(instr, 0, IR3_REG_SSA);    /* r0.x */
 		ir3_reg_create(instr, 0, IR3_REG_SSA);    /* r0.y */
-		ctx->frag_pos = instr;
+		ctx->frag_vcoord = instr;
 	}
 
 	/* Setup inputs: */
@@ -3467,7 +3472,7 @@ emit_instructions(struct ir3_context *ctx)
 
 /* from NIR perspective, we actually have inputs.  But most of the "inputs"
  * for a fragment shader are just bary.f instructions.  The *actual* inputs
- * from the hw perspective are the frag_pos and optionally frag_coord and
+ * from the hw perspective are the frag_vcoord and optionally frag_coord and
  * frag_face.
  */
 static void
@@ -3481,7 +3486,7 @@ fixup_frag_inputs(struct ir3_context *ctx)
 
 	ir->ninputs = 0;
 
-	n  = 4;  /* always have frag_pos */
+	n  = 4;  /* always have frag_vcoord */
 	n += COND(so->frag_face, 4);
 	n += COND(so->frag_coord, 4);
 
@@ -3489,7 +3494,7 @@ fixup_frag_inputs(struct ir3_context *ctx)
 
 	if (so->frag_face) {
 		/* this ultimately gets assigned to hr0.x so doesn't conflict
-		 * with frag_coord/frag_pos..
+		 * with frag_coord/frag_vcoord..
 		 */
 		inputs[ir->ninputs++] = ctx->frag_face;
 		ctx->frag_face->regs[0]->num = 0;
@@ -3504,7 +3509,7 @@ fixup_frag_inputs(struct ir3_context *ctx)
 
 	/* since we don't know where to set the regid for frag_coord,
 	 * we have to use r0.x for it.  But we don't want to *always*
-	 * use r1.x for frag_pos as that could increase the register
+	 * use r1.x for frag_vcoord as that could increase the register
 	 * footprint on simple shaders:
 	 */
 	if (so->frag_coord) {
@@ -3519,20 +3524,20 @@ fixup_frag_inputs(struct ir3_context *ctx)
 		inputs[ir->ninputs++] = ctx->frag_coord[3];
 	}
 
-	/* we always have frag_pos: */
+	/* we always have frag_vcoord: */
 	so->pos_regid = regid;
 
 	/* r0.x */
 	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
-	ctx->frag_pos->regs[1]->instr = instr;
+	ctx->frag_vcoord->regs[1]->instr = instr;
 
 	/* r0.y */
 	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
-	ctx->frag_pos->regs[2]->instr = instr;
+	ctx->frag_vcoord->regs[2]->instr = instr;
 
 	ir->inputs = inputs;
 }

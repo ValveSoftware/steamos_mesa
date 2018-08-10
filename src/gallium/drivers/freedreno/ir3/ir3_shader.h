@@ -251,7 +251,7 @@ struct ir3_shader_variant {
 	 *   + From the vert shader, we only need the output regid
 	 */
 
-	/* for frag shader, pos_regid holds the frag_pos, ie. what is passed
+	/* for frag shader, pos_regid holds the frag_vcoord, ie. what is passed
 	 * to bary.f instructions
 	 */
 	uint8_t pos_regid;
