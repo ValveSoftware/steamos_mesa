@@ -741,12 +741,12 @@ create_indirect_load(struct ir3_context *ctx, unsigned arrsz, int n,
 }
 
 static struct ir3_instruction *
-create_input_compmask(struct ir3_block *block, unsigned n, unsigned compmask)
+create_input_compmask(struct ir3_context *ctx, unsigned n, unsigned compmask)
 {
 	struct ir3_instruction *in;
 
-	in = ir3_instr_create(block, OPC_META_INPUT);
-	in->inout.block = block;
+	in = ir3_instr_create(ctx->in_block, OPC_META_INPUT);
+	in->inout.block = ctx->in_block;
 	ir3_reg_create(in, n, 0);
 
 	in->regs[0]->wrmask = compmask;
@@ -755,9 +755,9 @@ create_input_compmask(struct ir3_block *block, unsigned n, unsigned compmask)
 }
 
 static struct ir3_instruction *
-create_input(struct ir3_block *block, unsigned n)
+create_input(struct ir3_context *ctx, unsigned n)
 {
-	return create_input_compmask(block, n, 0x1);
+	return create_input_compmask(ctx, n, 0x1);
 }
 
 static struct ir3_instruction *
@@ -788,7 +788,7 @@ create_frag_coord(struct ir3_context *ctx, unsigned comp)
 
 	compile_assert(ctx, !ctx->frag_coord[comp]);
 
-	ctx->frag_coord[comp] = create_input(ctx->block, 0);
+	ctx->frag_coord[comp] = create_input(ctx, 0);
 
 	switch (comp) {
 	case 0: /* .x */
@@ -2406,14 +2406,14 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		if (!ctx->vertex_id) {
 			gl_system_value sv = (intr->intrinsic == nir_intrinsic_load_vertex_id) ?
 				SYSTEM_VALUE_VERTEX_ID : SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
-			ctx->vertex_id = create_input(b, 0);
+			ctx->vertex_id = create_input(ctx, 0);
 			add_sysval_input(ctx, sv, ctx->vertex_id);
 		}
 		dst[0] = ctx->vertex_id;
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(b, 0);
+			ctx->instance_id = create_input(ctx, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_INSTANCE_ID,
 					ctx->instance_id);
 		}
@@ -2422,7 +2422,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_load_sample_id:
 	case nir_intrinsic_load_sample_id_no_per_sample:
 		if (!ctx->samp_id) {
-			ctx->samp_id = create_input(b, 0);
+			ctx->samp_id = create_input(ctx, 0);
 			ctx->samp_id->regs[0]->flags |= IR3_REG_HALF;
 			add_sysval_input(ctx, SYSTEM_VALUE_SAMPLE_ID,
 					ctx->samp_id);
@@ -2431,7 +2431,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_sample_mask_in:
 		if (!ctx->samp_mask_in) {
-			ctx->samp_mask_in = create_input(b, 0);
+			ctx->samp_mask_in = create_input(ctx, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_SAMPLE_MASK_IN,
 					ctx->samp_mask_in);
 		}
@@ -2447,7 +2447,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_load_front_face:
 		if (!ctx->frag_face) {
 			ctx->so->frag_face = true;
-			ctx->frag_face = create_input(b, 0);
+			ctx->frag_face = create_input(ctx, 0);
 			ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
 		}
 		/* for fragface, we get -1 for back and 0 for front. However this is
@@ -2458,7 +2458,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_local_invocation_id:
 		if (!ctx->local_invocation_id) {
-			ctx->local_invocation_id = create_input_compmask(b, 0, 0x7);
+			ctx->local_invocation_id = create_input_compmask(ctx, 0, 0x7);
 			add_sysval_input_compmask(ctx, SYSTEM_VALUE_LOCAL_INVOCATION_ID,
 					0x7, ctx->local_invocation_id);
 		}
@@ -2466,7 +2466,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_work_group_id:
 		if (!ctx->work_group_id) {
-			ctx->work_group_id = create_input_compmask(b, 0, 0x7);
+			ctx->work_group_id = create_input_compmask(ctx, 0, 0x7);
 			add_sysval_input_compmask(ctx, SYSTEM_VALUE_WORK_GROUP_ID,
 					0x7, ctx->work_group_id);
 			ctx->work_group_id->regs[0]->flags |= IR3_REG_HIGH;
@@ -3115,7 +3115,7 @@ emit_stream_out(struct ir3_context *ctx)
 	 * so that it is seen as live over the entire duration
 	 * of the shader:
 	 */
-	vtxcnt = create_input(ctx->in_block, 0);
+	vtxcnt = create_input(ctx, 0);
 	add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_CNT, vtxcnt);
 
 	maxvtxcnt = create_driver_param(ctx, IR3_DP_VTXCNT_MAX);
@@ -3310,7 +3310,7 @@ setup_input(struct ir3_context *ctx, nir_variable *in)
 		for (int i = 0; i < ncomp; i++) {
 			unsigned idx = (n * 4) + i;
 			compile_assert(ctx, idx < ctx->ir->ninputs);
-			ctx->ir->inputs[idx] = create_input(ctx->block, idx);
+			ctx->ir->inputs[idx] = create_input(ctx, idx);
 		}
 	} else {
 		compile_error(ctx, "unknown shader type: %d\n", ctx->so->type);
@@ -3528,13 +3528,13 @@ fixup_frag_inputs(struct ir3_context *ctx)
 	so->pos_regid = regid;
 
 	/* r0.x */
-	instr = create_input(ctx->in_block, ir->ninputs);
+	instr = create_input(ctx, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_vcoord->regs[1]->instr = instr;
 
 	/* r0.y */
-	instr = create_input(ctx->in_block, ir->ninputs);
+	instr = create_input(ctx, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_vcoord->regs[2]->instr = instr;
