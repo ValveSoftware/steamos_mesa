@@ -5792,6 +5792,7 @@ _mesa_sysval_to_semantic(unsigned sysval)
    case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX:
    case SYSTEM_VALUE_GLOBAL_INVOCATION_ID:
    case SYSTEM_VALUE_VERTEX_CNT:
+   case SYSTEM_VALUE_VARYING_COORD:
    default:
       assert(!"Unexpected SYSTEM_VALUE_ enum");
       return TGSI_SEMANTIC_COUNT;
