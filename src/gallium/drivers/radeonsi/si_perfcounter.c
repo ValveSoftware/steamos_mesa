@@ -377,7 +377,7 @@ static struct si_pc_block groups_VI[] = {
 	{ &cik_DB, 257},
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
-	{ &cik_PA_SU, 153 },
+	{ &cik_PA_SU, 154 },
 	{ &cik_PA_SC, 397 },
 	{ &cik_SPI, 197 },
 	{ &cik_SQ, 273 },
