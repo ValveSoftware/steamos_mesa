@@ -104,28 +104,6 @@ struct ir3_context {
 	 */
 	struct hash_table *block_ht;
 
-	/* a4xx (at least patchlevel 0) cannot seem to flat-interpolate
-	 * so we need to use ldlv.u32 to load the varying directly:
-	 */
-	bool flat_bypass;
-
-	/* on a3xx, we need to add one to # of array levels:
-	 */
-	bool levels_add_one;
-
-	/* on a3xx, we need to scale up integer coords for isaml based
-	 * on LoD:
-	 */
-	bool unminify_coords;
-
-	/* on a3xx do txf_ms w/ isaml and scaled coords: */
-	bool txf_ms_with_isaml;
-
-	/* on a4xx, for array textures we need to add 0.5 to the array
-	 * index coordinate:
-	 */
-	bool array_index_add_half;
-
 	/* on a4xx, bitmask of samplers which need astc+srgb workaround: */
 	unsigned astc_srgb;
 
@@ -156,13 +134,6 @@ compile_init(struct ir3_compiler *compiler,
 	struct ir3_context *ctx = rzalloc(NULL, struct ir3_context);
 
 	if (compiler->gpu_id >= 400) {
-		/* need special handling for "flat" */
-		ctx->flat_bypass = true;
-		ctx->levels_add_one = false;
-		ctx->unminify_coords = false;
-		ctx->txf_ms_with_isaml = false;
-		ctx->array_index_add_half = true;
-
 		if (so->type == SHADER_VERTEX) {
 			ctx->astc_srgb = so->key.vastc_srgb;
 		} else if (so->type == SHADER_FRAGMENT) {
@@ -170,13 +141,6 @@ compile_init(struct ir3_compiler *compiler,
 		}
 
 	} else {
-		/* no special handling for "flat" */
-		ctx->flat_bypass = false;
-		ctx->levels_add_one = true;
-		ctx->unminify_coords = true;
-		ctx->txf_ms_with_isaml = true;
-		ctx->array_index_add_half = false;
-
 		if (so->type == SHADER_VERTEX) {
 			ctx->samples = so->key.vsamples;
 		} else if (so->type == SHADER_FRAGMENT) {
@@ -2098,7 +2062,7 @@ emit_intrinsic_image_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		dst[i] = tmp[i];
 
 	if (flags & IR3_INSTR_A) {
-		if (ctx->levels_add_one) {
+		if (ctx->compiler->levels_add_one) {
 			dst[ncoords-1] = ir3_ADD_U(b, tmp[3], 0, create_immed(b, 1), 0);
 		} else {
 			dst[ncoords-1] = ir3_MOV(b, tmp[3], TYPE_U32);
@@ -2731,7 +2695,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	 * with scaled x coord according to requested sample:
 	 */
 	if (tex->op == nir_texop_txf_ms) {
-		if (ctx->txf_ms_with_isaml) {
+		if (ctx->compiler->txf_ms_with_isaml) {
 			/* the samples are laid out in x dimension as
 			 *     0 1 2 3
 			 * x_ms = (x << ms) + sample_index;
@@ -2749,7 +2713,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	}
 
 	/* scale up integer coords for TXF based on the LOD */
-	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
+	if (ctx->compiler->unminify_coords && (opc == OPC_ISAML)) {
 		assert(has_lod);
 		for (i = 0; i < coords; i++)
 			src0[i] = ir3_SHL_B(b, src0[i], 0, lod, 0);
@@ -2770,7 +2734,7 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 		struct ir3_instruction *idx = coord[coords];
 
 		/* the array coord for cube arrays needs 0.5 added to it */
-		if (ctx->array_index_add_half && (opc != OPC_ISAML))
+		if (ctx->compiler->array_index_add_half && (opc != OPC_ISAML))
 			idx = ir3_ADD_F(b, idx, 0, create_immed(b, fui(0.5)), 0);
 
 		src0[nsrc0++] = idx;
@@ -2899,7 +2863,7 @@ emit_tex_query_levels(struct ir3_context *ctx, nir_tex_instr *tex)
 	/* The # of levels comes from getinfo.z. We need to add 1 to it, since
 	 * the value in TEX_CONST_0 is zero-based.
 	 */
-	if (ctx->levels_add_one)
+	if (ctx->compiler->levels_add_one)
 		dst[0] = ir3_ADD_U(b, dst[0], 0, create_immed(b, 1), 0);
 
 	put_dst(ctx, &tex->dest);
@@ -2939,7 +2903,7 @@ emit_tex_txs(struct ir3_context *ctx, nir_tex_instr *tex)
 	 * returned, which means that we have to add 1 to it for arrays.
 	 */
 	if (tex->is_array) {
-		if (ctx->levels_add_one) {
+		if (ctx->compiler->levels_add_one) {
 			dst[coords] = ir3_ADD_U(b, dst[3], 0, create_immed(b, 1), 0);
 		} else {
 			dst[coords] = ir3_MOV(b, dst[3], TYPE_U32);
@@ -3322,7 +3286,7 @@ setup_input(struct ir3_context *ctx, nir_variable *in)
 					}
 				}
 
-				if (ctx->flat_bypass) {
+				if (ctx->compiler->flat_bypass) {
 					if ((so->inputs[n].interpolate == INTERP_MODE_FLAT) ||
 							(so->inputs[n].rasterflat && ctx->so->key.rasterflat))
 						use_ldlv = true;
