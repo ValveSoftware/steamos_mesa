@@ -2250,6 +2250,17 @@ blorp_blit(struct blorp_batch *batch,
       }
    }
 
+   /* ISL_FORMAT_R24_UNORM_X8_TYPELESS it isn't supported as a render target,
+    * which requires shader math to render to it.  Blitting Z24X8 to Z24X8
+    * is fairly common though, so we'd like to avoid it.  Since we don't need
+    * to blend depth values, we can simply pick a renderable format with the
+    * right number of bits-per-pixel, like 8-bit BGRA.
+    */
+   if (dst_surf->surf->format == ISL_FORMAT_R24_UNORM_X8_TYPELESS &&
+       src_surf->surf->format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
+      src_format = dst_format = ISL_FORMAT_B8G8R8A8_UNORM;
+   }
+
    brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
                                src_layer, src_format, false);
    brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
