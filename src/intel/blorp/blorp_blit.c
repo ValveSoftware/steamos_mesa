@@ -994,14 +994,14 @@ convert_color(struct nir_builder *b, nir_ssa_def *color,
    nir_ssa_def *value;
 
    if (key->dst_format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
-      /* The destination image is bound as R32_UNORM but the data needs to be
+      /* The destination image is bound as R32_UINT but the data needs to be
        * in R24_UNORM_X8_TYPELESS.  The bottom 24 are the actual data and the
        * top 8 need to be zero.  We can accomplish this by simply multiplying
        * by a factor to scale things down.
        */
-      float factor = (float)((1 << 24) - 1) / (float)UINT32_MAX;
-      value = nir_fmul(b, nir_fsat(b, nir_channel(b, color, 0)),
-                          nir_imm_float(b, factor));
+      unsigned factor = (1 << 24) - 1;
+      value = nir_fsat(b, nir_channel(b, color, 0));
+      value = nir_f2i32(b, nir_fmul(b, value, nir_imm_float(b, factor)));
    } else if (key->dst_format == ISL_FORMAT_L8_UNORM_SRGB) {
       value = nir_format_linear_to_srgb(b, nir_channel(b, color, 0));
    } else if (key->dst_format == ISL_FORMAT_R8G8B8_UNORM_SRGB) {
@@ -1986,7 +1986,7 @@ try_blorp_blit(struct blorp_batch *batch,
          isl_format_rgbx_to_rgba(params->dst.view.format);
    } else if (params->dst.view.format == ISL_FORMAT_R24_UNORM_X8_TYPELESS) {
       wm_prog_key->dst_format = params->dst.view.format;
-      params->dst.view.format = ISL_FORMAT_R32_UNORM;
+      params->dst.view.format = ISL_FORMAT_R32_UINT;
    } else if (params->dst.view.format == ISL_FORMAT_A4B4G4R4_UNORM) {
       params->dst.view.swizzle =
          isl_swizzle_compose(params->dst.view.swizzle,
