@@ -285,8 +285,25 @@ ir3_ra_alloc_reg_set(struct ir3_compiler *compiler)
 		}
 	}
 
+	/* starting a6xx, half precision regs conflict w/ full precision regs: */
+	if (compiler->gpu_id >= 600) {
+		/* because of transitivity, we can get away with just setting up
+		 * conflicts between the first class of full and half regs:
+		 */
+		for (unsigned j = 0; j < CLASS_REGS(0) / 2; j++) {
+			unsigned freg  = set->gpr_to_ra_reg[0][j];
+			unsigned hreg0 = set->gpr_to_ra_reg[HALF_OFFSET][(j * 2) + 0];
+			unsigned hreg1 = set->gpr_to_ra_reg[HALF_OFFSET][(j * 2) + 1];
 
-	ra_set_finalize(set->regs, q_values);
+			ra_add_transitive_reg_conflict(set->regs, freg, hreg0);
+			ra_add_transitive_reg_conflict(set->regs, freg, hreg1);
+		}
+
+		// TODO also need to update q_values, but for now:
+		ra_set_finalize(set->regs, NULL);
+	} else {
+		ra_set_finalize(set->regs, q_values);
+	}
 
 	ralloc_free(q_values);
 
