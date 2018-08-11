@@ -714,21 +714,6 @@ radv_device_finish_meta_blit_state(struct radv_device *device)
 					state->blit.ds_layout, &state->alloc);
 }
 
-static VkFormat pipeline_formats[] = {
-   VK_FORMAT_R8G8B8A8_UNORM,
-   VK_FORMAT_R8G8B8A8_UINT,
-   VK_FORMAT_R8G8B8A8_SINT,
-   VK_FORMAT_A2R10G10B10_UINT_PACK32,
-   VK_FORMAT_A2R10G10B10_SINT_PACK32,
-   VK_FORMAT_R16G16B16A16_UNORM,
-   VK_FORMAT_R16G16B16A16_SNORM,
-   VK_FORMAT_R16G16B16A16_UINT,
-   VK_FORMAT_R16G16B16A16_SINT,
-   VK_FORMAT_R32_SFLOAT,
-   VK_FORMAT_R32G32_SFLOAT,
-   VK_FORMAT_R32G32B32A32_SFLOAT
-};
-
 static VkResult
 radv_device_init_meta_blit_color(struct radv_device *device,
 				 struct radv_shader_module *vs)
@@ -740,8 +725,8 @@ radv_device_init_meta_blit_color(struct radv_device *device,
 	fs_2d.nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_2D);
 	fs_3d.nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_3D);
 
-	for (unsigned i = 0; i < ARRAY_SIZE(pipeline_formats); ++i) {
-		unsigned key = radv_format_meta_fs_key(pipeline_formats[i]);
+	for (unsigned i = 0; i < NUM_META_FS_KEYS; ++i) {
+		unsigned key = radv_format_meta_fs_key(radv_fs_key_format_exemplars[i]);
 		for(unsigned j = 0; j < RADV_META_DST_LAYOUT_COUNT; ++j) {
 			VkImageLayout layout = radv_meta_dst_layout_to_layout(j);
 			result = radv_CreateRenderPass(radv_device_to_handle(device),
@@ -749,7 +734,7 @@ radv_device_init_meta_blit_color(struct radv_device *device,
 							.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 								.attachmentCount = 1,
 								.pAttachments = &(VkAttachmentDescription) {
-								.format = pipeline_formats[i],
+								.format = radv_fs_key_format_exemplars[i],
 								.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 								.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 								.initialLayout = layout,

@@ -156,21 +156,6 @@ static const VkPipelineVertexInputStateCreateInfo normal_vi_create_info = {
 	.vertexAttributeDescriptionCount = 0,
 };
 
-static VkFormat pipeline_formats[] = {
-   VK_FORMAT_R8G8B8A8_UNORM,
-   VK_FORMAT_R8G8B8A8_UINT,
-   VK_FORMAT_R8G8B8A8_SINT,
-   VK_FORMAT_A2R10G10B10_UINT_PACK32,
-   VK_FORMAT_A2R10G10B10_SINT_PACK32,
-   VK_FORMAT_R16G16B16A16_UNORM,
-   VK_FORMAT_R16G16B16A16_SNORM,
-   VK_FORMAT_R16G16B16A16_UINT,
-   VK_FORMAT_R16G16B16A16_SINT,
-   VK_FORMAT_R32_SFLOAT,
-   VK_FORMAT_R32G32_SFLOAT,
-   VK_FORMAT_R32G32B32A32_SFLOAT
-};
-
 static VkResult
 create_resolve_pipeline(struct radv_device *device,
 			int samples_log2,
@@ -335,8 +320,8 @@ radv_device_init_meta_resolve_fragment_state(struct radv_device *device)
 		goto fail;
 
 	for (uint32_t i = 0; i < MAX_SAMPLES_LOG2; ++i) {
-		for (unsigned j = 0; j < ARRAY_SIZE(pipeline_formats); ++j) {
-			res = create_resolve_pipeline(device, i, pipeline_formats[j]);
+		for (unsigned j = 0; j < NUM_META_FS_KEYS; ++j) {
+			res = create_resolve_pipeline(device, i, radv_fs_key_format_exemplars[j]);
 			if (res != VK_SUCCESS)
 				goto fail;
 		}

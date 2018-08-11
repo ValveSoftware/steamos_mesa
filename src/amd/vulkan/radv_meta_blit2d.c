@@ -1239,21 +1239,6 @@ blit2d_init_stencil_only_pipeline(struct radv_device *device,
 	return result;
 }
 
-static VkFormat pipeline_formats[] = {
-   VK_FORMAT_R8G8B8A8_UNORM,
-   VK_FORMAT_R8G8B8A8_UINT,
-   VK_FORMAT_R8G8B8A8_SINT,
-   VK_FORMAT_A2R10G10B10_UINT_PACK32,
-   VK_FORMAT_A2R10G10B10_SINT_PACK32,
-   VK_FORMAT_R16G16B16A16_UNORM,
-   VK_FORMAT_R16G16B16A16_SNORM,
-   VK_FORMAT_R16G16B16A16_UINT,
-   VK_FORMAT_R16G16B16A16_SINT,
-   VK_FORMAT_R32_SFLOAT,
-   VK_FORMAT_R32G32_SFLOAT,
-   VK_FORMAT_R32G32B32A32_SFLOAT
-};
-
 static VkResult
 meta_blit2d_create_pipe_layout(struct radv_device *device,
 			       int idx,
@@ -1320,8 +1305,8 @@ radv_device_init_meta_blit2d_state(struct radv_device *device)
 			if (result != VK_SUCCESS)
 				goto fail;
 
-			for (unsigned j = 0; j < ARRAY_SIZE(pipeline_formats); ++j) {
-				result = blit2d_init_color_pipeline(device, src, pipeline_formats[j], log2_samples);
+			for (unsigned j = 0; j < NUM_META_FS_KEYS; ++j) {
+				result = blit2d_init_color_pipeline(device, src, radv_fs_key_format_exemplars[j], log2_samples);
 				if (result != VK_SUCCESS)
 					goto fail;
 			}

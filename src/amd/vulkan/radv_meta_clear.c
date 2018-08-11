@@ -757,21 +757,6 @@ fail:
 	return false;
 }
 
-static VkFormat pipeline_formats[] = {
-	VK_FORMAT_R8G8B8A8_UNORM,
-	VK_FORMAT_R8G8B8A8_UINT,
-	VK_FORMAT_R8G8B8A8_SINT,
-	VK_FORMAT_A2R10G10B10_UINT_PACK32,
-	VK_FORMAT_A2R10G10B10_SINT_PACK32,
-	VK_FORMAT_R16G16B16A16_UNORM,
-	VK_FORMAT_R16G16B16A16_SNORM,
-	VK_FORMAT_R16G16B16A16_UINT,
-	VK_FORMAT_R16G16B16A16_SINT,
-	VK_FORMAT_R32_SFLOAT,
-	VK_FORMAT_R32G32_SFLOAT,
-	VK_FORMAT_R32G32B32A32_SFLOAT
-};
-
 VkResult
 radv_device_init_meta_clear_state(struct radv_device *device)
 {
@@ -808,8 +793,8 @@ radv_device_init_meta_clear_state(struct radv_device *device)
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(state->clear); ++i) {
 		uint32_t samples = 1 << i;
-		for (uint32_t j = 0; j < ARRAY_SIZE(pipeline_formats); ++j) {
-			VkFormat format = pipeline_formats[j];
+		for (uint32_t j = 0; j < NUM_META_FS_KEYS; ++j) {
+			VkFormat format = radv_fs_key_format_exemplars[j];
 			unsigned fs_key = radv_format_meta_fs_key(format);
 			assert(!state->clear[i].color_pipelines[fs_key]);
 
