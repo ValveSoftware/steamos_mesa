@@ -5493,7 +5493,7 @@ void test_indirect_access(const st_reg& reg, bool *has_indirect_access)
 	 if (reg.reladdr)
 	    test_indirect_access(*reg.reladdr, has_indirect_access);
 	 if (reg.reladdr2)
-	    test_indirect_access(*reg.reladdr, has_indirect_access);
+	    test_indirect_access(*reg.reladdr2, has_indirect_access);
       }
    }
 }
