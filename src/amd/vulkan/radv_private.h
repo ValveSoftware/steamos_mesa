@@ -372,7 +372,7 @@ radv_pipeline_cache_init(struct radv_pipeline_cache *cache,
 			 struct radv_device *device);
 void
 radv_pipeline_cache_finish(struct radv_pipeline_cache *cache);
-void
+bool
 radv_pipeline_cache_load(struct radv_pipeline_cache *cache,
 			 const void *data, size_t size);
 
@@ -428,6 +428,12 @@ struct radv_meta_state {
 	VkAllocationCallbacks alloc;
 
 	struct radv_pipeline_cache cache;
+
+	/*
+	 * For on-demand pipeline creation, makes sure that
+	 * only one thread tries to build a pipeline at the same time.
+	 */
+	mtx_t mtx;
 
 	/**
 	 * Use array element `i` for images with `2^i` samples.

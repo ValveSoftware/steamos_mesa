@@ -161,10 +161,18 @@ create_resolve_pipeline(struct radv_device *device,
 			int samples_log2,
 			VkFormat format)
 {
+	mtx_lock(&device->meta_state.mtx);
+
+	unsigned fs_key = radv_format_meta_fs_key(format);
+	VkPipeline *pipeline = &device->meta_state.resolve_fragment.rc[samples_log2].pipeline[fs_key];
+	if (*pipeline) {
+		mtx_unlock(&device->meta_state.mtx);
+		return VK_SUCCESS;
+	}
+
 	VkResult result;
 	bool is_integer = false;
 	uint32_t samples = 1 << samples_log2;
-	unsigned fs_key = radv_format_meta_fs_key(format);
 	const VkPipelineVertexInputStateCreateInfo *vi_create_info;
 	vi_create_info = &normal_vi_create_info;
 	if (vk_format_is_int(format))
@@ -179,9 +187,6 @@ create_resolve_pipeline(struct radv_device *device,
 	VkRenderPass *rp = &device->meta_state.resolve_fragment.rc[samples_log2].render_pass[fs_key][0];
 
 	assert(!*rp);
-
-	VkPipeline *pipeline = &device->meta_state.resolve_fragment.rc[samples_log2].pipeline[fs_key];
-	assert(!*pipeline);
 
 	VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
 		{
@@ -307,17 +312,21 @@ create_resolve_pipeline(struct radv_device *device,
 	ralloc_free(vs.nir);
 	ralloc_free(fs.nir);
 
+	mtx_unlock(&device->meta_state.mtx);
 	return result;
 }
 
 VkResult
-radv_device_init_meta_resolve_fragment_state(struct radv_device *device)
+radv_device_init_meta_resolve_fragment_state(struct radv_device *device, bool on_demand)
 {
 	VkResult res;
 
 	res = create_layout(device);
 	if (res != VK_SUCCESS)
 		goto fail;
+
+	if (on_demand)
+		return VK_SUCCESS;
 
 	for (uint32_t i = 0; i < MAX_SAMPLES_LOG2; ++i) {
 		for (unsigned j = 0; j < NUM_META_FS_KEYS; ++j) {
@@ -404,10 +413,18 @@ emit_resolve(struct radv_cmd_buffer *cmd_buffer,
 			      push_constants);
 
 	unsigned fs_key = radv_format_meta_fs_key(dest_iview->vk_format);
-	VkPipeline pipeline_h = device->meta_state.resolve_fragment.rc[samples_log2].pipeline[fs_key];
+	VkPipeline* pipeline = &device->meta_state.resolve_fragment.rc[samples_log2].pipeline[fs_key];
+
+	if (*pipeline == VK_NULL_HANDLE) {
+		VkResult ret = create_resolve_pipeline(device, samples_log2, radv_fs_key_format_exemplars[fs_key]);
+		if (ret != VK_SUCCESS) {
+			cmd_buffer->record_result = ret;
+			return;
+		}
+	}
 
 	radv_CmdBindPipeline(cmd_buffer_h, VK_PIPELINE_BIND_POINT_GRAPHICS,
-			     pipeline_h);
+			     *pipeline);
 
 	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {
 		.x = dest_offset->x,
