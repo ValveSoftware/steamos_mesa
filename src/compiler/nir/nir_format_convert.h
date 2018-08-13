@@ -298,7 +298,7 @@ nir_format_unpack_11f11f10f(nir_builder *b, nir_ssa_def *packed)
 }
 
 static inline nir_ssa_def *
-nir_format_pack_r11g11b10f(nir_builder *b, nir_ssa_def *color)
+nir_format_pack_11f11f10f(nir_builder *b, nir_ssa_def *color)
 {
    /* 10 and 11-bit floats are unsigned.  Clamp to non-negative */
    nir_ssa_def *clamped = nir_fmax(b, color, nir_imm_float(b, 0));
