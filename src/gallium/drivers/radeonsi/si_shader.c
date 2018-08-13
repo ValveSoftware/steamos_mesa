@@ -101,15 +101,15 @@ static bool llvm_type_is_64bit(struct si_shader_context *ctx,
 	return false;
 }
 
-static bool is_merged_shader(struct si_shader *shader)
+static bool is_merged_shader(struct si_shader_context *ctx)
 {
-	if (shader->selector->screen->info.chip_class <= VI)
+	if (ctx->screen->info.chip_class <= VI)
 		return false;
 
-	return shader->key.as_ls ||
-	       shader->key.as_es ||
-	       shader->selector->type == PIPE_SHADER_TESS_CTRL ||
-	       shader->selector->type == PIPE_SHADER_GEOMETRY;
+	return ctx->shader->key.as_ls ||
+	       ctx->shader->key.as_es ||
+	       ctx->type == PIPE_SHADER_TESS_CTRL ||
+	       ctx->type == PIPE_SHADER_GEOMETRY;
 }
 
 static void si_init_function_info(struct si_function_info *fninfo)
@@ -6580,7 +6580,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 	si_create_function(ctx, "wrapper", NULL, 0, &fninfo,
 			   si_get_max_workgroup_size(ctx->shader));
 
-	if (is_merged_shader(ctx->shader))
+	if (is_merged_shader(ctx))
 		ac_init_exec_full_mask(&ctx->ac);
 
 	/* Record the arguments of the function as if they were an output of
@@ -6638,7 +6638,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 		/* Merged shaders are executed conditionally depending
 		 * on the number of enabled threads passed in the input SGPRs. */
-		if (is_merged_shader(ctx->shader) && part == 0) {
+		if (is_merged_shader(ctx) && part == 0) {
 			LLVMValueRef ena, count = initial[3];
 
 			count = LLVMBuildAnd(builder, count,
@@ -6700,7 +6700,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 		ret = LLVMBuildCall(builder, parts[part], in, num_params, "");
 
-		if (is_merged_shader(ctx->shader) &&
+		if (is_merged_shader(ctx) &&
 		    part + 1 == next_shader_first_part) {
 			lp_build_endif(&if_state);
 
@@ -7034,7 +7034,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	/* Add the scratch offset to input SGPRs. */
-	if (shader->config.scratch_bytes_per_wave && !is_merged_shader(shader))
+	if (shader->config.scratch_bytes_per_wave && !is_merged_shader(&ctx))
 		shader->info.num_input_sgprs += 1; /* scratch byte offset */
 
 	/* Calculate the number of fragment input VGPRs. */
@@ -7180,22 +7180,18 @@ out:
 static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
 {
 	LLVMValueRef ptr[2], list;
-	bool is_merged_shader =
-		ctx->screen->info.chip_class >= GFX9 &&
-		(ctx->type == PIPE_SHADER_TESS_CTRL ||
-		 ctx->type == PIPE_SHADER_GEOMETRY ||
-		 ctx->shader->key.as_ls || ctx->shader->key.as_es);
+	bool merged_shader = is_merged_shader(ctx);
 
 	if (HAVE_32BIT_POINTERS) {
-		ptr[0] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
+		ptr[0] = LLVMGetParam(ctx->main_fn, (merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
 		list = LLVMBuildIntToPtr(ctx->ac.builder, ptr[0],
 					 ac_array_in_const32_addr_space(ctx->v4i32), "");
 		return list;
 	}
 
 	/* Get the pointer to rw buffers. */
-	ptr[0] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
-	ptr[1] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS + 1);
+	ptr[0] = LLVMGetParam(ctx->main_fn, (merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
+	ptr[1] = LLVMGetParam(ctx->main_fn, (merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS + 1);
 	list = ac_build_gather_values(&ctx->ac, ptr, 2);
 	list = LLVMBuildBitCast(ctx->ac.builder, list, ctx->i64, "");
 	list = LLVMBuildIntToPtr(ctx->ac.builder, list,
