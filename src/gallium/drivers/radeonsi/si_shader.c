@@ -6994,7 +6994,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, compiler,
-			    ctx.ac.module, debug, ctx.type, "TGSI shader",
+			    ctx.ac.module, debug, ctx.type,
+			    si_get_shader_name(shader, ctx.type),
 			    si_should_optimize_less(compiler, shader->selector));
 	si_llvm_dispose(&ctx);
 	if (r) {
