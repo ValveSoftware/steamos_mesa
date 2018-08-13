@@ -202,6 +202,62 @@ nir_format_bitcast_uvec_unmasked(nir_builder *b, nir_ssa_def *src,
 }
 
 static inline nir_ssa_def *
+_nir_format_norm_factor(nir_builder *b, unsigned *bits,
+                        unsigned num_components,
+                        bool is_signed)
+{
+   nir_const_value factor;
+   for (unsigned i = 0; i < num_components; i++) {
+      assert(bits[i] < 32);
+      factor.f32[i] = (1ul << (bits[i] - is_signed)) - 1;
+   }
+   return nir_build_imm(b, num_components, 32, factor);
+}
+
+static inline nir_ssa_def *
+nir_format_unorm_to_float(nir_builder *b, nir_ssa_def *u, unsigned *bits)
+{
+   nir_ssa_def *factor =
+      _nir_format_norm_factor(b, bits, u->num_components, false);
+
+   return nir_fdiv(b, nir_u2f32(b, u), factor);
+}
+
+static inline nir_ssa_def *
+nir_format_snorm_to_float(nir_builder *b, nir_ssa_def *s, unsigned *bits)
+{
+   nir_ssa_def *factor =
+      _nir_format_norm_factor(b, bits, s->num_components, true);
+
+   return nir_fmax(b, nir_fdiv(b, nir_i2f32(b, s), factor),
+                      nir_imm_float(b, -1.0f));
+}
+
+static inline nir_ssa_def *
+nir_format_float_to_unorm(nir_builder *b, nir_ssa_def *f, unsigned *bits)
+{
+   nir_ssa_def *factor =
+      _nir_format_norm_factor(b, bits, f->num_components, false);
+
+   /* Clamp to the range [0, 1] */
+   f = nir_fsat(b, f);
+
+   return nir_f2u32(b, nir_fround_even(b, nir_fmul(b, f, factor)));
+}
+
+static inline nir_ssa_def *
+nir_format_float_to_snorm(nir_builder *b, nir_ssa_def *f, unsigned *bits)
+{
+   nir_ssa_def *factor =
+      _nir_format_norm_factor(b, bits, f->num_components, true);
+
+   /* Clamp to the range [-1, 1] */
+   f = nir_fmin(b, nir_fmax(b, f, nir_imm_float(b, -1)), nir_imm_float(b, 1));
+
+   return nir_f2i32(b, nir_fround_even(b, nir_fmul(b, f, factor)));
+}
+
+static inline nir_ssa_def *
 nir_format_linear_to_srgb(nir_builder *b, nir_ssa_def *c)
 {
    nir_ssa_def *linear = nir_fmul(b, c, nir_imm_float(b, 12.92f));
