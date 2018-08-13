@@ -51,28 +51,49 @@ nir_mask_shift_or(struct nir_builder *b, nir_ssa_def *dst, nir_ssa_def *src,
 }
 
 static inline nir_ssa_def *
-nir_format_unpack_uint(nir_builder *b, nir_ssa_def *packed,
-                       const unsigned *bits, unsigned num_components)
+nir_format_unpack_int(nir_builder *b, nir_ssa_def *packed,
+                      const unsigned *bits, unsigned num_components,
+                      bool sign_extend)
 {
    assert(num_components >= 1 && num_components <= 4);
+   const unsigned bit_size = packed->bit_size;
    nir_ssa_def *comps[4];
 
-   if (bits[0] >= packed->bit_size) {
-      assert(bits[0] == packed->bit_size);
+   if (bits[0] >= bit_size) {
+      assert(bits[0] == bit_size);
       assert(num_components == 1);
       return packed;
    }
 
    unsigned offset = 0;
    for (unsigned i = 0; i < num_components; i++) {
-      assert(bits[i] < 32);
-      nir_ssa_def *mask = nir_imm_int(b, (1u << bits[i]) - 1);
-      comps[i] = nir_iand(b, nir_shift(b, packed, -offset), mask);
+      assert(bits[i] < bit_size);
+      assert(offset + bits[i] <= bit_size);
+      nir_ssa_def *lshift = nir_imm_int(b, bit_size - (offset + bits[i]));
+      nir_ssa_def *rshift = nir_imm_int(b, bit_size - bits[i]);
+      if (sign_extend)
+         comps[i] = nir_ishr(b, nir_ishl(b, packed, lshift), rshift);
+      else
+         comps[i] = nir_ushr(b, nir_ishl(b, packed, lshift), rshift);
       offset += bits[i];
    }
-   assert(offset <= packed->bit_size);
+   assert(offset <= bit_size);
 
    return nir_vec(b, comps, num_components);
+}
+
+static inline nir_ssa_def *
+nir_format_unpack_uint(nir_builder *b, nir_ssa_def *packed,
+                       const unsigned *bits, unsigned num_components)
+{
+   return nir_format_unpack_int(b, packed, bits, num_components, false);
+}
+
+static inline nir_ssa_def *
+nir_format_unpack_sint(nir_builder *b, nir_ssa_def *packed,
+                       const unsigned *bits, unsigned num_components)
+{
+   return nir_format_unpack_int(b, packed, bits, num_components, true);
 }
 
 static inline nir_ssa_def *
