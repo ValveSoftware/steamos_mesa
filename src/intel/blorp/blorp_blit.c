@@ -939,7 +939,7 @@ bit_cast_color(struct nir_builder *b, nir_ssa_def *color,
          isl_format_get_num_channels(key->src_format);
       color = nir_channels(b, color, (1 << src_channels) - 1);
 
-      color = nir_format_bitcast_uint_vec_unmasked(b, color, src_bpc, dst_bpc);
+      color = nir_format_bitcast_uvec_unmasked(b, color, src_bpc, dst_bpc);
    }
 
    /* Blorp likes to assume that colors are vec4s */

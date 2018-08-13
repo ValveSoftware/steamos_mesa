@@ -148,9 +148,10 @@ nir_format_pack_uint(nir_builder *b, nir_ssa_def *color,
 }
 
 static inline nir_ssa_def *
-nir_format_bitcast_uint_vec_unmasked(nir_builder *b, nir_ssa_def *src,
-                                     unsigned src_bits, unsigned dst_bits)
+nir_format_bitcast_uvec_unmasked(nir_builder *b, nir_ssa_def *src,
+                                 unsigned src_bits, unsigned dst_bits)
 {
+   assert(src->bit_size >= src_bits && src->bit_size >= dst_bits);
    assert(src_bits == 8 || src_bits == 16 || src_bits == 32);
    assert(dst_bits == 8 || dst_bits == 16 || dst_bits == 32);
 
