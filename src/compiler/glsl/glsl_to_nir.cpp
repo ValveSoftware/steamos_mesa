@@ -904,10 +904,15 @@ nir_visitor::visit(ir_call *ir)
          /* Set the intrinsic destination. */
          if (ir->return_deref) {
             unsigned num_components = ir->return_deref->type->vector_elements;
-            if (instr->intrinsic == nir_intrinsic_image_deref_size)
-               instr->num_components = num_components;
             nir_ssa_dest_init(&instr->instr, &instr->dest,
                               num_components, 32, NULL);
+         }
+
+         if (op == nir_intrinsic_image_deref_size) {
+            instr->num_components = instr->dest.ssa.num_components;
+         } else if (op == nir_intrinsic_image_deref_load ||
+                    op == nir_intrinsic_image_deref_store) {
+            instr->num_components = 4;
          }
 
          if (op == nir_intrinsic_image_deref_size ||

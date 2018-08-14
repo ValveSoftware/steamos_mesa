@@ -297,9 +297,9 @@ atomic3("atomic_counter_comp_swap")
 # argument with the value to be written, and image atomic operations take
 # either one or two additional scalar arguments with the same meaning as in
 # the ARB_shader_image_load_store specification.
-intrinsic("image_deref_load", src_comp=[1, 4, 1], dest_comp=4,
+intrinsic("image_deref_load", src_comp=[1, 4, 1], dest_comp=0,
           flags=[CAN_ELIMINATE])
-intrinsic("image_deref_store", src_comp=[1, 4, 1, 4])
+intrinsic("image_deref_store", src_comp=[1, 4, 1, 0])
 intrinsic("image_deref_atomic_add",  src_comp=[1, 4, 1, 1], dest_comp=1)
 intrinsic("image_deref_atomic_min",  src_comp=[1, 4, 1, 1], dest_comp=1)
 intrinsic("image_deref_atomic_max",  src_comp=[1, 4, 1, 1], dest_comp=1)
