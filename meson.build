@@ -697,7 +697,7 @@ if with_platform_haiku
   pre_args += '-DHAVE_HAIKU_PLATFORM'
 endif
 
-prog_python = find_program('python3')
+prog_python = import('python3').find_python()
 has_mako = run_command(
   prog_python, '-c',
   '''
