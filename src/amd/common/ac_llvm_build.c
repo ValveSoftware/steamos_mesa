@@ -1969,6 +1969,20 @@ LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
 				  AC_FUNC_ATTR_READNONE);
 }
 
+LLVMValueRef ac_build_imad(struct ac_llvm_context *ctx, LLVMValueRef s0,
+			   LLVMValueRef s1, LLVMValueRef s2)
+{
+	return LLVMBuildAdd(ctx->builder,
+			    LLVMBuildMul(ctx->builder, s0, s1, ""), s2, "");
+}
+
+LLVMValueRef ac_build_fmad(struct ac_llvm_context *ctx, LLVMValueRef s0,
+			   LLVMValueRef s1, LLVMValueRef s2)
+{
+	return LLVMBuildFAdd(ctx->builder,
+			     LLVMBuildFMul(ctx->builder, s0, s1, ""), s2, "");
+}
+
 void ac_build_waitcnt(struct ac_llvm_context *ctx, unsigned simm16)
 {
 	LLVMValueRef args[1] = {
