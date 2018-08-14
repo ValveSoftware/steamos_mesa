@@ -221,10 +221,6 @@ def generate(env):
     env['suncc'] = env['platform'] == 'sunos' and os.path.basename(env['CC']) == 'cc'
     env['icc'] = 'icc' == os.path.basename(env['CC'])
 
-    if env['msvc'] and env['toolchain'] == 'default' and env['machine'] == 'x86_64':
-        # MSVC x64 support is broken in earlier versions of scons
-        env.EnsurePythonVersion(2, 0)
-
     # shortcuts
     machine = env['machine']
     platform = env['platform']
