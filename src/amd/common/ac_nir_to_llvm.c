@@ -2582,8 +2582,7 @@ void ac_emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
 		ac_build_waitcnt(ac, LGKM_CNT & VM_CNT);
 		return;
 	}
-	ac_build_intrinsic(ac, "llvm.amdgcn.s.barrier",
-			   ac->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
+	ac_build_s_barrier(ac);
 }
 
 static void emit_discard(struct ac_nir_context *ctx,

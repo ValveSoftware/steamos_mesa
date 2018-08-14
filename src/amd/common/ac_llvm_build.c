@@ -348,6 +348,12 @@ ac_build_phi(struct ac_llvm_context *ctx, LLVMTypeRef type,
 	return phi;
 }
 
+void ac_build_s_barrier(struct ac_llvm_context *ctx)
+{
+	ac_build_intrinsic(ctx, "llvm.amdgcn.s.barrier", ctx->voidt, NULL,
+			   0, AC_FUNC_ATTR_CONVERGENT);
+}
+
 /* Prevent optimizations (at least of memory accesses) across the current
  * point in the program by emitting empty inline assembly that is marked as
  * having side effects.

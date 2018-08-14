@@ -4404,9 +4404,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 		return;
 	}
 
-	ac_build_intrinsic(&ctx->ac,
-			   "llvm.amdgcn.s.barrier",
-			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
+	ac_build_s_barrier(&ctx->ac);
 }
 
 static void si_create_function(struct si_shader_context *ctx,

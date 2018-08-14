@@ -133,6 +133,7 @@ ac_build_phi(struct ac_llvm_context *ctx, LLVMTypeRef type,
 	     unsigned count_incoming, LLVMValueRef *values,
 	     LLVMBasicBlockRef *blocks);
 
+void ac_build_s_barrier(struct ac_llvm_context *ctx);
 void ac_build_optimization_barrier(struct ac_llvm_context *ctx,
 				   LLVMValueRef *pvgpr);
 
