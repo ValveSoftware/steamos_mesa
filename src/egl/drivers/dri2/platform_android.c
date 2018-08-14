@@ -1134,6 +1134,25 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    return (config_count != 0);
 }
 
+#ifdef HAVE_DRM_GRALLOC
+static int
+droid_open_device_drm_gralloc(struct dri2_egl_display *dri2_dpy)
+{
+   int fd = -1, err = -EINVAL;
+
+   if (dri2_dpy->gralloc->perform)
+         err = dri2_dpy->gralloc->perform(dri2_dpy->gralloc,
+                                          GRALLOC_MODULE_PERFORM_GET_DRM_FD,
+                                          &fd);
+   if (err || fd < 0) {
+      _eglLog(_EGL_WARNING, "fail to get drm fd");
+      fd = -1;
+   }
+
+   return (fd >= 0) ? fcntl(fd, F_DUPFD_CLOEXEC, 3) : -1;
+}
+#endif /* HAVE_DRM_GRALLOC */
+
 static const struct dri2_egl_display_vtbl droid_display_vtbl = {
    .authenticate = NULL,
    .create_window_surface = droid_create_window_surface,
@@ -1384,7 +1403,11 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *disp)
 
    disp->DriverData = (void *) dri2_dpy;
 
+#ifdef HAVE_DRM_GRALLOC
+   dri2_dpy->fd = droid_open_device_drm_gralloc(dri2_dpy);
+#else
    dri2_dpy->fd = droid_open_device(disp);
+#endif
    if (dri2_dpy->fd < 0) {
       err = "DRI2: failed to open device";
       goto cleanup;
