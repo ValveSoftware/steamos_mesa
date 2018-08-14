@@ -362,7 +362,7 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 		return;
 
 	if (!meta_state->depth_decomp[samples_log2].decompress_pipeline) {
-		VkResult ret = create_pipeline(cmd_buffer->device, NULL, samples,
+		VkResult ret = create_pipeline(cmd_buffer->device, VK_NULL_HANDLE, samples,
 		                               meta_state->depth_decomp[samples_log2].pass,
 		                               meta_state->depth_decomp[samples_log2].p_layout,
 		                               &meta_state->depth_decomp[samples_log2].decompress_pipeline,
