@@ -24,6 +24,7 @@
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_video.h"
+#include "util/u_math.h"
 #include "util/os_time.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
@@ -72,10 +73,16 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_SWIZZLE:
       return 1;
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
+      if (vscreen->caps.caps.v2.max_texture_2d_size)
+         return 1 + util_logbase2(vscreen->caps.caps.v2.max_texture_2d_size);
       return 15; /* 16K x 16K */
    case PIPE_CAP_MAX_TEXTURE_3D_LEVELS:
+      if (vscreen->caps.caps.v2.max_texture_3d_size)
+         return 1 + util_logbase2(vscreen->caps.caps.v2.max_texture_3d_size);
       return 9; /* 256 x 256 x 256 */
    case PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS:
+      if (vscreen->caps.caps.v2.max_texture_cube_size)
+         return 1 + util_logbase2(vscreen->caps.caps.v2.max_texture_cube_size);
       return 13; /* 4K x 4K */
    case PIPE_CAP_BLEND_EQUATION_SEPARATE:
       return 1;

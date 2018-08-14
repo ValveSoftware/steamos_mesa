@@ -347,6 +347,9 @@ struct virgl_caps_v2 {
         uint32_t max_compute_shared_memory_size;
         uint32_t max_compute_grid_size[3];
         uint32_t max_compute_block_size[3];
+        uint32_t max_texture_2d_size;
+        uint32_t max_texture_3d_size;
+        uint32_t max_texture_cube_size;
 };
 
 union virgl_caps {
