@@ -47,6 +47,6 @@ args = parser.parse_args()
 
 git_sha1 = os.environ.get('MESA_GIT_SHA1_OVERRIDE', get_git_sha1())[:10]
 if git_sha1:
-    write_if_different('#define MESA_GIT_SHA1 "git-' + git_sha1 + '"')
+    write_if_different('#define MESA_GIT_SHA1 " (git-' + git_sha1 + ')"')
 else:
-    write_if_different('')
+    write_if_different('#define MESA_GIT_SHA1 ""')

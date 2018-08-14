@@ -889,11 +889,7 @@ init_logging(struct pipe_screen *screen)
    svga_host_log(host_log);
 
    util_snprintf(host_log, sizeof(host_log) - strlen(log_prefix),
-                 "%s%s"
-#ifdef MESA_GIT_SHA1
-                 " (" MESA_GIT_SHA1 ")"
-#endif
-                 , log_prefix, PACKAGE_VERSION);
+                 "%s%s" MESA_GIT_SHA1, log_prefix, PACKAGE_VERSION);
    svga_host_log(host_log);
 
    /* If the SVGA_EXTRA_LOGGING env var is set, log the process's command
