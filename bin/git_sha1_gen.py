@@ -30,14 +30,14 @@ def get_git_sha1():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--output', help='File to write the #define in',
-        required=True)
+                    required=True)
 args = parser.parse_args()
 
 git_sha1 = os.environ.get('MESA_GIT_SHA1_OVERRIDE', get_git_sha1())[:10]
 if git_sha1:
     git_sha1_h_in_path = os.path.join(os.path.dirname(sys.argv[0]),
-            '..', 'src', 'git_sha1.h.in')
-    with open(git_sha1_h_in_path , 'r') as git_sha1_h_in:
+                                      '..', 'src', 'git_sha1.h.in')
+    with open(git_sha1_h_in_path, 'r') as git_sha1_h_in:
         new_sha1 = git_sha1_h_in.read().replace('@VCS_TAG@', git_sha1)
         if os.path.isfile(args.output):
             with open(args.output, 'r') as git_sha1_h:
