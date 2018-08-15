@@ -146,11 +146,17 @@ is_a5xx(struct fd_screen *screen)
 	return (screen->gpu_id >= 500) && (screen->gpu_id < 600);
 }
 
+static inline boolean
+is_a6xx(struct fd_screen *screen)
+{
+	return (screen->gpu_id >= 600) && (screen->gpu_id < 700);
+}
+
 /* is it using the ir3 compiler (shader isa introduced with a3xx)? */
 static inline boolean
 is_ir3(struct fd_screen *screen)
 {
-	return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen);
+	return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen);
 }
 
 static inline bool

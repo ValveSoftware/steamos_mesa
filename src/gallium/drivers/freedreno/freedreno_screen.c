@@ -55,6 +55,8 @@
 #include "a3xx/fd3_screen.h"
 #include "a4xx/fd4_screen.h"
 #include "a5xx/fd5_screen.h"
+#include "a6xx/fd6_screen.h"
+
 
 #include "ir3/ir3_nir.h"
 
@@ -230,19 +232,19 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 	case PIPE_CAP_CLIP_HALFZ:
-		return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen);
+		return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen);
 
 	case PIPE_CAP_FAKE_SW_MSAA:
 		return !fd_screen_get_param(pscreen, PIPE_CAP_TEXTURE_MULTISAMPLE);
 
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
-		return is_a5xx(screen);
+		return is_a5xx(screen) || is_a6xx(screen);
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
-		return is_a5xx(screen);
+		return is_a5xx(screen) || is_a6xx(screen);
 
 	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
 		return 0;
@@ -250,6 +252,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		if (is_a3xx(screen)) return 16;
 		if (is_a4xx(screen)) return 32;
 		if (is_a5xx(screen)) return 32;
+		if (is_a6xx(screen)) return 32;
 		return 0;
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		/* We could possibly emulate more by pretending 2d/rect textures and
@@ -258,13 +261,14 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		if (is_a3xx(screen)) return 8192;
 		if (is_a4xx(screen)) return 16384;
 		if (is_a5xx(screen)) return 16384;
+		if (is_a6xx(screen)) return 16384;
 		return 0;
 
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
 	case PIPE_CAP_CUBE_MAP_ARRAY:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_TEXTURE_QUERY_LOD:
-		return is_a4xx(screen) || is_a5xx(screen);
+		return is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen);
 
 	case PIPE_CAP_START_INSTANCE:
 		/* Note that a5xx can do this, it just can't (at least with
@@ -284,12 +288,12 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_ir3(screen) ? 140 : 120;
 
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
-		if (is_a5xx(screen))
+		if (is_a5xx(screen) || is_a6xx(screen))
 			return 4;
 		return 0;
 
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
-		if (is_a4xx(screen) || is_a5xx(screen))
+		if (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen))
 			return 4;
 		return 0;
 
@@ -372,12 +376,12 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return screen->priority_mask;
 
 	case PIPE_CAP_DRAW_INDIRECT:
-		if (is_a4xx(screen) || is_a5xx(screen))
+		if (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen))
 			return 1;
 		return 0;
 
 	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
-		if (is_a4xx(screen) || is_a5xx(screen))
+		if (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen))
 			return 1;
 		return 0;
 
@@ -432,7 +436,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 11;
 
 	case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
-		return (is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen)) ? 256 : 0;
+		return (is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen)) ? 256 : 0;
 
 	/* Render targets. */
 	case PIPE_CAP_MAX_RENDER_TARGETS:
@@ -444,11 +448,11 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return 0;
 	case PIPE_CAP_OCCLUSION_QUERY:
-		return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen);
+		return is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen);
 	case PIPE_CAP_QUERY_TIMESTAMP:
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
 		/* only a4xx, requires new enough kernel so we know max_freq: */
-		return (screen->max_freq > 0) && (is_a4xx(screen) || is_a5xx(screen));
+		return (screen->max_freq > 0) && (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen));
 
 	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
 	case PIPE_CAP_MIN_TEXEL_OFFSET:
@@ -557,7 +561,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 		 * split between VS and FS.  Use lower limit of 256 to
 		 * avoid getting into impossible situations:
 		 */
-		return ((is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen)) ? 4096 : 64) * sizeof(float[4]);
+		return ((is_a3xx(screen) || is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen)) ? 4096 : 64) * sizeof(float[4]);
 	case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
 		return is_ir3(screen) ? 16 : 1;
 	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
@@ -615,7 +619,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 		return is_ir3(screen) ? 1 : 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-		if (is_a5xx(screen)) {
+		if (is_a5xx(screen) || is_a6xx(screen)) {
 			/* a5xx (and a4xx for that matter) has one state-block
 			 * for compute-shader SSBO's and another that is shared
 			 * by VS/HS/DS/GS/FS..  so to simplify things for now
@@ -906,6 +910,9 @@ fd_screen_create(struct fd_device *dev)
 		break;
 	case 530:
 		fd5_screen_init(pscreen);
+		break;
+	case 630:
+		fd6_screen_init(pscreen);
 		break;
 	default:
 		debug_printf("unsupported GPU: a%03d\n", screen->gpu_id);

@@ -59,8 +59,9 @@ enum adreno_stencil_op fd_stencil_op(unsigned op);
 #define A3XX_MAX_RENDER_TARGETS 4
 #define A4XX_MAX_RENDER_TARGETS 8
 #define A5XX_MAX_RENDER_TARGETS 8
+#define A6XX_MAX_RENDER_TARGETS 8
 
-#define MAX_RENDER_TARGETS A5XX_MAX_RENDER_TARGETS
+#define MAX_RENDER_TARGETS A6XX_MAX_RENDER_TARGETS
 
 #define FD_DBG_MSGS     0x0001
 #define FD_DBG_DISASM   0x0002
@@ -263,6 +264,12 @@ OUT_RELOCW(struct fd_ringbuffer *ring, struct fd_bo *bo,
 		.shift = shift,
 		.orhi = or >> 32,
 	});
+}
+
+static inline void
+OUT_RB(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
+{
+	fd_ringbuffer_emit_reloc_ring_full(ring, target, 0);
 }
 
 static inline void BEGIN_RING(struct fd_ringbuffer *ring, uint32_t ndwords)

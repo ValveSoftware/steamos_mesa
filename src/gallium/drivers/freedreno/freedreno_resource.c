@@ -844,7 +844,8 @@ fd_resource_create(struct pipe_screen *pscreen,
 	assert(rsc->cpp);
 
 	// XXX probably need some extra work if we hit rsc shadowing path w/ lrz..
-	if (is_a5xx(screen) && (fd_mesa_debug & FD_DBG_LRZ) && has_depth(format)) {
+	if ((is_a5xx(screen) || is_a6xx(screen)) &&
+		 (fd_mesa_debug & FD_DBG_LRZ) && has_depth(format)) {
 		const uint32_t flags = DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
 				DRM_FREEDRENO_GEM_TYPE_KMEM; /* TODO */
 		unsigned lrz_pitch  = align(DIV_ROUND_UP(tmpl->width0, 8), 32);

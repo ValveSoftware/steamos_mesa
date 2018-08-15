@@ -88,6 +88,8 @@ batch_init(struct fd_batch *batch)
 	if (is_a3xx(ctx->screen))
 		util_dynarray_init(&batch->rbrc_patches, NULL);
 
+	util_dynarray_init(&batch->gmem_patches, NULL);
+
 	assert(batch->resources->entries == 0);
 
 	util_dynarray_init(&batch->samples, NULL);
@@ -147,6 +149,8 @@ batch_fini(struct fd_batch *batch)
 
 	if (is_a3xx(batch->ctx->screen))
 		util_dynarray_fini(&batch->rbrc_patches);
+
+	util_dynarray_fini(&batch->gmem_patches);
 
 	while (batch->samples.size > 0) {
 		struct fd_hw_sample *samp =

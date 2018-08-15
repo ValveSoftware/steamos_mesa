@@ -140,6 +140,11 @@ struct fd_batch {
 	 */
 	struct util_dynarray draw_patches;
 
+	/* Keep track of blitter GMEM offsets that need to be patched up once we
+	 * know the gmem layout:
+	 */
+	struct util_dynarray gmem_patches;
+
 	/* Keep track of writes to RB_RENDER_CONTROL which need to be patched
 	 * once we know whether or not to use GMEM, and GMEM tile pitch.
 	 *
