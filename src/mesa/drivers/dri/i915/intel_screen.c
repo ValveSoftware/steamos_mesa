@@ -57,10 +57,6 @@ DRI_CONF_BEGIN
 	 DRI_CONF_DESC_END
       DRI_CONF_OPT_END
 
-      DRI_CONF_OPT_BEGIN_B(early_z, "false")
-	 DRI_CONF_DESC(en, "Enable early Z in classic mode (unstable, 945-only).")
-      DRI_CONF_OPT_END
-
       DRI_CONF_OPT_BEGIN_B(fragment_shader, "true")
 	 DRI_CONF_DESC(en, "Enable limited ARB_fragment_shader support on 915/945.")
       DRI_CONF_OPT_END
