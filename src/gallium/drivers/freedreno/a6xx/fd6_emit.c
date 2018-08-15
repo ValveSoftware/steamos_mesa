@@ -633,20 +633,16 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
 		struct fd6_zsa_stateobj *zsa = fd6_zsa_stateobj(ctx->zsa);
-		//bool fragz = fp->has_kill | fp->writes_pos;
+		bool fragz = fp->has_kill | fp->writes_pos;
 
 		OUT_PKT4(ring, REG_A6XX_RB_DEPTH_CNTL, 1);
 		OUT_RING(ring, zsa->rb_depth_cntl);
 
-#if 0
 		OUT_PKT4(ring, REG_A6XX_RB_DEPTH_PLANE_CNTL, 1);
-		OUT_RING(ring, COND(fragz, A6XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z) |
-				COND(fragz && fp->frag_coord, A6XX_RB_DEPTH_PLANE_CNTL_UNK1));
+		OUT_RING(ring, COND(fragz, A6XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z));
 
 		OUT_PKT4(ring, REG_A6XX_GRAS_SU_DEPTH_PLANE_CNTL, 1);
-		OUT_RING(ring, COND(fragz, A6XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z) |
-				COND(fragz && fp->frag_coord, A6XX_GRAS_SU_DEPTH_PLANE_CNTL_UNK1));
-#endif
+		OUT_RING(ring, COND(fragz, A6XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z));
 	}
 
 	if (dirty & FD_DIRTY_SCISSOR) {
