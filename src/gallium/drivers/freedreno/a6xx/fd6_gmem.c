@@ -50,12 +50,13 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		struct pipe_surface **bufs, struct fd_gmem_stateobj *gmem)
 {
 	enum a6xx_tile_mode tile_mode;
+	unsigned srgb_cntl = 0;
 	unsigned i;
 
 	for (i = 0; i < nr_bufs; i++) {
 		enum a6xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
-		bool srgb = false, sint = false, uint = false;
+		bool sint = false, uint = false;
 		struct fd_resource *rsc = NULL;
 		struct fd_resource_slice *slice = NULL;
 		uint32_t stride = 0;
@@ -80,9 +81,11 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		slice = fd_resource_slice(rsc, psurf->u.tex.level);
 		format = fd6_pipe2color(pformat);
 		swap = fd6_pipe2swap(pformat);
-		srgb = util_format_is_srgb(pformat);
 		sint = util_format_is_pure_sint(pformat);
 		uint = util_format_is_pure_uint(pformat);
+
+		if (util_format_is_srgb(pformat))
+			srgb_cntl |= (1 << i);
 
 		offset = fd_resource_offset(rsc, psurf->u.tex.level,
 									psurf->u.tex.first_layer);
@@ -95,9 +98,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_PKT4(ring, REG_A6XX_RB_MRT_BUF_INFO(i), 6);
 		OUT_RING(ring, A6XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
 				A6XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(rsc->tile_mode) |
-				A6XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap) |
-				 // COND(gmem, 0x800) | /* XXX 0x1000 for RECTLIST clear, 0x0 for BLIT.. */
-				COND(srgb, A6XX_RB_MRT_BUF_INFO_COLOR_SRGB));
+				A6XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap));
 		OUT_RING(ring, A6XX_RB_MRT_PITCH(stride));
 		OUT_RING(ring, A6XX_RB_MRT_ARRAY_PITCH(slice->size0));
 		OUT_RELOCW(ring, rsc->bo, offset, 0, 0);	/* BASE_LO/HI */
@@ -105,8 +106,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_PKT4(ring, REG_A6XX_SP_FS_MRT_REG(i), 1);
 		OUT_RING(ring, A6XX_SP_FS_MRT_REG_COLOR_FORMAT(format) |
 				COND(sint, A6XX_SP_FS_MRT_REG_COLOR_SINT) |
-				COND(uint, A6XX_SP_FS_MRT_REG_COLOR_UINT) |
-				COND(srgb, A6XX_SP_FS_MRT_REG_COLOR_SRGB));
+				COND(uint, A6XX_SP_FS_MRT_REG_COLOR_UINT));
 
 #if 0
 		/* when we support UBWC, these would be the system memory
@@ -119,6 +119,12 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_RING(ring, A6XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH(0));
 #endif
 	}
+
+	OUT_PKT4(ring, REG_A6XX_RB_SRGB_CNTL, 1);
+	OUT_RING(ring, srgb_cntl);
+
+	OUT_PKT4(ring, REG_A6XX_SP_SRGB_CNTL, 1);
+	OUT_RING(ring, srgb_cntl);
 }
 
 static void
