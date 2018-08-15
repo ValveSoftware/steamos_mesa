@@ -814,7 +814,6 @@ struct brw_context
     * drirc options:
     * @{
     */
-   bool no_rast;
    bool always_flush_batch;
    bool always_flush_cache;
    bool disable_throttling;
