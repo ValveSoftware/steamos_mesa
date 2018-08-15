@@ -3787,19 +3787,20 @@ genX(upload_3dstate_so_buffers)(struct brw_context *brw)
    for (int i = 0; i < 4; i++) {
       struct intel_buffer_object *bufferobj =
          intel_buffer_object(xfb_obj->Buffers[i]);
+      uint32_t start = xfb_obj->Offset[i];
+      uint32_t end = ALIGN(start + xfb_obj->Size[i], 4);
+      uint32_t const size = end - start;
 
-      if (!bufferobj) {
+      if (!bufferobj || !size) {
          brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
             sob.SOBufferIndex = i;
          }
          continue;
       }
 
-      uint32_t start = xfb_obj->Offset[i];
       assert(start % 4 == 0);
-      uint32_t end = ALIGN(start + xfb_obj->Size[i], 4);
       struct brw_bo *bo =
-         intel_bufferobj_buffer(brw, bufferobj, start, end - start, true);
+         intel_bufferobj_buffer(brw, bufferobj, start, size, true);
       assert(end <= bo->size);
 
       brw_batch_emit(brw, GENX(3DSTATE_SO_BUFFER), sob) {
