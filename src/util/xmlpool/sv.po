@@ -240,22 +240,6 @@ msgstr "Använd HyperZ för att maximera prestandan"
 msgid "Number of texture units used"
 msgstr "Antal använda texturenheter"
 
-#: t_options.h:294
-msgid "Used types of texture memory"
-msgstr "Använda typer av texturminne"
-
-#: t_options.h:295
-msgid "All available memory"
-msgstr "Allt tillgängligt minne"
-
-#: t_options.h:296
-msgid "Only card memory (if available)"
-msgstr "Endast kortminne (om tillgängligt)"
-
-#: t_options.h:297
-msgid "Only GART (AGP/PCIE) memory (if available)"
-msgstr "Endast GART-minne (AGP/PCIE) (om tillgängligt)"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

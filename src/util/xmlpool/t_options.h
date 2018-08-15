@@ -309,18 +309,6 @@ DRI_CONF_OPT_BEGIN_V(texture_units,int,def, # min ":" # max ) \
         DRI_CONF_DESC(en,gettext("Number of texture units used")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_TEXTURE_HEAPS_ALL 0
-#define DRI_CONF_TEXTURE_HEAPS_CARD 1
-#define DRI_CONF_TEXTURE_HEAPS_GART 2
-#define DRI_CONF_TEXTURE_HEAPS(def) \
-DRI_CONF_OPT_BEGIN_V(texture_heaps,enum,def,"0:2") \
-	DRI_CONF_DESC_BEGIN(en,gettext("Used types of texture memory")) \
-		DRI_CONF_ENUM(0,gettext("All available memory")) \
-		DRI_CONF_ENUM(1,gettext("Only card memory (if available)")) \
-		DRI_CONF_ENUM(2,gettext("Only GART (AGP/PCIE) memory (if available)")) \
-	DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_MESA_GLTHREAD(def) \
 DRI_CONF_OPT_BEGIN_B(mesa_glthread, def) \
         DRI_CONF_DESC(en,gettext("Enable offloading GL driver work to a separate thread")) \

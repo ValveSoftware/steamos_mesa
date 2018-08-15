@@ -274,22 +274,6 @@ msgstr "Utilitza el HyperZ per a augmentar el rendiment"
 msgid "Number of texture units used"
 msgstr "Nombre d'unitats de textura utilitzades"
 
-#: t_options.h:294
-msgid "Used types of texture memory"
-msgstr "Tipus utilitzats de memòria de textura"
-
-#: t_options.h:295
-msgid "All available memory"
-msgstr "Tota la memòria disponible"
-
-#: t_options.h:296
-msgid "Only card memory (if available)"
-msgstr "Només memòria de targeta (si està disponible)"
-
-#: t_options.h:297
-msgid "Only GART (AGP/PCIE) memory (if available)"
-msgstr "Només memòria GART (AGP/PCIE) (si està disponible)"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr "Miscel·lània"
