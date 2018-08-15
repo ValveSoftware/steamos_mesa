@@ -287,13 +287,6 @@ DRI_CONF_OPT_BEGIN_V(vblank_mode,enum,def,"0:3") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_HYPERZ_DISABLED 0
-#define DRI_CONF_HYPERZ_ENABLED 1
-#define DRI_CONF_HYPERZ(def) \
-DRI_CONF_OPT_BEGIN_B(hyperz, def) \
-        DRI_CONF_DESC(en,gettext("Use HyperZ to boost performance")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_MESA_GLTHREAD(def) \
 DRI_CONF_OPT_BEGIN_B(mesa_glthread, def) \
         DRI_CONF_DESC(en,gettext("Enable offloading GL driver work to a separate thread")) \

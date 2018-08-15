@@ -231,10 +231,6 @@ msgstr ""
 "Toujours synchroniser avec le balayage vertical, l'application choisit "
 "l'intervalle minimal"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "Utiliser le HyperZ pour améliorer les performances"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

@@ -230,10 +230,6 @@ msgstr ""
 "Synchroniseer altijd met verticale verversing, de applicatie kiest het "
 "minimum omwisselingsinterval"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "Gebruik HyperZ om de prestaties te verbeteren"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

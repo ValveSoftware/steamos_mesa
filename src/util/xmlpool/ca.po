@@ -258,10 +258,6 @@ msgstr ""
 "Sempre sincronitza amb el refresc vertical, l'aplicació tria l'interval "
 "mínim d'intercanvi"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "Utilitza el HyperZ per a augmentar el rendiment"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr "Miscel·lània"

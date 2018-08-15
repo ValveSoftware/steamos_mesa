@@ -75,6 +75,11 @@ DRI_CONF_OPT_BEGIN_V(texture_units,int,def, # min ":" # max ) \
         DRI_CONF_DESC(en,"Number of texture units used") \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_HYPERZ(def) \
+DRI_CONF_OPT_BEGIN_B(hyperz, def) \
+        DRI_CONF_DESC(en,"Use HyperZ to boost performance") \
+DRI_CONF_OPT_END
+
 #if defined(RADEON_R100)	/* R100 */
 static const __DRIconfigOptionsExtension radeon_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },

@@ -233,10 +233,6 @@ msgstr ""
 "Immer mit der Bildwiederholung synchronisieren, Anwendung wählt das minimale "
 "Bildintervall"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "HyperZ zur Leistungssteigerung verwenden"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

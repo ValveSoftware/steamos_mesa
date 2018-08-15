@@ -224,10 +224,6 @@ msgstr ""
 "Synkronisera alltid med vertikal uppdatering, programmet väljer den minsta "
 "växlingsintervallen"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "Använd HyperZ för att maximera prestandan"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

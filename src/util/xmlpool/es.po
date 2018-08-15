@@ -242,10 +242,6 @@ msgstr ""
 "Sincronizar siempre con el refresco vertical, la aplicación elige el "
 "intervalo de intercambio mínimo"
 
-#: t_options.h:276
-msgid "Use HyperZ to boost performance"
-msgstr "Usar HyperZ para potenciar rendimiento"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr "Misceláneos"
