@@ -136,6 +136,10 @@ void fd_fence_server_sync(struct pipe_context *pctx,
 
 	fence_flush(fence);
 
+	/* if not an external fence, then nothing more to do without preemption: */
+	if (fence->fence_fd == -1)
+		return;
+
 	if (sync_accumulate("freedreno", &batch->in_fence_fd, fence->fence_fd)) {
 		/* error */
 	}
