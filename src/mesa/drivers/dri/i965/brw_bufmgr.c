@@ -496,7 +496,6 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   uint32_t stride)
 {
    struct brw_bo *bo;
-   unsigned int page_size = getpagesize();
    int ret;
    struct bo_cache_bucket *bucket;
    bool alloc_from_cache;
@@ -522,12 +521,12 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
     * allocation up.
     */
    if (bucket == NULL) {
-      bo_size = size;
-      if (bo_size < page_size)
-         bo_size = page_size;
+      unsigned int page_size = getpagesize();
+      bo_size = size == 0 ? page_size : ALIGN(size, page_size);
    } else {
       bo_size = bucket->size;
    }
+   assert(bo_size);
 
    mtx_lock(&bufmgr->lock);
    /* Get a buffer out of the cache if available */
