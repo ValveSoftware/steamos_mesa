@@ -587,10 +587,10 @@ int remap_arrays(int narrays, unsigned *array_sizes,
    /* re-calculate arrays */
 #if __cplusplus < 201402L
    int *idx_map = new int[narrays + 1];
-   unsigned *old_sizes = new unsigned[narrays + 1];
+   unsigned *old_sizes = new unsigned[narrays];
 #else
    unique_ptr<int[]> idx_map = make_unique<int[]>(narrays + 1);
-   unique_ptr<unsigned[]> old_sizes = make_unique<unsigned[]>(narrays + 1);
+   unique_ptr<unsigned[]> old_sizes = make_unique<unsigned[]>(narrays);
 #endif
 
    memcpy(&old_sizes[0], &array_sizes[0], sizeof(unsigned) * narrays);
@@ -599,9 +599,9 @@ int remap_arrays(int narrays, unsigned *array_sizes,
    int new_narrays = 0;
    for (int i = 1; i <= narrays; ++i) {
       if (!map[i].is_valid()) {
-	 ++new_narrays;
-	 idx_map[i] = new_narrays;
-	 array_sizes[new_narrays] = old_sizes[i];
+         ++new_narrays;
+         array_sizes[new_narrays-1] = old_sizes[i-1];
+         idx_map[i] = new_narrays;
       }
    }
 

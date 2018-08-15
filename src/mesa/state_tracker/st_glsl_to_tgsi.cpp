@@ -5601,7 +5601,7 @@ glsl_to_tgsi_visitor::merge_registers(void)
    if (this->next_array > 0) {
       arr_live_ranges = new array_live_range[this->next_array];
       for (unsigned i = 0; i < this->next_array; ++i)
-	 arr_live_ranges[i] = array_live_range(i+1, this->array_sizes[i+1]);
+         arr_live_ranges[i] = array_live_range(i+1, this->array_sizes[i]);
    }
 
 
