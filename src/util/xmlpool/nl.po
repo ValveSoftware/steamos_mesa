@@ -25,10 +25,6 @@ msgstr "Debuggen"
 msgid "Disable 3D acceleration"
 msgstr "3D versnelling uitschakelen"
 
-#: t_options.h:65
-msgid "Show performance boxes"
-msgstr "Laat prestatie boxjes zien"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr ""

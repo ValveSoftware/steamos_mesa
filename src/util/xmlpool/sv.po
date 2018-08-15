@@ -25,10 +25,6 @@ msgstr "Felsökning"
 msgid "Disable 3D acceleration"
 msgstr "Inaktivera 3D-accelerering"
 
-#: t_options.h:65
-msgid "Show performance boxes"
-msgstr "Visa prestandarutor"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr ""

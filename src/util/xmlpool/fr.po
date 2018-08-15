@@ -25,10 +25,6 @@ msgstr "Debogage"
 msgid "Disable 3D acceleration"
 msgstr "Désactiver l'accélération 3D"
 
-#: t_options.h:65
-msgid "Show performance boxes"
-msgstr "Afficher les boîtes de performance"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr ""

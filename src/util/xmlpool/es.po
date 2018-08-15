@@ -28,10 +28,6 @@ msgstr "Depuración"
 msgid "Disable 3D acceleration"
 msgstr "Deshabilitar aceleración 3D"
 
-#: t_options.h:65
-msgid "Show performance boxes"
-msgstr "Mostrar cajas de rendimiento"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr "Habilitar vaciado del batchbuffer después de cada llamada de dibujo"
