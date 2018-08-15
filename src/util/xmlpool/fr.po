@@ -94,12 +94,6 @@ msgstr "Valeur maximale initiale pour le filtrage anisotropique de texture"
 msgid "Forbid negative texture LOD bias"
 msgstr "Interdire le LOD bias negatif"
 
-#: t_options.h:153
-msgid ""
-"Enable S3TC texture compression even if software support is not available"
-msgstr ""
-"Activer la compression de texture S3TC même si le support logiciel est absent"
-
 #: t_options.h:160
 msgid "Initial color reduction method"
 msgstr "Technique de réduction de couleurs"
