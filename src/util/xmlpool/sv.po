@@ -267,14 +267,6 @@ msgstr "Endast kortminne (om tillgängligt)"
 msgid "Only GART (AGP/PCIE) memory (if available)"
 msgstr "Endast GART-minne (AGP/PCIE) (om tillgängligt)"
 
-#: t_options.h:309
-msgid "Features that are not hardware-accelerated"
-msgstr "Funktioner som inte är hårdvaruaccelererade"
-
-#: t_options.h:313
-msgid "Enable extension GL_ARB_vertex_program"
-msgstr "Aktivera tillägget GL_ARB_vertex_program"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

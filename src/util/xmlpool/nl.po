@@ -275,14 +275,6 @@ msgstr "Alleen geheugen op de kaart (als het aanwezig is)"
 msgid "Only GART (AGP/PCIE) memory (if available)"
 msgstr "Alleen GART (AGP/PCIE) geheugen (als het aanwezig is)"
 
-#: t_options.h:309
-msgid "Features that are not hardware-accelerated"
-msgstr "Eigenschappen die niet hardwareversneld zijn"
-
-#: t_options.h:313
-msgid "Enable extension GL_ARB_vertex_program"
-msgstr "Zet uitbreiding GL_ARB_vertex_program aan"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""

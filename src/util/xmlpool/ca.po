@@ -303,14 +303,6 @@ msgstr "Només memòria de targeta (si està disponible)"
 msgid "Only GART (AGP/PCIE) memory (if available)"
 msgstr "Només memòria GART (AGP/PCIE) (si està disponible)"
 
-#: t_options.h:309
-msgid "Features that are not hardware-accelerated"
-msgstr "Característiques no accelerades per maquinari"
-
-#: t_options.h:313
-msgid "Enable extension GL_ARB_vertex_program"
-msgstr "Habilita l'extensió GL_ARB_vertex_program"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr "Miscel·lània"

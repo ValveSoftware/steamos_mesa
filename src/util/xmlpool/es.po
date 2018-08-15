@@ -287,14 +287,6 @@ msgstr "Solo memoria de tarjeta (si está disponible)"
 msgid "Only GART (AGP/PCIE) memory (if available)"
 msgstr "Solo memoria GART (AGP/PCIE) (si está disponible)"
 
-#: t_options.h:309
-msgid "Features that are not hardware-accelerated"
-msgstr "Características no aceleradas por hardware"
-
-#: t_options.h:313
-msgid "Enable extension GL_ARB_vertex_program"
-msgstr "Habilitar la extensión GL_ARB_vertex_program"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr "Misceláneos"

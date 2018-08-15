@@ -352,20 +352,6 @@ DRI_CONF_OPT_BEGIN_B(glx_disable_sgi_video_sync, def) \
 DRI_CONF_OPT_END
 
 
-/**
- * \brief Software-fallback options.  To allow using features (like
- * GL_ARB_vertex_program) on GPUs that don't otherwise support the feature.
- */
-#define DRI_CONF_SECTION_SOFTWARE \
-DRI_CONF_SECTION_BEGIN \
-        DRI_CONF_DESC(en,gettext("Features that are not hardware-accelerated"))
-
-#define DRI_CONF_ARB_VERTEX_PROGRAM(def) \
-DRI_CONF_OPT_BEGIN_B(arb_vertex_program, def) \
-        DRI_CONF_DESC(en,gettext("Enable extension GL_ARB_vertex_program")) \
-DRI_CONF_OPT_END
-
-
 
 /**
  * \brief Miscellaneous configuration options

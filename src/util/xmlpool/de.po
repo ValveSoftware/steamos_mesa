@@ -278,14 +278,6 @@ msgstr "Nur Grafikspeicher (falls verfügbar)"
 msgid "Only GART (AGP/PCIE) memory (if available)"
 msgstr "Nur GART-Speicher (AGP/PCIE) (falls verfügbar)"
 
-#: t_options.h:309
-msgid "Features that are not hardware-accelerated"
-msgstr "Funktionalität, die nicht hardwarebeschleunigt ist"
-
-#: t_options.h:313
-msgid "Enable extension GL_ARB_vertex_program"
-msgstr "Erweiterung GL_ARB_vertex_program aktivieren"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""
