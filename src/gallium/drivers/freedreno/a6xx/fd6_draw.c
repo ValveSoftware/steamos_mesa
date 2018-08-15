@@ -361,8 +361,8 @@ fd6_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_PKT4(ring, REG_A6XX_RB_BLIT_SCISSOR_TL, 2);
 	OUT_RING(ring, A6XX_RB_BLIT_SCISSOR_TL_X(scissor->minx) |
 			 A6XX_RB_BLIT_SCISSOR_TL_Y(scissor->miny));
-	OUT_RING(ring, A6XX_RB_BLIT_SCISSOR_BR_X(scissor->maxx) |
-			 A6XX_RB_BLIT_SCISSOR_BR_Y(scissor->maxy));
+	OUT_RING(ring, A6XX_RB_BLIT_SCISSOR_BR_X(scissor->maxx - 1) |
+			 A6XX_RB_BLIT_SCISSOR_BR_Y(scissor->maxy - 1));
 
 	if (buffers & PIPE_CLEAR_COLOR) {
 		for (int i = 0; i < pfb->nr_cbufs; i++) {

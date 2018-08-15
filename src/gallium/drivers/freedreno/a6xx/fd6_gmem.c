@@ -548,8 +548,8 @@ set_blit_scissor(struct fd_batch *batch)
 			 A6XX_RB_BLIT_SCISSOR_TL_X(blit_scissor.minx) |
 			 A6XX_RB_BLIT_SCISSOR_TL_Y(blit_scissor.miny));
 	OUT_RING(ring,
-			 A6XX_RB_BLIT_SCISSOR_BR_X(blit_scissor.maxx) |
-			 A6XX_RB_BLIT_SCISSOR_BR_Y(blit_scissor.maxy));
+			 A6XX_RB_BLIT_SCISSOR_BR_X(blit_scissor.maxx - 1) |
+			 A6XX_RB_BLIT_SCISSOR_BR_Y(blit_scissor.maxy - 1));
 }
 
 static void
