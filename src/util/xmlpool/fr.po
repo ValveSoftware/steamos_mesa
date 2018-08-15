@@ -21,10 +21,6 @@ msgstr ""
 msgid "Debugging"
 msgstr "Debogage"
 
-#: t_options.h:60
-msgid "Disable 3D acceleration"
-msgstr "Désactiver l'accélération 3D"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr ""

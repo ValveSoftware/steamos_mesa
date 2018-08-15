@@ -21,10 +21,6 @@ msgstr ""
 msgid "Debugging"
 msgstr "Fehlersuche"
 
-#: t_options.h:60
-msgid "Disable 3D acceleration"
-msgstr "3D-Beschleunigung abschalten"
-
 #: t_options.h:70
 msgid "Enable flushing batchbuffer after each draw call"
 msgstr "Aktiviere sofortige Leerung des Stapelpuffers nach jedem Zeichenaufruf"

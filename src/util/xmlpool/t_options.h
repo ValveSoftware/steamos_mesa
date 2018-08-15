@@ -55,11 +55,6 @@
 DRI_CONF_SECTION_BEGIN \
 	DRI_CONF_DESC(en,gettext("Debugging"))
 
-#define DRI_CONF_NO_RAST(def) \
-DRI_CONF_OPT_BEGIN_B(no_rast, def) \
-        DRI_CONF_DESC(en,gettext("Disable 3D acceleration")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_ALWAYS_FLUSH_BATCH(def) \
 DRI_CONF_OPT_BEGIN_B(always_flush_batch, def) \
         DRI_CONF_DESC(en,gettext("Enable flushing batchbuffer after each draw call")) \
