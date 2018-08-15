@@ -45,10 +45,6 @@ msgstr ""
 msgid "Disable backslash-based line continuations in GLSL source"
 msgstr ""
 
-#: t_options.h:100
-msgid "Disable GL_ARB_shader_bit_encoding"
-msgstr ""
-
 #: t_options.h:105
 msgid ""
 "Force a default GLSL version for shaders that lack an explicit #version line"

@@ -51,10 +51,6 @@ msgstr ""
 "Deshabilitar continuaciones de línea basadas en barra inversa en el código "
 "GLSL"
 
-#: t_options.h:100
-msgid "Disable GL_ARB_shader_bit_encoding"
-msgstr "Deshabilitar GL_ARB_shader_bit_encoding"
-
 #: t_options.h:105
 msgid ""
 "Force a default GLSL version for shaders that lack an explicit #version line"
