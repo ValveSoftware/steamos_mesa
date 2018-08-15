@@ -764,6 +764,8 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (info->num_outputs) {
 		struct fd_streamout_stateobj *so = &ctx->streamout;
 
+		emit->streamout_mask = 0;
+
 		for (unsigned i = 0; i < so->num_targets; i++) {
 			struct pipe_stream_output_target *target = so->targets[i];
 
@@ -787,6 +789,40 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RELOCW(ring, fd6_context(ctx)->blit_mem, 0x100, 0, 0);
 
 			emit->streamout_mask |= (1 << i);
+		}
+
+		if (emit->streamout_mask) {
+			struct fd6_streamout_state *tf = &fd6_context(ctx)->tf;
+
+			OUT_PKT7(ring, CP_CONTEXT_REG_BUNCH, 12 + (2 * tf->prog_count));
+			OUT_RING(ring, REG_A6XX_VPC_SO_BUF_CNTL);
+			OUT_RING(ring, tf->vpc_so_buf_cntl);
+			OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(0));
+			OUT_RING(ring, tf->ncomp[0]);
+			OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(1));
+			OUT_RING(ring, tf->ncomp[1]);
+			OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(2));
+			OUT_RING(ring, tf->ncomp[2]);
+			OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(3));
+			OUT_RING(ring, tf->ncomp[3]);
+			OUT_RING(ring, REG_A6XX_VPC_SO_CNTL);
+			OUT_RING(ring, A6XX_VPC_SO_CNTL_ENABLE);
+			for (unsigned i = 0; i < tf->prog_count; i++) {
+				OUT_RING(ring, REG_A6XX_VPC_SO_PROG);
+				OUT_RING(ring, tf->prog[i]);
+			}
+
+			OUT_PKT4(ring, REG_A6XX_VPC_SO_OVERRIDE, 1);
+			OUT_RING(ring, 0x0);
+		} else {
+			OUT_PKT7(ring, CP_CONTEXT_REG_BUNCH, 4);
+			OUT_RING(ring, REG_A6XX_VPC_SO_CNTL);
+			OUT_RING(ring, 0);
+			OUT_RING(ring, REG_A6XX_VPC_SO_BUF_CNTL);
+			OUT_RING(ring, 0);
+
+			OUT_PKT4(ring, REG_A6XX_VPC_SO_OVERRIDE, 1);
+			OUT_RING(ring, A6XX_VPC_SO_OVERRIDE_SO_DISABLE);
 		}
 	}
 

@@ -38,6 +38,13 @@
 
 #include "a6xx.xml.h"
 
+struct fd6_streamout_state {
+	uint32_t ncomp[PIPE_MAX_SO_BUFFERS];
+	uint32_t prog[256/2];
+	uint32_t prog_count;
+	uint32_t vpc_so_buf_cntl;
+};
+
 struct fd6_context {
 	struct fd_context base;
 
@@ -84,7 +91,9 @@ struct fd6_context {
 	int samples_passed_queries;
 
 	/* cached state about current emitted shader program (3d): */
-	unsigned max_loc;
+	/*{*/
+	struct fd6_streamout_state tf;
+	/*}*/
 };
 
 static inline struct fd6_context *

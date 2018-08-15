@@ -186,26 +186,25 @@ link_stream_out(struct ir3_shader_linkage *l, const struct ir3_shader_variant *v
 	}
 }
 
-#if 0
-/* TODO maybe some of this we could pre-compute once rather than having
- * so much draw-time logic?
- */
 static void
-emit_stream_out(struct fd_ringbuffer *ring, const struct ir3_shader_variant *v,
+setup_stream_out(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct ir3_shader_linkage *l)
 {
 	const struct pipe_stream_output_info *strmout = &v->shader->stream_output;
-	unsigned ncomp[PIPE_MAX_SO_BUFFERS] = {0};
-	unsigned prog[align(l->max_loc, 2) / 2];
+	struct fd6_streamout_state *tf = &fd6_context(ctx)->tf;
 
-	memset(prog, 0, sizeof(prog));
+	memset(tf, 0, sizeof(*tf));
+
+	tf->prog_count = align(l->max_loc, 2) / 2;
+
+	debug_assert(tf->prog_count < ARRAY_SIZE(tf->prog));
 
 	for (unsigned i = 0; i < strmout->num_outputs; i++) {
 		const struct pipe_stream_output *out = &strmout->output[i];
 		unsigned k = out->register_index;
 		unsigned idx;
 
-		ncomp[out->output_buffer] += out->num_components;
+		tf->ncomp[out->output_buffer] += out->num_components;
 
 		/* linkage map sorted by order frag shader wants things, so
 		 * a bit less ideal here..
@@ -222,40 +221,23 @@ emit_stream_out(struct fd_ringbuffer *ring, const struct ir3_shader_variant *v,
 			unsigned off = j + out->dst_offset;  /* in dwords */
 
 			if (loc & 1) {
-				prog[loc/2] |= A6XX_VPC_SO_PROG_B_EN |
+				tf->prog[loc/2] |= A6XX_VPC_SO_PROG_B_EN |
 						A6XX_VPC_SO_PROG_B_BUF(out->output_buffer) |
 						A6XX_VPC_SO_PROG_B_OFF(off * 4);
 			} else {
-				prog[loc/2] |= A6XX_VPC_SO_PROG_A_EN |
+				tf->prog[loc/2] |= A6XX_VPC_SO_PROG_A_EN |
 						A6XX_VPC_SO_PROG_A_BUF(out->output_buffer) |
 						A6XX_VPC_SO_PROG_A_OFF(off * 4);
 			}
 		}
 	}
 
-	OUT_PKT7(ring, CP_CONTEXT_REG_BUNCH, 12 + (2 * ARRAY_SIZE(prog)));
-	OUT_RING(ring, REG_A6XX_VPC_SO_BUF_CNTL);
-	OUT_RING(ring, A6XX_VPC_SO_BUF_CNTL_ENABLE |
-			COND(ncomp[0] > 0, A6XX_VPC_SO_BUF_CNTL_BUF0) |
-			COND(ncomp[1] > 0, A6XX_VPC_SO_BUF_CNTL_BUF1) |
-			COND(ncomp[2] > 0, A6XX_VPC_SO_BUF_CNTL_BUF2) |
-			COND(ncomp[3] > 0, A6XX_VPC_SO_BUF_CNTL_BUF3));
-	OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(0));
-	OUT_RING(ring, ncomp[0]);
-	OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(1));
-	OUT_RING(ring, ncomp[1]);
-	OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(2));
-	OUT_RING(ring, ncomp[2]);
-	OUT_RING(ring, REG_A6XX_VPC_SO_NCOMP(3));
-	OUT_RING(ring, ncomp[3]);
-	OUT_RING(ring, REG_A6XX_VPC_SO_CNTL);
-	OUT_RING(ring, A6XX_VPC_SO_CNTL_ENABLE);
-	for (unsigned i = 0; i < ARRAY_SIZE(prog); i++) {
-		OUT_RING(ring, REG_A6XX_VPC_SO_PROG);
-		OUT_RING(ring, prog[i]);
-	}
+	tf->vpc_so_buf_cntl = A6XX_VPC_SO_BUF_CNTL_ENABLE |
+			COND(tf->ncomp[0] > 0, A6XX_VPC_SO_BUF_CNTL_BUF0) |
+			COND(tf->ncomp[1] > 0, A6XX_VPC_SO_BUF_CNTL_BUF1) |
+			COND(tf->ncomp[2] > 0, A6XX_VPC_SO_BUF_CNTL_BUF2) |
+			COND(tf->ncomp[3] > 0, A6XX_VPC_SO_BUF_CNTL_BUF3);
 }
-#endif
 
 struct stage {
 	const struct ir3_shader_variant *v;
@@ -452,18 +434,10 @@ fd6_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		ir3_link_add(&l, psize_regid, 0x1, l.max_loc);
 	}
 
-#if 0
 	if ((s[VS].v->shader->stream_output.num_outputs > 0) &&
 			!emit->key.binning_pass) {
-		emit_stream_out(ring, s[VS].v, &l);
-
-		OUT_PKT4(ring, REG_A6XX_VPC_SO_OVERRIDE, 1);
-		OUT_RING(ring, 0x00000000);
-	} else {
-		OUT_PKT4(ring, REG_A6XX_VPC_SO_OVERRIDE, 1);
-		OUT_RING(ring, A6XX_VPC_SO_OVERRIDE_SO_DISABLE);
+		setup_stream_out(ctx, s[VS].v, &l);
 	}
-#endif
 
 	for (i = 0, j = 0; (i < 16) && (j < l.cnt); i++) {
 		uint32_t reg = 0;
@@ -515,8 +489,6 @@ fd6_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, A6XX_VPC_CNTL_0_NUMNONPOSVAR(s[FS].v->total_in) |
 			 COND(enable_varyings, A6XX_VPC_CNTL_0_VARYING) |
 			 0xff00ff00);
-
-	fd6_context(ctx)->max_loc = l.max_loc;
 
 	OUT_PKT4(ring, REG_A6XX_PC_PRIMITIVE_CNTL_1, 1);
 	OUT_RING(ring, A6XX_PC_PRIMITIVE_CNTL_1_STRIDE_IN_VPC(l.max_loc) |
