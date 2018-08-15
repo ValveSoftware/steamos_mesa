@@ -263,6 +263,7 @@ radv_load_meta_pipeline(struct radv_device *device)
 	char path[PATH_MAX + 1];
 	struct stat st;
 	void *data = NULL;
+	bool ret = false;
 
 	if (!radv_builtin_cache_path(path))
 		return false;
@@ -278,11 +279,11 @@ radv_load_meta_pipeline(struct radv_device *device)
 	if(read(fd, data, st.st_size) == -1)
 		goto fail;
 
-	return radv_pipeline_cache_load(&device->meta_state.cache, data, st.st_size);
+	ret = radv_pipeline_cache_load(&device->meta_state.cache, data, st.st_size);
 fail:
 	free(data);
 	close(fd);
-	return false;
+	return ret;
 }
 
 static void
