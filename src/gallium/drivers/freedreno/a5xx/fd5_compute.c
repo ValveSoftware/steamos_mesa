@@ -181,7 +181,7 @@ static void
 fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 {
 	struct fd5_compute_stateobj *so = ctx->compute;
-	struct ir3_shader_key key = {0};
+	struct ir3_shader_key key = {};
 	struct ir3_shader_variant *v;
 	struct fd_ringbuffer *ring = ctx->batch->draw;
 	unsigned i, nglobal = 0;

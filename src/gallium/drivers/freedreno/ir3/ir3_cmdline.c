@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 
 	while (n < argc) {
 		char *filename = argv[n];
-		char *ext = rindex(filename, '.');
+		char *ext = strrchr(filename, '.');
 
 		if (strcmp(ext, ".tgsi") == 0) {
 			if (num_files != 0)

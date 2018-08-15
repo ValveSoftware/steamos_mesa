@@ -445,14 +445,12 @@ struct ir3 {
 #endif
 };
 
-typedef struct nir_register nir_register;
-
 struct ir3_array {
 	struct list_head node;
 	unsigned length;
 	unsigned id;
 
-	nir_register *r;
+	struct nir_register *r;
 
 	/* To avoid array write's from getting DCE'd, keep track of the
 	 * most recent write.  Any array access depends on the most
@@ -470,13 +468,11 @@ struct ir3_array {
 
 struct ir3_array * ir3_lookup_array(struct ir3 *ir, unsigned id);
 
-typedef struct nir_block nir_block;
-
 struct ir3_block {
 	struct list_head node;
 	struct ir3 *shader;
 
-	const nir_block *nblock;
+	const struct nir_block *nblock;
 
 	struct list_head instr_list;  /* list of ir3_instruction */
 
