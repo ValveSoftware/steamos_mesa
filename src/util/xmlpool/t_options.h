@@ -304,11 +304,6 @@ DRI_CONF_OPT_BEGIN_B(hyperz, def) \
         DRI_CONF_DESC(en,gettext("Use HyperZ to boost performance")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_MAX_TEXTURE_UNITS(def,min,max) \
-DRI_CONF_OPT_BEGIN_V(texture_units,int,def, # min ":" # max ) \
-        DRI_CONF_DESC(en,gettext("Number of texture units used")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_MESA_GLTHREAD(def) \
 DRI_CONF_OPT_BEGIN_B(mesa_glthread, def) \
         DRI_CONF_DESC(en,gettext("Enable offloading GL driver work to a separate thread")) \

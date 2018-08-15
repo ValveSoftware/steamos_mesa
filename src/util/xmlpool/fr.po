@@ -243,10 +243,6 @@ msgstr ""
 msgid "Use HyperZ to boost performance"
 msgstr "Utiliser le HyperZ pour améliorer les performances"
 
-#: t_options.h:281
-msgid "Number of texture units used"
-msgstr "Nombre d'unités de texture"
-
 #: t_options.h:323
 msgid "Miscellaneous"
 msgstr ""
