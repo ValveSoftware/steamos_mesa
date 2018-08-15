@@ -97,6 +97,12 @@ DRI_CONF_END
 };
 
 #elif defined(RADEON_R200)
+
+#define DRI_CONF_TEXTURE_BLEND_QUALITY(def,range) \
+DRI_CONF_OPT_BEGIN_V(texture_blend_quality,float,def,range) \
+       DRI_CONF_DESC(en,"Texture filtering quality vs. speed, AKA “brilinear” texture filtering") \
+DRI_CONF_OPT_END
+
 static const __DRIconfigOptionsExtension radeon_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },
    .xml =

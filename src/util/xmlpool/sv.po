@@ -240,12 +240,6 @@ msgstr "Använd HyperZ för att maximera prestandan"
 msgid "Number of texture units used"
 msgstr "Antal använda texturenheter"
 
-#: t_options.h:286
-msgid "Texture filtering quality vs. speed, AKA “brilinear” texture filtering"
-msgstr ""
-"Texturfiltreringskvalitet mot hastighet, även kallad \"brilinear\"-"
-"texturfiltrering"
-
 #: t_options.h:294
 msgid "Used types of texture memory"
 msgstr "Använda typer av texturminne"

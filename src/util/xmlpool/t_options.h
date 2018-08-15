@@ -309,11 +309,6 @@ DRI_CONF_OPT_BEGIN_V(texture_units,int,def, # min ":" # max ) \
         DRI_CONF_DESC(en,gettext("Number of texture units used")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_TEXTURE_BLEND_QUALITY(def,range) \
-DRI_CONF_OPT_BEGIN_V(texture_blend_quality,float,def,range) \
-	DRI_CONF_DESC(en,gettext("Texture filtering quality vs. speed, AKA “brilinear” texture filtering")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_TEXTURE_HEAPS_ALL 0
 #define DRI_CONF_TEXTURE_HEAPS_CARD 1
 #define DRI_CONF_TEXTURE_HEAPS_GART 2

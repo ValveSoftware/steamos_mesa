@@ -247,11 +247,6 @@ msgstr "Utiliser le HyperZ pour améliorer les performances"
 msgid "Number of texture units used"
 msgstr "Nombre d'unités de texture"
 
-#: t_options.h:286
-msgid "Texture filtering quality vs. speed, AKA “brilinear” texture filtering"
-msgstr ""
-"Qualité/performance du filtrage trilinéaire de texture (filtrage brilinéaire)"
-
 #: t_options.h:294
 msgid "Used types of texture memory"
 msgstr "Types de mémoire de texture"
