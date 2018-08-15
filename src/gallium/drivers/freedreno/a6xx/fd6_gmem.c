@@ -505,8 +505,8 @@ fd6_emit_tile_prep(struct fd_batch *batch, struct fd_tile *tile)
 
 	set_window_offset(ring, x1, y1);
 
-	OUT_PKT4(ring, REG_A6XX_VPC_UNKNOWN_9306, 1);
-	OUT_RING(ring, 1);
+	OUT_PKT4(ring, REG_A6XX_VPC_SO_OVERRIDE, 1);
+	OUT_RING(ring, A6XX_VPC_SO_OVERRIDE_SO_DISABLE);
 
 	if (use_hw_binning(batch)) {
 		struct fd_vsc_pipe *pipe = &ctx->vsc_pipe[tile->p];
