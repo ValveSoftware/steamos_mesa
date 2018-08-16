@@ -182,10 +182,8 @@ LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
 	LLVMValueRef rsrc;
 
 	if (desc_type == AC_DESC_BUFFER) {
-		index = LLVMBuildMul(builder, index,
-				     LLVMConstInt(ctx->i32, 2, 0), "");
-		index = LLVMBuildAdd(builder, index,
-				     ctx->i32_1, "");
+		index = ac_build_imad(&ctx->ac, index, LLVMConstInt(ctx->i32, 2, 0),
+				      ctx->i32_1);
 		list = LLVMBuildPointerCast(builder, list,
 					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 	} else {
@@ -988,20 +986,20 @@ LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
 		break;
 	case AC_DESC_BUFFER:
 		/* The buffer is in [4:7]. */
-		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
-		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
+		index = ac_build_imad(&ctx->ac, index, LLVMConstInt(ctx->i32, 4, 0),
+				      ctx->i32_1);
 		list = LLVMBuildPointerCast(builder, list,
 					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 		break;
 	case AC_DESC_FMASK:
 		/* The FMASK is at [8:15]. */
-		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
-		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
+		index = ac_build_imad(&ctx->ac, index, LLVMConstInt(ctx->i32, 2, 0),
+				      ctx->i32_1);
 		break;
 	case AC_DESC_SAMPLER:
 		/* The sampler state is at [12:15]. */
-		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
-		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 3, 0), "");
+		index = ac_build_imad(&ctx->ac, index, LLVMConstInt(ctx->i32, 4, 0),
+				      LLVMConstInt(ctx->i32, 3, 0));
 		list = LLVMBuildPointerCast(builder, list,
 					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 		break;

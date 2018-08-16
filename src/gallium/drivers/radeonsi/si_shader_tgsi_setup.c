@@ -252,7 +252,6 @@ get_pointer_into_array(struct si_shader_context *ctx,
 {
 	unsigned array_id;
 	struct tgsi_array_info *array;
-	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef idxs[2];
 	LLVMValueRef index;
 	LLVMValueRef alloca;
@@ -290,15 +289,10 @@ get_pointer_into_array(struct si_shader_context *ctx,
 	 */
 	index = si_llvm_bound_index(ctx, index, array->range.Last - array->range.First + 1);
 
-	index = LLVMBuildMul(
-		builder, index,
-		LLVMConstInt(ctx->i32, util_bitcount(array->writemask), 0),
-		"");
-	index = LLVMBuildAdd(
-		builder, index,
-		LLVMConstInt(ctx->i32,
-			     util_bitcount(array->writemask & ((1 << swizzle) - 1)), 0),
-		"");
+	index = ac_build_imad(&ctx->ac, index,
+			      LLVMConstInt(ctx->i32, util_bitcount(array->writemask), 0),
+			      LLVMConstInt(ctx->i32,
+					   util_bitcount(array->writemask & ((1 << swizzle) - 1)), 0));
 	idxs[0] = ctx->i32_0;
 	idxs[1] = index;
 	return LLVMBuildGEP(ctx->ac.builder, alloca, idxs, 2, "");

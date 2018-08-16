@@ -378,10 +378,7 @@ get_tcs_out_current_patch_offset(struct si_shader_context *ctx)
 	LLVMValueRef patch_stride = get_tcs_out_patch_stride(ctx);
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
-	return LLVMBuildAdd(ctx->ac.builder, patch0_offset,
-			    LLVMBuildMul(ctx->ac.builder, patch_stride,
-					 rel_patch_id, ""),
-			    "");
+	return ac_build_imad(&ctx->ac, patch_stride, rel_patch_id, patch0_offset);
 }
 
 static LLVMValueRef
@@ -392,10 +389,7 @@ get_tcs_out_current_patch_data_offset(struct si_shader_context *ctx)
 	LLVMValueRef patch_stride = get_tcs_out_patch_stride(ctx);
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
-	return LLVMBuildAdd(ctx->ac.builder, patch0_patch_data_offset,
-			    LLVMBuildMul(ctx->ac.builder, patch_stride,
-					 rel_patch_id, ""),
-			    "");
+	return ac_build_imad(&ctx->ac, patch_stride, rel_patch_id, patch0_patch_data_offset);
 }
 
 static LLVMValueRef get_num_tcs_out_vertices(struct si_shader_context *ctx)
@@ -815,12 +809,8 @@ LLVMValueRef si_get_indirect_index(struct si_shader_context *ctx,
 		result = ac_to_integer(&ctx->ac, result);
 	}
 
-	if (addr_mul != 1)
-		result = LLVMBuildMul(ctx->ac.builder, result,
-				      LLVMConstInt(ctx->i32, addr_mul, 0), "");
-	result = LLVMBuildAdd(ctx->ac.builder, result,
-			      LLVMConstInt(ctx->i32, rel_index, 0), "");
-	return result;
+	return ac_build_imad(&ctx->ac, result, LLVMConstInt(ctx->i32, addr_mul, 0),
+			     LLVMConstInt(ctx->i32, rel_index, 0));
 }
 
 /**
@@ -847,15 +837,13 @@ static LLVMValueRef get_dw_address_from_generic_indices(struct si_shader_context
 							bool is_patch)
 {
 	if (vertex_dw_stride) {
-		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-					 LLVMBuildMul(ctx->ac.builder, vertex_index,
-						      vertex_dw_stride, ""), "");
+		base_addr = ac_build_imad(&ctx->ac, vertex_index,
+					  vertex_dw_stride, base_addr);
 	}
 
 	if (param_index) {
-		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-					 LLVMBuildMul(ctx->ac.builder, param_index,
-						      LLVMConstInt(ctx->i32, 4, 0), ""), "");
+		base_addr = ac_build_imad(&ctx->ac, param_index,
+					  LLVMConstInt(ctx->i32, 4, 0), base_addr);
 	}
 
 	int param = is_patch ?
@@ -975,22 +963,15 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct si_shader_context *ctx,
 
 	constant16 = LLVMConstInt(ctx->i32, 16, 0);
 	if (vertex_index) {
-		base_addr = LLVMBuildMul(ctx->ac.builder, rel_patch_id,
-		                         vertices_per_patch, "");
-
-		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-		                         vertex_index, "");
-
+		base_addr = ac_build_imad(&ctx->ac, rel_patch_id,
+					  vertices_per_patch, vertex_index);
 		param_stride = total_vertices;
 	} else {
 		base_addr = rel_patch_id;
 		param_stride = num_patches;
 	}
 
-	base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-	                         LLVMBuildMul(ctx->ac.builder, param_index,
-	                                      param_stride, ""), "");
-
+	base_addr = ac_build_imad(&ctx->ac, param_index, param_stride, base_addr);
 	base_addr = LLVMBuildMul(ctx->ac.builder, base_addr, constant16, "");
 
 	if (!vertex_index) {
@@ -2823,9 +2804,9 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 							      ctx->param_streamout_offset[i]);
 			so_offset = LLVMBuildMul(builder, so_offset, LLVMConstInt(ctx->i32, 4, 0), "");
 
-			so_write_offset[i] = LLVMBuildMul(builder, so_write_index,
-							  LLVMConstInt(ctx->i32, so->stride[i]*4, 0), "");
-			so_write_offset[i] = LLVMBuildAdd(builder, so_write_offset[i], so_offset, "");
+			so_write_offset[i] = ac_build_imad(&ctx->ac, so_write_index,
+							   LLVMConstInt(ctx->i32, so->stride[i]*4, 0),
+							   so_offset);
 		}
 
 		/* Write streamout data. */
@@ -3058,7 +3039,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef invocation_id, buffer, buffer_offset;
-	LLVMValueRef lds_vertex_stride, lds_vertex_offset, lds_base;
+	LLVMValueRef lds_vertex_stride, lds_base;
 	uint64_t inputs;
 
 	invocation_id = unpack_llvm_param(ctx, ctx->abi.tcs_rel_ids, 8, 5);
@@ -3066,10 +3047,9 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	buffer_offset = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
 	lds_vertex_stride = get_tcs_in_vertex_dw_stride(ctx);
-	lds_vertex_offset = LLVMBuildMul(ctx->ac.builder, invocation_id,
-	                                 lds_vertex_stride, "");
 	lds_base = get_tcs_in_current_patch_offset(ctx);
-	lds_base = LLVMBuildAdd(ctx->ac.builder, lds_base, lds_vertex_offset, "");
+	lds_base = ac_build_imad(&ctx->ac, invocation_id, lds_vertex_stride,
+				 lds_base);
 
 	inputs = ctx->shader->key.mono.u.ff_tcs_inputs_to_copy;
 	while (inputs) {
