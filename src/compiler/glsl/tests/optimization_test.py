@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # encoding=utf-8
 # Copyright © 2018 Intel Corporation
 
@@ -71,7 +71,9 @@ def main():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 stdin=subprocess.PIPE)
-            out, err = proc.communicate(source)
+            out, err = proc.communicate(source.encode('utf-8'))
+            out = out.decode('utf-8')
+            err = err.decode('utf-8')
             if err:
                 print('FAIL')
                 print('Unexpected output on stderr: {}'.format(err),
