@@ -98,7 +98,7 @@ BUILT_SOURCES = \
 	rasterizer/core/backends/gen_rasterizer.hpp
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
-PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
+PYTHON_GEN = $(AM_V_GEN)$(PYTHON) $(PYTHON_FLAGS)
 gen_swr_context_llvm.h: rasterizer/codegen/gen_llvm_types.py rasterizer/codegen/templates/gen_llvm.hpp swr_context.h
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_types.py \
