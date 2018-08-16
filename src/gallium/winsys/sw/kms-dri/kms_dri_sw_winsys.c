@@ -176,6 +176,8 @@ kms_sw_displaytarget_create(struct sw_winsys *ws,
 
    list_inithead(&kms_sw_dt->planes);
    kms_sw_dt->ref_count = 1;
+   kms_sw_dt->mapped = MAP_FAILED;
+   kms_sw_dt->ro_mapped = MAP_FAILED;
 
    kms_sw_dt->format = format;
 
@@ -262,7 +264,7 @@ kms_sw_displaytarget_map(struct sw_winsys *ws,
 
    prot = (flags == PIPE_TRANSFER_READ) ? PROT_READ : (PROT_READ | PROT_WRITE);
    void **ptr = (flags == PIPE_TRANSFER_READ) ? &kms_sw_dt->ro_mapped : &kms_sw_dt->mapped;
-   if (!*ptr) {
+   if (*ptr == MAP_FAILED) {
       void *tmp = mmap(0, kms_sw_dt->size, prot, MAP_SHARED,
                        kms_sw->fd, map_req.offset);
       if (tmp == MAP_FAILED)
@@ -332,6 +334,8 @@ kms_sw_displaytarget_add_from_prime(struct kms_sw_winsys *kms_sw, int fd,
       FREE(kms_sw_dt);
       return NULL;
    }
+   kms_sw_dt->mapped = MAP_FAILED;
+   kms_sw_dt->ro_mapped = MAP_FAILED;
    kms_sw_dt->size = lseek_ret;
    kms_sw_dt->ref_count = 1;
    kms_sw_dt->handle = handle;
@@ -368,10 +372,14 @@ kms_sw_displaytarget_unmap(struct sw_winsys *ws,
    DEBUG_PRINT("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->mapped);
    DEBUG_PRINT("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->ro_mapped);
 
-   munmap(kms_sw_dt->mapped, kms_sw_dt->size);
-   kms_sw_dt->mapped = NULL;
-   munmap(kms_sw_dt->ro_mapped, kms_sw_dt->size);
-   kms_sw_dt->ro_mapped = NULL;
+   if (kms_sw_dt->mapped != MAP_FAILED) {
+      munmap(kms_sw_dt->mapped, kms_sw_dt->size);
+      kms_sw_dt->mapped = MAP_FAILED;
+   }
+   if (kms_sw_dt->ro_mapped != MAP_FAILED) {
+      munmap(kms_sw_dt->ro_mapped, kms_sw_dt->size);
+      kms_sw_dt->ro_mapped = MAP_FAILED;
+   }
 }
 
 static struct sw_displaytarget *
