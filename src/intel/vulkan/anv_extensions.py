@@ -32,10 +32,9 @@ import xml.etree.cElementTree as et
 def _bool_to_c_expr(b):
     if b is True:
         return 'true'
-    elif b is False:
+    if b is False:
         return 'false'
-    else:
-        return b
+    return b
 
 class Extension:
     def __init__(self, name, ext_version, enable):
@@ -142,7 +141,7 @@ class VkVersion:
         # VK_MAKE_VERSION macro
         assert self.major < 1024 and self.minor < 1024
         assert self.patch is None or self.patch < 4096
-        assert(str(self) == string)
+        assert str(self) == string
 
     def __str__(self):
         ver_list = [str(self.major), str(self.minor)]
