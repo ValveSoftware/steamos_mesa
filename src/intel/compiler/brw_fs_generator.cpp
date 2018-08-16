@@ -958,6 +958,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
          }
          break;
       case SHADER_OPCODE_TXS:
+      case SHADER_OPCODE_IMAGE_SIZE:
 	 msg_type = GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO;
 	 break;
       case SHADER_OPCODE_TXD:
@@ -1126,10 +1127,19 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       }
    }
 
-   uint32_t base_binding_table_index = (inst->opcode == SHADER_OPCODE_TG4 ||
-         inst->opcode == SHADER_OPCODE_TG4_OFFSET)
-         ? prog_data->binding_table.gather_texture_start
-         : prog_data->binding_table.texture_start;
+   uint32_t base_binding_table_index;
+   switch (inst->opcode) {
+   case SHADER_OPCODE_TG4:
+   case SHADER_OPCODE_TG4_OFFSET:
+      base_binding_table_index = prog_data->binding_table.gather_texture_start;
+      break;
+   case SHADER_OPCODE_IMAGE_SIZE:
+      base_binding_table_index = prog_data->binding_table.image_start;
+      break;
+   default:
+      base_binding_table_index = prog_data->binding_table.texture_start;
+      break;
+   }
 
    if (surface_index.file == BRW_IMMEDIATE_VALUE &&
        sampler_index.file == BRW_IMMEDIATE_VALUE) {
@@ -2114,6 +2124,11 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_SAMPLEINFO:
 	 generate_tex(inst, dst, src[0], src[1], src[2]);
 	 break;
+
+      case SHADER_OPCODE_IMAGE_SIZE:
+         generate_tex(inst, dst, src[0], src[1], brw_imm_ud(0));
+         break;
+
       case FS_OPCODE_DDX_COARSE:
       case FS_OPCODE_DDX_FINE:
          generate_ddx(inst, dst, src[0]);

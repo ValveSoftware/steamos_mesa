@@ -354,6 +354,8 @@ enum opcode {
    SHADER_OPCODE_SAMPLEINFO,
    SHADER_OPCODE_SAMPLEINFO_LOGICAL,
 
+   SHADER_OPCODE_IMAGE_SIZE,
+
    /**
     * Combines multiple sources of size 1 into a larger virtual GRF.
     * For example, parameters for a send-from-GRF message.  Or, updating

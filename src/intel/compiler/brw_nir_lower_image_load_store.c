@@ -725,6 +725,21 @@ lower_image_size_instr(nir_builder *b,
                        nir_intrinsic_instr *intrin)
 {
    nir_deref_instr *deref = nir_src_as_deref(intrin->src[0]);
+   nir_variable *var = nir_deref_instr_get_variable(deref);
+
+   /* For write-only images, we have an actual image surface so we fall back
+    * and let the back-end emit a TXS for this.
+    */
+   if (var->data.image.access & ACCESS_NON_READABLE)
+      return false;
+
+   /* If we have a matching typed format, then we have an actual image surface
+    * so we fall back and let the back-end emit a TXS for this.
+    */
+   const enum isl_format image_fmt =
+      isl_format_for_gl_format(var->data.image.format);
+   if (isl_has_matching_typed_storage_image_format(devinfo, image_fmt))
+      return false;
 
    b->cursor = nir_instr_remove(&intrin->instr);
 

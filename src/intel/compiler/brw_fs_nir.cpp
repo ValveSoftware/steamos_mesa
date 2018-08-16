@@ -3918,6 +3918,41 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_image_size: {
+      /* Unlike the [un]typed load and store opcodes, the TXS that this turns
+       * into will handle the binding table index for us in the geneerator.
+       */
+      fs_reg image = retype(get_nir_src_imm(instr->src[0]),
+                            BRW_REGISTER_TYPE_UD);
+      image = bld.emit_uniformize(image);
+
+      /* Since the image size is always uniform, we can just emit a SIMD8
+       * query instruction and splat the result out.
+       */
+      const fs_builder ubld = bld.exec_all().group(8, 0);
+
+      /* The LOD also serves as the message payload */
+      fs_reg lod = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+      ubld.MOV(lod, brw_imm_ud(0));
+
+      fs_reg tmp = ubld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+      fs_inst *inst = ubld.emit(SHADER_OPCODE_IMAGE_SIZE, tmp, lod, image);
+      inst->mlen = 1;
+      inst->size_written = 4 * REG_SIZE;
+
+      for (unsigned c = 0; c < instr->dest.ssa.num_components; ++c) {
+         if (c == 2 && nir_intrinsic_image_dim(instr) == GLSL_SAMPLER_DIM_CUBE) {
+            bld.emit(SHADER_OPCODE_INT_QUOTIENT,
+                     offset(retype(dest, tmp.type), bld, c),
+                     component(offset(tmp, ubld, c), 0), brw_imm_ud(6));
+         } else {
+            bld.MOV(offset(retype(dest, tmp.type), bld, c),
+                    component(offset(tmp, ubld, c), 0));
+         }
+      }
+      break;
+   }
+
    case nir_intrinsic_image_load_raw_intel: {
       const fs_reg image = get_nir_image_intrinsic_image(bld, instr);
       const fs_reg addr = retype(get_nir_src(instr->src[1]),

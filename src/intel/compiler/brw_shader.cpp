@@ -267,6 +267,9 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
    case SHADER_OPCODE_SAMPLEINFO_LOGICAL:
       return "sampleinfo_logical";
 
+   case SHADER_OPCODE_IMAGE_SIZE:
+      return "image_size";
+
    case SHADER_OPCODE_SHADER_TIME_ADD:
       return "shader_time_add";
 
