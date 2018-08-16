@@ -305,18 +305,11 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 			 LLVMValueRef ptr2)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef result;
-
-	result = LLVMGetUndef(LLVMVectorType(ctx->i32, 2));
-
-	result = LLVMBuildInsertElement(ctx->ac.builder,
-					result,
-					ac_to_integer(&ctx->ac, ptr),
-					ctx->i32_0, "");
-	result = LLVMBuildInsertElement(ctx->ac.builder,
-					result,
-					ac_to_integer(&ctx->ac, ptr2),
-					ctx->i32_1, "");
+	LLVMValueRef values[2] = {
+		ac_to_integer(&ctx->ac, ptr),
+		ac_to_integer(&ctx->ac, ptr2),
+	};
+	LLVMValueRef result = ac_build_gather_values(&ctx->ac, values, 2);
 	return LLVMBuildBitCast(ctx->ac.builder, result, type, "");
 }
 

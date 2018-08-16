@@ -2724,12 +2724,10 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 		break;
 	case 2: /* as v2i32 */
 	case 3: /* as v4i32 (aligned to 4) */
+		out[3] = LLVMGetUndef(ctx->i32);
+		/* fall through */
 	case 4: /* as v4i32 */
-		vdata = LLVMGetUndef(LLVMVectorType(ctx->i32, util_next_power_of_two(num_comps)));
-		for (int j = 0; j < num_comps; j++) {
-			vdata = LLVMBuildInsertElement(ctx->ac.builder, vdata, out[j],
-						       LLVMConstInt(ctx->i32, j, 0), "");
-		}
+		vdata = ac_build_gather_values(&ctx->ac, out, util_next_power_of_two(num_comps));
 		break;
 	}
 

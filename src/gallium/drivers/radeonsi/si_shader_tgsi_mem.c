@@ -553,7 +553,7 @@ static void store_emit_buffer(struct si_shader_context *ctx,
 	while (writemask) {
 		int start, count;
 		const char *intrinsic_name;
-		LLVMValueRef data, voff, tmp;
+		LLVMValueRef data, voff;
 
 		u_bit_scan_consecutive_range(&writemask, &start, &count);
 
@@ -568,21 +568,14 @@ static void store_emit_buffer(struct si_shader_context *ctx,
 			data = base_data;
 			intrinsic_name = "llvm.amdgcn.buffer.store.v4f32";
 		} else if (count == 2) {
-			LLVMTypeRef v2f32 = LLVMVectorType(ctx->f32, 2);
+			LLVMValueRef values[2] = {
+				LLVMBuildExtractElement(builder, base_data,
+							LLVMConstInt(ctx->i32, start, 0), ""),
+				LLVMBuildExtractElement(builder, base_data,
+							LLVMConstInt(ctx->i32, start + 1, 0), ""),
+			};
 
-			tmp = LLVMBuildExtractElement(
-				builder, base_data,
-				LLVMConstInt(ctx->i32, start, 0), "");
-			data = LLVMBuildInsertElement(
-				builder, LLVMGetUndef(v2f32), tmp,
-				ctx->i32_0, "");
-
-			tmp = LLVMBuildExtractElement(
-				builder, base_data,
-				LLVMConstInt(ctx->i32, start + 1, 0), "");
-			data = LLVMBuildInsertElement(
-				builder, data, tmp, ctx->i32_1, "");
-
+			data = ac_build_gather_values(&ctx->ac, values, 2);
 			intrinsic_name = "llvm.amdgcn.buffer.store.v2f32";
 		} else {
 			assert(count == 1);

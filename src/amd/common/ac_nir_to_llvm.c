@@ -486,7 +486,7 @@ static LLVMValueRef emit_unpack_half_2x16(struct ac_llvm_context *ctx,
 					  LLVMValueRef src0)
 {
 	LLVMValueRef const16 = LLVMConstInt(ctx->i32, 16, false);
-	LLVMValueRef temps[2], result, val;
+	LLVMValueRef temps[2], val;
 	int i;
 
 	for (i = 0; i < 2; i++) {
@@ -495,12 +495,7 @@ static LLVMValueRef emit_unpack_half_2x16(struct ac_llvm_context *ctx,
 		val = LLVMBuildBitCast(ctx->builder, val, ctx->f16, "");
 		temps[i] = LLVMBuildFPExt(ctx->builder, val, ctx->f32, "");
 	}
-
-	result = LLVMBuildInsertElement(ctx->builder, LLVMGetUndef(ctx->v2f32), temps[0],
-					ctx->i32_0, "");
-	result = LLVMBuildInsertElement(ctx->builder, result, temps[1],
-					ctx->i32_1, "");
-	return result;
+	return ac_build_gather_values(ctx, temps, 2);
 }
 
 static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
@@ -1004,10 +999,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 
 	case nir_op_pack_64_2x32_split: {
 		LLVMValueRef tmp = LLVMGetUndef(ctx->ac.v2i32);
-		tmp = LLVMBuildInsertElement(ctx->ac.builder, tmp,
-					     src[0], ctx->ac.i32_0, "");
-		tmp = LLVMBuildInsertElement(ctx->ac.builder, tmp,
-					     src[1], ctx->ac.i32_1, "");
+		tmp = ac_build_gather_values(&ctx->ac, src, 2);
 		result = LLVMBuildBitCast(ctx->ac.builder, tmp, ctx->ac.i64, "");
 		break;
 	}
