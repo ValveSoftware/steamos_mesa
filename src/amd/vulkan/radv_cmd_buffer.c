@@ -2307,6 +2307,7 @@ VkResult radv_BeginCommandBuffer(
 	cmd_buffer->state.last_num_instances = -1;
 	cmd_buffer->state.last_vertex_offset = -1;
 	cmd_buffer->state.last_first_instance = -1;
+	cmd_buffer->state.predication_type = -1;
 	cmd_buffer->usage_flags = pBeginInfo->flags;
 
 	/* setup initial configuration into command buffer */
