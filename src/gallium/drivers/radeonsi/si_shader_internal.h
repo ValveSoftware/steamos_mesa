@@ -288,11 +288,6 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			unsigned index,
 			LLVMValueRef dst[4]);
 
-/* Combine these with & instead of |. */
-#define NOOP_WAITCNT 0xf7f
-#define LGKM_CNT 0x07f
-#define VM_CNT 0xf70
-
 LLVMValueRef si_get_indirect_index(struct si_shader_context *ctx,
 				   const struct tgsi_ind_register *ind,
 				   unsigned addr_mul, int rel_index);

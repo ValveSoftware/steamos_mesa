@@ -2537,10 +2537,6 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 	return res;
 }
 
-#define NOOP_WAITCNT 0xf7f
-#define LGKM_CNT 0x07f
-#define VM_CNT 0xf70
-
 static void emit_membar(struct ac_llvm_context *ac,
 			const nir_intrinsic_instr *instr)
 {
