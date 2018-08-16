@@ -331,9 +331,9 @@ image("samples", dest_comp=1, flags=[CAN_ELIMINATE, CAN_REORDER])
 # variable. The const index specifies which of the six parameters to load.
 intrinsic("image_deref_load_param_intel", src_comp=[1], dest_comp=0,
           indices=[BASE], flags=[CAN_ELIMINATE, CAN_REORDER])
-intrinsic("image_deref_load_raw_intel", src_comp=[1, 1], dest_comp=0,
-          flags=[CAN_ELIMINATE])
-intrinsic("image_deref_store_raw_intel", src_comp=[1, 1, 0])
+image("load_raw_intel", src_comp=[1], dest_comp=0,
+      flags=[CAN_ELIMINATE])
+image("store_raw_intel", src_comp=[1, 0])
 
 # Vulkan descriptor set intrinsics
 #

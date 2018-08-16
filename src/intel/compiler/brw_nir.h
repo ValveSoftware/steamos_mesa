@@ -116,6 +116,8 @@ void brw_nir_lower_fs_outputs(nir_shader *nir);
 
 bool brw_nir_lower_image_load_store(nir_shader *nir,
                                     const struct gen_device_info *devinfo);
+void brw_nir_rewrite_image_intrinsic(nir_intrinsic_instr *intrin,
+                                     nir_ssa_def *index);
 
 nir_shader *brw_postprocess_nir(nir_shader *nir,
                                 const struct brw_compiler *compiler,
@@ -146,6 +148,9 @@ void brw_nir_setup_glsl_uniforms(void *mem_ctx, nir_shader *shader,
 void brw_nir_setup_arb_uniforms(void *mem_ctx, nir_shader *shader,
                                 struct gl_program *prog,
                                 struct brw_stage_prog_data *stage_prog_data);
+
+void brw_nir_lower_glsl_images(nir_shader *shader,
+                               const struct gl_program *prog);
 
 void brw_nir_analyze_ubo_ranges(const struct brw_compiler *compiler,
                                 nir_shader *nir,

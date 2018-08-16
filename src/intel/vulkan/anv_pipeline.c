@@ -523,6 +523,8 @@ anv_pipeline_lower_nir(struct anv_pipeline *pipeline,
    if (nir->info.num_ssbos > 0 || nir->info.num_images > 0)
       pipeline->needs_data_cache = true;
 
+   NIR_PASS_V(nir, brw_nir_lower_image_load_store, compiler->devinfo);
+
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (layout) {
       anv_nir_apply_pipeline_layout(pipeline, layout, nir, prog_data,
@@ -531,8 +533,6 @@ anv_pipeline_lower_nir(struct anv_pipeline *pipeline,
 
    if (nir->info.stage != MESA_SHADER_COMPUTE)
       brw_nir_analyze_ubo_ranges(compiler, nir, NULL, prog_data->ubo_ranges);
-
-   NIR_PASS_V(nir, brw_nir_lower_image_load_store, compiler->devinfo);
 
    assert(nir->num_uniforms == prog_data->nr_params * 4);
 

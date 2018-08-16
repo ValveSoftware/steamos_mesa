@@ -494,16 +494,14 @@ type_size_scalar(const struct glsl_type *type)
       }
       return size;
    case GLSL_TYPE_SAMPLER:
-      /* Samplers take up no register space, since they're baked in at
-       * link time.
-       */
-      return 0;
    case GLSL_TYPE_ATOMIC_UINT:
+   case GLSL_TYPE_IMAGE:
+      /* Samplers, atomics, and images take up no register space, since
+       * they're baked in at link time.
+       */
       return 0;
    case GLSL_TYPE_SUBROUTINE:
       return 1;
-   case GLSL_TYPE_IMAGE:
-      return BRW_IMAGE_PARAM_SIZE;
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_INTERFACE:
