@@ -23,6 +23,7 @@
 
 #include "common/gen_decoder.h"
 #include "gen_disasm.h"
+#include "util/macros.h"
 
 #include <string.h>
 
@@ -64,8 +65,6 @@ gen_batch_decode_ctx_finish(struct gen_batch_decode_ctx *ctx)
 #define BLUE_HEADER  CSI "0;44m"
 #define GREEN_HEADER CSI "1;42m"
 #define NORMAL       CSI "0m"
-
-#define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 
 static void
 ctx_print_group(struct gen_batch_decode_ctx *ctx,
@@ -835,7 +834,7 @@ gen_print_batch(struct gen_batch_decode_ctx *ctx,
       if (ctx->flags & GEN_BATCH_DECODE_FULL) {
          ctx_print_group(ctx, inst, offset, p);
 
-         for (int i = 0; i < ARRAY_LENGTH(custom_decoders); i++) {
+         for (int i = 0; i < ARRAY_SIZE(custom_decoders); i++) {
             if (strcmp(inst_name, custom_decoders[i].cmd_name) == 0) {
                custom_decoders[i].decode(ctx, p);
                break;
