@@ -233,12 +233,12 @@ isl_surf_fill_image_param(const struct isl_device *dev,
              surf->logical_level0_px.array_len);
    }
    param->size[0] = isl_minify(surf->logical_level0_px.w, view->base_level);
-   param->size[1] = isl_minify(surf->logical_level0_px.h, view->base_level);
-   if (surf->dim == ISL_SURF_DIM_3D) {
-      param->size[2] = isl_minify(surf->logical_level0_px.d, view->base_level);
-   } else {
-      param->size[2] = view->array_len;
-   }
+   param->size[1] = surf->dim == ISL_SURF_DIM_1D ?
+                    view->array_len :
+                    isl_minify(surf->logical_level0_px.h, view->base_level);
+   param->size[2] = surf->dim == ISL_SURF_DIM_2D ?
+                    view->array_len :
+                    isl_minify(surf->logical_level0_px.d, view->base_level);
 
    isl_surf_get_image_offset_el(surf, view->base_level,
                                 surf->dim == ISL_SURF_DIM_3D ?

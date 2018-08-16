@@ -119,30 +119,15 @@ _load_image_param(nir_builder *b, nir_deref_instr *deref, unsigned offset)
    _load_image_param(b, d, BRW_IMAGE_PARAM_##o##_OFFSET)
 
 static nir_ssa_def *
-sanitize_image_coord(nir_builder *b, nir_deref_instr *deref, nir_ssa_def *coord)
-{
-   if (glsl_get_sampler_dim(deref->type) == GLSL_SAMPLER_DIM_1D &&
-       glsl_sampler_type_is_array(deref->type)) {
-      /* It's easier if 1D arrays are treated like 2D arrays */
-      return nir_vec3(b, nir_channel(b, coord, 0),
-                         nir_imm_int(b, 0),
-                         nir_channel(b, coord, 1));
-   } else {
-      unsigned dims = glsl_get_sampler_coordinate_components(deref->type);
-      return nir_channels(b, coord, (1 << dims) - 1);
-   }
-}
-
-static nir_ssa_def *
 image_coord_is_in_bounds(nir_builder *b, nir_deref_instr *deref,
                          nir_ssa_def *coord)
 {
-   coord = sanitize_image_coord(b, deref, coord);
    nir_ssa_def *size = load_image_param(b, deref, SIZE);
-
    nir_ssa_def *cmp = nir_ilt(b, coord, size);
+
+   unsigned coord_comps = glsl_get_sampler_coordinate_components(deref->type);
    nir_ssa_def *in_bounds = nir_imm_int(b, NIR_TRUE);
-   for (unsigned i = 0; i < coord->num_components; i++)
+   for (unsigned i = 0; i < coord_comps; i++)
       in_bounds = nir_iand(b, in_bounds, nir_channel(b, cmp, i));
 
    return in_bounds;
@@ -164,7 +149,16 @@ static nir_ssa_def *
 image_address(nir_builder *b, const struct gen_device_info *devinfo,
               nir_deref_instr *deref, nir_ssa_def *coord)
 {
-   coord = sanitize_image_coord(b, deref, coord);
+   if (glsl_get_sampler_dim(deref->type) == GLSL_SAMPLER_DIM_1D &&
+       glsl_sampler_type_is_array(deref->type)) {
+      /* It's easier if 1D arrays are treated like 2D arrays */
+      coord = nir_vec3(b, nir_channel(b, coord, 0),
+                          nir_imm_int(b, 0),
+                          nir_channel(b, coord, 1));
+   } else {
+      unsigned dims = glsl_get_sampler_coordinate_components(deref->type);
+      coord = nir_channels(b, coord, (1 << dims) - 1);
+   }
 
    nir_ssa_def *offset = load_image_param(b, deref, OFFSET);
    nir_ssa_def *tiling = load_image_param(b, deref, TILING);
@@ -741,10 +735,7 @@ lower_image_size_instr(nir_builder *b,
    enum glsl_sampler_dim dim = glsl_get_sampler_dim(deref->type);
    unsigned coord_comps = glsl_get_sampler_coordinate_components(deref->type);
    for (unsigned c = 0; c < coord_comps; c++) {
-      if (c == 1 && dim == GLSL_SAMPLER_DIM_1D) {
-         /* The array length for 1D arrays is in .z */
-         comps[1] = nir_channel(b, size, 2);
-      } else if (c == 2 && dim == GLSL_SAMPLER_DIM_CUBE) {
+      if (c == 2 && dim == GLSL_SAMPLER_DIM_CUBE) {
          comps[2] = nir_idiv(b, nir_channel(b, size, 2), nir_imm_int(b, 6));
       } else {
          comps[c] = nir_channel(b, size, c);
