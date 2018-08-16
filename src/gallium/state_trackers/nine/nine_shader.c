@@ -3458,8 +3458,8 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst oCol0 = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
     struct ureg_src fog_end, fog_coeff, fog_density;
-    struct ureg_src fog_vs, depth, fog_color;
-    struct ureg_dst fog_factor;
+    struct ureg_src fog_vs, fog_color;
+    struct ureg_dst fog_factor, depth;
 
     if (!tx->info->fog_enable) {
         ureg_MOV(ureg, oCol0, src_col);
@@ -3467,8 +3467,10 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     }
 
     if (tx->info->fog_mode != D3DFOG_NONE) {
-        depth = nine_get_position_input(tx);
-        depth = ureg_scalar(depth, TGSI_SWIZZLE_Z);
+        depth = tx_scratch_scalar(tx);
+        /* Depth used for fog is perspective interpolated */
+        ureg_RCP(ureg, depth, ureg_scalar(nine_get_position_input(tx), TGSI_SWIZZLE_W));
+        ureg_MUL(ureg, depth, ureg_src(depth), ureg_scalar(nine_get_position_input(tx), TGSI_SWIZZLE_Z));
     }
 
     nine_info_mark_const_f_used(tx->info, 33);
@@ -3478,16 +3480,16 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     if (tx->info->fog_mode == D3DFOG_LINEAR) {
         fog_end = NINE_CONSTANT_SRC_SWIZZLE(33, X);
         fog_coeff = NINE_CONSTANT_SRC_SWIZZLE(33, Y);
-        ureg_ADD(ureg, fog_factor, fog_end, ureg_negate(depth));
+        ureg_ADD(ureg, fog_factor, fog_end, ureg_negate(ureg_src(depth)));
         ureg_MUL(ureg, ureg_saturate(fog_factor), tx_src_scalar(fog_factor), fog_coeff);
     } else if (tx->info->fog_mode == D3DFOG_EXP) {
         fog_density = NINE_CONSTANT_SRC_SWIZZLE(33, X);
-        ureg_MUL(ureg, fog_factor, depth, fog_density);
+        ureg_MUL(ureg, fog_factor, ureg_src(depth), fog_density);
         ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), ureg_imm1f(ureg, -1.442695f));
         ureg_EX2(ureg, fog_factor, tx_src_scalar(fog_factor));
     } else if (tx->info->fog_mode == D3DFOG_EXP2) {
         fog_density = NINE_CONSTANT_SRC_SWIZZLE(33, X);
-        ureg_MUL(ureg, fog_factor, depth, fog_density);
+        ureg_MUL(ureg, fog_factor, ureg_src(depth), fog_density);
         ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), tx_src_scalar(fog_factor));
         ureg_MUL(ureg, fog_factor, tx_src_scalar(fog_factor), ureg_imm1f(ureg, -1.442695f));
         ureg_EX2(ureg, fog_factor, tx_src_scalar(fog_factor));
