@@ -1445,7 +1445,6 @@ VkResult anv_EnumerateDeviceExtensionProperties(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
-   (void)device;
 
    for (int i = 0; i < ANV_DEVICE_EXTENSION_COUNT; i++) {
       if (device->supported_extensions.extensions[i]) {
