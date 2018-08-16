@@ -1455,7 +1455,7 @@ get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    enum isl_format hw_format = brw_isl_format_for_mesa_format(format);
-   if (access == GL_WRITE_ONLY) {
+   if (access == GL_WRITE_ONLY || access == GL_NONE) {
       return hw_format;
    } else if (isl_has_matching_typed_storage_image_format(devinfo, hw_format)) {
       /* Typed surface reads support a very limited subset of the shader
@@ -1523,6 +1523,7 @@ update_image_surface(struct brw_context *brw,
    if (_mesa_is_image_unit_valid(&brw->ctx, u)) {
       struct gl_texture_object *obj = u->TexObj;
       const unsigned format = get_image_format(brw, u->_ActualFormat, access);
+      const bool written = (access != GL_READ_ONLY && access != GL_NONE);
 
       if (obj->Target == GL_TEXTURE_BUFFER) {
          const unsigned texel_size = (format == ISL_FORMAT_RAW ? 1 :
@@ -1530,13 +1531,12 @@ update_image_surface(struct brw_context *brw,
          const unsigned buffer_size = buffer_texture_range_size(brw, obj);
          struct brw_bo *const bo = !obj->BufferObject ? NULL :
             intel_bufferobj_buffer(brw, intel_buffer_object(obj->BufferObject),
-                                   obj->BufferOffset, buffer_size,
-                                   access != GL_READ_ONLY);
+                                   obj->BufferOffset, buffer_size, written);
 
          brw_emit_buffer_surface_state(
             brw, surf_offset, bo, obj->BufferOffset,
             format, buffer_size, texel_size,
-            access != GL_READ_ONLY ? RELOC_WRITE : 0);
+            written ? RELOC_WRITE : 0);
 
          update_buffer_image_param(brw, u, surface_idx, param);
 
@@ -1560,7 +1560,7 @@ update_image_surface(struct brw_context *brw,
             brw_emit_buffer_surface_state(
                brw, surf_offset, mt->bo, mt->offset,
                format, mt->bo->size - mt->offset, 1 /* pitch */,
-               access != GL_READ_ONLY ? RELOC_WRITE : 0);
+               written ? RELOC_WRITE : 0);
 
          } else {
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
@@ -1571,7 +1571,7 @@ update_image_surface(struct brw_context *brw,
             brw_emit_surface_state(brw, mt, mt->target, view,
                                    ISL_AUX_USAGE_NONE,
                                    surf_offset, surf_index,
-                                   access == GL_READ_ONLY ? 0 : RELOC_WRITE);
+                                   written ? RELOC_WRITE : 0);
          }
 
          isl_surf_fill_image_param(&brw->isl_dev, param, &mt->surf, &view);
