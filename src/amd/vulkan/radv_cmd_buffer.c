@@ -4127,15 +4127,18 @@ static void radv_init_color_image_metadata(struct radv_cmd_buffer *cmd_buffer,
 
 	if (radv_image_has_dcc(image)) {
 		uint32_t value = 0xffffffffu; /* Fully expanded mode. */
+		bool need_decompress_pass = false;
 
 		if (radv_layout_dcc_compressed(image, dst_layout,
 					       dst_queue_mask)) {
 			value = 0x20202020u;
+			need_decompress_pass = true;
 		}
 
 		radv_initialize_dcc(cmd_buffer, image, value);
 
-		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, image, false);
+		radv_set_dcc_need_cmask_elim_pred(cmd_buffer, image,
+						  need_decompress_pass);
 	}
 
 	if (radv_image_has_cmask(image) || radv_image_has_dcc(image)) {
