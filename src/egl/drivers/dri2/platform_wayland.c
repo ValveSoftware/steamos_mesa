@@ -1059,7 +1059,7 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
    if (visual_idx == -1)
       goto bad_format;
 
-   if (!(dri2_dpy->formats & (1 << visual_idx)))
+   if (!(dri2_dpy->formats & (1u << visual_idx)))
       goto bad_format;
 
    buffer = create_wl_buffer(dri2_dpy, NULL, image);
@@ -1140,7 +1140,7 @@ drm_handle_format(void *data, struct wl_drm *drm, uint32_t format)
    if (visual_idx == -1)
       return;
 
-   dri2_dpy->formats |= (1 << visual_idx);
+   dri2_dpy->formats |= (1u << visual_idx);
 }
 
 static void
@@ -1189,7 +1189,7 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
        modifier_lo == (DRM_FORMAT_MOD_INVALID & 0xffffffff))
       return;
 
-   dri2_dpy->formats |= (1 << visual_idx);
+   dri2_dpy->formats |= (1u << visual_idx);
 
    mod = u_vector_add(&dri2_dpy->wl_modifiers[visual_idx]);
    *mod = (uint64_t) modifier_hi << 32;
@@ -1288,7 +1288,7 @@ dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       for (unsigned j = 0; j < ARRAY_SIZE(dri2_wl_visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
-         if (!(dri2_dpy->formats & (1 << j)))
+         if (!(dri2_dpy->formats & (1u << j)))
             continue;
 
          dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
@@ -1906,7 +1906,7 @@ shm_handle_format(void *data, struct wl_shm *shm, uint32_t format)
    if (visual_idx == -1)
       return;
 
-   dri2_dpy->formats |= (1 << visual_idx);
+   dri2_dpy->formats |= (1u << visual_idx);
 }
 
 static const struct wl_shm_listener shm_listener = {

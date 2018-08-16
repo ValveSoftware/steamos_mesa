@@ -223,7 +223,7 @@ struct dri2_egl_display
    struct zwp_linux_dmabuf_v1 *wl_dmabuf;
    struct u_vector          *wl_modifiers;
    bool                      authenticated;
-   int                       formats;
+   unsigned                  formats;
    uint32_t                  capabilities;
    char                     *device_name;
 #endif
