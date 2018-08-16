@@ -915,7 +915,7 @@ dri2_x11_swap_buffers_msc(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw,
       reply = xcb_dri2_swap_buffers_reply(dri2_dpy->conn, cookie, NULL);
 
       if (reply) {
-         swap_count = (((int64_t)reply->swap_hi) << 32) | reply->swap_lo;
+         swap_count = combine_u32_into_u64(reply->swap_hi, reply->swap_lo);
          free(reply);
       }
    }

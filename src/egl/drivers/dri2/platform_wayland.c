@@ -818,8 +818,7 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
                                            __DRI_IMAGE_ATTRIB_MODIFIER_LOWER,
                                            &mod_lo);
       if (query) {
-         modifier = (uint64_t) mod_hi << 32;
-         modifier |= (uint64_t) (mod_lo & 0xffffffff);
+         modifier = combine_u32_into_u64(mod_hi, mod_lo);
       }
    }
 
@@ -1192,8 +1191,7 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    dri2_dpy->formats |= (1u << visual_idx);
 
    mod = u_vector_add(&dri2_dpy->wl_modifiers[visual_idx]);
-   *mod = (uint64_t) modifier_hi << 32;
-   *mod |= (uint64_t) (modifier_lo & 0xffffffff);
+   *mod = combine_u32_into_u64(modifier_hi, modifier_lo);
 }
 
 static const struct zwp_linux_dmabuf_v1_listener dmabuf_listener = {

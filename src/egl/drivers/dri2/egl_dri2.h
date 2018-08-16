@@ -528,4 +528,10 @@ dri2_init_surface(_EGLSurface *surf, _EGLDisplay *dpy, EGLint type,
 void
 dri2_fini_surface(_EGLSurface *surf);
 
+static inline uint64_t
+combine_u32_into_u64(uint32_t hi, uint32_t lo)
+{
+   return (((uint64_t) hi) << 32) | (((uint64_t) lo) & 0xffffffff);
+}
+
 #endif /* EGL_DRI2_INCLUDED */
