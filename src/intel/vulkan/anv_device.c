@@ -325,7 +325,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->instance = instance;
 
    assert(strlen(path) < ARRAY_SIZE(device->path));
-   strncpy(device->path, path, ARRAY_SIZE(device->path));
+   snprintf(device->path, ARRAY_SIZE(device->path), "%s", path);
 
    device->no_hw = getenv("INTEL_NO_HW") != NULL;
 
