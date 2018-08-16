@@ -463,7 +463,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
              dim == GLSL_SAMPLER_DIM_SUBPASS_MS)
             pipe_binding[i].input_attachment_index = var->data.index + i;
 
-         pipe_binding[i].write_only = var->data.image.write_only;
+         pipe_binding[i].write_only =
+            (var->data.image.access & ACCESS_NON_READABLE) != 0;
       }
    }
 

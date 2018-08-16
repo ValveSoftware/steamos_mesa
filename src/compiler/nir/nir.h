@@ -377,11 +377,7 @@ typedef struct nir_variable {
        * ARB_shader_image_load_store qualifiers.
        */
       struct {
-         bool read_only; /**< "readonly" qualifier. */
-         bool write_only; /**< "writeonly" qualifier. */
-         bool coherent;
-         bool _volatile;
-         bool restrict_flag;
+         enum gl_access_qualifier access;
 
          /** Image internal format if specified explicitly, otherwise GL_NONE. */
          GLenum format;

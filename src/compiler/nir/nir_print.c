@@ -433,11 +433,12 @@ print_var_decl(nir_variable *var, print_state *state)
            cent, samp, patch, inv, get_variable_mode_str(var->data.mode, false),
            glsl_interp_mode_name(var->data.interpolation));
 
-   const char *const coher = (var->data.image.coherent) ? "coherent " : "";
-   const char *const volat = (var->data.image._volatile) ? "volatile " : "";
-   const char *const restr = (var->data.image.restrict_flag) ? "restrict " : "";
-   const char *const ronly = (var->data.image.read_only) ? "readonly " : "";
-   const char *const wonly = (var->data.image.write_only) ? "writeonly " : "";
+   enum gl_access_qualifier access = var->data.image.access;
+   const char *const coher = (access & ACCESS_COHERENT) ? "coherent " : "";
+   const char *const volat = (access & ACCESS_VOLATILE) ? "volatile " : "";
+   const char *const restr = (access & ACCESS_RESTRICT) ? "restrict " : "";
+   const char *const ronly = (access & ACCESS_NON_WRITEABLE) ? "readonly " : "";
+   const char *const wonly = (access & ACCESS_NON_READABLE) ? "writeonly " : "";
    fprintf(fp, "%s%s%s%s%s", coher, volat, restr, ronly, wonly);
 
    fprintf(fp, "%s %s", glsl_get_type_name(var->type),
