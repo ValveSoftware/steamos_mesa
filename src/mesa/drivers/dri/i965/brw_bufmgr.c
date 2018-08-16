@@ -980,7 +980,6 @@ brw_bo_map_cpu(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
       };
       int ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
       if (ret != 0) {
-         ret = -errno;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
          return NULL;
@@ -1044,7 +1043,6 @@ brw_bo_map_wc(struct brw_context *brw, struct brw_bo *bo, unsigned flags)
       };
       int ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
       if (ret != 0) {
-         ret = -errno;
          DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
              __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
          return NULL;
