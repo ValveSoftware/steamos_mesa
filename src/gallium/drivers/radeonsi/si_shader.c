@@ -2659,10 +2659,8 @@ static void si_llvm_emit_clipvertex(struct si_shader_context *ctx,
 								const_chan) * 4, 0);
 				base_elt = buffer_load_const(ctx, const_resource,
 							     addr);
-				args->out[chan] =
-					LLVMBuildFAdd(ctx->ac.builder, args->out[chan],
-						      LLVMBuildFMul(ctx->ac.builder, base_elt,
-								    out_elts[const_chan], ""), "");
+				args->out[chan] = ac_build_fmad(&ctx->ac, base_elt,
+								out_elts[const_chan], args->out[chan]);
 			}
 		}
 
@@ -4114,17 +4112,12 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 								      ddxy_out, iy_ll, "");
 			LLVMValueRef interp_el = LLVMBuildExtractElement(ctx->ac.builder,
 									 interp_param, ix_ll, "");
-			LLVMValueRef temp1, temp2;
+			LLVMValueRef temp;
 
 			interp_el = ac_to_float(&ctx->ac, interp_el);
 
-			temp1 = LLVMBuildFMul(ctx->ac.builder, ddx_el, offset_x, "");
-
-			temp1 = LLVMBuildFAdd(ctx->ac.builder, temp1, interp_el, "");
-
-			temp2 = LLVMBuildFMul(ctx->ac.builder, ddy_el, offset_y, "");
-
-			ij_out[i] = LLVMBuildFAdd(ctx->ac.builder, temp2, temp1, "");
+			temp = ac_build_fmad(&ctx->ac, ddx_el, offset_x, interp_el);
+			ij_out[i] = ac_build_fmad(&ctx->ac, ddy_el, offset_y, temp);
 		}
 		interp_param = ac_build_gather_values(&ctx->ac, ij_out, 2);
 	}

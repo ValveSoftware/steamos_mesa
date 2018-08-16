@@ -762,8 +762,7 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 	if (is_array) {
 		/* for cube arrays coord.z = coord.w(array_index) * 8 + face */
 		/* coords_arg.w component - array_index for cube arrays */
-		LLVMValueRef tmp = LLVMBuildFMul(ctx->builder, coords_arg[3], LLVMConstReal(ctx->f32, 8.0), "");
-		coords[2] = LLVMBuildFAdd(ctx->builder, tmp, coords[2], "");
+		coords[2] = ac_build_fmad(ctx, coords_arg[3], LLVMConstReal(ctx->f32, 8.0), coords[2]);
 	}
 
 	memcpy(coords_arg, coords, sizeof(coords));

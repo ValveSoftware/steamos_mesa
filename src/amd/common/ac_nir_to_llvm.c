@@ -2853,11 +2853,8 @@ static LLVMValueRef visit_interp(struct ac_nir_context *ctx,
 			interp_el = LLVMBuildBitCast(ctx->ac.builder, interp_el,
 						     ctx->ac.f32, "");
 
-			temp1 = LLVMBuildFMul(ctx->ac.builder, ddx_el, src_c0, "");
-			temp1 = LLVMBuildFAdd(ctx->ac.builder, temp1, interp_el, "");
-
-			temp2 = LLVMBuildFMul(ctx->ac.builder, ddy_el, src_c1, "");
-			temp2 = LLVMBuildFAdd(ctx->ac.builder, temp2, temp1, "");
+			temp1 = ac_build_fmad(&ctx->ac, ddx_el, src_c0, interp_el);
+			temp2 = ac_build_fmad(&ctx->ac, ddy_el, src_c1, temp1);
 
 			ij_out[i] = LLVMBuildBitCast(ctx->ac.builder,
 						     temp2, ctx->ac.i32, "");
