@@ -538,19 +538,30 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 static void
 _eglCreateAPIsString(_EGLDisplay *dpy)
 {
+#define addstr(str) \
+   { \
+      const size_t old_len = strlen(dpy->ClientAPIsString); \
+      const size_t add_len = sizeof(str); \
+      const size_t max_len = sizeof(dpy->ClientAPIsString) - 1; \
+      if (old_len + add_len <= max_len) \
+         strcat(dpy->ClientAPIsString, str " "); \
+      else \
+         assert(!"dpy->ClientAPIsString is not large enough"); \
+   }
+
    if (dpy->ClientAPIs & EGL_OPENGL_BIT)
-      strcat(dpy->ClientAPIsString, "OpenGL ");
+      addstr("OpenGL");
 
    if (dpy->ClientAPIs & EGL_OPENGL_ES_BIT ||
        dpy->ClientAPIs & EGL_OPENGL_ES2_BIT ||
        dpy->ClientAPIs & EGL_OPENGL_ES3_BIT_KHR) {
-      strcat(dpy->ClientAPIsString, "OpenGL_ES ");
+      addstr("OpenGL_ES");
    }
 
    if (dpy->ClientAPIs & EGL_OPENVG_BIT)
-      strcat(dpy->ClientAPIsString, "OpenVG ");
+      addstr("OpenVG");
 
-   assert(strlen(dpy->ClientAPIsString) < sizeof(dpy->ClientAPIsString));
+#undef addstr
 }
 
 static void
