@@ -3542,7 +3542,7 @@ intel_miptree_release_map(struct intel_mipmap_tree *mt,
 
 static bool
 can_blit_slice(struct intel_mipmap_tree *mt,
-               unsigned int level, unsigned int slice)
+               const struct intel_miptree_map *map)
 {
    /* See intel_miptree_blit() for details on the 32k pitch limit. */
    if (intel_miptree_blt_pitch(mt) >= 32768)
@@ -3554,9 +3554,7 @@ can_blit_slice(struct intel_mipmap_tree *mt,
 static bool
 use_intel_mipree_map_blit(struct brw_context *brw,
                           struct intel_mipmap_tree *mt,
-                          GLbitfield mode,
-                          unsigned int level,
-                          unsigned int slice)
+                          const struct intel_miptree_map *map)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
@@ -3564,19 +3562,19 @@ use_intel_mipree_map_blit(struct brw_context *brw,
       /* It's probably not worth swapping to the blit ring because of
        * all the overhead involved.
        */
-       !(mode & GL_MAP_WRITE_BIT) &&
+       !(map->mode & GL_MAP_WRITE_BIT) &&
        !mt->compressed &&
        (mt->surf.tiling == ISL_TILING_X ||
         /* Prior to Sandybridge, the blitter can't handle Y tiling */
         (devinfo->gen >= 6 && mt->surf.tiling == ISL_TILING_Y0) ||
         /* Fast copy blit on skl+ supports all tiling formats. */
         devinfo->gen >= 9) &&
-       can_blit_slice(mt, level, slice))
+       can_blit_slice(mt, map))
       return true;
 
    if (mt->surf.tiling != ISL_TILING_LINEAR &&
        mt->bo->size >= brw->max_gtt_map_object_size) {
-      assert(can_blit_slice(mt, level, slice));
+      assert(can_blit_slice(mt, map));
       return true;
    }
 
@@ -3625,7 +3623,7 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_etc(brw, mt, map, level, slice);
    } else if (mt->stencil_mt && !(mode & BRW_MAP_DIRECT_BIT)) {
       intel_miptree_map_depthstencil(brw, mt, map, level, slice);
-   } else if (use_intel_mipree_map_blit(brw, mt, mode, level, slice)) {
+   } else if (use_intel_mipree_map_blit(brw, mt, map)) {
       intel_miptree_map_blit(brw, mt, map, level, slice);
 #if defined(USE_SSE41)
    } else if (!(mode & GL_MAP_WRITE_BIT) &&
