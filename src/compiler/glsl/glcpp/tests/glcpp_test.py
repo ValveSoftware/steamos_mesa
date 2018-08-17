@@ -64,8 +64,9 @@ def test_output(glcpp, filename, expfile, nl_format='\n'):
             stderr=subprocess.STDOUT,
             stdin=subprocess.PIPE)
         actual, _ = proc.communicate(f.read())
+        actual = actual.decode('utf-8')
 
-    with open(expfile, 'rb') as f:
+    with open(expfile, 'r') as f:
         expected = f.read()
 
     if actual == expected:
