@@ -157,6 +157,23 @@ genX(init_device_state)(struct anv_device *device)
    gen10_emit_wa_lri_to_cache_mode_zero(&batch);
 #endif
 
+#if GEN_GEN == 11
+   /* The default behavior of bit 5 "Headerless Message for Pre-emptable
+    * Contexts" in SAMPLER MODE register is set to 0, which means
+    * headerless sampler messages are not allowed for pre-emptable
+    * contexts. Set the bit 5 to 1 to allow them.
+    */
+   uint32_t sampler_mode;
+   anv_pack_struct(&sampler_mode, GENX(SAMPLER_MODE),
+                   .HeaderlessMessageforPreemptableContexts = true,
+                   .HeaderlessMessageforPreemptableContextsMask = true);
+
+    anv_batch_emit(&batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      lri.RegisterOffset = GENX(SAMPLER_MODE_num);
+      lri.DataDWord      = sampler_mode;
+   }
+#endif
+
    /* Set the "CONSTANT_BUFFER Address Offset Disable" bit, so
     * 3DSTATE_CONSTANT_XS buffer 0 is an absolute address.
     *
