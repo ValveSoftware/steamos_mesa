@@ -46,7 +46,10 @@ def arg_parser():
 
 def parse_test_file(filename, nl_format):
     """Check for any special arguments and return them as a list."""
-    with open(filename) as f:
+    # Disable "universal newlines" mode; we can't directly use `nl_format` as
+    # the `newline` argument, because the "bizarro" test uses something Python
+    # considers invalid.
+    with io.open(filename, newline='') as f:
         for l in f.read().split(nl_format):
             if 'glcpp-args:' in l:
                 return l.split('glcpp-args:')[1].strip().split()
