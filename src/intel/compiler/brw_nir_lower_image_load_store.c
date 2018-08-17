@@ -91,9 +91,6 @@ _load_image_param(nir_builder *b, nir_deref_instr *deref, unsigned offset)
    nir_intrinsic_set_base(load, offset / 4);
 
    switch (offset) {
-   case BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET:
-      load->num_components = 1;
-      break;
    case BRW_IMAGE_PARAM_OFFSET_OFFSET:
    case BRW_IMAGE_PARAM_SWIZZLING_OFFSET:
       load->num_components = 2;

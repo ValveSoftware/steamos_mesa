@@ -2109,7 +2109,6 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             &cmd_buffer->state.push_constants[stage]->images[image++];
 
          *image_param = desc->image_view->planes[binding->plane].storage_image_param;
-         image_param->surface_idx = bias + s;
          break;
       }
 
@@ -2159,7 +2158,6 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             &cmd_buffer->state.push_constants[stage]->images[image++];
 
          *image_param = desc->buffer_view->storage_image_param;
-         image_param->surface_idx = bias + s;
          break;
 
       default:

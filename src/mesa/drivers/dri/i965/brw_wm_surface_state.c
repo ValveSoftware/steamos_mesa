@@ -1474,11 +1474,9 @@ get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 static void
 update_default_image_param(struct brw_context *brw,
                            struct gl_image_unit *u,
-                           unsigned surface_idx,
                            struct brw_image_param *param)
 {
    memset(param, 0, sizeof(*param));
-   param->surface_idx = surface_idx;
    /* Set the swizzling shifts to all-ones to effectively disable swizzling --
     * See emit_address_calculation() in brw_fs_surface_builder.cpp for a more
     * detailed explanation of these parameters.
@@ -1490,11 +1488,10 @@ update_default_image_param(struct brw_context *brw,
 static void
 update_buffer_image_param(struct brw_context *brw,
                           struct gl_image_unit *u,
-                          unsigned surface_idx,
                           struct brw_image_param *param)
 {
    const unsigned size = buffer_texture_range_size(brw, u->TexObj);
-   update_default_image_param(brw, u, surface_idx, param);
+   update_default_image_param(brw, u, param);
 
    param->size[0] = size / _mesa_get_format_bytes(u->_ActualFormat);
    param->stride[0] = _mesa_get_format_bytes(u->_ActualFormat);
@@ -1516,7 +1513,6 @@ static void
 update_image_surface(struct brw_context *brw,
                      struct gl_image_unit *u,
                      GLenum access,
-                     unsigned surface_idx,
                      uint32_t *surf_offset,
                      struct brw_image_param *param)
 {
@@ -1538,7 +1534,7 @@ update_image_surface(struct brw_context *brw,
             format, buffer_size, texel_size,
             written ? RELOC_WRITE : 0);
 
-         update_buffer_image_param(brw, u, surface_idx, param);
+         update_buffer_image_param(brw, u, param);
 
       } else {
          struct intel_texture_object *intel_obj = intel_texture_object(obj);
@@ -1575,12 +1571,11 @@ update_image_surface(struct brw_context *brw,
          }
 
          isl_surf_fill_image_param(&brw->isl_dev, param, &mt->surf, &view);
-         param->surface_idx = surface_idx;
       }
 
    } else {
       emit_null_surface_state(brw, NULL, surf_offset);
-      update_default_image_param(brw, u, surface_idx, param);
+      update_default_image_param(brw, u, param);
    }
 }
 
@@ -1599,7 +1594,6 @@ brw_upload_image_surfaces(struct brw_context *brw,
          const unsigned surf_idx = prog_data->binding_table.image_start + i;
 
          update_image_surface(brw, u, prog->sh.ImageAccess[i],
-                              surf_idx,
                               &stage_state->surf_offset[surf_idx],
                               &stage_state->image_param[i]);
       }

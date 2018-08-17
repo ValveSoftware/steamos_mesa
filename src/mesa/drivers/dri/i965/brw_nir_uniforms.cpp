@@ -93,9 +93,6 @@ brw_setup_image_uniform_values(gl_shader_stage stage,
       /* Upload the brw_image_param structure.  The order is expected to match
        * the BRW_IMAGE_PARAM_*_OFFSET defines.
        */
-      setup_vec4_image_param(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
-                             image_idx,
-                             offsetof(brw_image_param, surface_idx), 1);
       setup_vec4_image_param(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
                              image_idx,
                              offsetof(brw_image_param, offset), 2);

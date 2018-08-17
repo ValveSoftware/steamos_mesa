@@ -527,8 +527,6 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       struct anv_push_constants *null_data = NULL;
       const struct brw_image_param *image_param = null_data->images;
       for (uint32_t i = 0; i < map->image_count; i++) {
-         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
-                                  (uintptr_t)&image_param->surface_idx, 1);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
                                   (uintptr_t)image_param->offset, 2);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SIZE_OFFSET,
