@@ -218,6 +218,11 @@ for line in template:
         assert len(descMatches) == 0
         descMatches = [matchDESC_BEGIN]
     else:
+        # In Python 2, stdout expects encoded byte strings, or else it will
+        # encode them with the ascii 'codec'
+        if sys.version_info.major == 2:
+           line = line.encode('utf-8')
+
         print(line, end='')
 
 template.close()
