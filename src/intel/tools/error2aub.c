@@ -206,7 +206,7 @@ main(int argc, char *argv[])
       BO_TYPE_BATCH,
       BO_TYPE_USER,
    } bo_type = BO_TYPE_UNKNOWN;
-   uint64_t bo_addr;
+   uint64_t bo_addr = 0;
 
    char *line = NULL;
    size_t line_size;
