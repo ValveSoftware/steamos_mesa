@@ -958,6 +958,9 @@ ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
 bool
 ConstantFolding::createMul(DataType ty, Value *def, Value *a, int64_t b, Value *c)
 {
+   const Target *target = prog->getTarget();
+   int64_t absB = llabs(b);
+
    //a * (2^shl) -> a << shl
    if (b >= 0 && util_is_power_of_two_or_zero64(b)) {
       int shl = util_logbase2_64(b);
@@ -966,6 +969,30 @@ ConstantFolding::createMul(DataType ty, Value *def, Value *a, int64_t b, Value *
       bld.mkOp2(OP_SHL, ty, res, a, bld.mkImm(shl));
       if (c)
          bld.mkOp2(OP_ADD, ty, def, res, c);
+
+      return true;
+   }
+
+   //a * (2^shl + 1) -> a << shl + a
+   //a * -(2^shl + 1) -> -a << shl + a
+   //a * (2^shl - 1) -> a << shl - a
+   //a * -(2^shl - 1) -> -a << shl - a
+   if (typeSizeof(ty) == 4 &&
+       (util_is_power_of_two_or_zero64(absB - 1) ||
+        util_is_power_of_two_or_zero64(absB + 1)) &&
+       target->isOpSupported(OP_SHLADD, TYPE_U32)) {
+      bool subA = util_is_power_of_two_or_zero64(absB + 1);
+      int shl = subA ? util_logbase2_64(absB + 1) : util_logbase2_64(absB - 1);
+
+      Value *res = c ? bld.getSSA() : def;
+      Instruction *insn = bld.mkOp3(OP_SHLADD, TYPE_U32, res, a, bld.mkImm(shl), a);
+      if (b < 0)
+         insn->src(0).mod = Modifier(NV50_IR_MOD_NEG);
+      if (subA)
+         insn->src(2).mod = Modifier(NV50_IR_MOD_NEG);
+
+      if (c)
+         bld.mkOp2(OP_ADD, TYPE_U32, def, res, c);
 
       return true;
    }
