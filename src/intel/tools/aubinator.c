@@ -206,7 +206,7 @@ ensure_phys_mem(uint64_t phys_addr)
       new_mem->phys_addr = phys_addr;
       new_mem->fd_offset = mem_fd_len;
 
-      int ftruncate_res = ftruncate(mem_fd, mem_fd_len += 4096);
+      MAYBE_UNUSED int ftruncate_res = ftruncate(mem_fd, mem_fd_len += 4096);
       assert(ftruncate_res == 0);
 
       new_mem->data = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
