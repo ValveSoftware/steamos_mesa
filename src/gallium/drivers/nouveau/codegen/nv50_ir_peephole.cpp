@@ -997,6 +997,16 @@ ConstantFolding::createMul(DataType ty, Value *def, Value *a, int64_t b, Value *
       return true;
    }
 
+   if (typeSizeof(ty) == 4 && b >= 0 && b <= 0xffff &&
+       target->isOpSupported(OP_XMAD, TYPE_U32)) {
+      Value *tmp = bld.mkOp3v(OP_XMAD, TYPE_U32, bld.getSSA(),
+                              a, bld.mkImm((uint32_t)b), c ? c : bld.mkImm(0));
+      bld.mkOp3(OP_XMAD, TYPE_U32, def, a, bld.mkImm((uint32_t)b), tmp)->subOp =
+         NV50_IR_SUBOP_XMAD_PSL | NV50_IR_SUBOP_XMAD_H1(0);
+
+      return true;
+   }
+
    return false;
 }
 
