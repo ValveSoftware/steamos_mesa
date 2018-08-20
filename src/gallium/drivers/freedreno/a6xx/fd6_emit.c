@@ -522,6 +522,13 @@ fd6_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd6_emit *emit)
 			uint32_t size = fd_bo_size(rsc->bo) - off;
 			debug_assert(fmt != ~0);
 
+#ifdef DEBUG
+			/* see dEQP-GLES31.stress.vertex_attribute_binding.buffer_bounds.bind_vertex_buffer_offset_near_wrap_10
+			 */
+			if (off > fd_bo_size(rsc->bo))
+				continue;
+#endif
+
 			OUT_PKT4(ring, REG_A6XX_VFD_FETCH(j), 4);
 			OUT_RELOC(ring, rsc->bo, off, 0, 0);
 			OUT_RING(ring, size);           /* VFD_FETCH[j].SIZE */
