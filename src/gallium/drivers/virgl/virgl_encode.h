@@ -70,7 +70,6 @@ static inline void virgl_encoder_write_block(struct virgl_cmd_buf *state,
    int x;
    memcpy(state->buf + state->cdw, ptr, len);
    x = (len % 4);
-//   fprintf(stderr, "[%d] block %d x is %d\n", state->cdw, len, x);
    if (x) {
       uint8_t *mp = (uint8_t *)(state->buf + state->cdw);
       mp += len;
