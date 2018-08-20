@@ -804,8 +804,10 @@ static bool
 iter_more_groups(const struct gen_field_iterator *iter)
 {
    if (iter->group->variable) {
+      int length = gen_group_get_length(iter->group, iter->p);
+      assert(length >= 0 && "error the length is unknown!");
       return iter_group_offset_bits(iter, iter->group_iter + 1) <
-              (gen_group_get_length(iter->group, iter->p) * 32);
+              (length * 32);
    } else {
       return (iter->group_iter + 1) < iter->group->group_count ||
          iter->group->next != NULL;
@@ -997,6 +999,7 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->p_bit = p_bit;
 
    int length = gen_group_get_length(iter->group, iter->p);
+   assert(length >= 0 && "error the length is unknown!");
    iter->p_end = length >= 0 ? &p[length] : NULL;
    iter->print_colors = print_colors;
 }
