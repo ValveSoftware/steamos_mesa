@@ -262,6 +262,14 @@ static const uint32_t vk_to_gen_shadow_compare_op[] = {
    [VK_COMPARE_OP_ALWAYS]                       = PREFILTEROPNEVER,
 };
 
+#if GEN_GEN >= 9
+static const uint32_t vk_to_gen_sampler_reduction_mode[] = {
+   [VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE_EXT] = STD_FILTER,
+   [VK_SAMPLER_REDUCTION_MODE_MIN_EXT]              = MINIMUM,
+   [VK_SAMPLER_REDUCTION_MODE_MAX_EXT]              = MAXIMUM,
+};
+#endif
+
 VkResult genX(CreateSampler)(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
@@ -283,6 +291,11 @@ VkResult genX(CreateSampler)(
    uint32_t border_color_offset = device->border_colors.offset +
                                   pCreateInfo->borderColor * 64;
 
+#if GEN_GEN >= 9
+   unsigned sampler_reduction_mode = STD_FILTER;
+   bool enable_sampler_reduction = false;
+#endif
+
    vk_foreach_struct(ext, pCreateInfo->pNext) {
       switch (ext->sType) {
       case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO: {
@@ -298,6 +311,16 @@ VkResult genX(CreateSampler)(
          sampler->conversion = conversion;
          break;
       }
+#if GEN_GEN >= 9
+      case VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT: {
+         struct VkSamplerReductionModeCreateInfoEXT *sampler_reduction =
+            (struct VkSamplerReductionModeCreateInfoEXT *) ext;
+         sampler_reduction_mode =
+            vk_to_gen_sampler_reduction_mode[sampler_reduction->reductionMode];
+         enable_sampler_reduction = true;
+         break;
+      }
+#endif
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
@@ -365,6 +388,11 @@ VkResult genX(CreateSampler)(
          .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeU],
          .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeV],
          .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
+
+#if GEN_GEN >= 9
+         .ReductionType = sampler_reduction_mode,
+         .ReductionTypeEnable = enable_sampler_reduction,
+#endif
       };
 
       GENX(SAMPLER_STATE_pack)(NULL, sampler->state[p], &sampler_state);
