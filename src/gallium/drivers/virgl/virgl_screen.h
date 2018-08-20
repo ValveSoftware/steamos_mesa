@@ -27,6 +27,9 @@
 #include "util/slab.h"
 #include "virgl_winsys.h"
 
+#define VIRGL_DEBUG_VERBOSE 1
+extern int virgl_debug;
+
 struct virgl_screen {
    struct pipe_screen base;
 

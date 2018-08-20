@@ -1115,8 +1115,10 @@ static void virgl_get_sample_position(struct pipe_context *ctx,
    }
    out_value[0] = ((bits >> 4) & 0xf) / 16.0f;
    out_value[1] = (bits & 0xf) / 16.0f;
-   debug_printf("VIRGL: sample postion [%2d/%2d] = (%f, %f)\n",
-		index, sample_count, out_value[0], out_value[1]);
+
+   if (virgl_debug & VIRGL_DEBUG_VERBOSE)
+      debug_printf("VIRGL: sample postion [%2d/%2d] = (%f, %f)\n",
+                   index, sample_count, out_value[0], out_value[1]);
 }
 
 struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,

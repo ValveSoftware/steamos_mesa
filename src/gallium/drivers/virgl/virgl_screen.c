@@ -36,6 +36,13 @@
 #include "virgl_public.h"
 #include "virgl_context.h"
 
+int virgl_debug = 0;
+static const struct debug_named_value debug_options[] = {
+   { "verbose", VIRGL_DEBUG_VERBOSE, NULL },
+   DEBUG_NAMED_VALUE_END
+};
+DEBUG_GET_ONCE_FLAGS_OPTION(virgl_debug, "VIRGL_DEBUG", debug_options, 0)
+
 static const char *
 virgl_get_vendor(struct pipe_screen *screen)
 {
@@ -729,6 +736,8 @@ virgl_create_screen(struct virgl_winsys *vws)
 
    if (!screen)
       return NULL;
+
+   virgl_debug = debug_get_option_virgl_debug();
 
    screen->vws = vws;
    screen->base.get_name = virgl_get_name;
