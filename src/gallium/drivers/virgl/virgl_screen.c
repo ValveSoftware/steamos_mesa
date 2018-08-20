@@ -39,6 +39,7 @@
 int virgl_debug = 0;
 static const struct debug_named_value debug_options[] = {
    { "verbose", VIRGL_DEBUG_VERBOSE, NULL },
+   { "tgsi", VIRGL_DEBUG_TGSI, NULL },
    DEBUG_NAMED_VALUE_END
 };
 DEBUG_GET_ONCE_FLAGS_OPTION(virgl_debug, "VIRGL_DEBUG", debug_options, 0)

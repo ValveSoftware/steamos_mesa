@@ -274,6 +274,9 @@ int virgl_encode_shader_state(struct virgl_context *ctx,
    if (bret == false)
       return -1;
 
+   if (virgl_debug & VIRGL_DEBUG_TGSI)
+      debug_printf("TGSI:\n---8<---\n%s\n---8<---\n", str);
+
    shader_len = strlen(str) + 1;
 
    left_bytes = shader_len;
