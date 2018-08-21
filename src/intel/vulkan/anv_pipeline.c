@@ -364,7 +364,7 @@ populate_wm_prog_key(const struct gen_device_info *devinfo,
          key->color_outputs_valid |= (1 << i);
    }
 
-   key->nr_color_regions = _mesa_bitcount(key->color_outputs_valid);
+   key->nr_color_regions = util_bitcount(key->color_outputs_valid);
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
                           ms_info && ms_info->alphaToCoverageEnable;

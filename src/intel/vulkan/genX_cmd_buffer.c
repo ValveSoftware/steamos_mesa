@@ -787,7 +787,7 @@ genX(cmd_buffer_mark_image_written)(struct anv_cmd_buffer *cmd_buffer,
                                     uint32_t layer_count)
 {
    /* The aspect must be exactly one of the image aspects. */
-   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+   assert(util_bitcount(aspect) == 1 && (aspect & image->aspects));
 
    /* The only compression types with more than just fast-clears are MCS,
     * CCS_E, and HiZ.  With HiZ we just trust the layout and don't actually
@@ -1859,7 +1859,7 @@ cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
    const unsigned num_stages =
-      _mesa_bitcount(stages & VK_SHADER_STAGE_ALL_GRAPHICS);
+      util_bitcount(stages & VK_SHADER_STAGE_ALL_GRAPHICS);
    unsigned size_per_stage = push_constant_kb / num_stages;
 
    /* Broadwell+ and Haswell gt3 require that the push constant sizes be in

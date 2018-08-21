@@ -39,6 +39,7 @@
 #include "compiler/glsl_types.h"
 #include "compiler/nir/nir_builder.h"
 #include "program/prog_parameter.h"
+#include "util/u_math.h"
 
 using namespace brw;
 
@@ -1534,7 +1535,7 @@ fs_visitor::calculate_urb_setup()
    int urb_next = 0;
    /* Figure out where each of the incoming setup attributes lands. */
    if (devinfo->gen >= 6) {
-      if (_mesa_bitcount_64(nir->info.inputs_read &
+      if (util_bitcount64(nir->info.inputs_read &
                             BRW_FS_VARYING_INPUT_MASK) <= 16) {
          /* The SF/SBE pipeline stage can do arbitrary rearrangement of the
           * first 16 varying inputs, so we can put them wherever we want.

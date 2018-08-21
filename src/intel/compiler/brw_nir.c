@@ -26,6 +26,7 @@
 #include "common/gen_debug.h"
 #include "compiler/glsl_types.h"
 #include "compiler/nir/nir_builder.h"
+#include "util/u_math.h"
 
 static bool
 is_input(nir_intrinsic_instr *intrin)
@@ -243,7 +244,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
        BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
        BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID));
 
-   const unsigned num_inputs = _mesa_bitcount_64(nir->info.inputs_read);
+   const unsigned num_inputs = util_bitcount64(nir->info.inputs_read);
 
    nir_foreach_function(function, nir) {
       if (!function->impl)
@@ -322,7 +323,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                 * before it and counting the bits.
                 */
                int attr = nir_intrinsic_base(intrin);
-               int slot = _mesa_bitcount_64(nir->info.inputs_read &
+               int slot = util_bitcount64(nir->info.inputs_read &
                                             BITFIELD64_MASK(attr));
                nir_intrinsic_set_base(intrin, slot);
                break;

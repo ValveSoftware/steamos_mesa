@@ -32,7 +32,6 @@
 #include "program/prog_parameter.h"
 #include "program/ir_to_mesa.h"
 #include "main/mtypes.h"
-#include "main/imports.h"
 #include "main/errors.h"
 #include "main/shaderapi.h"
 #include "main/uniforms.h"
@@ -91,10 +90,10 @@ st_nir_assign_vs_in_locations(struct gl_program *prog, nir_shader *nir)
        */
       if (var->data.location == VERT_ATTRIB_EDGEFLAG) {
          /* bit of a hack, mirroring st_translate_vertex_program */
-         var->data.driver_location = _mesa_bitcount_64(nir->info.inputs_read);
+         var->data.driver_location = util_bitcount64(nir->info.inputs_read);
       } else if (nir->info.inputs_read & BITFIELD64_BIT(var->data.location)) {
          var->data.driver_location =
-            _mesa_bitcount_64(nir->info.inputs_read &
+            util_bitcount64(nir->info.inputs_read &
                               BITFIELD64_MASK(var->data.location));
          nir->num_inputs++;
       } else {

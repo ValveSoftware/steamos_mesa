@@ -25,6 +25,7 @@
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
+#include "util/u_math.h"
 
 using namespace brw;
 using namespace brw::surface_access;
@@ -751,7 +752,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       /* Since NIR is doing the scalarizing for us, we should only ever see
        * vectorized operations with a single channel.
        */
-      assert(_mesa_bitcount(instr->dest.write_mask) == 1);
+      assert(util_bitcount(instr->dest.write_mask) == 1);
       channel = ffs(instr->dest.write_mask) - 1;
 
       result = offset(result, bld, channel);

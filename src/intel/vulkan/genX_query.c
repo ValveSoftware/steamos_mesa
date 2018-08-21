@@ -70,7 +70,7 @@ VkResult genX(CreateQueryPool)(
       pipeline_statistics &= ANV_PIPELINE_STATISTICS_MASK;
 
       /* Statistics queries have a min and max for every statistic */
-      uint64s_per_slot += 2 * _mesa_bitcount(pipeline_statistics);
+      uint64s_per_slot += 2 * util_bitcount(pipeline_statistics);
       break;
    default:
       assert(!"Invalid query type");
@@ -272,7 +272,7 @@ VkResult genX(GetQueryPoolResults)(
 
                idx++;
             }
-            assert(idx == _mesa_bitcount(pool->pipeline_statistics));
+            assert(idx == util_bitcount(pool->pipeline_statistics));
             break;
          }
 
@@ -289,7 +289,7 @@ VkResult genX(GetQueryPoolResults)(
 
       if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
          uint32_t idx = (pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS) ?
-                        _mesa_bitcount(pool->pipeline_statistics) : 1;
+                        util_bitcount(pool->pipeline_statistics) : 1;
          cpu_write_query_result(pData, flags, idx, available);
       }
 
@@ -489,7 +489,7 @@ void genX(CmdEndQuery)(
     */
    if (cmd_buffer->state.subpass && cmd_buffer->state.subpass->view_mask) {
       const uint32_t num_queries =
-         _mesa_bitcount(cmd_buffer->state.subpass->view_mask);
+         util_bitcount(cmd_buffer->state.subpass->view_mask);
       if (num_queries > 1)
          emit_zero_queries(cmd_buffer, pool, query + 1, num_queries - 1);
    }
@@ -546,7 +546,7 @@ void genX(CmdWriteTimestamp)(
     */
    if (cmd_buffer->state.subpass && cmd_buffer->state.subpass->view_mask) {
       const uint32_t num_queries =
-         _mesa_bitcount(cmd_buffer->state.subpass->view_mask);
+         util_bitcount(cmd_buffer->state.subpass->view_mask);
       if (num_queries > 1)
          emit_zero_queries(cmd_buffer, pool, query + 1, num_queries - 1);
    }
@@ -778,7 +778,7 @@ void genX(CmdCopyQueryPoolResults)(
 
             idx++;
          }
-         assert(idx == _mesa_bitcount(pool->pipeline_statistics));
+         assert(idx == util_bitcount(pool->pipeline_statistics));
          break;
       }
 
@@ -795,7 +795,7 @@ void genX(CmdCopyQueryPoolResults)(
 
       if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
          uint32_t idx = (pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS) ?
-                        _mesa_bitcount(pool->pipeline_statistics) : 1;
+                        util_bitcount(pool->pipeline_statistics) : 1;
 
          emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0),
                                &pool->bo, slot_offset);

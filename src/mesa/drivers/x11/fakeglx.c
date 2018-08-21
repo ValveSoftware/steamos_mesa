@@ -52,6 +52,7 @@
 #include "main/version.h"
 #include "xfonts.h"
 #include "xmesaP.h"
+#include "util/u_math.h"
 
 /* This indicates the client-side GLX API and GLX encoder version. */
 #define CLIENT_MAJOR_VERSION 1
@@ -510,9 +511,9 @@ get_visual( Display *dpy, int scr, unsigned int depth, int xclass )
     * 10 bits per color channel.  Mesa's limited to a max of 8 bits/channel.
     */
    if (vis && depth > 24 && (xclass==TrueColor || xclass==DirectColor)) {
-      if (_mesa_bitcount((GLuint) vis->red_mask  ) <= 8 &&
-          _mesa_bitcount((GLuint) vis->green_mask) <= 8 &&
-          _mesa_bitcount((GLuint) vis->blue_mask ) <= 8) {
+      if (util_bitcount((GLuint) vis->red_mask  ) <= 8 &&
+          util_bitcount((GLuint) vis->green_mask) <= 8 &&
+          util_bitcount((GLuint) vis->blue_mask ) <= 8) {
          return vis;
       }
       else {

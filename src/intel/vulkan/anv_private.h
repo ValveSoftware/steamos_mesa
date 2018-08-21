@@ -54,6 +54,7 @@
 #include "util/set.h"
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
+#include "util/u_math.h"
 #include "util/vma.h"
 #include "vk_alloc.h"
 #include "vk_debug_report.h"
@@ -2557,7 +2558,7 @@ anv_plane_to_aspect(VkImageAspectFlags image_aspects,
                     uint32_t plane)
 {
    if (image_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
-      if (_mesa_bitcount(image_aspects) > 1)
+      if (util_bitcount(image_aspects) > 1)
          return VK_IMAGE_ASPECT_PLANE_0_BIT << plane;
       return VK_IMAGE_ASPECT_COLOR_BIT;
    }
@@ -2968,7 +2969,7 @@ anv_image_aspects_compatible(VkImageAspectFlags aspects1,
    /* Only 1 color aspects are compatibles. */
    if ((aspects1 & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) != 0 &&
        (aspects2 & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) != 0 &&
-       _mesa_bitcount(aspects1) == _mesa_bitcount(aspects2))
+       util_bitcount(aspects1) == util_bitcount(aspects2))
       return true;
 
    return false;
@@ -3179,7 +3180,7 @@ struct anv_subpass {
 static inline unsigned
 anv_subpass_view_count(const struct anv_subpass *subpass)
 {
-   return MAX2(1, _mesa_bitcount(subpass->view_mask));
+   return MAX2(1, util_bitcount(subpass->view_mask));
 }
 
 struct anv_render_pass_attachment {

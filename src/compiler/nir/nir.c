@@ -31,8 +31,8 @@
 #include <limits.h>
 #include <assert.h>
 #include <math.h>
+#include "util/u_math.h"
 
-#include "main/imports.h" /* _mesa_bitcount_64 */
 #include "main/menums.h" /* BITFIELD64_MASK */
 
 nir_shader *
@@ -1862,7 +1862,7 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
  * the original OpenGL single-slot input numbering.  The mapping from old
  * locations to new locations is as follows:
  *
- *    new_loc = loc + _mesa_bitcount(dual_slot & BITFIELD64_MASK(loc))
+ *    new_loc = loc + util_bitcount(dual_slot & BITFIELD64_MASK(loc))
  */
 void
 nir_remap_dual_slot_attributes(nir_shader *shader, uint64_t *dual_slot)
@@ -1879,7 +1879,7 @@ nir_remap_dual_slot_attributes(nir_shader *shader, uint64_t *dual_slot)
 
    nir_foreach_variable(var, &shader->inputs) {
       var->data.location +=
-         _mesa_bitcount_64(*dual_slot & BITFIELD64_MASK(var->data.location));
+         util_bitcount64(*dual_slot & BITFIELD64_MASK(var->data.location));
    }
 }
 

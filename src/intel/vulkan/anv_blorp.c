@@ -296,7 +296,7 @@ void anv_CmdCopyImage(
 
       assert(anv_image_aspects_compatible(src_mask, dst_mask));
 
-      if (_mesa_bitcount(src_mask) > 1) {
+      if (util_bitcount(src_mask) > 1) {
          uint32_t aspect_bit;
          anv_foreach_image_aspect_bit(aspect_bit, src_image, src_mask) {
             struct blorp_surf src_surf, dst_surf;

@@ -29,6 +29,7 @@
 #include "util/format_rgb9e5.h"
 /* header-only include needed for _mesa_unorm_to_float and friends. */
 #include "mesa/main/format_utils.h"
+#include "util/u_math.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
@@ -582,7 +583,7 @@ static inline int count_trailing_one_bits(unsigned value)
 #ifdef HAVE___BUILTIN_CTZ
    return __builtin_ctz(~value);
 #else
-   return _mesa_bitcount(value & ~(value + 1));
+   return util_bitcount(value & ~(value + 1));
 #endif
 }
 
@@ -634,7 +635,7 @@ blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
    nir_ssa_def *texture_data[5];
    unsigned stack_depth = 0;
    for (unsigned i = 0; i < tex_samples; ++i) {
-      assert(stack_depth == _mesa_bitcount(i)); /* Loop invariant */
+      assert(stack_depth == util_bitcount(i)); /* Loop invariant */
 
       /* Push sample i onto the stack */
       assert(stack_depth < ARRAY_SIZE(texture_data));

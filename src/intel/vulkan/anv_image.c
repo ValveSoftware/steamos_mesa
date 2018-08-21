@@ -32,6 +32,7 @@
 #include "anv_private.h"
 #include "util/debug.h"
 #include "vk_util.h"
+#include "util/u_math.h"
 
 #include "vk_format_info.h"
 
@@ -814,7 +815,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    assert(image != NULL);
 
    /* The aspect must be exactly one of the image aspects. */
-   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+   assert(util_bitcount(aspect) == 1 && (aspect & image->aspects));
 
    /* Determine the optimal buffer. */
 
@@ -942,7 +943,7 @@ anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
                               const VkImageLayout layout)
 {
    /* The aspect must be exactly one of the image aspects. */
-   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+   assert(util_bitcount(aspect) == 1 && (aspect & image->aspects));
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
 
@@ -1230,11 +1231,11 @@ static VkImageAspectFlags
 remap_aspect_flags(VkImageAspectFlags view_aspects)
 {
    if (view_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
-      if (_mesa_bitcount(view_aspects) == 1)
+      if (util_bitcount(view_aspects) == 1)
          return VK_IMAGE_ASPECT_COLOR_BIT;
 
       VkImageAspectFlags color_aspects = 0;
-      for (uint32_t i = 0; i < _mesa_bitcount(view_aspects); i++)
+      for (uint32_t i = 0; i < util_bitcount(view_aspects); i++)
          color_aspects |= VK_IMAGE_ASPECT_PLANE_0_BIT << i;
       return color_aspects;
    }
