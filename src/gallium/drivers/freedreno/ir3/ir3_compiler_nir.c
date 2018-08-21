@@ -3233,6 +3233,25 @@ create_frag_coord(struct ir3_context *ctx, unsigned comp)
 	}
 }
 
+static uint64_t
+input_bitmask(struct ir3_context *ctx, nir_variable *in)
+{
+	unsigned ncomp = glsl_get_components(in->type);
+	unsigned slot = in->data.location;
+
+	/* let's pretend things other than vec4 don't exist: */
+	ncomp = MAX2(ncomp, 4);
+
+	if (ctx->so->type == SHADER_FRAGMENT) {
+		/* see st_nir_fixup_varying_slots(): */
+		if (slot >= VARYING_SLOT_VAR9)
+			slot -= 9;
+	}
+
+	/* Note that info.inputs_read is in units of vec4 slots: */
+	return ((1ull << (ncomp/4)) - 1) << slot;
+}
+
 static void
 setup_input(struct ir3_context *ctx, nir_variable *in)
 {
@@ -3247,6 +3266,15 @@ setup_input(struct ir3_context *ctx, nir_variable *in)
 
 	/* let's pretend things other than vec4 don't exist: */
 	ncomp = MAX2(ncomp, 4);
+
+	/* skip unread inputs, we could end up with (for example), unsplit
+	 * matrix/etc inputs in the case they are not read, so just silently
+	 * skip these.
+	 *
+	 */
+	if (!(ctx->s->info.inputs_read & input_bitmask(ctx, in)))
+		return;
+
 	compile_assert(ctx, ncomp == 4);
 
 	so->inputs[n].slot = slot;
@@ -3264,7 +3292,7 @@ setup_input(struct ir3_context *ctx, nir_variable *in)
 				so->frag_coord = true;
 				instr = create_frag_coord(ctx, i);
 			} else if (slot == VARYING_SLOT_PNTC) {
-				/* see for example st_get_generic_varying_index().. this is
+				/* see for example st_nir_fixup_varying_slots().. this is
 				 * maybe a bit mesa/st specific.  But we need things to line
 				 * up for this in fdN_program:
 				 *    unsigned texmask = 1 << (slot - VARYING_SLOT_VAR0);
