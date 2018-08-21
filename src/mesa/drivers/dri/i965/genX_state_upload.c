@@ -2343,6 +2343,12 @@ genX(upload_cc_viewport)(struct brw_context *brw)
       if (ctx->Transform.DepthClampNear && ctx->Transform.DepthClampFar) {
          ccv.MinimumDepth = MIN2(vp->Near, vp->Far);
          ccv.MaximumDepth = MAX2(vp->Near, vp->Far);
+      } else if (ctx->Transform.DepthClampNear) {
+         ccv.MinimumDepth = MIN2(vp->Near, vp->Far);
+         ccv.MaximumDepth = 0.0;
+      } else if (ctx->Transform.DepthClampFar) {
+         ccv.MinimumDepth = 0.0;
+         ccv.MaximumDepth = MAX2(vp->Near, vp->Far);
       } else {
          ccv.MinimumDepth = 0.0;
          ccv.MaximumDepth = 1.0;
@@ -4607,15 +4613,19 @@ genX(upload_raster)(struct brw_context *brw)
       raster.ScissorRectangleEnable = ctx->Scissor.EnableFlags;
 
       /* _NEW_TRANSFORM */
+#if GEN_GEN < 9
       if (!(ctx->Transform.DepthClampNear &&
-            ctx->Transform.DepthClampFar)) {
-#if GEN_GEN >= 9
-         raster.ViewportZFarClipTestEnable = true;
-         raster.ViewportZNearClipTestEnable = true;
-#else
+            ctx->Transform.DepthClampFar))
          raster.ViewportZClipTestEnable = true;
 #endif
-      }
+
+#if GEN_GEN >= 9
+      if (!ctx->Transform.DepthClampNear)
+         raster.ViewportZNearClipTestEnable = true;
+
+      if (!ctx->Transform.DepthClampFar)
+         raster.ViewportZFarClipTestEnable = true;
+#endif
 
       /* BRW_NEW_CONSERVATIVE_RASTERIZATION */
 #if GEN_GEN >= 9
