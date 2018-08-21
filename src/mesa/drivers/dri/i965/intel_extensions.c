@@ -303,6 +303,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (devinfo->gen >= 9) {
       ctx->Extensions.ANDROID_extension_pack_es31a = true;
+      ctx->Extensions.AMD_depth_clamp_separate = true;
       ctx->Extensions.ARB_post_depth_coverage = true;
       ctx->Extensions.ARB_shader_stencil_export = true;
       ctx->Extensions.EXT_shader_framebuffer_fetch = true;
