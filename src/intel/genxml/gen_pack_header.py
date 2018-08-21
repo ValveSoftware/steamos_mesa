@@ -306,7 +306,7 @@ class Field(object):
         print("   %-36s %s%s;" % (type, self.name, dim))
 
         prefix = ""
-        if self.values and self.default == None:
+        if self.values and self.default is None:
             if self.prefix:
                 prefix = self.prefix + "_"
 
