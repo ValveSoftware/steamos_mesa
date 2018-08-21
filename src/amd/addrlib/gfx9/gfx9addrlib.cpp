@@ -3878,7 +3878,7 @@ ADDR_E_RETURNCODE Gfx9Lib::ComputeStereoInfo(
             const UINT_32        numBankBits       = GetBankXorBits(blkSizeLog2);
             const UINT_32        bppLog2           = Log2(pIn->bpp >> 3);
             const UINT_32        maxYCoordBlock256 = Log2(Block256_2d[bppLog2].h) - 1;
-            const ADDR_EQUATION *pEqToCheck        = &m_equationTable[eqIndex];
+            MAYBE_UNUSED const ADDR_EQUATION *pEqToCheck = &m_equationTable[eqIndex];
 
             ADDR_ASSERT(maxYCoordBlock256 ==
                         GetMaxValidChannelIndex(&pEqToCheck->addr[0], GetBlockSizeLog2(ADDR_SW_256B), 1));
