@@ -92,6 +92,19 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	}
 }
 
+static int64_t si_finish_dma_get_cpu_time(struct si_context *sctx)
+{
+	struct pipe_fence_handle *fence = NULL;
+
+	si_flush_dma_cs(sctx, 0, &fence);
+	if (fence) {
+		sctx->ws->fence_wait(sctx->ws, fence, PIPE_TIMEOUT_INFINITE);
+		sctx->ws->fence_reference(&fence, NULL);
+	}
+
+	return os_time_get_nano();
+}
+
 static bool si_query_sw_begin(struct si_context *sctx,
 			      struct si_query *rquery)
 {
@@ -101,6 +114,9 @@ static bool si_query_sw_begin(struct si_context *sctx,
 	switch(query->b.type) {
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 	case PIPE_QUERY_GPU_FINISHED:
+		break;
+	case SI_QUERY_TIME_ELAPSED_SDMA_SI:
+		query->begin_result = si_finish_dma_get_cpu_time(sctx);
 		break;
 	case SI_QUERY_DRAW_CALLS:
 		query->begin_result = sctx->num_draw_calls;
@@ -261,6 +277,9 @@ static bool si_query_sw_end(struct si_context *sctx,
 		break;
 	case PIPE_QUERY_GPU_FINISHED:
 		sctx->b.flush(&sctx->b, &query->fence, PIPE_FLUSH_DEFERRED);
+		break;
+	case SI_QUERY_TIME_ELAPSED_SDMA_SI:
+		query->end_result = si_finish_dma_get_cpu_time(sctx);
 		break;
 	case SI_QUERY_DRAW_CALLS:
 		query->end_result = sctx->num_draw_calls;
