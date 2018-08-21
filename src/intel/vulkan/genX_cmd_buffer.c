@@ -1743,6 +1743,19 @@ genX(cmd_buffer_apply_pipe_flushes)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (bits & ANV_PIPE_INVALIDATE_BITS) {
+      /* From the SKL PRM, Vol. 2a, "PIPE_CONTROL",
+       *
+       *    "If the VF Cache Invalidation Enable is set to a 1 in a
+       *    PIPE_CONTROL, a separate Null PIPE_CONTROL, all bitfields sets to
+       *    0, with the VF Cache Invalidation Enable set to 0 needs to be sent
+       *    prior to the PIPE_CONTROL with VF Cache Invalidation Enable set to
+       *    a 1."
+       *
+       * This appears to hang Broadwell, so we restrict it to just gen9.
+       */
+      if (GEN_GEN == 9 && (bits & ANV_PIPE_VF_CACHE_INVALIDATE_BIT))
+         anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pipe);
+
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pipe) {
          pipe.StateCacheInvalidationEnable =
             bits & ANV_PIPE_STATE_CACHE_INVALIDATE_BIT;
@@ -1754,6 +1767,18 @@ genX(cmd_buffer_apply_pipe_flushes)(struct anv_cmd_buffer *cmd_buffer)
             bits & ANV_PIPE_TEXTURE_CACHE_INVALIDATE_BIT;
          pipe.InstructionCacheInvalidateEnable =
             bits & ANV_PIPE_INSTRUCTION_CACHE_INVALIDATE_BIT;
+
+         /* From the SKL PRM, Vol. 2a, "PIPE_CONTROL",
+          *
+          *    "When VF Cache Invalidate is set “Post Sync Operation” must be
+          *    enabled to “Write Immediate Data” or “Write PS Depth Count” or
+          *    “Write Timestamp”.
+          */
+         if (GEN_GEN == 9 && pipe.VFCacheInvalidationEnable) {
+            pipe.PostSyncOperation = WriteImmediateData;
+            pipe.Address =
+               (struct anv_address) { &cmd_buffer->device->workaround_bo, 0 };
+         }
       }
 
       bits &= ~ANV_PIPE_INVALIDATE_BITS;
