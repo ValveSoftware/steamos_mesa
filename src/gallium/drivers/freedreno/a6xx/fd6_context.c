@@ -43,6 +43,8 @@ fd6_context_destroy(struct pipe_context *pctx)
 {
 	struct fd6_context *fd6_ctx = fd6_context(fd_context(pctx));
 
+	u_upload_destroy(fd6_ctx->border_color_uploader);
+
 	fd_context_destroy(pctx);
 
 	fd_bo_del(fd6_ctx->vs_pvt_mem);
@@ -51,8 +53,6 @@ fd6_context_destroy(struct pipe_context *pctx)
 	fd_bo_del(fd6_ctx->blit_mem);
 
 	fd_context_cleanup_common_vbos(&fd6_ctx->base);
-
-	u_upload_destroy(fd6_ctx->border_color_uploader);
 
 	free(fd6_ctx);
 }

@@ -44,6 +44,8 @@ fd3_context_destroy(struct pipe_context *pctx)
 {
 	struct fd3_context *fd3_ctx = fd3_context(fd_context(pctx));
 
+	u_upload_destroy(fd3_ctx->border_color_uploader);
+
 	fd_context_destroy(pctx);
 
 	fd_bo_del(fd3_ctx->vs_pvt_mem);
@@ -51,8 +53,6 @@ fd3_context_destroy(struct pipe_context *pctx)
 	fd_bo_del(fd3_ctx->vsc_size_mem);
 
 	fd_context_cleanup_common_vbos(&fd3_ctx->base);
-
-	u_upload_destroy(fd3_ctx->border_color_uploader);
 
 	fd_hw_query_fini(pctx);
 
