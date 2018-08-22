@@ -480,7 +480,7 @@ static void *r600_create_rs_state(struct pipe_context *ctx,
 	rs->pa_cl_clip_cntl =
 		S_028810_DX_CLIP_SPACE_DEF(state->clip_halfz) |
 		S_028810_ZCLIP_NEAR_DISABLE(!state->depth_clip_near) |
-		S_028810_ZCLIP_FAR_DISABLE(!state->depth_clip_near) |
+		S_028810_ZCLIP_FAR_DISABLE(!state->depth_clip_far) |
 		S_028810_DX_LINEAR_ATTR_CLIP_ENA(1);
 	if (rctx->b.chip_class == R700) {
 		rs->pa_cl_clip_cntl |=

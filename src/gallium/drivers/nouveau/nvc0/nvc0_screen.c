@@ -281,6 +281,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return class_3d >= NVE4_3D_CLASS;
 
    /* unsupported caps */
+   case PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE:
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
    case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
    case PIPE_CAP_SHADER_STENCIL_EXPORT:

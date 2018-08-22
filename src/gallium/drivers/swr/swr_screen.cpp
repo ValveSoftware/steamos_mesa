@@ -203,6 +203,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return PIPE_ENDIAN_NATIVE;
    case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
    case PIPE_CAP_MAX_TEXTURE_GATHER_OFFSET:
+   case PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE:
       return 0;
 
       /* supported features */

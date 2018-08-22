@@ -283,6 +283,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return sws->have_vgpu10 ? 140 : 120;
 
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
+   case PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE:
       return 0;
 
    case PIPE_CAP_SM3:

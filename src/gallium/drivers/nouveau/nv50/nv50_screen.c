@@ -219,6 +219,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return class_3d >= NVA3_3D_CLASS;
 
    /* unsupported caps */
+   case PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE:
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
    case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:

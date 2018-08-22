@@ -69,6 +69,10 @@ The integer capabilities:
   property FS_COORD_PIXEL_CENTER with value INTEGER is supported.
 * ``PIPE_CAP_DEPTH_CLIP_DISABLE``: Whether the driver is capable of disabling
   depth clipping (through pipe_rasterizer_state)
+* ``PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE``: Whether the driver is capable of
+  disabling depth clipping (through pipe_rasterizer_state) separately for
+  the near and far plane. If not, depth_clip_near and depth_clip_far will be
+  equal.
 * ``PIPE_CAP_SHADER_STENCIL_EXPORT``: Whether a stencil reference value can be
   written from a fragment shader.
 * ``PIPE_CAP_TGSI_INSTANCEID``: Whether TGSI_SEMANTIC_INSTANCEID is supported

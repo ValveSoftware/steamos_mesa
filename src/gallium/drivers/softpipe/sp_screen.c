@@ -144,6 +144,7 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_CONDITIONAL_RENDER:
       return 1;
    case PIPE_CAP_TEXTURE_BARRIER:
+   case PIPE_CAP_DEPTH_CLIP_DISABLE_SEPARATE:
       return 0;
    case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
    case PIPE_CAP_VERTEX_COLOR_UNCLAMPED: /* draw module */
