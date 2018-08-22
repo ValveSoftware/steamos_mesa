@@ -154,7 +154,7 @@ int virgl_encode_rasterizer_state(struct virgl_context *ctx,
    virgl_encoder_write_dword(ctx->cbuf, handle);
 
    tmp = VIRGL_OBJ_RS_S0_FLATSHADE(state->flatshade) |
-      VIRGL_OBJ_RS_S0_DEPTH_CLIP(state->depth_clip) |
+      VIRGL_OBJ_RS_S0_DEPTH_CLIP(state->depth_clip_near) |
       VIRGL_OBJ_RS_S0_CLIP_HALFZ(state->clip_halfz) |
       VIRGL_OBJ_RS_S0_RASTERIZER_DISCARD(state->rasterizer_discard) |
       VIRGL_OBJ_RS_S0_FLATSHADE_FIRST(state->flatshade_first) |

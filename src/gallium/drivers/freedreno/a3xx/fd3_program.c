@@ -83,7 +83,7 @@ fd3_needs_manual_clipping(const struct ir3_shader *shader,
 {
 	uint64_t outputs = ir3_shader_outputs(shader);
 
-	return (!rast->depth_clip ||
+	return (!rast->depth_clip_near ||
 			util_bitcount(rast->clip_plane_enable) > 6 ||
 			outputs & ((1ULL << VARYING_SLOT_CLIP_VERTEX) |
 					   (1ULL << VARYING_SLOT_CLIP_DIST0) |

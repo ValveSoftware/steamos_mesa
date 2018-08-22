@@ -557,7 +557,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		if (fp->has_kill) {
 			val |= A3XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE;
 		}
-		if (!ctx->rasterizer->depth_clip) {
+		if (!ctx->rasterizer->depth_clip_near) {
 			val |= A3XX_RB_DEPTH_CONTROL_Z_CLAMP_ENABLE;
 		}
 		OUT_PKT0(ring, REG_A3XX_RB_DEPTH_CONTROL, 1);
@@ -652,7 +652,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		 * or nothing deal. So when we disable clipping, we must handle the
 		 * viewport clip via scissors.
 		 */
-		if (!ctx->rasterizer->depth_clip) {
+		if (!ctx->rasterizer->depth_clip_near) {
 			struct pipe_viewport_state *vp = &ctx->viewport;
 			minx = MAX2(minx, (int)floorf(vp->translate[0] - fabsf(vp->scale[0])));
 			miny = MAX2(miny, (int)floorf(vp->translate[1] - fabsf(vp->scale[1])));
