@@ -1173,7 +1173,28 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
       vs.IllegalOpcodeExceptionEnable = false;
       vs.SoftwareExceptionEnable    = false;
       vs.MaximumNumberofThreads     = devinfo->max_vs_threads - 1;
-      vs.VertexCacheDisable         = false;
+
+      if (GEN_GEN == 9 && devinfo->gt == 4 &&
+          anv_pipeline_has_stage(pipeline, MESA_SHADER_TESS_EVAL)) {
+         /* On Sky Lake GT4, we have experienced some hangs related to the VS
+          * cache and tessellation.  It is unknown exactly what is happening
+          * but the Haswell docs for the "VS Reference Count Full Force Miss
+          * Enable" field of the "Thread Mode" register refer to a HSW bug in
+          * which the VUE handle reference count would overflow resulting in
+          * internal reference counting bugs.  My (Jason's) best guess is that
+          * this bug cropped back up on SKL GT4 when we suddenly had more
+          * threads in play than any previous gen9 hardware.
+          *
+          * What we do know for sure is that setting this bit when
+          * tessellation shaders are in use fixes a GPU hang in Batman: Arkham
+          * City when playing with DXVK (https://bugs.freedesktop.org/107280).
+          * Disabling the vertex cache with tessellation shaders should only
+          * have a minor performance impact as the tessellation shaders are
+          * likely generating and processing far more geometry than the vertex
+          * stage.
+          */
+         vs.VertexCacheDisable = true;
+      }
 
       vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
       vs.VertexURBEntryReadOffset      = 0;
