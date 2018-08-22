@@ -48,6 +48,7 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
 void
 gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    uint32_t count = cmd_buffer->state.gfx.dynamic.scissor.count;
    const VkRect2D *scissors = cmd_buffer->state.gfx.dynamic.scissor.scissors;
    struct anv_state scissor_state =
@@ -73,8 +74,8 @@ gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
          /* Do this math using int64_t so overflow gets clamped correctly. */
          .ScissorRectangleYMin = clamp_int64(s->offset.y, 0, max),
          .ScissorRectangleXMin = clamp_int64(s->offset.x, 0, max),
-         .ScissorRectangleYMax = clamp_int64((uint64_t) s->offset.y + s->extent.height - 1, 0, max),
-         .ScissorRectangleXMax = clamp_int64((uint64_t) s->offset.x + s->extent.width - 1, 0, max)
+         .ScissorRectangleYMax = clamp_int64((uint64_t) s->offset.y + s->extent.height - 1, 0, fb->height - 1),
+         .ScissorRectangleXMax = clamp_int64((uint64_t) s->offset.x + s->extent.width - 1, 0, fb->width - 1)
       };
 
       if (s->extent.width <= 0 || s->extent.height <= 0) {
