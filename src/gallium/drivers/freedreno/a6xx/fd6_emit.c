@@ -160,7 +160,8 @@ struct PACKED bcolor_entry {
 	int8_t   si8[4];
 	uint32_t rgb10a2;
 	uint32_t z24; /* also s8? */
-	uint8_t  __pad1[32];
+	uint16_t srgb[4];      /* appears to duplicate fp16[], but clamped, used for srgb */
+	uint8_t  __pad1[24];
 };
 
 #define FD6_BORDER_COLOR_SIZE        0x60
@@ -194,8 +195,9 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 		if ((i >= tex->num_textures) || !tex->textures[i])
 			continue;
 
+		enum pipe_format format = tex->textures[i]->format;
 		const struct util_format_description *desc =
-				util_format_description(tex->textures[i]->format);
+				util_format_description(format);
 
 		e->rgb565 = 0;
 		e->rgb5a1 = 0;
@@ -205,6 +207,24 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 
 		for (j = 0; j < 4; j++) {
 			int c = desc->swizzle[j];
+			int cd = c;
+
+			/*
+			 * HACK: for PIPE_FORMAT_X24S8_UINT we end up w/ the
+			 * stencil border color value in bc->ui[0] but according
+			 * to desc->swizzle and desc->channel, the .x component
+			 * is NONE and the stencil value is in the y component.
+			 * Meanwhile the hardware wants this in the .x componetn.
+			 */
+			if ((format == PIPE_FORMAT_X24S8_UINT) ||
+					(format == PIPE_FORMAT_X32_S8X24_UINT)) {
+				if (j == 0) {
+					c = 1;
+					cd = 0;
+				} else {
+					continue;
+				}
+			}
 
 			if (c >= 4)
 				continue;
@@ -238,8 +258,8 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 					clamped = 0;
 					break;
 				}
-				e->fp32[c] = bc->ui[j];
-				e->fp16[c] = clamped;
+				e->fp32[cd] = bc->ui[j];
+				e->fp16[cd] = clamped;
 			} else {
 				float f = bc->f[j];
 				float f_u = CLAMP(f, 0, 1);
@@ -247,6 +267,7 @@ setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entrie
 
 				e->fp32[c] = fui(f);
 				e->fp16[c] = util_float_to_half(f);
+				e->srgb[c] = util_float_to_half(f_u);
 				e->ui16[c] = f_u * 0xffff;
 				e->si16[c] = f_s * 0x7fff;
 				e->ui8[c]  = f_u * 0xff;
