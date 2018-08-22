@@ -300,8 +300,6 @@ struct svga_state
    struct {
       unsigned flag_1d;
       unsigned flag_srgb;
-      unsigned flag_rect;  /* sampler views with rectangular texture target */
-      unsigned flag_buf;   /* sampler views with texture buffer target */
    } tex_flags;
 
    unsigned sample_mask;

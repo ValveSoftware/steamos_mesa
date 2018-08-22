@@ -769,7 +769,8 @@ struct svga_tracked_state svga_hw_vs_constants =
    "hw vs params",
    (SVGA_NEW_PRESCALE |
     SVGA_NEW_VS_CONST_BUFFER |
-    SVGA_NEW_VS_VARIANT),
+    SVGA_NEW_VS_VARIANT |
+    SVGA_NEW_TEXTURE_CONSTS),
    emit_vs_consts
 };
 
@@ -809,6 +810,7 @@ struct svga_tracked_state svga_hw_gs_constants =
    (SVGA_NEW_PRESCALE |
     SVGA_NEW_GS_CONST_BUFFER |
     SVGA_NEW_RAST |
-    SVGA_NEW_GS_VARIANT),
+    SVGA_NEW_GS_VARIANT |
+    SVGA_NEW_TEXTURE_CONSTS),
    emit_gs_consts
 };
