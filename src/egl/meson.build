@@ -130,6 +130,7 @@ endif
 if with_platform_android
   deps_for_egl += dep_android
   files_egl += files('drivers/dri2/platform_android.c')
+  incs_for_egl += [inc_loader]
 endif
 if with_platform_haiku
   incs_for_egl += inc_haikugl
