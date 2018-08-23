@@ -289,7 +289,7 @@ ps30_input(struct svga_shader_emitter *emit,
       if (semantic.Name == TGSI_SEMANTIC_GENERIC &&
           emit->key.sprite_origin_lower_left &&
           index >= 1 &&
-          emit->key.tex[index - 1].sprite_texgen) {
+          emit->key.sprite_coord_enable & (1 << semantic.Index)) {
          /* This is a sprite texture coord with lower-left origin.
           * We need to invert the texture T coordinate since the SVGA3D
           * device only supports an upper-left origin.

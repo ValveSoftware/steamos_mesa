@@ -93,7 +93,7 @@ struct svga_compile_key
    unsigned num_unnormalized_coords:8;
    unsigned clip_plane_enable:PIPE_MAX_CLIP_PLANES;
    unsigned sprite_origin_lower_left:1;
-   unsigned sprite_coord_enable;
+   uint16_t sprite_coord_enable;
    struct {
       unsigned compare_mode:1;
       unsigned compare_func:3;
@@ -101,7 +101,6 @@ struct svga_compile_key
       unsigned texel_bias:1;
       unsigned width_height_idx:5; /**< texture unit */
       unsigned is_array:1;
-      unsigned sprite_texgen:1;
       unsigned swizzle_r:3;
       unsigned swizzle_g:3;
       unsigned swizzle_b:3;
