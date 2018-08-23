@@ -3604,6 +3604,21 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
    }
 }
 
+static int
+get_op_for_atomic_add(nir_intrinsic_instr *instr, unsigned src)
+{
+   const nir_const_value *const val = nir_src_as_const_value(instr->src[src]);
+
+   if (val != NULL) {
+      if (val->i32[0] == 1)
+         return BRW_AOP_INC;
+      else if (val->i32[0] == -1)
+         return BRW_AOP_DEC;
+   }
+
+   return BRW_AOP_ADD;
+}
+
 void
 fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
@@ -3660,7 +3675,7 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
    }
 
    case nir_intrinsic_shared_atomic_add:
-      nir_emit_shared_atomic(bld, BRW_AOP_ADD, instr);
+      nir_emit_shared_atomic(bld, get_op_for_atomic_add(instr, 1), instr);
       break;
    case nir_intrinsic_shared_atomic_imin:
       nir_emit_shared_atomic(bld, BRW_AOP_IMIN, instr);
@@ -4378,7 +4393,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    }
 
    case nir_intrinsic_ssbo_atomic_add:
-      nir_emit_ssbo_atomic(bld, BRW_AOP_ADD, instr);
+      nir_emit_ssbo_atomic(bld, get_op_for_atomic_add(instr, 2), instr);
       break;
    case nir_intrinsic_ssbo_atomic_imin:
       nir_emit_ssbo_atomic(bld, BRW_AOP_IMIN, instr);
@@ -4889,7 +4904,9 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
    }
 
    fs_reg offset = get_nir_src(instr->src[1]);
-   fs_reg data1 = get_nir_src(instr->src[2]);
+   fs_reg data1;
+   if (op != BRW_AOP_INC && op != BRW_AOP_DEC && op != BRW_AOP_PREDEC)
+      data1 = get_nir_src(instr->src[2]);
    fs_reg data2;
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[3]);
@@ -4963,7 +4980,9 @@ fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
 
    fs_reg surface = brw_imm_ud(GEN7_BTI_SLM);
    fs_reg offset;
-   fs_reg data1 = get_nir_src(instr->src[1]);
+   fs_reg data1;
+   if (op != BRW_AOP_INC && op != BRW_AOP_DEC && op != BRW_AOP_PREDEC)
+      data1 = get_nir_src(instr->src[1]);
    fs_reg data2;
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[2]);
