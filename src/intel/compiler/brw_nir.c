@@ -597,6 +597,11 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
       OPT(nir_lower_pack);
    } while (progress);
 
+   /* Workaround Gfxbench unused local sampler variable which will trigger an
+    * assert in the opt_large_constants pass.
+    */
+   OPT(nir_remove_dead_variables, nir_var_local);
+
    return nir;
 }
 
