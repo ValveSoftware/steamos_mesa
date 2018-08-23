@@ -944,10 +944,14 @@ iter_decode_field(struct gen_field_iterator *iter)
       snprintf(iter->value, sizeof(iter->value), "%f",
                (float) v.qw / (1 << iter->field->type.f));
       break;
-   case GEN_TYPE_SFIXED:
-      /* FIXME: Sign extend extracted field. */
-      snprintf(iter->value, sizeof(iter->value), "%s", "foo");
+   case GEN_TYPE_SFIXED: {
+      /* Sign extend before converting */
+      int bits = iter->field->type.i + iter->field->type.f + 1;
+      int64_t v_sign_extend = ((int64_t)(v.qw << (64 - bits))) >> (64 - bits);
+      snprintf(iter->value, sizeof(iter->value), "%f",
+               (float) v_sign_extend / (1 << iter->field->type.f));
       break;
+   }
    case GEN_TYPE_MBO:
        break;
    case GEN_TYPE_ENUM: {
