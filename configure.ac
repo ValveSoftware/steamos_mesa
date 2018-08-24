@@ -125,7 +125,9 @@ AC_PROG_GREP
 AC_PROG_NM
 AM_PROG_AS
 AX_CHECK_GNU_MAKE
-AM_PATH_PYTHON([3.4],, [AM_PATH_PYTHON([2.7],, [:])])
+AM_PATH_PYTHON([2.7],, [:])
+PYTHON2=$PYTHON
+AC_SUBST([PYTHON2])
 
 AC_PROG_SED
 AC_PROG_MKDIR_P
@@ -158,7 +160,7 @@ fi
 
 AX_CHECK_PYTHON_MAKO_MODULE($PYTHON_MAKO_REQUIRED)
 
-if test "$PYTHON" = ":"; then
+if test "$PYTHON2" = ":"; then
     if test ! -f "$srcdir/src/util/format_srgb.c"; then
         AC_MSG_ERROR([Python not found - unable to generate sources])
     fi
@@ -3346,7 +3348,7 @@ if test "x$enable_llvm" = xyes; then
     echo "        LLVM_LDFLAGS:    $LLVM_LDFLAGS"
     echo ""
 fi
-echo "        PYTHON:         $PYTHON"
+echo "        PYTHON2:         $PYTHON2"
 
 echo ""
 echo "        Run '${MAKE-make}' to build Mesa"
