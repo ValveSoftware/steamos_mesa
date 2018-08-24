@@ -337,7 +337,8 @@ void st_init_limits(struct pipe_screen *screen,
               c->Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits +
-              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
+              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits +
+              c->Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
               MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
    /* This depends on program constants. */
@@ -412,7 +413,8 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_TESS_CTRL].MaxUniformBlocks +
          c->Program[MESA_SHADER_TESS_EVAL].MaxUniformBlocks +
          c->Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks +
-         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks,
+         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks +
+         c->Program[MESA_SHADER_COMPUTE].MaxUniformBlocks;
       assert(c->MaxCombinedUniformBlocks <= MAX_COMBINED_UNIFORM_BUFFERS);
    }
 
@@ -478,7 +480,8 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_TESS_CTRL].MaxImageUniforms +
          c->Program[MESA_SHADER_TESS_EVAL].MaxImageUniforms +
          c->Program[MESA_SHADER_GEOMETRY].MaxImageUniforms +
-         c->Program[MESA_SHADER_FRAGMENT].MaxImageUniforms;
+         c->Program[MESA_SHADER_FRAGMENT].MaxImageUniforms +
+         c->Program[MESA_SHADER_COMPUTE].MaxImageUniforms;
    c->MaxCombinedShaderOutputResources += c->MaxCombinedImageUniforms;
    c->MaxImageUnits = MAX_IMAGE_UNITS;
    if (c->MaxCombinedImageUniforms) {
