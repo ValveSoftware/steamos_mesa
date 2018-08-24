@@ -525,6 +525,8 @@ svga_tgsi_sampler_type(const struct svga_shader_emitter *emit, int idx)
    case TGSI_TEXTURE_2D:
    case TGSI_TEXTURE_RECT:
       return SVGA3DSAMP_2D;
+   case TGSI_TEXTURE_SHADOW2D:
+      return SVGA3DSAMP_2D_SHADOW;
    case TGSI_TEXTURE_3D:
       return SVGA3DSAMP_VOLUME;
    case TGSI_TEXTURE_CUBE:
