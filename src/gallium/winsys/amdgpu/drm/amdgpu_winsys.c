@@ -32,6 +32,7 @@
 
 #include "util/u_hash_table.h"
 #include "util/hash_table.h"
+#include "util/xmlconfig.h"
 #include <amdgpu_drm.h>
 #include <xf86drm.h>
 #include <stdio.h>
@@ -49,7 +50,9 @@ static simple_mtx_t dev_tab_mutex = _SIMPLE_MTX_INITIALIZER_NP;
 DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
 
 /* Helper function to do the ioctls needed for setup and init. */
-static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
+static bool do_winsys_init(struct amdgpu_winsys *ws,
+                           const struct pipe_screen_config *config,
+                           int fd)
 {
    if (!ac_query_gpu_info(fd, ws->dev, &ws->info, &ws->amdinfo))
       goto fail;
@@ -63,7 +66,8 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
    ws->debug_all_bos = debug_get_option_all_bos();
    ws->reserve_vmid = strstr(debug_get_option("R600_DEBUG", ""), "reserve_vmid") != NULL;
-   ws->zero_all_vram_allocs = strstr(debug_get_option("R600_DEBUG", ""), "zerovram") != NULL;
+   ws->zero_all_vram_allocs = strstr(debug_get_option("R600_DEBUG", ""), "zerovram") != NULL ||
+      driQueryOptionb(config->options, "radeonsi_zerovram");
 
    return true;
 
@@ -279,7 +283,7 @@ amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
    ws->info.drm_major = drm_major;
    ws->info.drm_minor = drm_minor;
 
-   if (!do_winsys_init(ws, fd))
+   if (!do_winsys_init(ws, config, fd))
       goto fail_alloc;
 
    /* Create managers. */

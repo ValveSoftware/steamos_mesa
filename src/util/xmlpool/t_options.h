@@ -414,3 +414,8 @@ DRI_CONF_OPT_END
 DRI_CONF_OPT_BEGIN_B(radeonsi_clear_db_cache_before_clear, def) \
         DRI_CONF_DESC(en,"Clear DB cache before fast depth clear") \
 DRI_CONF_OPT_END
+
+#define DRI_CONF_RADEONSI_ZERO_ALL_VRAM_ALLOCS(def) \
+DRI_CONF_OPT_BEGIN_B(radeonsi_zerovram, def) \
+        DRI_CONF_DESC(en,"Zero all vram allocations") \
+DRI_CONF_OPT_END
