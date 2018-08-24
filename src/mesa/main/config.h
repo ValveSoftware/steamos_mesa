@@ -141,9 +141,6 @@
 /** Maximum size for CVA.  May be overridden by the drivers.  */
 #define MAX_ARRAY_LOCK_SIZE 3000
 
-/** For GL_MAX_ELEMENTS_INDICES and GL_MAX_ELEMENTS_VERTICES. */
-#define MAX_ELEMENTS_VERTICES_INDICES  (512 * 1024 * 1024)
-
 /** Subpixel precision for antialiasing, window coordinate snapping */
 #define SUB_PIXEL_BITS 4
 
