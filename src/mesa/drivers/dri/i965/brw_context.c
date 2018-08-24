@@ -421,10 +421,10 @@ brw_initialize_context_constants(struct brw_context *brw)
           ctx->Const.MaxComputeWorkGroupSize[0] >= 128),
    };
 
-   unsigned num_stages = 0;
-   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+   unsigned num_gfx_stages = 0;
+   for (int i = 0; i < MESA_SHADER_COMPUTE; i++) {
       if (stage_exists[i])
-         num_stages++;
+         num_gfx_stages++;
    }
 
    unsigned max_samplers =
@@ -505,14 +505,14 @@ brw_initialize_context_constants(struct brw_context *brw)
       MIN2(ctx->Const.MaxTextureCoordUnits,
            ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits);
 
-   ctx->Const.MaxUniformBufferBindings = num_stages * BRW_MAX_UBO;
-   ctx->Const.MaxCombinedUniformBlocks = num_stages * BRW_MAX_UBO;
-   ctx->Const.MaxCombinedAtomicBuffers = num_stages * BRW_MAX_ABO;
-   ctx->Const.MaxCombinedShaderStorageBlocks = num_stages * BRW_MAX_SSBO;
-   ctx->Const.MaxShaderStorageBufferBindings = num_stages * BRW_MAX_SSBO;
-   ctx->Const.MaxCombinedTextureImageUnits = num_stages * max_samplers;
-   ctx->Const.MaxCombinedImageUniforms = num_stages * BRW_MAX_IMAGES;
-
+   ctx->Const.MaxUniformBufferBindings = num_gfx_stages * BRW_MAX_UBO;
+   ctx->Const.MaxCombinedUniformBlocks = num_gfx_stages * BRW_MAX_UBO;
+   ctx->Const.MaxCombinedAtomicBuffers = num_gfx_stages * BRW_MAX_ABO;
+   ctx->Const.MaxCombinedShaderStorageBlocks = num_gfx_stages * BRW_MAX_SSBO;
+   ctx->Const.MaxCombinedTextureImageUnits = num_gfx_stages * max_samplers;
+   ctx->Const.MaxCombinedImageUniforms = num_gfx_stages * BRW_MAX_IMAGES;
+   ctx->Const.MaxShaderStorageBufferBindings =
+      (num_gfx_stages + stage_exists[MESA_SHADER_COMPUTE]) * BRW_MAX_SSBO;
 
    /* Hardware only supports a limited number of transform feedback buffers.
     * So we need to override the Mesa default (which is based only on software
