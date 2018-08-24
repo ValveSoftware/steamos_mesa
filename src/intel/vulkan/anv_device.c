@@ -1158,6 +1158,13 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES: {
+         VkPhysicalDeviceProtectedMemoryProperties *props =
+            (VkPhysicalDeviceProtectedMemoryProperties *)ext;
+         props->protectedNoFault = false;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
