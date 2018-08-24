@@ -301,7 +301,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 	      * of them are moved to SDMA thanks to this. */
 	     !ws->cs_is_buffer_referenced(sctx->gfx_cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
-		sctx->dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
+		si_sdma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
 
 		offset += dma_clear_size;
 		size -= dma_clear_size;

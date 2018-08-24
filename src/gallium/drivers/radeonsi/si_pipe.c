@@ -750,7 +750,7 @@ static void si_test_vmfault(struct si_screen *sscreen)
 		puts("VM fault test: CP - done.");
 	}
 	if (sscreen->debug_flags & DBG(TEST_VMFAULT_SDMA)) {
-		sctx->dma_clear_buffer(sctx, buf, 0, 4, 0);
+		si_sdma_clear_buffer(sctx, buf, 0, 4, 0);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: SDMA - done.");
 	}

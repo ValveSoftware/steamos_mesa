@@ -191,7 +191,7 @@ void si_test_dma_perf(struct si_screen *sscreen)
 							u_box_1d(0, size, &box);
 							sctx->dma_copy(ctx, dst, 0, 0, 0, 0, src, 0, &box);
 						} else {
-							sctx->dma_clear_buffer(sctx, dst, 0, size, clear_value);
+							si_sdma_clear_buffer(sctx, dst, 0, size, clear_value);
 						}
 					} else {
 						/* Compute */
