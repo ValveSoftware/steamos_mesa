@@ -178,8 +178,8 @@ void si_test_dma_perf(struct si_screen *sscreen)
 					if (test_cp) {
 						/* CP DMA */
 						if (is_copy) {
-							si_copy_buffer(sctx, dst, src, 0, 0, size, 0,
-								       cache_policy);
+							si_cp_dma_copy_buffer(sctx, dst, src, 0, 0, size, 0,
+									      SI_COHERENCY_NONE, cache_policy);
 						} else {
 							si_cp_dma_clear_buffer(sctx, dst, 0, size, clear_value,
 									       SI_COHERENCY_NONE, cache_policy);

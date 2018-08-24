@@ -745,7 +745,8 @@ static void si_test_vmfault(struct si_screen *sscreen)
 	r600_resource(buf)->gpu_address = 0; /* cause a VM fault */
 
 	if (sscreen->debug_flags & DBG(TEST_VMFAULT_CP)) {
-		si_copy_buffer(sctx, buf, buf, 0, 4, 4, 0, -1);
+		si_cp_dma_copy_buffer(sctx, buf, buf, 0, 4, 4, 0,
+				      SI_COHERENCY_NONE, L2_BYPASS);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: CP - done.");
 	}
