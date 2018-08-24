@@ -641,7 +641,6 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
                               int count)
 {
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
-   struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
 
    uint32_t state_offset = 0;
 
@@ -661,6 +660,22 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
    if (state_map == NULL) {
       fprintf(ctx->fp, "  dynamic %s state unavailable\n", struct_type);
       return;
+   }
+
+   struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
+   if (strcmp(struct_type, "BLEND_STATE") == 0) {
+      /* Blend states are different from the others because they have a header
+       * struct called BLEND_STATE which is followed by a variable number of
+       * BLEND_STATE_ENTRY structs.
+       */
+      fprintf(ctx->fp, "%s\n", struct_type);
+      ctx_print_group(ctx, state, state_addr, state_map);
+
+      state_addr += state->dw_length * 4;
+      state_map += state->dw_length * 4;
+
+      struct_type = "BLEND_STATE_ENTRY";
+      state = gen_spec_find_struct(ctx->spec, struct_type);
    }
 
    for (int i = 0; i < count; i++) {
