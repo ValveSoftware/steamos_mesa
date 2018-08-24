@@ -45,14 +45,27 @@
 #include "main/bufferobj.h"
 #include "main/texobj.h"
 
+#include "dri_util.h"
+
 #include "dri_helpers.h"
 #include "dri_drawable.h"
 #include "dri_query_renderer.h"
-#include "dri2_buffer.h"
 
 #ifndef DRM_FORMAT_MOD_INVALID
 #define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
 #endif
+
+struct dri2_buffer
+{
+   __DRIbuffer base;
+   struct pipe_resource *resource;
+};
+
+static inline struct dri2_buffer *
+dri2_buffer(__DRIbuffer * driBufferPriv)
+{
+   return (struct dri2_buffer *) driBufferPriv;
+}
 
 static const int fourcc_formats[] = {
    __DRI_IMAGE_FOURCC_ARGB2101010,
