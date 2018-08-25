@@ -709,9 +709,20 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_ssbo_atomic_add:
-      nir_emit_ssbo_atomic(BRW_AOP_ADD, instr);
+   case nir_intrinsic_ssbo_atomic_add: {
+      int op = BRW_AOP_ADD;
+      const nir_const_value *const val = nir_src_as_const_value(instr->src[2]);
+
+      if (val != NULL) {
+         if (val->i32[0] == 1)
+            op = BRW_AOP_INC;
+         else if (val->i32[0] == -1)
+            op = BRW_AOP_DEC;
+      }
+
+      nir_emit_ssbo_atomic(op, instr);
       break;
+   }
    case nir_intrinsic_ssbo_atomic_imin:
       nir_emit_ssbo_atomic(BRW_AOP_IMIN, instr);
       break;
@@ -937,7 +948,9 @@ vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
    }
 
    src_reg offset = get_nir_src(instr->src[1], 1);
-   src_reg data1 = get_nir_src(instr->src[2], 1);
+   src_reg data1;
+   if (op != BRW_AOP_INC && op != BRW_AOP_DEC && op != BRW_AOP_PREDEC)
+      data1 = get_nir_src(instr->src[2], 1);
    src_reg data2;
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[3], 1);
