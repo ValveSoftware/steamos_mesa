@@ -3899,10 +3899,16 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                           var->data.image.write_only ? GL_NONE : format);
       } else {
          int op;
+         unsigned num_srcs = info->num_srcs;
 
          switch (instr->intrinsic) {
          case nir_intrinsic_image_deref_atomic_add:
-            op = BRW_AOP_ADD;
+            assert(num_srcs == 4);
+
+            op = get_op_for_atomic_add(instr, 3);
+
+            if (op != BRW_AOP_ADD)
+               num_srcs = 3;
             break;
          case nir_intrinsic_image_deref_atomic_min:
             op = (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
@@ -3931,10 +3937,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             unreachable("Not reachable.");
          }
 
-         const fs_reg src0 = (info->num_srcs >= 4 ?
+         const fs_reg src0 = (num_srcs >= 4 ?
                               retype(get_nir_src(instr->src[3]), base_type) :
                               fs_reg());
-         const fs_reg src1 = (info->num_srcs >= 5 ?
+         const fs_reg src1 = (num_srcs >= 5 ?
                               retype(get_nir_src(instr->src[4]), base_type) :
                               fs_reg());
 
