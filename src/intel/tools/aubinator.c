@@ -71,7 +71,7 @@ struct brw_instruction;
 static void
 aubinator_error(void *user_data, const void *aub_data, const char *msg)
 {
-   fprintf(stderr, msg);
+   fprintf(stderr, "%s", msg);
 }
 
 static void
