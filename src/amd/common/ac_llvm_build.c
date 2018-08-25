@@ -561,7 +561,14 @@ ac_build_fdiv(struct ac_llvm_context *ctx,
 	      LLVMValueRef num,
 	      LLVMValueRef den)
 {
-	LLVMValueRef ret = LLVMBuildFDiv(ctx->builder, num, den, "");
+	/* If we do (num / den), LLVM >= 7.0 does:
+	 *    return num * v_rcp_f32(den * (fabs(den) > 0x1.0p+96f ? 0x1.0p-32f : 1.0f));
+	 *
+	 * If we do (num * (1 / den)), LLVM does:
+	 *    return num * v_rcp_f32(den);
+	 */
+	LLVMValueRef rcp = LLVMBuildFDiv(ctx->builder, ctx->f32_1, den, "");
+	LLVMValueRef ret = LLVMBuildFMul(ctx->builder, num, rcp, "");
 
 	/* Use v_rcp_f32 instead of precise division. */
 	if (!LLVMIsConstant(ret))
