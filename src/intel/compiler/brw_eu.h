@@ -374,7 +374,7 @@ brw_dp_surface_desc(const struct gen_device_info *devinfo,
  * interpolator function controls.
  */
 static inline uint32_t
-brw_pixel_interp_desc(const struct gen_device_info *devinfo,
+brw_pixel_interp_desc(UNUSED const struct gen_device_info *devinfo,
                       unsigned msg_type,
                       bool noperspective,
                       unsigned simd_mode,
