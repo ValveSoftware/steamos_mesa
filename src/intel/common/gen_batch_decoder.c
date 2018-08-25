@@ -248,11 +248,11 @@ dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
 
       if (pointers[i] % 32 != 0 ||
           addr < bo.addr || addr + size >= bo.addr + bo.size) {
-         fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
+         fprintf(ctx->fp, "pointer %u: 0x%08x <not valid>\n", i, pointers[i]);
          continue;
       }
 
-      fprintf(ctx->fp, "pointer %u: %08x\n", i, pointers[i]);
+      fprintf(ctx->fp, "pointer %u: 0x%08x\n", i, pointers[i]);
       ctx_print_group(ctx, strct, addr, bo.map + (addr - bo.addr));
    }
 }
