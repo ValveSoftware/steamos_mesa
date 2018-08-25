@@ -997,7 +997,7 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->p_bit = p_bit;
 
    int length = gen_group_get_length(iter->group, iter->p);
-   iter->p_end = length > 0 ? &p[length] : NULL;
+   iter->p_end = length >= 0 ? &p[length] : NULL;
    iter->print_colors = print_colors;
 }
 
@@ -1012,10 +1012,14 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
          iter_start_field(iter, iter->group->next->fields);
 
       bool result = iter_decode_field(iter);
-      if (iter->p_end)
-         assert(result);
+      if (!result && iter->p_end) {
+         /* We're dealing with a non empty struct of length=0 (BLEND_STATE on
+          * Gen 7.5)
+          */
+         assert(iter->group->dw_length == 0);
+      }
 
-      return true;
+      return result;
    }
 
    if (!iter_advance_field(iter))
