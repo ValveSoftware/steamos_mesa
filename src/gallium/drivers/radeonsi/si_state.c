@@ -4928,9 +4928,7 @@ static void si_init_config(struct si_context *sctx)
 			       S_00B21C_CU_EN(0xffff) | S_00B21C_WAVE_LIMIT(0x3F));
 
 		/* Compute LATE_ALLOC_VS.LIMIT. */
-		unsigned num_cu_per_sh = sscreen->info.num_good_compute_units /
-					 (sscreen->info.max_se *
-					  sscreen->info.max_sh_per_se);
+		unsigned num_cu_per_sh = sscreen->info.num_good_cu_per_sh;
 		unsigned late_alloc_limit; /* The limit is per SH. */
 
 		if (sctx->family == CHIP_KABINI) {

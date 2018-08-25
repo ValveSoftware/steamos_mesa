@@ -414,6 +414,8 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		for (j = 0; j < info->max_sh_per_se; j++)
 			info->num_good_compute_units +=
 				util_bitcount(amdinfo->cu_bitmap[i][j]);
+	info->num_good_cu_per_sh = info->num_good_compute_units /
+				   (info->max_se * info->max_sh_per_se);
 
 	memcpy(info->si_tile_mode_array, amdinfo->gb_tile_mode,
 		sizeof(amdinfo->gb_tile_mode));
@@ -543,6 +545,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
 	printf("    num_good_compute_units = %i\n", info->num_good_compute_units);
+	printf("    num_good_cu_per_sh = %i\n", info->num_good_cu_per_sh);
 	printf("    num_tcc_blocks = %i\n", info->num_tcc_blocks);
 	printf("    max_se = %i\n", info->max_se);
 	printf("    max_sh_per_se = %i\n", info->max_sh_per_se);

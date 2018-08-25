@@ -525,6 +525,10 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
 
     radeon_get_drm_value(ws->fd, RADEON_INFO_MAX_SH_PER_SE, NULL,
                          &ws->info.max_sh_per_se);
+    if (ws->gen == DRV_SI) {
+        ws->info.num_good_cu_per_sh = ws->info.num_good_compute_units /
+                                      (ws->info.max_se * ws->info.max_sh_per_se);
+    }
 
     radeon_get_drm_value(ws->fd, RADEON_INFO_ACCEL_WORKING2, NULL,
                          &ws->accel_working2);
