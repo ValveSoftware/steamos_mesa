@@ -1795,36 +1795,6 @@ get_image_base_type(const glsl_type *type)
    }
 }
 
-/**
- * Get the appropriate atomic op for an image atomic intrinsic.
- */
-static unsigned
-get_image_atomic_op(nir_intrinsic_op op, const glsl_type *type)
-{
-   switch (op) {
-   case nir_intrinsic_image_deref_atomic_add:
-      return BRW_AOP_ADD;
-   case nir_intrinsic_image_deref_atomic_min:
-      return (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
-              BRW_AOP_IMIN : BRW_AOP_UMIN);
-   case nir_intrinsic_image_deref_atomic_max:
-      return (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
-              BRW_AOP_IMAX : BRW_AOP_UMAX);
-   case nir_intrinsic_image_deref_atomic_and:
-      return BRW_AOP_AND;
-   case nir_intrinsic_image_deref_atomic_or:
-      return BRW_AOP_OR;
-   case nir_intrinsic_image_deref_atomic_xor:
-      return BRW_AOP_XOR;
-   case nir_intrinsic_image_deref_atomic_exchange:
-      return BRW_AOP_MOV;
-   case nir_intrinsic_image_deref_atomic_comp_swap:
-      return BRW_AOP_CMPWR;
-   default:
-      unreachable("Not reachable.");
-   }
-}
-
 static fs_inst *
 emit_pixel_interpolater_send(const fs_builder &bld,
                              enum opcode opcode,
@@ -3918,26 +3888,60 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       const fs_reg image = get_nir_image_deref(deref);
       const fs_reg addr = retype(get_nir_src(instr->src[1]),
                                  BRW_REGISTER_TYPE_UD);
-      const fs_reg src0 = (info->num_srcs >= 4 ?
-                           retype(get_nir_src(instr->src[3]), base_type) :
-                           fs_reg());
-      const fs_reg src1 = (info->num_srcs >= 5 ?
-                           retype(get_nir_src(instr->src[4]), base_type) :
-                           fs_reg());
       fs_reg tmp;
 
       /* Emit an image load, store or atomic op. */
       if (instr->intrinsic == nir_intrinsic_image_deref_load)
          tmp = emit_image_load(bld, image, addr, surf_dims, arr_dims, format);
-
-      else if (instr->intrinsic == nir_intrinsic_image_deref_store)
+      else if (instr->intrinsic == nir_intrinsic_image_deref_store) {
+         const fs_reg src0 = retype(get_nir_src(instr->src[3]), base_type);
          emit_image_store(bld, image, addr, src0, surf_dims, arr_dims,
                           var->data.image.write_only ? GL_NONE : format);
+      } else {
+         int op;
 
-      else
+         switch (instr->intrinsic) {
+         case nir_intrinsic_image_deref_atomic_add:
+            op = BRW_AOP_ADD;
+            break;
+         case nir_intrinsic_image_deref_atomic_min:
+            op = (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
+                 BRW_AOP_IMIN : BRW_AOP_UMIN);
+            break;
+         case nir_intrinsic_image_deref_atomic_max:
+            op = (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
+                 BRW_AOP_IMAX : BRW_AOP_UMAX);
+            break;
+         case nir_intrinsic_image_deref_atomic_and:
+            op = BRW_AOP_AND;
+            break;
+         case nir_intrinsic_image_deref_atomic_or:
+            op = BRW_AOP_OR;
+            break;
+         case nir_intrinsic_image_deref_atomic_xor:
+            op = BRW_AOP_XOR;
+            break;
+         case nir_intrinsic_image_deref_atomic_exchange:
+            op = BRW_AOP_MOV;
+            break;
+         case nir_intrinsic_image_deref_atomic_comp_swap:
+            op = BRW_AOP_CMPWR;
+            break;
+         default:
+            unreachable("Not reachable.");
+         }
+
+         const fs_reg src0 = (info->num_srcs >= 4 ?
+                              retype(get_nir_src(instr->src[3]), base_type) :
+                              fs_reg());
+         const fs_reg src1 = (info->num_srcs >= 5 ?
+                              retype(get_nir_src(instr->src[4]), base_type) :
+                              fs_reg());
+
          tmp = emit_image_atomic(bld, image, addr, src0, src1,
                                  surf_dims, arr_dims, dest_components,
-                                 get_image_atomic_op(instr->intrinsic, type));
+                                 op);
+      }
 
       /* Assign the result. */
       for (unsigned c = 0; c < dest_components; ++c) {
