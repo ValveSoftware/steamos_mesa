@@ -172,6 +172,20 @@ genX(init_device_state)(struct anv_device *device)
       lri.RegisterOffset = GENX(SAMPLER_MODE_num);
       lri.DataDWord      = sampler_mode;
    }
+
+   /* Bit 1 "Enabled Texel Offset Precision Fix" must be set in
+    * HALF_SLICE_CHICKEN7 register.
+    */
+   uint32_t half_slice_chicken7;
+   anv_pack_struct(&half_slice_chicken7, GENX(HALF_SLICE_CHICKEN7),
+                   .EnabledTexelOffsetPrecisionFix = true,
+                   .EnabledTexelOffsetPrecisionFixMask = true);
+
+    anv_batch_emit(&batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      lri.RegisterOffset = GENX(HALF_SLICE_CHICKEN7_num);
+      lri.DataDWord      = half_slice_chicken7;
+   }
+
 #endif
 
    /* Set the "CONSTANT_BUFFER Address Offset Disable" bit, so
