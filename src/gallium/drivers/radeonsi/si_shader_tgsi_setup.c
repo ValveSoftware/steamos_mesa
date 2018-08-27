@@ -445,13 +445,14 @@ get_output_ptr(struct lp_build_tgsi_context *bld_base, unsigned index,
 LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				const struct tgsi_full_src_register *reg,
 				enum tgsi_opcode_type type,
-				unsigned swizzle)
+				unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef result = NULL, ptr, ptr2;
+	unsigned swizzle = swizzle_in & 0xffff;
 
-	if (swizzle == ~0) {
+	if (swizzle_in == ~0) {
 		LLVMValueRef values[TGSI_NUM_CHANNELS];
 		unsigned chan;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
@@ -476,7 +477,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle],
 							ctx->i32_0);
 			result = LLVMConstInsertElement(result,
-							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1],
+							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + (swizzle_in >> 16)],
 							ctx->i32_1);
 			return LLVMConstBitCast(result, ctype);
 		} else {
@@ -503,7 +504,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 
 		if (tgsi_type_is_64bit(type)) {
 			ptr = result;
-			ptr2 = input[swizzle + 1];
+			ptr2 = input[swizzle_in >> 16];
 			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 							ptr, ptr2);
 		}
@@ -515,7 +516,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 			return LLVMGetUndef(tgsi2llvmtype(bld_base, type));
 		ptr = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle];
 		if (tgsi_type_is_64bit(type)) {
-			ptr2 = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1];
+			ptr2 = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + (swizzle_in >> 16)];
 			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 							LLVMBuildLoad(builder, ptr, ""),
 							LLVMBuildLoad(builder, ptr2, ""));
@@ -526,7 +527,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	case TGSI_FILE_OUTPUT:
 		ptr = get_output_ptr(bld_base, reg->Register.Index, swizzle);
 		if (tgsi_type_is_64bit(type)) {
-			ptr2 = get_output_ptr(bld_base, reg->Register.Index, swizzle + 1);
+			ptr2 = get_output_ptr(bld_base, reg->Register.Index, (swizzle_in >> 16));
 			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 							LLVMBuildLoad(builder, ptr, ""),
 							LLVMBuildLoad(builder, ptr2, ""));
@@ -544,11 +545,12 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 				       const struct tgsi_full_src_register *reg,
 				       enum tgsi_opcode_type type,
-				       unsigned swizzle)
+				       unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef cval = ctx->system_values[reg->Register.Index];
+	unsigned swizzle = swizzle_in & 0xffff;
 
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef lo, hi;
@@ -558,7 +560,7 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 		lo = LLVMBuildExtractElement(
 			builder, cval, LLVMConstInt(ctx->i32, swizzle, 0), "");
 		hi = LLVMBuildExtractElement(
-			builder, cval, LLVMConstInt(ctx->i32, swizzle + 1, 0), "");
+			builder, cval, LLVMConstInt(ctx->i32, (swizzle_in >> 16), 0), "");
 
 		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 						lo, hi);

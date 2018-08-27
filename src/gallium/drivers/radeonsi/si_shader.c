@@ -2397,16 +2397,17 @@ static LLVMValueRef fetch_constant(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
 	enum tgsi_opcode_type type,
-	unsigned swizzle)
+	unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader_selector *sel = ctx->shader->selector;
 	const struct tgsi_ind_register *ireg = &reg->Indirect;
 	unsigned buf, idx;
+	unsigned swizzle = swizzle_in & 0xffff;
 
 	LLVMValueRef addr, bufp;
 
-	if (swizzle == LP_CHAN_ALL) {
+	if (swizzle_in == LP_CHAN_ALL) {
 		unsigned chan;
 		LLVMValueRef values[4];
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; ++chan)
@@ -2420,7 +2421,7 @@ static LLVMValueRef fetch_constant(
 		LLVMValueRef lo, hi;
 
 		lo = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle);
-		hi = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle + 1);
+		hi = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, (swizzle_in >> 16));
 		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 						lo, hi);
 	}
