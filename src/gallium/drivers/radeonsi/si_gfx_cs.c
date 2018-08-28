@@ -133,12 +133,13 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 
 	if (ctx->current_saved_cs) {
 		si_trace_emit(ctx);
-		si_log_hw_flush(ctx);
 
 		/* Save the IB for debug contexts. */
 		si_save_cs(ws, cs, &ctx->current_saved_cs->gfx, true);
 		ctx->current_saved_cs->flushed = true;
 		ctx->current_saved_cs->time_flush = os_time_get_nano();
+
+		si_log_hw_flush(ctx);
 	}
 
 	/* Flush the CS. */
