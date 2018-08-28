@@ -255,9 +255,6 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		info->gart_size = meminfo.gtt.total_heap_size;
 		info->vram_size = meminfo.vram.total_heap_size;
 		info->vram_vis_size = meminfo.cpu_accessible_vram.total_heap_size;
-
-		info->max_alloc_size = MAX2(meminfo.vram.max_allocation,
-					    meminfo.gtt.max_allocation);
 	} else {
 		/* This is a deprecated interface, which reports usable sizes
 		 * (total minus pinned), but the pinned size computation is
@@ -289,11 +286,6 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		info->gart_size = gtt.heap_size;
 		info->vram_size = vram.heap_size;
 		info->vram_vis_size = vram_vis.heap_size;
-
-		/* The kernel can split large buffers in VRAM but not in GTT, so large
-		 * allocations can fail or cause buffer movement failures in the kernel.
-		 */
-		info->max_alloc_size = MAX2(info->vram_size * 0.9, info->gart_size * 0.7);
 	}
 
 	/* Set chip identification. */
@@ -330,6 +322,14 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	/* Set which chips have dedicated VRAM. */
 	info->has_dedicated_vram =
 		!(amdinfo->ids_flags & AMDGPU_IDS_FLAGS_FUSION);
+
+	/* The kernel can split large buffers in VRAM but not in GTT, so large
+	 * allocations can fail or cause buffer movement failures in the kernel.
+	 */
+	if (info->has_dedicated_vram)
+		info->max_alloc_size = info->vram_size * 0.8;
+	else
+		info->max_alloc_size = info->gart_size * 0.7;
 
 	/* Set hardware information. */
 	info->gds_size = gds.gds_total_size;
