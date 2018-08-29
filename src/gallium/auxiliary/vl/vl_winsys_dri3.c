@@ -726,7 +726,6 @@ vl_dri3_screen_destroy(struct vl_screen *vscreen)
    if (scrn->front_buffer) {
       dri3_free_front_buffer(scrn, scrn->front_buffer);
       scrn->front_buffer = NULL;
-      return;
    }
 
    for (i = 0; i < BACK_BUFFER_NUM; ++i) {
