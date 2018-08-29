@@ -3769,6 +3769,11 @@ struct gl_constants
    GLboolean AllowHigherCompatVersion;
 
    /**
+    * Allow layout qualifiers on function parameters.
+    */
+   GLboolean AllowLayoutQualifiersOnFunctionParameters;
+
+   /**
     * Force computing the absolute value for sqrt() and inversesqrt() to follow
     * D3D9 when apps rely on this behaviour.
     */
