@@ -3052,6 +3052,23 @@ radv_pipeline_generate_ps_inputs(struct radeon_cmdbuf *cs,
 		ps_offset++;
 	}
 
+	if (ps->info.info.ps.num_input_clips_culls) {
+		unsigned vs_offset;
+
+		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_CLIP_DIST0];
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
+			ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+			++ps_offset;
+		}
+
+		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_CLIP_DIST1];
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED &&
+		    ps->info.info.ps.num_input_clips_culls > 4) {
+			ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+			++ps_offset;
+		}
+	}
+
 	for (unsigned i = 0; i < 32 && (1u << i) <= ps->info.fs.input_mask; ++i) {
 		unsigned vs_offset;
 		bool flat_shade;
