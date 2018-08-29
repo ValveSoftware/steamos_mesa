@@ -29,7 +29,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 
 #include <X11/Xlib-xcb.h>
 #include <X11/extensions/dri2tokens.h>
@@ -471,6 +470,8 @@ vl_dri2_screen_create(Display *display, int screen)
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[0]);
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[1]);
 
+   /* The pipe loader duplicates the fd */
+   close(fd);
    free(authenticate);
    free(connect);
    free(dri2_query);
@@ -479,15 +480,12 @@ vl_dri2_screen_create(Display *display, int screen)
    return &scrn->base;
 
 release_pipe:
-   if (scrn->base.dev) {
+   if (scrn->base.dev)
       pipe_loader_release(&scrn->base.dev, 1);
-      fd = -1;
-   }
 free_authenticate:
    free(authenticate);
 close_fd:
-   if (fd != -1)
-      close(fd);
+   close(fd);
 free_connect:
    free(connect);
 free_query:
@@ -515,5 +513,6 @@ vl_dri2_screen_destroy(struct vl_screen *vscreen)
    vl_dri2_destroy_drawable(scrn);
    scrn->base.pscreen->destroy(scrn->base.pscreen);
    pipe_loader_release(&scrn->base.dev, 1);
+   /* There is no user provided fd */
    FREE(scrn);
 }

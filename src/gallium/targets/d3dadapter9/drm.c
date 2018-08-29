@@ -107,7 +107,7 @@ drm_destroy( struct d3dadapter9_context *ctx )
     if (drm->dev)
         pipe_loader_release(&drm->dev, 1);
 
-    /* The pipe loader takes ownership of the fd */
+    close(drm->fd);
     FREE(ctx);
 }
 

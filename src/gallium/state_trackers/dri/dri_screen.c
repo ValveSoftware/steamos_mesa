@@ -488,6 +488,7 @@ dri_destroy_screen(__DRIscreen * sPriv)
 
    pipe_loader_release(&screen->dev, 1);
 
+   /* The caller in dri_util preserves the fd ownership */
    free(screen);
    sPriv->driverPrivate = NULL;
    sPriv->extensions = NULL;
