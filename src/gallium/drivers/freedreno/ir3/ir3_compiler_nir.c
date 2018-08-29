@@ -48,6 +48,8 @@ struct ir3_context {
 
 	struct nir_shader *s;
 
+	struct nir_instr *cur_instr;  /* current instruction, just for debug */
+
 	struct ir3 *ir;
 	struct ir3_shader_variant *so;
 
@@ -263,11 +265,21 @@ compile_init(struct ir3_compiler *compiler,
 static void
 compile_error(struct ir3_context *ctx, const char *format, ...)
 {
+	struct hash_table *errors = NULL;
 	va_list ap;
 	va_start(ap, format);
-	_debug_vprintf(format, ap);
+	if (ctx->cur_instr) {
+		errors = _mesa_hash_table_create(NULL,
+				_mesa_hash_pointer,
+				_mesa_key_pointer_equal);
+		char *msg = ralloc_vasprintf(errors, format, ap);
+		_mesa_hash_table_insert(errors, ctx->cur_instr, msg);
+	} else {
+		_debug_vprintf(format, ap);
+	}
 	va_end(ap);
-	nir_print_shader(ctx->s, stdout);
+	nir_print_shader_annotated(ctx->s, stdout, errors);
+	ralloc_free(errors);
 	ctx->error = true;
 	debug_assert(0);
 }
@@ -2999,7 +3011,9 @@ emit_block(struct ir3_context *ctx, nir_block *nblock)
 	}
 
 	nir_foreach_instr(instr, nblock) {
+		ctx->cur_instr = instr;
 		emit_instr(ctx, instr);
+		ctx->cur_instr = NULL;
 		if (ctx->error)
 			return;
 	}
