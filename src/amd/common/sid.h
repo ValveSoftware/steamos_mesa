@@ -9145,7 +9145,9 @@
 #define        SDMA_TS_SUB_OPCODE_GET_LOCAL_TIMESTAMP     0x1
 #define        SDMA_TS_SUB_OPCODE_GET_GLOBAL_TIMESTAMP    0x2
 #define    CIK_SDMA_PACKET_SRBM_WRITE              0xe
-#define    CIK_SDMA_COPY_MAX_SIZE                  0x3fffe0
+/* There is apparently an undocumented HW "feature" that
+   prevents the HW from copying past 256 bytes of (1 << 22) */
+#define    CIK_SDMA_COPY_MAX_SIZE                  0x3fff00
 
 enum amd_cmp_class_flags {
 	S_NAN = 1 << 0,        // Signaling NaN
