@@ -81,7 +81,7 @@ void st_init_limits(struct pipe_screen *screen,
 {
    int supported_irs;
    unsigned sh;
-   boolean can_ubo = TRUE;
+   bool can_ubo = true;
    int temp;
    bool ssbo_atomic = true;
 
@@ -160,7 +160,7 @@ void st_init_limits(struct pipe_screen *screen,
    c->MaxUniformBlockSize = MIN2(c->MaxUniformBlockSize, INT_MAX - 127);
 
    if (c->MaxUniformBlockSize < 16384) {
-      can_ubo = FALSE;
+      can_ubo = false;
    }
 
    for (sh = 0; sh < PIPE_SHADER_TYPES; ++sh) {
@@ -301,7 +301,7 @@ void st_init_limits(struct pipe_screen *screen,
 
       if (pc->MaxNativeInstructions &&
           (options->EmitNoIndirectUniform || pc->MaxUniformBlocks < 12)) {
-         can_ubo = FALSE;
+         can_ubo = false;
       }
 
       if (options->EmitNoLoops)
