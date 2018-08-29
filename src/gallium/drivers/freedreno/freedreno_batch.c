@@ -352,8 +352,14 @@ fd_batch_flush(struct fd_batch *batch, bool sync, bool force)
 
 	if (newbatch) {
 		struct fd_context *ctx = batch->ctx;
-		struct fd_batch *new_batch =
-			fd_batch_from_fb(&ctx->screen->batch_cache, ctx, &batch->framebuffer);
+		struct fd_batch *new_batch;
+
+		if (ctx->screen->reorder) {
+			new_batch = fd_batch_from_fb(&ctx->screen->batch_cache,
+					ctx, &batch->framebuffer);
+		} else {
+			new_batch = fd_batch_create(ctx, false);
+		}
 
 		util_copy_framebuffer_state(&new_batch->framebuffer, &batch->framebuffer);
 
