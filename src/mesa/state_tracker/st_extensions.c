@@ -241,6 +241,10 @@ void st_init_limits(struct pipe_screen *screen,
          pc->MaxUniformComponents +
          (uint64_t)c->MaxUniformBlockSize / 4 * pc->MaxUniformBlocks;
 
+      pc->MaxShaderStorageBlocks =
+         screen->get_shader_param(screen, sh,
+                                  PIPE_SHADER_CAP_MAX_SHADER_BUFFERS);
+
       temp = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS);
       if (temp) {
          /*
@@ -250,11 +254,14 @@ void st_init_limits(struct pipe_screen *screen,
          ssbo_atomic = false;
          pc->MaxAtomicCounters = temp;
          pc->MaxAtomicBuffers = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS);
-         pc->MaxShaderStorageBlocks = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS);
       } else {
          pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-         pc->MaxAtomicBuffers = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
-         pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
+         /*
+          * without separate atomic counters, reserve half of the available
+          * SSBOs for atomic buffers, and the other half for normal SSBOs.
+          */
+         pc->MaxAtomicBuffers = pc->MaxShaderStorageBlocks / 2;
+         pc->MaxShaderStorageBlocks -= pc->MaxAtomicBuffers;
       }
       pc->MaxImageUniforms = screen->get_shader_param(
             screen, sh, PIPE_SHADER_CAP_MAX_SHADER_IMAGES);
@@ -465,9 +472,17 @@ void st_init_limits(struct pipe_screen *screen,
       screen->get_param(screen, PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT);
    if (c->ShaderStorageBufferOffsetAlignment) {
       /* for hw atomic counters leaves these at default for now */
-      if (ssbo_atomic)
-         c->MaxCombinedShaderStorageBlocks = c->MaxShaderStorageBufferBindings =
-            c->MaxCombinedAtomicBuffers;
+      if (ssbo_atomic) {
+         c->MaxCombinedShaderStorageBlocks =
+            c->Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks +
+            c->Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks +
+            c->Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks +
+            c->Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks +
+            c->Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks;
+         assert(c->MaxCombinedShaderStorageBlocks < MAX_COMBINED_SHADER_STORAGE_BUFFERS);
+      }
+      c->MaxShaderStorageBufferBindings = c->MaxCombinedShaderStorageBlocks;
+
       c->MaxCombinedShaderOutputResources +=
          c->MaxCombinedShaderStorageBlocks;
       c->MaxShaderStorageBlockSize =
