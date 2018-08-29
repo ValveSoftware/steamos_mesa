@@ -71,7 +71,7 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		visible = conds[0];
 	} else {
 		assert(emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL);
-		visible = LLVMConstInt(ctx->i1, false, 0);
+		visible = ctx->i1false;
 	}
 
 	si_llvm_emit_kill(&ctx->abi, visible);

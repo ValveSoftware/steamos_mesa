@@ -2609,7 +2609,7 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 			LLVMBuildFCmp(ctx->ac.builder, cond, alpha, alpha_ref, "");
 		ac_build_kill_if_false(&ctx->ac, alpha_pass);
 	} else {
-		ac_build_kill_if_false(&ctx->ac, LLVMConstInt(ctx->i1, 0, 0));
+		ac_build_kill_if_false(&ctx->ac, ctx->i1false);
 	}
 }
 
@@ -6154,7 +6154,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx)
 	if (sel->force_correct_derivs_after_kill) {
 		ctx->postponed_kill = ac_build_alloca_undef(&ctx->ac, ctx->i1, "");
 		/* true = don't kill. */
-		LLVMBuildStore(ctx->ac.builder, LLVMConstInt(ctx->i1, 1, 0),
+		LLVMBuildStore(ctx->ac.builder, ctx->i1true,
 			       ctx->postponed_kill);
 	}
 

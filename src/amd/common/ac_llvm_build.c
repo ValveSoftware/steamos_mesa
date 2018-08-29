@@ -829,11 +829,10 @@ ac_build_gep0(struct ac_llvm_context *ctx,
 	      LLVMValueRef index)
 {
 	LLVMValueRef indices[2] = {
-		LLVMConstInt(ctx->i32, 0, 0),
+		ctx->i32_0,
 		index,
 	};
-	return LLVMBuildGEP(ctx->builder, base_ptr,
-			    indices, 2, "");
+	return LLVMBuildGEP(ctx->builder, base_ptr, indices, 2, "");
 }
 
 void
@@ -944,7 +943,7 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 		LLVMValueRef args[] = {
 			ac_to_float(ctx, vdata),
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-			LLVMConstInt(ctx->i32, 0, 0),
+			ctx->i32_0,
 			offset,
 			LLVMConstInt(ctx->i1, glc, 0),
 			LLVMConstInt(ctx->i1, slc, 0),
@@ -972,8 +971,8 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 	LLVMValueRef args[] = {
 		vdata,
 		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-		LLVMConstInt(ctx->i32, 0, 0),
-		voffset ? voffset : LLVMConstInt(ctx->i32, 0, 0),
+		ctx->i32_0,
+		voffset ? voffset : ctx->i32_0,
 		soffset,
 		LLVMConstInt(ctx->i32, inst_offset, 0),
 		LLVMConstInt(ctx->i32, dfmt[num_channels - 1], 0),
@@ -1005,7 +1004,7 @@ ac_build_buffer_load_common(struct ac_llvm_context *ctx,
 {
 	LLVMValueRef args[] = {
 		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-		vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
+		vindex ? vindex : ctx->i32_0,
 		voffset,
 		LLVMConstInt(ctx->i1, glc, 0),
 		LLVMConstInt(ctx->i1, slc, 0)
@@ -1100,7 +1099,7 @@ LLVMValueRef ac_build_buffer_load_format_gfx9_safe(struct ac_llvm_context *ctx,
                                                   bool can_speculate)
 {
 	LLVMValueRef elem_count = LLVMBuildExtractElement(ctx->builder, rsrc, LLVMConstInt(ctx->i32, 2, 0), "");
-	LLVMValueRef stride = LLVMBuildExtractElement(ctx->builder, rsrc, LLVMConstInt(ctx->i32, 1, 0), "");
+	LLVMValueRef stride = LLVMBuildExtractElement(ctx->builder, rsrc, ctx->i32_1, "");
 	stride = LLVMBuildLShr(ctx->builder, stride, LLVMConstInt(ctx->i32, 16, 0), "");
 
 	LLVMValueRef new_elem_count = LLVMBuildSelect(ctx->builder,
@@ -1167,7 +1166,7 @@ ac_get_thread_id(struct ac_llvm_context *ctx)
 
 	LLVMValueRef tid_args[2];
 	tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
-	tid_args[1] = LLVMConstInt(ctx->i32, 0, false);
+	tid_args[1] = ctx->i32_0;
 	tid_args[1] = ac_build_intrinsic(ctx,
 					 "llvm.amdgcn.mbcnt.lo", ctx->i32,
 					 tid_args, 2, AC_FUNC_ATTR_READNONE);
@@ -1334,7 +1333,7 @@ ac_build_imsb(struct ac_llvm_context *ctx,
 	LLVMValueRef all_ones = LLVMConstInt(ctx->i32, -1, true);
 	LLVMValueRef cond = LLVMBuildOr(ctx->builder,
 					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
-						      arg, LLVMConstInt(ctx->i32, 0, 0), ""),
+						      arg, ctx->i32_0, ""),
 					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
 						      arg, all_ones, ""), "");
 
@@ -2403,7 +2402,7 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 		 *
 		 * The hardware already implements the correct behavior.
 		 */
-		LLVMConstInt(ctx->i1, 1, false),
+		ctx->i1true,
 	};
 
 	LLVMValueRef lsb = ac_build_intrinsic(ctx, intrin_name, type,
@@ -2657,7 +2656,7 @@ LLVMValueRef ac_trim_vector(struct ac_llvm_context *ctx, LLVMValueRef value,
 		return value;
 
 	LLVMValueRef masks[] = {
-	    LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
+	    ctx->i32_0, ctx->i32_1,
 	    LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false)};
 
 	if (count == 1)
