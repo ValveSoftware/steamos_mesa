@@ -1397,7 +1397,7 @@ static LLVMValueRef visit_load_push_constant(struct ac_nir_context *ctx,
 		LLVMValueRef res = LLVMBuildLoad(ctx->ac.builder, ptr, "");
 		res = LLVMBuildBitCast(ctx->ac.builder, res, vec_type, "");
 		LLVMValueRef cond = LLVMBuildLShr(ctx->ac.builder, addr, ctx->ac.i32_1, "");
-		cond = LLVMBuildTrunc(ctx->ac.builder, cond, LLVMInt1Type(), "");
+		cond = LLVMBuildTrunc(ctx->ac.builder, cond, ctx->ac.i1, "");
 		LLVMValueRef mask[] = { LLVMConstInt(ctx->ac.i32, 0, false), LLVMConstInt(ctx->ac.i32, 1, false),
 					LLVMConstInt(ctx->ac.i32, 2, false), LLVMConstInt(ctx->ac.i32, 3, false),
 					LLVMConstInt(ctx->ac.i32, 4, false)};
