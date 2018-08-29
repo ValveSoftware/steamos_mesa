@@ -682,6 +682,9 @@ void anv_DestroyInstance(
       anv_physical_device_finish(&instance->physicalDevice);
    }
 
+   vk_free(&instance->alloc, instance->app_info.app_name);
+   vk_free(&instance->alloc, instance->app_info.engine_name);
+
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
 
    vk_debug_report_instance_destroy(&instance->debug_report_callbacks);
