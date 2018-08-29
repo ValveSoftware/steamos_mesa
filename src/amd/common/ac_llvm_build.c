@@ -835,6 +835,14 @@ ac_build_gep0(struct ac_llvm_context *ctx,
 	return LLVMBuildGEP(ctx->builder, base_ptr, indices, 2, "");
 }
 
+LLVMValueRef ac_build_pointer_add(struct ac_llvm_context *ctx, LLVMValueRef ptr,
+				  LLVMValueRef index)
+{
+	return LLVMBuildPointerCast(ctx->builder,
+				    ac_build_gep0(ctx, ptr, index),
+				    LLVMTypeOf(ptr), "");
+}
+
 void
 ac_build_indexed_store(struct ac_llvm_context *ctx,
 		       LLVMValueRef base_ptr, LLVMValueRef index,
@@ -853,14 +861,39 @@ ac_build_indexed_store(struct ac_llvm_context *ctx,
  * \param uniform   Whether the base_ptr and index can be assumed to be
  *                  dynamically uniform (i.e. load to an SGPR)
  * \param invariant Whether the load is invariant (no other opcodes affect it)
+ * \param no_unsigned_wraparound
+ *    For all possible re-associations and re-distributions of an expression
+ *    "base_ptr + index * elemsize" into "addr + offset" (excluding GEPs
+ *    without inbounds in base_ptr), this parameter is true if "addr + offset"
+ *    does not result in an unsigned integer wraparound. This is used for
+ *    optimal code generation of 32-bit pointer arithmetic.
+ *
+ *    For example, a 32-bit immediate offset that causes a 32-bit unsigned
+ *    integer wraparound can't be an imm offset in s_load_dword, because
+ *    the instruction performs "addr + offset" in 64 bits.
+ *
+ *    Expected usage for bindless textures by chaining GEPs:
+ *      // possible unsigned wraparound, don't use InBounds:
+ *      ptr1 = LLVMBuildGEP(base_ptr, index);
+ *      image = load(ptr1); // becomes "s_load ptr1, 0"
+ *
+ *      ptr2 = LLVMBuildInBoundsGEP(ptr1, 32 / elemsize);
+ *      sampler = load(ptr2); // becomes "s_load ptr1, 32" thanks to InBounds
  */
 static LLVMValueRef
 ac_build_load_custom(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
-		     LLVMValueRef index, bool uniform, bool invariant)
+		     LLVMValueRef index, bool uniform, bool invariant,
+		     bool no_unsigned_wraparound)
 {
 	LLVMValueRef pointer, result;
+	LLVMValueRef indices[2] = {ctx->i32_0, index};
 
-	pointer = ac_build_gep0(ctx, base_ptr, index);
+	if (no_unsigned_wraparound &&
+	    LLVMGetPointerAddressSpace(LLVMTypeOf(base_ptr)) == AC_CONST_32BIT_ADDR_SPACE)
+		pointer = LLVMBuildInBoundsGEP(ctx->builder, base_ptr, indices, 2, "");
+	else
+		pointer = LLVMBuildGEP(ctx->builder, base_ptr, indices, 2, "");
+
 	if (uniform)
 		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
 	result = LLVMBuildLoad(ctx->builder, pointer, "");
@@ -872,19 +905,28 @@ ac_build_load_custom(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
 LLVMValueRef ac_build_load(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
 			   LLVMValueRef index)
 {
-	return ac_build_load_custom(ctx, base_ptr, index, false, false);
+	return ac_build_load_custom(ctx, base_ptr, index, false, false, false);
 }
 
 LLVMValueRef ac_build_load_invariant(struct ac_llvm_context *ctx,
 				     LLVMValueRef base_ptr, LLVMValueRef index)
 {
-	return ac_build_load_custom(ctx, base_ptr, index, false, true);
+	return ac_build_load_custom(ctx, base_ptr, index, false, true, false);
 }
 
+/* This assumes that there is no unsigned integer wraparound during the address
+ * computation, excluding all GEPs within base_ptr. */
 LLVMValueRef ac_build_load_to_sgpr(struct ac_llvm_context *ctx,
 				   LLVMValueRef base_ptr, LLVMValueRef index)
 {
-	return ac_build_load_custom(ctx, base_ptr, index, true, true);
+	return ac_build_load_custom(ctx, base_ptr, index, true, true, true);
+}
+
+/* See ac_build_load_custom() documentation. */
+LLVMValueRef ac_build_load_to_sgpr_uint_wraparound(struct ac_llvm_context *ctx,
+				   LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	return ac_build_load_custom(ctx, base_ptr, index, true, true, false);
 }
 
 /* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.

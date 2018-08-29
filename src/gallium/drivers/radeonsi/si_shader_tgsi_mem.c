@@ -176,7 +176,8 @@ static LLVMValueRef force_dcc_off(struct si_shader_context *ctx,
 
 LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
 				LLVMValueRef list, LLVMValueRef index,
-				enum ac_descriptor_type desc_type, bool dcc_off)
+				enum ac_descriptor_type desc_type, bool dcc_off,
+				bool bindless)
 {
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef rsrc;
@@ -190,7 +191,11 @@ LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
 		assert(desc_type == AC_DESC_IMAGE);
 	}
 
-	rsrc = ac_build_load_to_sgpr(&ctx->ac, list, index);
+	if (bindless)
+		rsrc = ac_build_load_to_sgpr_uint_wraparound(&ctx->ac, list, index);
+	else
+		rsrc = ac_build_load_to_sgpr(&ctx->ac, list, index);
+
 	if (desc_type == AC_DESC_IMAGE && dcc_off)
 		rsrc = force_dcc_off(ctx, rsrc);
 	return rsrc;
@@ -240,6 +245,8 @@ image_fetch_rsrc(
 				     index, "");
 	}
 
+	bool bindless = false;
+
 	if (image->Register.File != TGSI_FILE_IMAGE) {
 		/* Bindless descriptors are accessible from a different pair of
 		 * user SGPR indices.
@@ -254,11 +261,12 @@ image_fetch_rsrc(
 		 */
 		index = LLVMBuildMul(ctx->ac.builder, index,
 				     LLVMConstInt(ctx->i32, 2, 0), "");
+		bindless = true;
 	}
 
 	*rsrc = si_load_image_desc(ctx, rsrc_ptr, index,
 				   target == TGSI_TEXTURE_BUFFER ? AC_DESC_BUFFER : AC_DESC_IMAGE,
-				   dcc_off);
+				   dcc_off, bindless);
 }
 
 static void image_fetch_coords(
@@ -1068,6 +1076,15 @@ static void tex_fetch_ptrs(struct lp_build_tgsi_context *bld_base,
 				    ctx->param_bindless_samplers_and_images);
 		index = lp_build_emit_fetch_src(bld_base, reg,
 						TGSI_TYPE_UNSIGNED, 0);
+
+		/* Since bindless handle arithmetic can contain an unsigned integer
+		 * wraparound and si_load_sampler_desc assumes there isn't any,
+		 * use GEP without "inbounds" (inside ac_build_pointer_add)
+		 * to prevent incorrect code generation and hangs.
+		 */
+		index = LLVMBuildMul(ctx->ac.builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
+		list = ac_build_pointer_add(&ctx->ac, list, index);
+		index = ctx->i32_0;
 	}
 
 	if (target == TGSI_TEXTURE_BUFFER)

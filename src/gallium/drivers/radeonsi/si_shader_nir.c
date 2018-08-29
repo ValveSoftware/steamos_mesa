@@ -920,7 +920,7 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 				     index, "");
 
 		/* TODO: be smarter about when we use dcc_off */
-		return si_load_image_desc(ctx, list, index, desc_type, write);
+		return si_load_image_desc(ctx, list, index, desc_type, write, bindless);
 	}
 
 	assert(base_index + constant_index < ctx->num_samplers);
@@ -931,6 +931,16 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 	index = LLVMBuildAdd(ctx->ac.builder, index,
 			     LLVMConstInt(ctx->i32, SI_NUM_IMAGES / 2, 0), "");
 
+	if (bindless) {
+		/* Since bindless handle arithmetic can contain an unsigned integer
+		 * wraparound and si_load_sampler_desc assumes there isn't any,
+		 * use GEP without "inbounds" (inside ac_build_pointer_add)
+		 * to prevent incorrect code generation and hangs.
+		 */
+		index = LLVMBuildMul(ctx->ac.builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
+		list = ac_build_pointer_add(&ctx->ac, list, index);
+		index = ctx->i32_0;
+	}
 	return si_load_sampler_desc(ctx, list, index, desc_type);
 }
 
