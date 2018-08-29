@@ -22,6 +22,7 @@
 noinst_PROGRAMS += \
 	tools/aubinator \
 	tools/aubinator_error_decode \
+	tools/i965_disasm \
 	tools/error2aub
 
 
@@ -65,6 +66,19 @@ tools_aubinator_error_decode_LDADD = \
 tools_aubinator_error_decode_CFLAGS = \
 	$(AM_CFLAGS) \
 	$(ZLIB_CFLAGS)
+
+tools_i965_disasm_SOURCES = \
+	tools/i965_disasm.c
+
+tools_i965_disasm_LDADD = \
+	common/libintel_common.la \
+	compiler/libintel_compiler.la \
+	dev/libintel_dev.la \
+	$(top_builddir)/src/util/libmesautil.la \
+	$(PTHREAD_LIBS)
+
+tools_i965_disasm_CFLAGS = \
+	$(AM_CFLAGS)
 
 
 tools_error2aub_SOURCES = \

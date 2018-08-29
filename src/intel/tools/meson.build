@@ -49,6 +49,17 @@ aubinator_error_decode = executable(
   install : true
 )
 
+i965_disasm = executable(
+  'i965_disasm',
+  files('i965_disasm.c'),
+  dependencies : [dep_thread],
+  include_directories : [inc_common, inc_intel],
+  link_with : [libintel_common, libintel_compiler, libintel_dev, libmesa_util],
+  c_args : [c_vis_args, no_override_init_args],
+  build_by_default : true,
+  install : true
+)
+
 error2aub = executable(
   'intel_error2aub',
   files('aub_write.h', 'aub_write.c', 'error2aub.c'),
