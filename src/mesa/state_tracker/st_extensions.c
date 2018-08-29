@@ -83,7 +83,6 @@ void st_init_limits(struct pipe_screen *screen,
    unsigned sh;
    bool can_ubo = true;
    int temp;
-   bool ssbo_atomic = true;
 
    c->MaxTextureLevels
       = _min(screen->get_param(screen, PIPE_CAP_MAX_TEXTURE_2D_LEVELS),
@@ -251,7 +250,6 @@ void st_init_limits(struct pipe_screen *screen,
           * for separate atomic counters get the actual hw limits
           * per stage on atomic counters and buffers
           */
-         ssbo_atomic = false;
          pc->MaxAtomicCounters = temp;
          pc->MaxAtomicBuffers = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS);
       } else {
@@ -445,13 +443,11 @@ void st_init_limits(struct pipe_screen *screen,
    c->MaxAtomicBufferSize =
       c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters * ATOMIC_COUNTER_SIZE;
 
-   if (!ssbo_atomic) {
-      /* on all HW with separate atomic (evergreen) the following
-         lines are true. not sure it's worth adding CAPs for this at this
-         stage. */
-      c->MaxCombinedAtomicCounters = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters;
-      c->MaxCombinedAtomicBuffers = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
-   } else {
+   c->MaxCombinedAtomicBuffers =
+      MIN2(screen->get_param(screen,
+                             PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS),
+           MAX_COMBINED_ATOMIC_BUFFERS);
+   if (!c->MaxCombinedAtomicBuffers) {
       c->MaxCombinedAtomicBuffers =
          c->Program[MESA_SHADER_VERTEX].MaxAtomicBuffers +
          c->Program[MESA_SHADER_TESS_CTRL].MaxAtomicBuffers +
@@ -460,6 +456,11 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
       assert(c->MaxCombinedAtomicBuffers <= MAX_COMBINED_ATOMIC_BUFFERS);
    }
+
+   c->MaxCombinedAtomicCounters =
+      screen->get_param(screen, PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTERS);
+   if (!c->MaxCombinedAtomicCounters)
+      c->MaxCombinedAtomicCounters = MAX_ATOMIC_COUNTERS;
 
    if (c->MaxCombinedAtomicBuffers > 0) {
       extensions->ARB_shader_atomic_counters = GL_TRUE;

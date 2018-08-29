@@ -549,6 +549,16 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return rscreen->b.info.pci_dev;
 	case PIPE_CAP_PCI_FUNCTION:
 		return rscreen->b.info.pci_func;
+
+	case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTERS:
+		if (rscreen->b.family >= CHIP_CEDAR && rscreen->has_atomics)
+			return 8;
+		return 0;
+	case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS:
+		if (rscreen->b.family >= CHIP_CEDAR && rscreen->has_atomics)
+			return EG_MAX_ATOMIC_BUFFERS;
+		return 0;
+
 	default:
 		return u_pipe_screen_get_param_defaults(pscreen, param);
 	}

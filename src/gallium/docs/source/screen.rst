@@ -461,6 +461,11 @@ subpixel precision bias in bits during conservative rasterization.
 * ``PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS``: Maximum total number of shader
   buffers. A value of 0 means the sum of all per-shader stage maximums (see
   ``PIPE_SHADER_CAP_MAX_SHADER_BUFFERS``).
+* ``PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTERS``: Maximum total number of atomic
+  counters. A value of 0 means the default value (MAX_ATOMIC_COUNTERS = 4096).
+* ``PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS``: Maximum total number of
+  atomic counter buffers. A value of 0 means the sum of all per-shader stage
+  maximums (see ``PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS``).
 
 .. _pipe_capf:
 
