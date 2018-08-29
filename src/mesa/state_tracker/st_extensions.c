@@ -441,12 +441,11 @@ void st_init_limits(struct pipe_screen *screen,
       c->NumProgramBinaryFormats = 1;
 
    c->MaxAtomicBufferBindings =
-          c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+      c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   c->MaxAtomicBufferSize =
+      c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters * ATOMIC_COUNTER_SIZE;
 
    if (!ssbo_atomic) {
-      /* for separate atomic buffers - there atomic buffer size will be
-         limited */
-      c->MaxAtomicBufferSize = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters * ATOMIC_COUNTER_SIZE;
       /* on all HW with separate atomic (evergreen) the following
          lines are true. not sure it's worth adding CAPs for this at this
          stage. */
