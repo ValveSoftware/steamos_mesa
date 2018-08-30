@@ -191,11 +191,6 @@ DRI_CONF_OPT_BEGIN_V(round_mode,enum,def,"0:1") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_FLOAT_DEPTH(def) \
-DRI_CONF_OPT_BEGIN_B(float_depth, def) \
-        DRI_CONF_DESC(en,gettext("Floating point depth buffer")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_PP_CELSHADE(def) \
 DRI_CONF_OPT_BEGIN_V(pp_celshade,enum,def,"0:1") \
         DRI_CONF_DESC(en,gettext("A post-processing filter to cel-shade the output")) \

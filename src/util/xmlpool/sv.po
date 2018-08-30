@@ -114,10 +114,6 @@ msgstr "Horisontell felspridning, återställ fel vid radbörjan"
 msgid "Ordered 2D color dithering"
 msgstr "Ordnad 2D-färgutjämning"
 
-#: t_options.h:190
-msgid "Floating point depth buffer"
-msgstr "Buffert för flytande punktdjup"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr ""

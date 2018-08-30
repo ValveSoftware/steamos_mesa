@@ -124,10 +124,6 @@ msgstr "Arrodoneix els components de color a baix"
 msgid "Round to nearest color"
 msgstr "Arrodoneix al color més proper"
 
-#: t_options.h:190
-msgid "Floating point depth buffer"
-msgstr "Buffer de profunditat de punt flotant"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Un filtre de postprocessament per a aplicar cel shading a la sortida"

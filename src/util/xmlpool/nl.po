@@ -98,10 +98,6 @@ msgstr "Horizontale foutdiffusie, zet fout bij lijnbegin terug"
 msgid "Ordered 2D color dithering"
 msgstr "Geordende 2D kleurrasterisering"
 
-#: t_options.h:190
-msgid "Floating point depth buffer"
-msgstr "Dieptebuffer als commagetal"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr ""

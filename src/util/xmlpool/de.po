@@ -99,10 +99,6 @@ msgstr "Farbkomponenten abrunden"
 msgid "Round to nearest color"
 msgstr "Zur ähnlichsten Farbe runden"
 
-#: t_options.h:190
-msgid "Floating point depth buffer"
-msgstr "Fließkomma z-Puffer"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Nachbearbeitungsfilter für Cell Shading"
