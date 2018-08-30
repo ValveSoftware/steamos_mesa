@@ -1014,6 +1014,10 @@ delete_vertex_arrays(struct gl_context *ctx, GLsizei n, const GLuint *ids)
    GLsizei i;
 
    for (i = 0; i < n; i++) {
+      /* IDs equal to 0 should be silently ignored. */
+      if (!ids[i])
+         continue;
+
       struct gl_vertex_array_object *obj = _mesa_lookup_vao(ctx, ids[i]);
 
       if (obj) {
