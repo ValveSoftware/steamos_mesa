@@ -162,29 +162,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Performance"
 
-#: t_options.h:238
-msgid "TCL mode (Transformation, Clipping, Lighting)"
-msgstr "Mode de TCL (Transformation, Clipping, Eclairage)"
-
-#: t_options.h:239
-msgid "Use software TCL pipeline"
-msgstr "Utiliser un pipeline TCL logiciel"
-
-#: t_options.h:240
-msgid "Use hardware TCL as first TCL pipeline stage"
-msgstr "Utiliser le TCL matériel pour le premier niveau de pipeline"
-
-#: t_options.h:241
-msgid "Bypass the TCL pipeline"
-msgstr "Court-circuiter le pipeline TCL"
-
-#: t_options.h:242
-msgid ""
-"Bypass the TCL pipeline with state-based machine code generated on-the-fly"
-msgstr ""
-"Court-circuiter le pipeline TCL par une machine à états qui génère le codede "
-"TCL à la volée"
-
 #: t_options.h:251
 msgid "Method to limit rendering latency"
 msgstr "Méthode d'attente de la carte graphique"

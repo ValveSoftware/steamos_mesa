@@ -193,29 +193,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Rendiment"
 
-#: t_options.h:238
-msgid "TCL mode (Transformation, Clipping, Lighting)"
-msgstr "Mode TCL (Transformació, Retall, Il·luminació)"
-
-#: t_options.h:239
-msgid "Use software TCL pipeline"
-msgstr "Utilitza la canonada TCL de programari"
-
-#: t_options.h:240
-msgid "Use hardware TCL as first TCL pipeline stage"
-msgstr "Utilitza el TCL de maquinari com a la primera fase de la canonada TCL"
-
-#: t_options.h:241
-msgid "Bypass the TCL pipeline"
-msgstr "Passa per alt la canonada TCL"
-
-#: t_options.h:242
-msgid ""
-"Bypass the TCL pipeline with state-based machine code generated on-the-fly"
-msgstr ""
-"Passa per alt la canonada TCL amb codi de màquina basat en estats, generat "
-"sobre la marxa"
-
 #: t_options.h:251
 msgid "Method to limit rendering latency"
 msgstr "Mètode per a limitar la latència de renderització"

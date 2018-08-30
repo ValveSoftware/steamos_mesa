@@ -80,6 +80,16 @@ DRI_CONF_OPT_BEGIN_B(hyperz, def) \
         DRI_CONF_DESC(en,"Use HyperZ to boost performance") \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_TCL_MODE(def) \
+DRI_CONF_OPT_BEGIN_V(tcl_mode,enum,def,"0:3") \
+        DRI_CONF_DESC_BEGIN(en,"TCL mode (Transformation, Clipping, Lighting)") \
+                DRI_CONF_ENUM(0,"Use software TCL pipeline") \
+                DRI_CONF_ENUM(1,"Use hardware TCL as first TCL pipeline stage") \
+                DRI_CONF_ENUM(2,"Bypass the TCL pipeline") \
+                DRI_CONF_ENUM(3,"Bypass the TCL pipeline with state-based machine code generated on-the-fly") \
+        DRI_CONF_DESC_END \
+DRI_CONF_OPT_END
+
 #if defined(RADEON_R100)	/* R100 */
 static const __DRIconfigOptionsExtension radeon_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },

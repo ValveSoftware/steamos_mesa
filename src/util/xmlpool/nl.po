@@ -162,29 +162,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Prestatie"
 
-#: t_options.h:238
-msgid "TCL mode (Transformation, Clipping, Lighting)"
-msgstr "TCL-modus (Transformatie, Clipping, Licht)"
-
-#: t_options.h:239
-msgid "Use software TCL pipeline"
-msgstr "Gebruik software TCL pijpleiding"
-
-#: t_options.h:240
-msgid "Use hardware TCL as first TCL pipeline stage"
-msgstr "Gebruik hardware TCL as eerste TCL pijpleiding trap"
-
-#: t_options.h:241
-msgid "Bypass the TCL pipeline"
-msgstr "Omzeil de TCL pijpleiding"
-
-#: t_options.h:242
-msgid ""
-"Bypass the TCL pipeline with state-based machine code generated on-the-fly"
-msgstr ""
-"Omzeil de TCL pijpleiding met staatgebaseerde machinecode die tijdens "
-"executie gegenereerd wordt"
-
 #: t_options.h:251
 msgid "Method to limit rendering latency"
 msgstr "Methode om beeldopbouwvertraging te onderdrukken"

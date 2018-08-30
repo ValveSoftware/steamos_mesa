@@ -162,28 +162,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Prestanda"
 
-#: t_options.h:238
-msgid "TCL mode (Transformation, Clipping, Lighting)"
-msgstr "TCL-läge (Transformation, Clipping, Lighting)"
-
-#: t_options.h:239
-msgid "Use software TCL pipeline"
-msgstr "Använd programvaru-TCL-rörledning"
-
-#: t_options.h:240
-msgid "Use hardware TCL as first TCL pipeline stage"
-msgstr "Använd maskinvaru-TCL som första TCL-rörledningssteg"
-
-#: t_options.h:241
-msgid "Bypass the TCL pipeline"
-msgstr "Kringgå TCL-rörledningen"
-
-#: t_options.h:242
-msgid ""
-"Bypass the TCL pipeline with state-based machine code generated on-the-fly"
-msgstr ""
-"Kringgå TCL-rörledningen med tillståndsbaserad maskinkod som direktgenereras"
-
 #: t_options.h:251
 msgid "Method to limit rendering latency"
 msgstr "Metod för att begränsa renderingslatens"

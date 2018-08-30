@@ -174,29 +174,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Rendimiento"
 
-#: t_options.h:238
-msgid "TCL mode (Transformation, Clipping, Lighting)"
-msgstr "Modo TCL (Transformación, Recorte, Iluminación)"
-
-#: t_options.h:239
-msgid "Use software TCL pipeline"
-msgstr "Usar tubería TCL por software"
-
-#: t_options.h:240
-msgid "Use hardware TCL as first TCL pipeline stage"
-msgstr "Usar TCL por hardware en la primera fase de la tubería TCL"
-
-#: t_options.h:241
-msgid "Bypass the TCL pipeline"
-msgstr "Pasar por alto la tubería TCL"
-
-#: t_options.h:242
-msgid ""
-"Bypass the TCL pipeline with state-based machine code generated on-the-fly"
-msgstr ""
-"Pasar por alto la tubería TCL con código máquina basado en estados, generado "
-"al vuelo"
-
 #: t_options.h:251
 msgid "Method to limit rendering latency"
 msgstr "Método para limitar la latencia de renderización"

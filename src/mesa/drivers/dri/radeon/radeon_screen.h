@@ -48,6 +48,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "util/xmlconfig.h"
 
 
+#define DRI_CONF_TCL_SW 0
+#define DRI_CONF_TCL_PIPELINED 1
+#define DRI_CONF_TCL_VTXFMT 2
+#define DRI_CONF_TCL_CODEGEN 3
+
 typedef struct {
    drm_handle_t handle;			/* Handle to the DRM region */
    drmSize size;			/* Size of the DRM region */

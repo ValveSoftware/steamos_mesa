@@ -257,20 +257,6 @@ DRI_CONF_OPT_END
 DRI_CONF_SECTION_BEGIN \
         DRI_CONF_DESC(en,gettext("Performance"))
 
-#define DRI_CONF_TCL_SW 0
-#define DRI_CONF_TCL_PIPELINED 1
-#define DRI_CONF_TCL_VTXFMT 2
-#define DRI_CONF_TCL_CODEGEN 3
-#define DRI_CONF_TCL_MODE(def) \
-DRI_CONF_OPT_BEGIN_V(tcl_mode,enum,def,"0:3") \
-        DRI_CONF_DESC_BEGIN(en,gettext("TCL mode (Transformation, Clipping, Lighting)")) \
-                DRI_CONF_ENUM(0,gettext("Use software TCL pipeline")) \
-                DRI_CONF_ENUM(1,gettext("Use hardware TCL as first TCL pipeline stage")) \
-                DRI_CONF_ENUM(2,gettext("Bypass the TCL pipeline")) \
-                DRI_CONF_ENUM(3,gettext("Bypass the TCL pipeline with state-based machine code generated on-the-fly")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_FTHROTTLE_BUSY 0
 #define DRI_CONF_FTHROTTLE_USLEEPS 1
 #define DRI_CONF_FTHROTTLE_IRQS 2
