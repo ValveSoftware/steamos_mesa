@@ -933,6 +933,7 @@ static const struct brw_tracked_state genX(vertices) = {
       .mesa = _NEW_POLYGON,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
+             BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_VERTICES |
              BRW_NEW_VS_PROG_DATA,
    },
