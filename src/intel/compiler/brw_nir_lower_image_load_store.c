@@ -817,8 +817,8 @@ brw_nir_lower_image_load_store(nir_shader *shader,
          }
       }
 
-      nir_metadata_preserve(function->impl, nir_metadata_block_index |
-                                            nir_metadata_dominance);
+      if (progress)
+         nir_metadata_preserve(function->impl, nir_metadata_none);
    }
 
    return progress;
