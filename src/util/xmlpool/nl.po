@@ -82,10 +82,6 @@ msgstr "Dwing 16 bits per texel af"
 msgid "Initial maximum value for anisotropic texture filtering"
 msgstr "Initïele maximum waarde voor anisotrophische textuur filtering"
 
-#: t_options.h:148
-msgid "Forbid negative texture LOD bias"
-msgstr "Verbied negatief niveau detailonderscheid (LOD) van texturen"
-
 #: t_options.h:182
 msgid "Horizontal error diffusion"
 msgstr "Horizontale foutdiffusie"

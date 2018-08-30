@@ -171,11 +171,6 @@ DRI_CONF_OPT_BEGIN_V(def_max_anisotropy,float,def,range) \
         DRI_CONF_DESC(en,gettext("Initial maximum value for anisotropic texture filtering")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_NO_NEG_LOD_BIAS(def) \
-DRI_CONF_OPT_BEGIN_B(no_neg_lod_bias, def) \
-        DRI_CONF_DESC(en,gettext("Forbid negative texture LOD bias")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_PRECISE_TRIG(def) \
 DRI_CONF_OPT_BEGIN_B(precise_trig, def) \
         DRI_CONF_DESC(en,gettext("Prefer accuracy over performance in trig functions")) \

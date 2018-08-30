@@ -82,10 +82,6 @@ msgstr "Tvinga 16 bitar per texel"
 msgid "Initial maximum value for anisotropic texture filtering"
 msgstr "Initialt maximalt värde för anisotropisk texturfiltrering"
 
-#: t_options.h:148
-msgid "Forbid negative texture LOD bias"
-msgstr "Förbjud negativ LOD-kompensation för texturer"
-
 #: t_options.h:181
 msgid "Color dithering method"
 msgstr "Färgutjämningsmetod"

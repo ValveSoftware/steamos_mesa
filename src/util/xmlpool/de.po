@@ -83,10 +83,6 @@ msgstr "Erzwinge 16 bits pro Texel"
 msgid "Initial maximum value for anisotropic texture filtering"
 msgstr "Initialer Maximalwert für anisotropische Texturfilterung"
 
-#: t_options.h:148
-msgid "Forbid negative texture LOD bias"
-msgstr "Verbiete negative Textur-Detailgradverschiebung"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Nachbearbeitungsfilter für Cell Shading"

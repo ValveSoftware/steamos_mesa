@@ -90,6 +90,11 @@ DRI_CONF_OPT_BEGIN_V(tcl_mode,enum,def,"0:3") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_NO_NEG_LOD_BIAS(def) \
+DRI_CONF_OPT_BEGIN_B(no_neg_lod_bias, def) \
+        DRI_CONF_DESC(en,"Forbid negative texture LOD bias") \
+DRI_CONF_OPT_END
+
 #if defined(RADEON_R100)	/* R100 */
 static const __DRIconfigOptionsExtension radeon_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },

@@ -106,12 +106,6 @@ msgstr "Força 16 bits per texel"
 msgid "Initial maximum value for anisotropic texture filtering"
 msgstr "Valor màxim inicial per a la filtració de textura anisòtropa"
 
-#: t_options.h:148
-msgid "Forbid negative texture LOD bias"
-msgstr ""
-"Prohibeix una parcialitat negativa del Nivell de Detalle (LOD) de les "
-"textures"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Un filtre de postprocessament per a aplicar cel shading a la sortida"
