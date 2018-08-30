@@ -126,22 +126,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Prestanda"
 
-#: t_options.h:251
-msgid "Method to limit rendering latency"
-msgstr "Metod för att begränsa renderingslatens"
-
-#: t_options.h:252
-msgid "Busy waiting for the graphics hardware"
-msgstr "Upptagen med att vänta på grafikhårdvaran"
-
-#: t_options.h:253
-msgid "Sleep for brief intervals while waiting for the graphics hardware"
-msgstr "Sov i korta intervall under väntan på grafikhårdvaran"
-
-#: t_options.h:254
-msgid "Let the graphics hardware emit a software interrupt and sleep"
-msgstr "Låt grafikhårdvaran sända ut ett programvaruavbrott och sov"
-
 #: t_options.h:264
 msgid "Synchronization with vertical refresh (swap intervals)"
 msgstr "Synkronisering med vertikal uppdatering (växlingsintervall)"

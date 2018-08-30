@@ -139,23 +139,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Rendiment"
 
-#: t_options.h:251
-msgid "Method to limit rendering latency"
-msgstr "Mètode per a limitar la latència de renderització"
-
-#: t_options.h:252
-msgid "Busy waiting for the graphics hardware"
-msgstr "Espera activa pel maquinari de gràfics"
-
-#: t_options.h:253
-msgid "Sleep for brief intervals while waiting for the graphics hardware"
-msgstr "Dorm per intervals breus mentre s'espera al maquinari de gràfics"
-
-#: t_options.h:254
-msgid "Let the graphics hardware emit a software interrupt and sleep"
-msgstr ""
-"Deixa que el maquinari de gràfics emeti una interrupció de programari i dormi"
-
 #: t_options.h:264
 msgid "Synchronization with vertical refresh (swap intervals)"
 msgstr "Sincronització amb refresc vertical (intervals d'intercanvi)"

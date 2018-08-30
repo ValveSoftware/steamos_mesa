@@ -115,23 +115,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Leistung"
 
-#: t_options.h:251
-msgid "Method to limit rendering latency"
-msgstr "Methode zur Begrenzung der Bildverzögerung"
-
-#: t_options.h:252
-msgid "Busy waiting for the graphics hardware"
-msgstr "Aktives Warten auf die Grafikhardware"
-
-#: t_options.h:253
-msgid "Sleep for brief intervals while waiting for the graphics hardware"
-msgstr "Kurze Schlafintervalle beim Warten auf die Grafikhardware"
-
-#: t_options.h:254
-msgid "Let the graphics hardware emit a software interrupt and sleep"
-msgstr ""
-"Die Grafikhardware eine Softwareunterbrechnung erzeugen lassen und schlafen"
-
 #: t_options.h:264
 msgid "Synchronization with vertical refresh (swap intervals)"
 msgstr "Synchronisation mit der vertikalen Bildwiederholung"

@@ -122,25 +122,6 @@ msgstr ""
 msgid "Performance"
 msgstr "Prestatie"
 
-#: t_options.h:251
-msgid "Method to limit rendering latency"
-msgstr "Methode om beeldopbouwvertraging te onderdrukken"
-
-#: t_options.h:252
-msgid "Busy waiting for the graphics hardware"
-msgstr "Actief wachten voor de grafische hardware"
-
-#: t_options.h:253
-msgid "Sleep for brief intervals while waiting for the graphics hardware"
-msgstr ""
-"Slaap voor korte intervallen tijdens het wachten op de grafische hardware"
-
-#: t_options.h:254
-msgid "Let the graphics hardware emit a software interrupt and sleep"
-msgstr ""
-"Laat de grafische hardware een software onderbreking uitzenden en in slaap "
-"vallen"
-
 #: t_options.h:264
 msgid "Synchronization with vertical refresh (swap intervals)"
 msgstr "Synchronisatie met verticale verversing (interval omwisselen)"

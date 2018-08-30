@@ -210,18 +210,6 @@ DRI_CONF_OPT_END
 DRI_CONF_SECTION_BEGIN \
         DRI_CONF_DESC(en,gettext("Performance"))
 
-#define DRI_CONF_FTHROTTLE_BUSY 0
-#define DRI_CONF_FTHROTTLE_USLEEPS 1
-#define DRI_CONF_FTHROTTLE_IRQS 2
-#define DRI_CONF_FTHROTTLE_MODE(def) \
-DRI_CONF_OPT_BEGIN_V(fthrottle_mode,enum,def,"0:2") \
-        DRI_CONF_DESC_BEGIN(en,gettext("Method to limit rendering latency")) \
-                DRI_CONF_ENUM(0,gettext("Busy waiting for the graphics hardware")) \
-                DRI_CONF_ENUM(1,gettext("Sleep for brief intervals while waiting for the graphics hardware")) \
-                DRI_CONF_ENUM(2,gettext("Let the graphics hardware emit a software interrupt and sleep")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_VBLANK_NEVER 0
 #define DRI_CONF_VBLANK_DEF_INTERVAL_0 1
 #define DRI_CONF_VBLANK_DEF_INTERVAL_1 2
