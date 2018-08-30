@@ -54,6 +54,8 @@ delete_variant(struct ir3_shader_variant *v)
 		ir3_destroy(v->ir);
 	if (v->bo)
 		fd_bo_del(v->bo);
+	if (v->immediates)
+		free(v->immediates);
 	free(v);
 }
 

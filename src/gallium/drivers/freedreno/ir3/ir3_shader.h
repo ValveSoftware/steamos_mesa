@@ -325,9 +325,10 @@ struct ir3_shader_variant {
 	} constbase;
 
 	unsigned immediates_count;
+	unsigned immediates_size;
 	struct {
 		uint32_t val[4];
-	} immediates[64];
+	} *immediates;
 
 	/* for astc srgb workaround, the number/base of additional
 	 * alpha tex states we need, and index of original tex states
