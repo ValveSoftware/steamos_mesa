@@ -112,18 +112,6 @@ msgstr ""
 "Prohibeix una parcialitat negativa del Nivell de Detalle (LOD) de les "
 "textures"
 
-#: t_options.h:160
-msgid "Initial color reduction method"
-msgstr "Mètode inicial de reducció de color"
-
-#: t_options.h:161
-msgid "Round colors"
-msgstr "Colors arrodonits"
-
-#: t_options.h:162
-msgid "Dither colors"
-msgstr "Colors tramats"
-
 #: t_options.h:170
 msgid "Color rounding method"
 msgstr "Mètode d'arrodoniment de color"

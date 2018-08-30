@@ -86,18 +86,6 @@ msgstr "Initialt maximalt värde för anisotropisk texturfiltrering"
 msgid "Forbid negative texture LOD bias"
 msgstr "Förbjud negativ LOD-kompensation för texturer"
 
-#: t_options.h:160
-msgid "Initial color reduction method"
-msgstr "Initial färgminskningsmetod"
-
-#: t_options.h:161
-msgid "Round colors"
-msgstr "Avrunda färger"
-
-#: t_options.h:162
-msgid "Dither colors"
-msgstr "Utjämna färger"
-
 #: t_options.h:170
 msgid "Color rounding method"
 msgstr "Färgavrundningsmetod"

@@ -87,18 +87,6 @@ msgstr "Initialer Maximalwert für anisotropische Texturfilterung"
 msgid "Forbid negative texture LOD bias"
 msgstr "Verbiete negative Textur-Detailgradverschiebung"
 
-#: t_options.h:160
-msgid "Initial color reduction method"
-msgstr "Initiale Farbreduktionsmethode"
-
-#: t_options.h:161
-msgid "Round colors"
-msgstr "Farben runden"
-
-#: t_options.h:162
-msgid "Dither colors"
-msgstr "Farben rastern"
-
 #: t_options.h:170
 msgid "Color rounding method"
 msgstr "Farbrundungsmethode"

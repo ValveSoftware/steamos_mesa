@@ -47,6 +47,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "radeon_reg.h"
 #include "util/xmlconfig.h"
 
+#define DRI_CONF_COLOR_REDUCTION_ROUND 0
+#define DRI_CONF_COLOR_REDUCTION_DITHER 1
+#define DRI_CONF_COLOR_REDUCTION(def) \
+DRI_CONF_OPT_BEGIN_V(color_reduction,enum,def,"0:1") \
+        DRI_CONF_DESC_BEGIN(en,"Initial color reduction method") \
+                DRI_CONF_ENUM(0,"Round colors") \
+                DRI_CONF_ENUM(1,"Dither colors") \
+        DRI_CONF_DESC_END \
+DRI_CONF_OPT_END
+
 
 #define DRI_CONF_TCL_SW 0
 #define DRI_CONF_TCL_PIPELINED 1

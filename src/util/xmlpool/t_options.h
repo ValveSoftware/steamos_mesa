@@ -181,16 +181,6 @@ DRI_CONF_OPT_BEGIN_B(precise_trig, def) \
         DRI_CONF_DESC(en,gettext("Prefer accuracy over performance in trig functions")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_COLOR_REDUCTION_ROUND 0
-#define DRI_CONF_COLOR_REDUCTION_DITHER 1
-#define DRI_CONF_COLOR_REDUCTION(def) \
-DRI_CONF_OPT_BEGIN_V(color_reduction,enum,def,"0:1") \
-        DRI_CONF_DESC_BEGIN(en,gettext("Initial color reduction method")) \
-                DRI_CONF_ENUM(0,gettext("Round colors")) \
-                DRI_CONF_ENUM(1,gettext("Dither colors")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_ROUND_TRUNC 0
 #define DRI_CONF_ROUND_ROUND 1
 #define DRI_CONF_ROUND_MODE(def) \
