@@ -87,18 +87,6 @@ msgstr "Initialer Maximalwert für anisotropische Texturfilterung"
 msgid "Forbid negative texture LOD bias"
 msgstr "Verbiete negative Textur-Detailgradverschiebung"
 
-#: t_options.h:170
-msgid "Color rounding method"
-msgstr "Farbrundungsmethode"
-
-#: t_options.h:171
-msgid "Round color components downward"
-msgstr "Farbkomponenten abrunden"
-
-#: t_options.h:172
-msgid "Round to nearest color"
-msgstr "Zur ähnlichsten Farbe runden"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Nachbearbeitungsfilter für Cell Shading"

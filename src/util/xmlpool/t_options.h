@@ -181,16 +181,6 @@ DRI_CONF_OPT_BEGIN_B(precise_trig, def) \
         DRI_CONF_DESC(en,gettext("Prefer accuracy over performance in trig functions")) \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_ROUND_TRUNC 0
-#define DRI_CONF_ROUND_ROUND 1
-#define DRI_CONF_ROUND_MODE(def) \
-DRI_CONF_OPT_BEGIN_V(round_mode,enum,def,"0:1") \
-        DRI_CONF_DESC_BEGIN(en,gettext("Color rounding method")) \
-                DRI_CONF_ENUM(0,gettext("Round color components downward")) \
-                DRI_CONF_ENUM(1,gettext("Round to nearest color")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_PP_CELSHADE(def) \
 DRI_CONF_OPT_BEGIN_V(pp_celshade,enum,def,"0:1") \
         DRI_CONF_DESC(en,gettext("A post-processing filter to cel-shade the output")) \

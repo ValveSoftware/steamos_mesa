@@ -69,6 +69,16 @@ DRI_CONF_OPT_BEGIN_V(dither_mode,enum,def,"0:2") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_ROUND_TRUNC 0
+#define DRI_CONF_ROUND_ROUND 1
+#define DRI_CONF_ROUND_MODE(def) \
+DRI_CONF_OPT_BEGIN_V(round_mode,enum,def,"0:1") \
+       DRI_CONF_DESC_BEGIN(en,"Color rounding method") \
+                DRI_CONF_ENUM(0,"Round color components downward") \
+                DRI_CONF_ENUM(1,"Round to nearest color") \
+        DRI_CONF_DESC_END \
+DRI_CONF_OPT_END
+
 
 #define DRI_CONF_TCL_SW 0
 #define DRI_CONF_TCL_PIPELINED 1

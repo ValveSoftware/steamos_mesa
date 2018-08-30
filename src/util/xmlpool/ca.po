@@ -112,18 +112,6 @@ msgstr ""
 "Prohibeix una parcialitat negativa del Nivell de Detalle (LOD) de les "
 "textures"
 
-#: t_options.h:170
-msgid "Color rounding method"
-msgstr "Mètode d'arrodoniment de color"
-
-#: t_options.h:171
-msgid "Round color components downward"
-msgstr "Arrodoneix els components de color a baix"
-
-#: t_options.h:172
-msgid "Round to nearest color"
-msgstr "Arrodoneix al color més proper"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Un filtre de postprocessament per a aplicar cel shading a la sortida"
