@@ -59,26 +59,6 @@ msgstr ""
 msgid "Image Quality"
 msgstr "Bildqualität"
 
-#: t_options.h:133
-msgid "Texture color depth"
-msgstr "Texturfarbtiefe"
-
-#: t_options.h:134
-msgid "Prefer frame buffer color depth"
-msgstr "Bevorzuge Farbtiefe des Framebuffers"
-
-#: t_options.h:135
-msgid "Prefer 32 bits per texel"
-msgstr "Bevorzuge 32 bits pro Texel"
-
-#: t_options.h:136
-msgid "Prefer 16 bits per texel"
-msgstr "Bevorzuge 16 bits pro Texel"
-
-#: t_options.h:137
-msgid "Force 16 bits per texel"
-msgstr "Erzwinge 16 bits pro Texel"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Nachbearbeitungsfilter für Cell Shading"

@@ -66,26 +66,6 @@ msgstr "Permite directivas #extension GLSL en medio de los shaders"
 msgid "Image Quality"
 msgstr "Calidad de imagen"
 
-#: t_options.h:133
-msgid "Texture color depth"
-msgstr "Profundidad de color de textura"
-
-#: t_options.h:134
-msgid "Prefer frame buffer color depth"
-msgstr "Preferir profundidad de color del framebuffer"
-
-#: t_options.h:135
-msgid "Prefer 32 bits per texel"
-msgstr "Preferir 32 bits por texel"
-
-#: t_options.h:136
-msgid "Prefer 16 bits per texel"
-msgstr "Preferir 16 bits por texel"
-
-#: t_options.h:137
-msgid "Force 16 bits per texel"
-msgstr "Forzar a 16 bits por texel"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr "Un filtro de postprocesamiento para aplicar cel shading a la salida"

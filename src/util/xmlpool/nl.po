@@ -58,26 +58,6 @@ msgstr ""
 msgid "Image Quality"
 msgstr "Beeldkwaliteit"
 
-#: t_options.h:133
-msgid "Texture color depth"
-msgstr "Textuurkleurendiepte"
-
-#: t_options.h:134
-msgid "Prefer frame buffer color depth"
-msgstr "Prefereer kaderbufferkleurdiepte"
-
-#: t_options.h:135
-msgid "Prefer 32 bits per texel"
-msgstr "Prefereer 32 bits per texel"
-
-#: t_options.h:136
-msgid "Prefer 16 bits per texel"
-msgstr "Prefereer 16 bits per texel"
-
-#: t_options.h:137
-msgid "Force 16 bits per texel"
-msgstr "Dwing 16 bits per texel af"
-
 #: t_options.h:182
 msgid "Horizontal error diffusion"
 msgstr "Horizontale foutdiffusie"

@@ -58,26 +58,6 @@ msgstr ""
 msgid "Image Quality"
 msgstr "Qualité d'image"
 
-#: t_options.h:133
-msgid "Texture color depth"
-msgstr "Profondeur de texture"
-
-#: t_options.h:134
-msgid "Prefer frame buffer color depth"
-msgstr "Profondeur de couleur"
-
-#: t_options.h:135
-msgid "Prefer 32 bits per texel"
-msgstr "Préférer 32 bits par texel"
-
-#: t_options.h:136
-msgid "Prefer 16 bits per texel"
-msgstr "Prérérer 16 bits par texel"
-
-#: t_options.h:137
-msgid "Force 16 bits per texel"
-msgstr "Forcer 16 bits par texel"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr ""

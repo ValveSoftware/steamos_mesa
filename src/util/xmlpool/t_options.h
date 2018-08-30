@@ -152,20 +152,6 @@ DRI_CONF_OPT_END
 DRI_CONF_SECTION_BEGIN \
         DRI_CONF_DESC(en,gettext("Image Quality"))
 
-#define DRI_CONF_TEXTURE_DEPTH_FB       0
-#define DRI_CONF_TEXTURE_DEPTH_32       1
-#define DRI_CONF_TEXTURE_DEPTH_16       2
-#define DRI_CONF_TEXTURE_DEPTH_FORCE_16 3
-#define DRI_CONF_TEXTURE_DEPTH(def) \
-DRI_CONF_OPT_BEGIN_V(texture_depth,enum,def,"0:3") \
-        DRI_CONF_DESC_BEGIN(en,gettext("Texture color depth")) \
-                DRI_CONF_ENUM(0,gettext("Prefer frame buffer color depth")) \
-                DRI_CONF_ENUM(1,gettext("Prefer 32 bits per texel")) \
-                DRI_CONF_ENUM(2,gettext("Prefer 16 bits per texel")) \
-                DRI_CONF_ENUM(3,gettext("Force 16 bits per texel")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_PRECISE_TRIG(def) \
 DRI_CONF_OPT_BEGIN_B(precise_trig, def) \
         DRI_CONF_DESC(en,gettext("Prefer accuracy over performance in trig functions")) \

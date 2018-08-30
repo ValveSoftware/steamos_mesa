@@ -58,26 +58,6 @@ msgstr ""
 msgid "Image Quality"
 msgstr "Bildkvalitet"
 
-#: t_options.h:133
-msgid "Texture color depth"
-msgstr "Färgdjup för texturer"
-
-#: t_options.h:134
-msgid "Prefer frame buffer color depth"
-msgstr "Föredra färgdjupet för framebuffer"
-
-#: t_options.h:135
-msgid "Prefer 32 bits per texel"
-msgstr "Föredra 32 bitar per texel"
-
-#: t_options.h:136
-msgid "Prefer 16 bits per texel"
-msgstr "Föredra 16 bitar per texel"
-
-#: t_options.h:137
-msgid "Force 16 bits per texel"
-msgstr "Tvinga 16 bitar per texel"
-
 #: t_options.h:181
 msgid "Color dithering method"
 msgstr "Färgutjämningsmetod"
