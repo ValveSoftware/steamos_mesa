@@ -4967,7 +4967,7 @@ setup_texcoord(struct svga_shader_emitter_v10 *emit,
                unsigned unit,
                const struct tgsi_full_src_register *coord)
 {
-   if (emit->key.tex[unit].unnormalized) {
+   if (emit->sampler_view[unit] && emit->key.tex[unit].unnormalized) {
       unsigned scale_index = emit->texcoord_scale_index[unit];
       unsigned tmp = get_temp_index(emit);
       struct tgsi_full_src_register tmp_src = make_src_temp_reg(tmp);
