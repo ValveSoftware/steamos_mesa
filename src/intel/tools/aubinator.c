@@ -280,8 +280,9 @@ int main(int argc, char *argv[])
       case 'g': {
          const int id = gen_device_name_to_pci_device_id(optarg);
          if (id < 0) {
-            fprintf(stderr, "can't parse gen: '%s', expected ivb, byt, hsw, "
-                                   "bdw, chv, skl, kbl or bxt\n", optarg);
+            fprintf(stderr, "can't parse gen: '%s', expected brw, g4x, ilk, "
+                            "snb, ivb, hsw, byt, bdw, chv, skl, bxt, kbl, "
+                            "glk, cfl, cnl, icl", optarg);
             exit(EXIT_FAILURE);
          } else {
             pci_id = id;
