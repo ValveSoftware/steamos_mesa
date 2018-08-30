@@ -60,6 +60,7 @@ gen_device_name_to_pci_device_id(const char *name)
       { "aml", 0x591C },
       { "glk", 0x3185 },
       { "cfl", 0x3E9B },
+      { "whl", 0x3EA1 },
       { "cnl", 0x5a52 },
       { "icl", 0x8a52 },
    };

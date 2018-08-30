@@ -43,6 +43,7 @@ static const struct gen_info {
    { "aml", },
    { "glk", },
    { "cfl", },
+   { "whl", },
    { "cnl", },
    { "icl", },
 };
