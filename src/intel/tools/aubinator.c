@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
          if (id < 0) {
             fprintf(stderr, "can't parse gen: '%s', expected brw, g4x, ilk, "
                             "snb, ivb, hsw, byt, bdw, chv, skl, bxt, kbl, "
-                            "glk, cfl, cnl, icl", optarg);
+                            "aml, glk, cfl, cnl, icl", optarg);
             exit(EXIT_FAILURE);
          } else {
             pci_id = id;
