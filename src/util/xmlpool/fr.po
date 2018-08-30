@@ -98,22 +98,6 @@ msgstr "Arrondi à l'inférieur"
 msgid "Round to nearest color"
 msgstr "Arrondi au plus proche"
 
-#: t_options.h:181
-msgid "Color dithering method"
-msgstr "Méthode de tramage"
-
-#: t_options.h:182
-msgid "Horizontal error diffusion"
-msgstr "Diffusion d'erreur horizontale"
-
-#: t_options.h:183
-msgid "Horizontal error diffusion, reset error at line start"
-msgstr "Diffusion d'erreur horizontale, réinitialisé pour chaque ligne"
-
-#: t_options.h:184
-msgid "Ordered 2D color dithering"
-msgstr "Tramage ordonné des couleurs"
-
 #: t_options.h:190
 msgid "Floating point depth buffer"
 msgstr "Z-buffer en virgule flottante"

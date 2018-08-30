@@ -124,22 +124,6 @@ msgstr "Arrodoneix els components de color a baix"
 msgid "Round to nearest color"
 msgstr "Arrodoneix al color més proper"
 
-#: t_options.h:181
-msgid "Color dithering method"
-msgstr "Mètode de tramat de color"
-
-#: t_options.h:182
-msgid "Horizontal error diffusion"
-msgstr "Difusió d'error horitzontal"
-
-#: t_options.h:183
-msgid "Horizontal error diffusion, reset error at line start"
-msgstr "Difusió d'error horitzontal, reinicia l'error a l'inici de la línia"
-
-#: t_options.h:184
-msgid "Ordered 2D color dithering"
-msgstr "Tramat de color 2D ordenat"
-
 #: t_options.h:190
 msgid "Floating point depth buffer"
 msgstr "Buffer de profunditat de punt flotant"

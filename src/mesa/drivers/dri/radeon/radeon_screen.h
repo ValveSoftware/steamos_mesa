@@ -57,6 +57,18 @@ DRI_CONF_OPT_BEGIN_V(color_reduction,enum,def,"0:1") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_DITHER_XERRORDIFF 0
+#define DRI_CONF_DITHER_XERRORDIFFRESET 1
+#define DRI_CONF_DITHER_ORDERED 2
+#define DRI_CONF_DITHER_MODE(def) \
+DRI_CONF_OPT_BEGIN_V(dither_mode,enum,def,"0:2") \
+       DRI_CONF_DESC_BEGIN(en,"Color dithering method") \
+                DRI_CONF_ENUM(0,"Horizontal error diffusion") \
+                DRI_CONF_ENUM(1,"Horizontal error diffusion, reset error at line start") \
+                DRI_CONF_ENUM(2,"Ordered 2D color dithering") \
+        DRI_CONF_DESC_END \
+DRI_CONF_OPT_END
+
 
 #define DRI_CONF_TCL_SW 0
 #define DRI_CONF_TCL_PIPELINED 1

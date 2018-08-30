@@ -99,22 +99,6 @@ msgstr "Farbkomponenten abrunden"
 msgid "Round to nearest color"
 msgstr "Zur ähnlichsten Farbe runden"
 
-#: t_options.h:181
-msgid "Color dithering method"
-msgstr "Farbrasterungsmethode"
-
-#: t_options.h:182
-msgid "Horizontal error diffusion"
-msgstr "Horizontale Fehlerstreuung"
-
-#: t_options.h:183
-msgid "Horizontal error diffusion, reset error at line start"
-msgstr "Horizontale Fehlerstreuung, Fehler am Zeilenanfang zurücksetzen"
-
-#: t_options.h:184
-msgid "Ordered 2D color dithering"
-msgstr "Geordnete 2D Farbrasterung"
-
 #: t_options.h:190
 msgid "Floating point depth buffer"
 msgstr "Fließkomma z-Puffer"

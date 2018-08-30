@@ -106,22 +106,6 @@ msgstr "Redondear hacia abajo los componentes de color"
 msgid "Round to nearest color"
 msgstr "Redondear al color más cercano"
 
-#: t_options.h:181
-msgid "Color dithering method"
-msgstr "Método de suavizado de color"
-
-#: t_options.h:182
-msgid "Horizontal error diffusion"
-msgstr "Difusión de error horizontal"
-
-#: t_options.h:183
-msgid "Horizontal error diffusion, reset error at line start"
-msgstr "Difusión de error horizontal, reiniciar error al comienzo de línea"
-
-#: t_options.h:184
-msgid "Ordered 2D color dithering"
-msgstr "Suavizado de color 2D ordenado"
-
 #: t_options.h:190
 msgid "Floating point depth buffer"
 msgstr "Búfer de profundidad en coma flotante"

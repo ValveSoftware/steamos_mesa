@@ -86,22 +86,6 @@ msgstr "Initïele maximum waarde voor anisotrophische textuur filtering"
 msgid "Forbid negative texture LOD bias"
 msgstr "Verbied negatief niveau detailonderscheid (LOD) van texturen"
 
-#: t_options.h:170
-msgid "Color rounding method"
-msgstr "Kleurafrondingmethode"
-
-#: t_options.h:171
-msgid "Round color components downward"
-msgstr "Rond kleurencomponenten af naar beneden"
-
-#: t_options.h:172
-msgid "Round to nearest color"
-msgstr "Rond af naar dichtsbijzijnde kleur"
-
-#: t_options.h:181
-msgid "Color dithering method"
-msgstr "Kleurrasteriseringsmethode"
-
 #: t_options.h:182
 msgid "Horizontal error diffusion"
 msgstr "Horizontale foutdiffusie"

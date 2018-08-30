@@ -191,18 +191,6 @@ DRI_CONF_OPT_BEGIN_V(round_mode,enum,def,"0:1") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_DITHER_XERRORDIFF 0
-#define DRI_CONF_DITHER_XERRORDIFFRESET 1
-#define DRI_CONF_DITHER_ORDERED 2
-#define DRI_CONF_DITHER_MODE(def) \
-DRI_CONF_OPT_BEGIN_V(dither_mode,enum,def,"0:2") \
-        DRI_CONF_DESC_BEGIN(en,gettext("Color dithering method")) \
-                DRI_CONF_ENUM(0,gettext("Horizontal error diffusion")) \
-                DRI_CONF_ENUM(1,gettext("Horizontal error diffusion, reset error at line start")) \
-                DRI_CONF_ENUM(2,gettext("Ordered 2D color dithering")) \
-        DRI_CONF_DESC_END \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_FLOAT_DEPTH(def) \
 DRI_CONF_OPT_BEGIN_B(float_depth, def) \
         DRI_CONF_DESC(en,gettext("Floating point depth buffer")) \
