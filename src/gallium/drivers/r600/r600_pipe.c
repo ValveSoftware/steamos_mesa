@@ -380,8 +380,12 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_MAX_GS_INVOCATIONS:
 		return 32;
+
+	/* shader buffer objects */
 	case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
 		return 1 << 27;
+	case PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS:
+		return 8;
 
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:

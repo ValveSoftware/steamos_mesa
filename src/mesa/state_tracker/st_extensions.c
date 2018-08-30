@@ -470,8 +470,10 @@ void st_init_limits(struct pipe_screen *screen,
    c->ShaderStorageBufferOffsetAlignment =
       screen->get_param(screen, PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT);
    if (c->ShaderStorageBufferOffsetAlignment) {
-      /* for hw atomic counters leaves these at default for now */
-      if (ssbo_atomic) {
+      c->MaxCombinedShaderStorageBlocks =
+         MIN2(screen->get_param(screen, PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS),
+              MAX_COMBINED_SHADER_STORAGE_BUFFERS);
+      if (!c->MaxCombinedShaderStorageBlocks) {
          c->MaxCombinedShaderStorageBlocks =
             c->Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks +
             c->Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks +

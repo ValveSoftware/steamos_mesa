@@ -458,6 +458,9 @@ subpixel precision bias in bits during conservative rasterization.
   TGSI_PROPERTY_GS_INVOCATIONS.
 * ``PIPE_CAP_MAX_SHADER_BUFFER_SIZE``: Maximum supported size for binding
   with set_shader_buffers.
+* ``PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS``: Maximum total number of shader
+  buffers. A value of 0 means the sum of all per-shader stage maximums (see
+  ``PIPE_SHADER_CAP_MAX_SHADER_BUFFERS``).
 
 .. _pipe_capf:
 
