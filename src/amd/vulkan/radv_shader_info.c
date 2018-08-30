@@ -128,6 +128,14 @@ set_output_usage_mask(const nir_shader *nir, const nir_intrinsic_instr *instr,
 
 	get_deref_offset(deref_instr, &const_offset);
 
+	if (idx == VARYING_SLOT_CLIP_DIST0) {
+		/* Special case for clip/cull distances because there are
+		 * combined into a single array that contains both.
+		 */
+		output_usage_mask[idx] |= 1 << const_offset;
+		return;
+	}
+
 	for (unsigned i = 0; i < attrib_count; i++) {
 		output_usage_mask[idx + i + const_offset] |=
 			instr->const_index[0] << comp;
