@@ -1139,6 +1139,12 @@ void radv_GetPhysicalDeviceProperties2(
 			properties->maxDescriptorSetUpdateAfterBindInputAttachments = max_descriptor_set_size;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES: {
+			VkPhysicalDeviceProtectedMemoryProperties *properties =
+				(VkPhysicalDeviceProtectedMemoryProperties *)ext;
+			properties->protectedNoFault = false;
+			break;
+		}
 		default:
 			break;
 		}
