@@ -91,8 +91,6 @@ struct radv_shader_context {
 
 	uint64_t input_mask;
 	uint64_t output_mask;
-	uint8_t num_output_clips;
-	uint8_t num_output_culls;
 
 	bool is_gs_copy_shader;
 	LLVMValueRef gs_next_vertex;
@@ -3289,8 +3287,6 @@ LLVMModuleRef ac_translate_nir_to_llvm(struct ac_llvm_compiler *ac_llvm,
 	for(int i = 0; i < shader_count; ++i) {
 		ctx.stage = shaders[i]->info.stage;
 		ctx.output_mask = 0;
-		ctx.num_output_clips = shaders[i]->info.clip_distance_array_size;
-		ctx.num_output_culls = shaders[i]->info.cull_distance_array_size;
 
 		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
 			ctx.gs_next_vertex = ac_build_alloca(&ctx.ac, ctx.ac.i32, "gs_next_vertex");
@@ -3682,9 +3678,6 @@ radv_compile_gs_copy_shader(struct ac_llvm_compiler *ac_llvm,
 
 	ctx.gs_max_out_vertices = geom_shader->info.gs.vertices_out;
 	ac_setup_rings(&ctx);
-
-	ctx.num_output_clips = geom_shader->info.clip_distance_array_size;
-	ctx.num_output_culls = geom_shader->info.cull_distance_array_size;
 
 	nir_foreach_variable(variable, &geom_shader->outputs) {
 		scan_shader_output_decl(&ctx, variable, geom_shader, MESA_SHADER_VERTEX);
