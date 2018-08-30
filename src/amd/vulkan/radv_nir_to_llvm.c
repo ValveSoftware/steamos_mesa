@@ -1741,7 +1741,6 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 			length = ctx->num_output_clips + ctx->num_output_culls;
 			if (length > 4)
 				slot_inc = 2;
-			output_usage_mask = (1 << length) - 1;
 		}
 
 		for (unsigned j = 0; j < length; j++) {
@@ -2711,10 +2710,8 @@ handle_es_outputs_post(struct radv_shader_context *ctx,
 				ctx->shader_info->info.tes.output_usage_mask[i];
 		}
 
-		if (i == VARYING_SLOT_CLIP_DIST0) {
+		if (i == VARYING_SLOT_CLIP_DIST0)
 			length = ctx->num_output_clips + ctx->num_output_culls;
-			output_usage_mask = (1 << length) - 1;
-		}
 
 		param_index = shader_io_get_unique_index(i);
 
