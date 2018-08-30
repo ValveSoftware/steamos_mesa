@@ -78,10 +78,6 @@ msgstr "Föredra 16 bitar per texel"
 msgid "Force 16 bits per texel"
 msgstr "Tvinga 16 bitar per texel"
 
-#: t_options.h:143
-msgid "Initial maximum value for anisotropic texture filtering"
-msgstr "Initialt maximalt värde för anisotropisk texturfiltrering"
-
 #: t_options.h:181
 msgid "Color dithering method"
 msgstr "Färgutjämningsmetod"

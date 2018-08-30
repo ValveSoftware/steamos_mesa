@@ -95,6 +95,11 @@ DRI_CONF_OPT_BEGIN_B(no_neg_lod_bias, def) \
         DRI_CONF_DESC(en,"Forbid negative texture LOD bias") \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_DEF_MAX_ANISOTROPY(def,range) \
+DRI_CONF_OPT_BEGIN_V(def_max_anisotropy,float,def,range) \
+        DRI_CONF_DESC(en,"Initial maximum value for anisotropic texture filtering") \
+DRI_CONF_OPT_END
+
 #if defined(RADEON_R100)	/* R100 */
 static const __DRIconfigOptionsExtension radeon_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },

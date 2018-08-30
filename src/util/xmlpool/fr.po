@@ -78,10 +78,6 @@ msgstr "Prérérer 16 bits par texel"
 msgid "Force 16 bits per texel"
 msgstr "Forcer 16 bits par texel"
 
-#: t_options.h:143
-msgid "Initial maximum value for anisotropic texture filtering"
-msgstr "Valeur maximale initiale pour le filtrage anisotropique de texture"
-
 #: t_options.h:195
 msgid "A post-processing filter to cel-shade the output"
 msgstr ""

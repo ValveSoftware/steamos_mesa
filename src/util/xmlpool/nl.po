@@ -78,10 +78,6 @@ msgstr "Prefereer 16 bits per texel"
 msgid "Force 16 bits per texel"
 msgstr "Dwing 16 bits per texel af"
 
-#: t_options.h:143
-msgid "Initial maximum value for anisotropic texture filtering"
-msgstr "Initïele maximum waarde voor anisotrophische textuur filtering"
-
 #: t_options.h:182
 msgid "Horizontal error diffusion"
 msgstr "Horizontale foutdiffusie"

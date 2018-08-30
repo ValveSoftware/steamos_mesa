@@ -166,11 +166,6 @@ DRI_CONF_OPT_BEGIN_V(texture_depth,enum,def,"0:3") \
         DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
-#define DRI_CONF_DEF_MAX_ANISOTROPY(def,range) \
-DRI_CONF_OPT_BEGIN_V(def_max_anisotropy,float,def,range) \
-        DRI_CONF_DESC(en,gettext("Initial maximum value for anisotropic texture filtering")) \
-DRI_CONF_OPT_END
-
 #define DRI_CONF_PRECISE_TRIG(def) \
 DRI_CONF_OPT_BEGIN_B(precise_trig, def) \
         DRI_CONF_DESC(en,gettext("Prefer accuracy over performance in trig functions")) \
