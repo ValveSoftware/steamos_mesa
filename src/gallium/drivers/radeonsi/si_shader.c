@@ -1204,11 +1204,11 @@ static LLVMValueRef get_tess_ring_descriptor(struct si_shader_context *ctx,
 static LLVMValueRef fetch_input_tcs(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
-	enum tgsi_opcode_type type, unsigned swizzle)
+	enum tgsi_opcode_type type, unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef dw_addr, stride;
-
+	unsigned swizzle = swizzle_in & 0xffff;
 	stride = get_tcs_in_vertex_dw_stride(ctx);
 	dw_addr = get_tcs_in_current_patch_offset(ctx);
 	dw_addr = get_dw_address(ctx, NULL, reg, stride, dw_addr);
@@ -1289,10 +1289,11 @@ static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
 static LLVMValueRef fetch_output_tcs(
 		struct lp_build_tgsi_context *bld_base,
 		const struct tgsi_full_src_register *reg,
-		enum tgsi_opcode_type type, unsigned swizzle)
+		enum tgsi_opcode_type type, unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef dw_addr, stride;
+	unsigned swizzle = (swizzle_in & 0xffff);
 
 	if (reg->Register.Dimension) {
 		stride = get_tcs_out_vertex_dw_stride(ctx);
@@ -1309,10 +1310,11 @@ static LLVMValueRef fetch_output_tcs(
 static LLVMValueRef fetch_input_tes(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
-	enum tgsi_opcode_type type, unsigned swizzle)
+	enum tgsi_opcode_type type, unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef base, addr;
+	unsigned swizzle = (swizzle_in & 0xffff);
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
@@ -1696,10 +1698,11 @@ static LLVMValueRef fetch_input_gs(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
 	enum tgsi_opcode_type type,
-	unsigned swizzle)
+	unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	unsigned swizzle = swizzle_in & 0xffff;
 
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
