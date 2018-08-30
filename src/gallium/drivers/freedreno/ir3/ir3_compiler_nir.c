@@ -3679,6 +3679,20 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 	ir3_cp(ir, so);
 
+	/* Insert mov if there's same instruction for each output.
+	 * eg. dEQP-GLES31.functional.shaders.opaque_type_indexing.sampler.const_expression.vertex.sampler2dshadow
+	 */
+	for (int i = ir->noutputs - 1; i >= 0; i--) {
+		if (!ir->outputs[i])
+			continue;
+		for (unsigned j = 0; j < i; j++) {
+			if (ir->outputs[i] == ir->outputs[j]) {
+				ir->outputs[i] =
+					ir3_MOV(ir->outputs[i]->block, ir->outputs[i], TYPE_F32);
+			}
+		}
+	}
+
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
 		printf("BEFORE GROUPING:\n");
 		ir3_print(ir);
