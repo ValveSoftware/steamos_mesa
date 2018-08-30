@@ -52,7 +52,6 @@ struct aub_file {
    int addr_bits;
 
    struct aub_ppgtt_table pml4;
-   uint32_t default_addr_space;
 };
 
 void aub_file_init(struct aub_file *aub, FILE *file, uint16_t pci_id);
