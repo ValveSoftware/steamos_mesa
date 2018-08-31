@@ -88,21 +88,15 @@ static void
 mark_whole_variable(nir_shader *shader, nir_variable *var, bool is_output_read)
 {
    const struct glsl_type *type = var->type;
-   bool is_vertex_input = false;
 
    if (nir_is_per_vertex_io(var, shader->info.stage)) {
       assert(glsl_type_is_array(type));
       type = glsl_get_array_element(type);
    }
 
-   if (!shader->options->vs_inputs_dual_locations &&
-       shader->info.stage == MESA_SHADER_VERTEX &&
-       var->data.mode == nir_var_shader_in)
-      is_vertex_input = true;
-
    const unsigned slots =
       var->data.compact ? DIV_ROUND_UP(glsl_get_length(type), 4)
-                        : glsl_count_attribute_slots(type, is_vertex_input);
+                        : glsl_count_attribute_slots(type, false);
 
    set_io_mask(shader, var, 0, slots, is_output_read);
 }
@@ -165,13 +159,7 @@ try_mask_partial_io(nir_shader *shader, nir_variable *var,
       return false;
    }
 
-   bool is_vertex_input = false;
-   if (!shader->options->vs_inputs_dual_locations &&
-       shader->info.stage == MESA_SHADER_VERTEX &&
-       var->data.mode == nir_var_shader_in)
-      is_vertex_input = true;
-
-   unsigned offset = get_io_offset(deref, is_vertex_input);
+   unsigned offset = get_io_offset(deref, false);
    if (offset == -1)
       return false;
 
@@ -187,10 +175,8 @@ try_mask_partial_io(nir_shader *shader, nir_variable *var,
    }
 
    /* double element width for double types that takes two slots */
-   if (!is_vertex_input &&
-       glsl_type_is_dual_slot(glsl_without_array(type))) {
+   if (glsl_type_is_dual_slot(glsl_without_array(type)))
       elem_width *= 2;
-   }
 
    if (offset >= num_elems * elem_width * mat_cols) {
       /* Constant index outside the bounds of the matrix/array.  This could

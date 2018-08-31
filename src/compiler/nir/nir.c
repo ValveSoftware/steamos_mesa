@@ -1854,34 +1854,32 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
    }
 }
 
-uint64_t
-nir_get_dual_slot_attributes(nir_shader *shader)
-{
-   assert(shader->info.stage == MESA_SHADER_VERTEX);
-
-   uint64_t dual_slot = 0;
-   nir_foreach_variable(var, &shader->inputs) {
-      if (glsl_type_is_dual_slot(glsl_without_array(var->type))) {
-         unsigned slots = glsl_count_attribute_slots(var->type, true);
-         dual_slot |= BITFIELD64_MASK(slots) << var->data.location;
-      }
-   }
-
-   return dual_slot;
-}
-
 /* OpenGL utility method that remaps the location attributes if they are
  * doubles. Not needed for vulkan due the differences on the input location
  * count for doubles on vulkan vs OpenGL
+ *
+ * The bitfield returned in dual_slot is one bit for each double input slot in
+ * the original OpenGL single-slot input numbering.  The mapping from old
+ * locations to new locations is as follows:
+ *
+ *    new_loc = loc + _mesa_bitcount(dual_slot & BITFIELD64_MASK(loc))
  */
 void
-nir_remap_dual_slot_attributes(nir_shader *shader, uint64_t dual_slot)
+nir_remap_dual_slot_attributes(nir_shader *shader, uint64_t *dual_slot)
 {
    assert(shader->info.stage == MESA_SHADER_VERTEX);
 
+   *dual_slot = 0;
+   nir_foreach_variable(var, &shader->inputs) {
+      if (glsl_type_is_dual_slot(glsl_without_array(var->type))) {
+         unsigned slots = glsl_count_attribute_slots(var->type, true);
+         *dual_slot |= BITFIELD64_MASK(slots) << var->data.location;
+      }
+   }
+
    nir_foreach_variable(var, &shader->inputs) {
       var->data.location +=
-         _mesa_bitcount_64(dual_slot & BITFIELD64_MASK(var->data.location));
+         _mesa_bitcount_64(*dual_slot & BITFIELD64_MASK(var->data.location));
    }
 }
 

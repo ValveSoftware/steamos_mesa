@@ -263,12 +263,8 @@ _mesa_spirv_to_nir(struct gl_context *ctx,
    NIR_PASS_V(nir, nir_split_var_copies);
    NIR_PASS_V(nir, nir_split_per_member_structs);
 
-   if (nir->info.stage == MESA_SHADER_VERTEX) {
-      uint64_t dual_slot_inputs = nir_get_dual_slot_attributes(nir);
-      if (options->vs_inputs_dual_locations)
-         nir_remap_dual_slot_attributes(nir, dual_slot_inputs);
-      linked_shader->Program->DualSlotInputs = dual_slot_inputs;
-   }
+   if (nir->info.stage == MESA_SHADER_VERTEX)
+      nir_remap_dual_slot_attributes(nir, &linked_shader->Program->DualSlotInputs);
 
    return nir;
 }
