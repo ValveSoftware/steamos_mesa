@@ -317,18 +317,21 @@ static LLVMValueRef
 emit_array_fetch(struct lp_build_tgsi_context *bld_base,
 		 unsigned File, enum tgsi_opcode_type type,
 		 struct tgsi_declaration_range range,
-		 unsigned swizzle)
+		 unsigned swizzle_in)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	unsigned i, size = range.Last - range.First + 1;
 	LLVMTypeRef vec = LLVMVectorType(tgsi2llvmtype(bld_base, type), size);
 	LLVMValueRef result = LLVMGetUndef(vec);
-
+	unsigned swizzle = swizzle_in;
 	struct tgsi_full_src_register tmp_reg = {};
 	tmp_reg.Register.File = File;
+	if (tgsi_type_is_64bit(type))
+		swizzle |= (swizzle_in + 1) << 16;
 
 	for (i = 0; i < size; ++i) {
 		tmp_reg.Register.Index = i + range.First;
+
 		LLVMValueRef temp = si_llvm_emit_fetch(bld_base, &tmp_reg, type, swizzle);
 		result = LLVMBuildInsertElement(ctx->ac.builder, result, temp,
 			LLVMConstInt(ctx->i32, i, 0), "array_vector");
