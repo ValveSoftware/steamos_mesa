@@ -74,8 +74,6 @@ pipe_reference_described(struct pipe_reference *dst,
                          struct pipe_reference *src,
                          debug_reference_descriptor get_desc)
 {
-   boolean destroy = FALSE;
-
    if (dst != src) {
       /* bump the src.count first */
       if (src) {
@@ -87,14 +85,13 @@ pipe_reference_described(struct pipe_reference *dst,
       if (dst) {
          int count = p_atomic_dec_return(&dst->count);
          assert(count != -1); /* dst had to be referenced */
-         if (!count)
-            destroy = TRUE;
-
          debug_reference(dst, get_desc, -1);
+         if (!count)
+            return true;
       }
    }
 
-   return destroy;
+   return false;
 }
 
 static inline boolean
