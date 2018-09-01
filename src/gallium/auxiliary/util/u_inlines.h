@@ -109,7 +109,7 @@ pipe_surface_reference(struct pipe_surface **dst, struct pipe_surface *src)
 {
    struct pipe_surface *old_dst = *dst;
 
-   if (pipe_reference_described(&(*dst)->reference, &src->reference,
+   if (pipe_reference_described(&old_dst->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_surface))
       old_dst->context->surface_destroy(old_dst->context, old_dst);
@@ -125,10 +125,12 @@ pipe_surface_reference(struct pipe_surface **dst, struct pipe_surface *src)
 static inline void
 pipe_surface_release(struct pipe_context *pipe, struct pipe_surface **ptr)
 {
-   if (pipe_reference_described(&(*ptr)->reference, NULL,
+   struct pipe_surface *old = *ptr;
+
+   if (pipe_reference_described(&old->reference, NULL,
                                 (debug_reference_descriptor)
                                 debug_describe_surface))
-      pipe->surface_destroy(pipe, *ptr);
+      pipe->surface_destroy(pipe, old);
    *ptr = NULL;
 }
 
@@ -138,7 +140,7 @@ pipe_resource_reference(struct pipe_resource **dst, struct pipe_resource *src)
 {
    struct pipe_resource *old_dst = *dst;
 
-   if (pipe_reference_described(&(*dst)->reference, &src->reference,
+   if (pipe_reference_described(&old_dst->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_resource)) {
       /* Avoid recursion, which would prevent inlining this function */
@@ -166,7 +168,7 @@ pipe_sampler_view_reference(struct pipe_sampler_view **dst,
 {
    struct pipe_sampler_view *old_dst = *dst;
 
-   if (pipe_reference_described(&(*dst)->reference, &src->reference,
+   if (pipe_reference_described(&old_dst->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_sampler_view))
       old_dst->context->sampler_view_destroy(old_dst->context, old_dst);
@@ -185,7 +187,8 @@ pipe_sampler_view_release(struct pipe_context *ctx,
                           struct pipe_sampler_view **ptr)
 {
    struct pipe_sampler_view *old_view = *ptr;
-   if (pipe_reference_described(&(*ptr)->reference, NULL,
+
+   if (pipe_reference_described(&old_view->reference, NULL,
                     (debug_reference_descriptor)debug_describe_sampler_view)) {
       ctx->sampler_view_destroy(ctx, old_view);
    }
@@ -198,7 +201,7 @@ pipe_so_target_reference(struct pipe_stream_output_target **dst,
 {
    struct pipe_stream_output_target *old_dst = *dst;
 
-   if (pipe_reference_described(&(*dst)->reference, &src->reference,
+   if (pipe_reference_described(&old_dst->reference, &src->reference,
                      (debug_reference_descriptor)debug_describe_so_target))
       old_dst->context->stream_output_target_destroy(old_dst->context, old_dst);
    *dst = src;
