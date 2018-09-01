@@ -275,6 +275,7 @@ st_destroy_context_priv(struct st_context *st, bool destroy_pipe)
 
    /* free glReadPixels cache data */
    st_invalidate_readpix_cache(st);
+   util_throttle_deinit(st->pipe->screen, &st->throttle);
 
    cso_destroy_context(st->cso_context);
 
@@ -466,6 +467,10 @@ st_create_context_priv(struct gl_context *ctx, struct pipe_context *pipe,
       screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
                                PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS)
       ? true : false;
+
+   util_throttle_init(&st->throttle,
+                      screen->get_param(screen,
+                                        PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET));
 
    /* GL limits and extensions */
    st_init_limits(pipe->screen, &ctx->Const, &ctx->Extensions, ctx->API);

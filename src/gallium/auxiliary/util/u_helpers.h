@@ -64,6 +64,23 @@ util_end_pipestat_query(struct pipe_context *ctx, struct pipe_query *q,
 void
 util_wait_for_idle(struct pipe_context *ctx);
 
+/* A utility for throttling execution based on memory usage. */
+struct util_throttle {
+   struct {
+      struct pipe_fence_handle *fence;
+      uint64_t mem_usage;
+   } ring[10];
+
+   unsigned flush_index;
+   unsigned wait_index;
+   uint64_t max_mem_usage;
+};
+
+void util_throttle_init(struct util_throttle *t, uint64_t max_mem_usage);
+void util_throttle_deinit(struct pipe_screen *screen, struct util_throttle *t);
+void util_throttle_memory_usage(struct pipe_context *pipe,
+                                struct util_throttle *t, uint64_t memory_size);
+
 #ifdef __cplusplus
 }
 #endif
