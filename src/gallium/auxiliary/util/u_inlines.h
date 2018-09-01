@@ -52,44 +52,44 @@ extern "C" {
 
 
 static inline void
-pipe_reference_init(struct pipe_reference *reference, unsigned count)
+pipe_reference_init(struct pipe_reference *dst, unsigned count)
 {
-   p_atomic_set(&reference->count, count);
+   p_atomic_set(&dst->count, count);
 }
 
 static inline boolean
-pipe_is_referenced(struct pipe_reference *reference)
+pipe_is_referenced(struct pipe_reference *src)
 {
-   return p_atomic_read(&reference->count) != 0;
+   return p_atomic_read(&src->count) != 0;
 }
 
 /**
  * Update reference counting.
  * The old thing pointed to, if any, will be unreferenced.
- * Both 'ptr' and 'reference' may be NULL.
+ * Both 'dst' and 'src' may be NULL.
  * \return TRUE if the object's refcount hits zero and should be destroyed.
  */
 static inline boolean
-pipe_reference_described(struct pipe_reference *ptr,
-                         struct pipe_reference *reference,
+pipe_reference_described(struct pipe_reference *dst,
+                         struct pipe_reference *src,
                          debug_reference_descriptor get_desc)
 {
    boolean destroy = FALSE;
 
-   if(ptr != reference) {
-      /* bump the reference.count first */
-      if (reference) {
-         assert(pipe_is_referenced(reference));
-         p_atomic_inc(&reference->count);
-         debug_reference(reference, get_desc, 1);
+   if (dst != src) {
+      /* bump the src.count first */
+      if (src) {
+         assert(pipe_is_referenced(src));
+         p_atomic_inc(&src->count);
+         debug_reference(src, get_desc, 1);
       }
 
-      if (ptr) {
-         assert(pipe_is_referenced(ptr));
-         if (p_atomic_dec_zero(&ptr->count)) {
+      if (dst) {
+         assert(pipe_is_referenced(dst));
+         if (p_atomic_dec_zero(&dst->count))
             destroy = TRUE;
-         }
-         debug_reference(ptr, get_desc, -1);
+
+         debug_reference(dst, get_desc, -1);
       }
    }
 
@@ -97,23 +97,23 @@ pipe_reference_described(struct pipe_reference *ptr,
 }
 
 static inline boolean
-pipe_reference(struct pipe_reference *ptr, struct pipe_reference *reference)
+pipe_reference(struct pipe_reference *dst, struct pipe_reference *src)
 {
-   return pipe_reference_described(ptr, reference,
+   return pipe_reference_described(dst, src,
                                    (debug_reference_descriptor)
                                    debug_describe_reference);
 }
 
 static inline void
-pipe_surface_reference(struct pipe_surface **ptr, struct pipe_surface *surf)
+pipe_surface_reference(struct pipe_surface **dst, struct pipe_surface *src)
 {
-   struct pipe_surface *old_surf = *ptr;
+   struct pipe_surface *old_dst = *dst;
 
-   if (pipe_reference_described(&(*ptr)->reference, &surf->reference,
+   if (pipe_reference_described(&(*dst)->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_surface))
-      old_surf->context->surface_destroy(old_surf->context, old_surf);
-   *ptr = surf;
+      old_dst->context->surface_destroy(old_dst->context, old_dst);
+   *dst = src;
 }
 
 /**
@@ -134,43 +134,43 @@ pipe_surface_release(struct pipe_context *pipe, struct pipe_surface **ptr)
 
 
 static inline void
-pipe_resource_reference(struct pipe_resource **ptr, struct pipe_resource *tex)
+pipe_resource_reference(struct pipe_resource **dst, struct pipe_resource *src)
 {
-   struct pipe_resource *old_tex = *ptr;
+   struct pipe_resource *old_dst = *dst;
 
-   if (pipe_reference_described(&(*ptr)->reference, &tex->reference,
+   if (pipe_reference_described(&(*dst)->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_resource)) {
       /* Avoid recursion, which would prevent inlining this function */
       do {
-         struct pipe_resource *next = old_tex->next;
+         struct pipe_resource *next = old_dst->next;
 
-         old_tex->screen->resource_destroy(old_tex->screen, old_tex);
-         old_tex = next;
-      } while (pipe_reference_described(&old_tex->reference, NULL,
+         old_dst->screen->resource_destroy(old_dst->screen, old_dst);
+         old_dst = next;
+      } while (pipe_reference_described(&old_dst->reference, NULL,
                                         (debug_reference_descriptor)
                                         debug_describe_resource));
    }
-   *ptr = tex;
+   *dst = src;
 }
 
 /**
- * Set *ptr to \p view with proper reference counting.
+ * Set *dst to \p src with proper reference counting.
  *
- * The caller must guarantee that \p view and *ptr must have been created in
+ * The caller must guarantee that \p src and *dst were created in
  * the same context (if they exist), and that this must be the current context.
  */
 static inline void
-pipe_sampler_view_reference(struct pipe_sampler_view **ptr,
-                            struct pipe_sampler_view *view)
+pipe_sampler_view_reference(struct pipe_sampler_view **dst,
+                            struct pipe_sampler_view *src)
 {
-   struct pipe_sampler_view *old_view = *ptr;
+   struct pipe_sampler_view *old_dst = *dst;
 
-   if (pipe_reference_described(&(*ptr)->reference, &view->reference,
+   if (pipe_reference_described(&(*dst)->reference, &src->reference,
                                 (debug_reference_descriptor)
                                 debug_describe_sampler_view))
-      old_view->context->sampler_view_destroy(old_view->context, old_view);
-   *ptr = view;
+      old_dst->context->sampler_view_destroy(old_dst->context, old_dst);
+   *dst = src;
 }
 
 /**
@@ -193,15 +193,15 @@ pipe_sampler_view_release(struct pipe_context *ctx,
 }
 
 static inline void
-pipe_so_target_reference(struct pipe_stream_output_target **ptr,
-                         struct pipe_stream_output_target *target)
+pipe_so_target_reference(struct pipe_stream_output_target **dst,
+                         struct pipe_stream_output_target *src)
 {
-   struct pipe_stream_output_target *old = *ptr;
+   struct pipe_stream_output_target *old_dst = *dst;
 
-   if (pipe_reference_described(&(*ptr)->reference, &target->reference,
+   if (pipe_reference_described(&(*dst)->reference, &src->reference,
                      (debug_reference_descriptor)debug_describe_so_target))
-      old->context->stream_output_target_destroy(old->context, old);
-   *ptr = target;
+      old_dst->context->stream_output_target_destroy(old_dst->context, old_dst);
+   *dst = src;
 }
 
 static inline void
