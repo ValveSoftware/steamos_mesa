@@ -320,6 +320,7 @@ u_pipe_screen_get_param_defaults(struct pipe_screen *pscreen,
       return 1 << 27;
 
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP_TO_EDGE:
+   case PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET:
       return 0;
 
    default:

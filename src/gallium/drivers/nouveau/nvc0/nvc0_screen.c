@@ -322,6 +322,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_CONSTBUF0_FLAGS:
    case PIPE_CAP_PACKED_UNIFORMS:
    case PIPE_CAP_CONSERVATIVE_RASTER_PRE_SNAP_POINTS_LINES:
+   case PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:

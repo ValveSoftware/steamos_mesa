@@ -472,6 +472,9 @@ subpixel precision bias in bits during conservative rasterization.
 * ``PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS``: Maximum total number of
   atomic counter buffers. A value of 0 means the sum of all per-shader stage
   maximums (see ``PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS``).
+* ``PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET: Maximum recommend memory size
+  for all active texture uploads combined. This is a performance hint.
+  0 means no limit.
 
 .. _pipe_capf:
 

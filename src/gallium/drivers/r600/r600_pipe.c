@@ -311,6 +311,10 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
 		return 1;
 
+	case PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET:
+		/* Optimal number for good TexSubImage performance on Polaris10. */
+		return 64 * 1024 * 1024;
+
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 		return rscreen->b.info.drm_major == 2 && rscreen->b.info.drm_minor >= 43;
 
