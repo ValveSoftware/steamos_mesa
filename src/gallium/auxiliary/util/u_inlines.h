@@ -79,14 +79,15 @@ pipe_reference_described(struct pipe_reference *dst,
    if (dst != src) {
       /* bump the src.count first */
       if (src) {
-         assert(pipe_is_referenced(src));
-         p_atomic_inc(&src->count);
+         MAYBE_UNUSED int count = p_atomic_inc_return(&src->count);
+         assert(count != 1); /* src had to be referenced */
          debug_reference(src, get_desc, 1);
       }
 
       if (dst) {
-         assert(pipe_is_referenced(dst));
-         if (p_atomic_dec_zero(&dst->count))
+         int count = p_atomic_dec_return(&dst->count);
+         assert(count != -1); /* dst had to be referenced */
+         if (!count)
             destroy = TRUE;
 
          debug_reference(dst, get_desc, -1);
