@@ -1616,8 +1616,8 @@ anv_image_hiz_clear(struct anv_cmd_buffer *cmd_buffer,
     *       * [...]"
     *
     * Even though the PRM only says that this is required if using 3DSTATE_WM
-    * and a 3DPRIMITIVE, it appears to also sometimes hang when doing a clear
-    * with WM_HZ_OP.
+    * and a 3DPRIMITIVE, the GPU appears to also need this to avoid occasional
+    * hangs when doing a clear with WM_HZ_OP.
     */
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_DEPTH_CACHE_FLUSH_BIT | ANV_PIPE_DEPTH_STALL_BIT;
