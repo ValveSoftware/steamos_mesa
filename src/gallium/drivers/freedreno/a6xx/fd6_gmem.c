@@ -180,6 +180,9 @@ emit_zs(struct fd_ringbuffer *ring, struct pipe_surface *zsbuf,
 			OUT_RING(ring, A6XX_RB_STENCIL_BUFFER_ARRAY_PITCH(size));
 			OUT_RELOCW(ring, rsc->stencil->bo, 0, 0, 0);  /* RB_STENCIL_BASE_LO/HI */
 			OUT_RING(ring, base);  /* RB_STENCIL_BASE_LO */
+		} else {
+			OUT_PKT4(ring, REG_A6XX_RB_STENCIL_INFO, 1);
+			OUT_RING(ring, 0x00000000);     /* RB_STENCIL_INFO */
 		}
 	} else {
 		OUT_PKT4(ring, REG_A6XX_RB_DEPTH_BUFFER_INFO, 6);
@@ -610,7 +613,7 @@ emit_restore_blit(struct fd_batch *batch, uint32_t base,
 		info |= A6XX_RB_BLIT_INFO_UNK0;
 		break;
 	case FD_BUFFER_DEPTH:
-		info |= A6XX_RB_BLIT_INFO_DEPTH;
+		info |= A6XX_RB_BLIT_INFO_DEPTH | A6XX_RB_BLIT_INFO_UNK0;
 		break;
 	}
 
