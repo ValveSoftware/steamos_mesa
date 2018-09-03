@@ -1712,25 +1712,6 @@ fs_visitor::emit_percomp(const fs_builder &bld, const fs_inst &inst,
    }
 }
 
-/**
- * Get the matching channel register datatype for an image intrinsic of the
- * specified GLSL image type.
- */
-static brw_reg_type
-get_image_base_type(const glsl_type *type)
-{
-   switch ((glsl_base_type)type->sampled_type) {
-   case GLSL_TYPE_UINT:
-      return BRW_REGISTER_TYPE_UD;
-   case GLSL_TYPE_INT:
-      return BRW_REGISTER_TYPE_D;
-   case GLSL_TYPE_FLOAT:
-      return BRW_REGISTER_TYPE_F;
-   default:
-      unreachable("Not reached.");
-   }
-}
-
 static fs_inst *
 emit_pixel_interpolater_send(const fs_builder &bld,
                              enum opcode opcode,
