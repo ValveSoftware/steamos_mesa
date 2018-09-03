@@ -49,6 +49,9 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fencep,
 
 	DBG("%p: flush: flags=%x\n", ctx->batch, flags);
 
+	if (!ctx->batch)
+		return;
+
 	/* Take a ref to the batch's fence (batch can be unref'd when flushed: */
 	fd_fence_ref(pctx->screen, &fence, ctx->batch->fence);
 

@@ -428,6 +428,12 @@ fd_supported_prim(struct fd_context *ctx, unsigned prim)
 	return (1 << prim) & ctx->primtype_mask;
 }
 
+static inline struct fd_batch *
+fd_context_batch(struct fd_context *ctx)
+{
+	return ctx->batch;
+}
+
 static inline void
 fd_batch_set_stage(struct fd_batch *batch, enum fd_render_stage stage)
 {

@@ -144,10 +144,11 @@ bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx, bool deferred)
 	}
 
 	if (deferred) {
-		struct fd_batch *current_batch = ctx->batch;
+		struct fd_batch *current_batch = fd_context_batch(ctx);
 
 		for (unsigned i = 0; i < n; i++) {
-			if (batches[i] != current_batch) {
+			if (batches[i] && (batches[i]->ctx == ctx) &&
+					(batches[i] != current_batch)) {
 				fd_batch_add_dep(current_batch, batches[i]);
 			}
 		}
