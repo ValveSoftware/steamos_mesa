@@ -1222,6 +1222,9 @@ eglSwapInterval(EGLDisplay dpy, EGLint interval)
    if (_eglGetSurfaceHandle(surf) == EGL_NO_SURFACE)
       RETURN_EGL_ERROR(disp, EGL_BAD_SURFACE, EGL_FALSE);
 
+   if (surf->Type != EGL_WINDOW_BIT)
+      RETURN_EGL_EVAL(disp, EGL_TRUE);
+
    interval = CLAMP(interval,
                     surf->Config->MinSwapInterval,
                     surf->Config->MaxSwapInterval);
