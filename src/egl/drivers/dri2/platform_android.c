@@ -676,10 +676,6 @@ droid_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
-
-   if (dri2_surf->base.Type != EGL_WINDOW_BIT)
-      return EGL_TRUE;
-
    const bool has_mutable_rb = _eglSurfaceHasMutableRenderBuffer(draw);
 
    /* From the EGL_KHR_mutable_render_buffer spec (v12):
