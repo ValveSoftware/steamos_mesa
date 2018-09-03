@@ -715,8 +715,6 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    /* Get rid of split copies */
    nir = brw_nir_optimize(nir, compiler, is_scalar, false);
 
-   OPT(nir_remove_dead_variables, nir_var_local);
-
    return nir;
 }
 
