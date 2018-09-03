@@ -2539,6 +2539,7 @@ radv_pipeline_generate_binning_state(struct radeon_cmdbuf *cs,
 	switch (pipeline->device->physical_device->rad_info.family) {
 	case CHIP_VEGA10:
 	case CHIP_VEGA12:
+	case CHIP_VEGA20:
 		context_states_per_bin = 1;
 		persistent_states_per_bin = 1;
 		fpovs_per_batch = 63;
