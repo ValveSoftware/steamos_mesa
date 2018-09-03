@@ -898,10 +898,6 @@ dri2_x11_swap_buffers_msc(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw,
    xcb_dri2_swap_buffers_reply_t *reply;
    int64_t swap_count = -1;
 
-   /* No-op for a pixmap or pbuffer surface */
-   if (draw->Type == EGL_PIXMAP_BIT || draw->Type == EGL_PBUFFER_BIT)
-      return 0;
-
    if (draw->SwapBehavior == EGL_BUFFER_PRESERVED || !dri2_dpy->swap_available) {
       swap_count = dri2_copy_region(drv, disp, draw, dri2_surf->region) ? 0 : -1;
    } else {
