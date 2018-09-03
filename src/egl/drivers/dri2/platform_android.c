@@ -1202,10 +1202,14 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    return (config_count != 0);
 }
 
+static EGLBoolean
+droid_probe_device(_EGLDisplay *disp);
+
 #ifdef HAVE_DRM_GRALLOC
-static int
-droid_open_device_drm_gralloc(struct dri2_egl_display *dri2_dpy)
+static EGLBoolean
+droid_open_device_drm_gralloc(_EGLDisplay *disp)
 {
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    int fd = -1, err = -EINVAL;
 
    if (dri2_dpy->gralloc->perform)
@@ -1214,10 +1218,14 @@ droid_open_device_drm_gralloc(struct dri2_egl_display *dri2_dpy)
                                           &fd);
    if (err || fd < 0) {
       _eglLog(_EGL_WARNING, "fail to get drm fd");
-      fd = -1;
+      return EGL_FALSE;
    }
 
-   return (fd >= 0) ? fcntl(fd, F_DUPFD_CLOEXEC, 3) : -1;
+   dri2_dpy->fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
+   if (dri2_dpy->fd < 0)
+     return EGL_FALSE;
+
+   return droid_probe_device(disp);
 }
 #endif /* HAVE_DRM_GRALLOC */
 
@@ -1404,6 +1412,17 @@ error:
    return false;
 }
 
+static void
+droid_unload_driver(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+
+   dlclose(dri2_dpy->driver);
+   dri2_dpy->driver = NULL;
+   free(dri2_dpy->driver_name);
+   dri2_dpy->driver_name = NULL;
+}
+
 static int
 droid_filter_device(_EGLDisplay *disp, int fd, const char *vendor)
 {
@@ -1420,13 +1439,31 @@ droid_filter_device(_EGLDisplay *disp, int fd, const char *vendor)
    return 0;
 }
 
-static int
+static EGLBoolean
+droid_probe_device(_EGLDisplay *disp)
+{
+  /* Check that the device is supported, by attempting to:
+   * - load the dri module
+   * - and, create a screen
+   */
+   if (!droid_load_driver(disp))
+      return EGL_FALSE;
+
+   if (!dri2_create_screen(disp)) {
+      _eglLog(_EGL_WARNING, "DRI2: failed to create screen");
+      droid_unload_driver(disp);
+      return EGL_FALSE;
+   }
+   return EGL_TRUE;
+}
+
+static EGLBoolean
 droid_open_device(_EGLDisplay *disp)
 {
 #define MAX_DRM_DEVICES 32
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    drmDevicePtr device, devices[MAX_DRM_DEVICES] = { NULL };
-   int prop_set, num_devices;
-   int fd = -1, fallback_fd = -1;
+   int num_devices;
 
    char *vendor_name = NULL;
    char vendor_buf[PROPERTY_VALUE_MAX];
@@ -1436,7 +1473,7 @@ droid_open_device(_EGLDisplay *disp)
 
    num_devices = drmGetDevices2(0, devices, ARRAY_SIZE(devices));
    if (num_devices < 0)
-      return num_devices;
+      return EGL_FALSE;
 
    for (int i = 0; i < num_devices; i++) {
       device = devices[i];
@@ -1444,41 +1481,49 @@ droid_open_device(_EGLDisplay *disp)
       if (!(device->available_nodes & (1 << DRM_NODE_RENDER)))
          continue;
 
-      fd = loader_open_device(device->nodes[DRM_NODE_RENDER]);
-      if (fd < 0) {
+      dri2_dpy->fd = loader_open_device(device->nodes[DRM_NODE_RENDER]);
+      if (dri2_dpy->fd < 0) {
          _eglLog(_EGL_WARNING, "%s() Failed to open DRM device %s",
                  __func__, device->nodes[DRM_NODE_RENDER]);
          continue;
       }
 
-      if (vendor_name && droid_filter_device(disp, fd, vendor_name)) {
-         /* Match requested, but not found - set as fallback */
-         if (fallback_fd == -1) {
-            fallback_fd = fd;
-         } else {
-            close(fd);
-            fd = -1;
+      /* If a vendor is explicitly provided, we use only that.
+       * Otherwise we fall-back the first device that is supported.
+       */
+      if (vendor_name) {
+         if (droid_filter_device(disp, dri2_dpy->fd, vendor_name)) {
+            /* Device does not match - try next device */
+            close(dri2_dpy->fd);
+            dri2_dpy->fd = -1;
+            continue;
+         }
+         /* If the requested device matches - use it. Regardless if
+          * init fails, do not fall-back to any other device.
+          */
+         if (!droid_probe_device(disp)) {
+            close(dri2_dpy->fd);
+            dri2_dpy->fd = -1;
          }
 
-         continue;
+         break;
       }
-      /* Found a device */
-      break;
+      if (droid_probe_device(disp))
+         break;
+
+      /* No explicit request - attempt the next device */
+      close(dri2_dpy->fd);
+      dri2_dpy->fd = -1;
    }
    drmFreeDevices(devices, num_devices);
 
-   if (fallback_fd < 0 && fd < 0) {
-      _eglLog(_EGL_WARNING, "Failed to open any DRM device");
-      return -1;
+   if (dri2_dpy->fd < 0) {
+      _eglLog(_EGL_WARNING, "Failed to open %s DRM device",
+            vendor_name ? "desired": "any");
+      return EGL_FALSE;
    }
 
-   if (fd < 0) {
-      _eglLog(_EGL_WARNING, "Failed to open desired DRM device, using fallback");
-      return fallback_fd;
-   }
-
-   close(fallback_fd);
-   return fd;
+   return EGL_TRUE;
 #undef MAX_DRM_DEVICES
 }
 
@@ -1510,22 +1555,11 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *disp)
    disp->DriverData = (void *) dri2_dpy;
 
 #ifdef HAVE_DRM_GRALLOC
-   dri2_dpy->fd = droid_open_device_drm_gralloc(dri2_dpy);
+   if (!droid_open_device_drm_gralloc(disp)) {
 #else
-   dri2_dpy->fd = droid_open_device(disp);
+   if (!droid_open_device(disp)) {
 #endif
-   if (dri2_dpy->fd < 0) {
       err = "DRI2: failed to open device";
-      goto cleanup;
-   }
-
-   if (!droid_load_driver(disp)) {
-      err = "DRI2: failed to load driver";
-      goto cleanup;
-   }
-
-   if (!dri2_create_screen(disp)) {
-      err = "DRI2: failed to create screen";
       goto cleanup;
    }
 
