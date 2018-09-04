@@ -91,7 +91,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
    /* Pull inputs_read out of the VS prog data */
    const uint64_t inputs_read = vs_prog_data->inputs_read;
-   const uint64_t double_inputs_read = vs_prog_data->double_inputs_read;
+   const uint64_t double_inputs_read =
+      vs_prog_data->double_inputs_read & inputs_read;
    assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
    const uint32_t elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    const uint32_t elements_double = double_inputs_read >> VERT_ATTRIB_GENERIC0;
