@@ -1777,7 +1777,6 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
           && buffer) {
 
          /* Fill the new buffer with data from an old buffer */
-         dri3_fence_await(draw->conn, draw, buffer);
          if (!loader_dri3_blit_image(draw,
                                      new_buffer->image,
                                      buffer->image,
