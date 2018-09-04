@@ -613,9 +613,10 @@ intel_miptree_access_raw(struct brw_context *brw,
                          uint32_t level, uint32_t layer,
                          bool write)
 {
-   intel_miptree_prepare_access(brw, mt, level, 1, layer, 1, false, false);
+   intel_miptree_prepare_access(brw, mt, level, 1, layer, 1,
+                                ISL_AUX_USAGE_NONE, false);
    if (write)
-      intel_miptree_finish_write(brw, mt, level, layer, 1, false);
+      intel_miptree_finish_write(brw, mt, level, layer, 1, ISL_AUX_USAGE_NONE);
 }
 
 enum isl_aux_usage

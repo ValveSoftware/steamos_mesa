@@ -2727,7 +2727,7 @@ intel_miptree_finish_depth(struct brw_context *brw,
 {
    if (depth_written) {
       intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
-                                 mt->aux_buf != NULL);
+                                 mt->aux_usage);
    }
 }
 
