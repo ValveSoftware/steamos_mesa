@@ -459,13 +459,18 @@ static void virgl_vtest_add_res(struct virgl_vtest_winsys *vtws,
 {
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added)-1);
 
-   if (cbuf->cres > cbuf->nres) {
-      cbuf->nres += 256;
-      cbuf->res_bo = realloc(cbuf->res_bo, cbuf->nres * sizeof(struct virgl_hw_buf*));
-      if (!cbuf->res_bo) {
+   if (cbuf->cres >= cbuf->nres) {
+      unsigned new_nres = cbuf->nres + 256;
+      struct virgl_hw_res **new_re_bo = REALLOC(cbuf->res_bo,
+                                                cbuf->nres * sizeof(struct virgl_hw_buf*),
+                                                new_nres * sizeof(struct virgl_hw_buf*));
+      if (!new_re_bo) {
           fprintf(stderr,"failure to add relocation %d, %d\n", cbuf->cres, cbuf->nres);
           return;
       }
+
+      cbuf->res_bo = new_re_bo;
+      cbuf->nres = new_nres;
    }
 
    cbuf->res_bo[cbuf->cres] = NULL;
