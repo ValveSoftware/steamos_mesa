@@ -343,8 +343,6 @@ brw_nir_lower_glsl_images(nir_shader *shader,
          case nir_intrinsic_image_deref_store_raw_intel: {
             nir_deref_instr *deref = nir_src_as_deref(intrin->src[0]);
             nir_variable *var = nir_deref_instr_get_variable(deref);
-            const unsigned num_images =
-               MAX2(1, var->type->arrays_of_arrays_size());
 
             struct gl_uniform_storage *storage =
                &prog->sh.data->UniformStorage[var->data.location];
