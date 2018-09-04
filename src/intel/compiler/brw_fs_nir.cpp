@@ -3815,6 +3815,8 @@ image_intrinsic_coord_components(nir_intrinsic_instr *instr)
       return 3;
    case GLSL_SAMPLER_DIM_BUF:
       return 1;
+   case GLSL_SAMPLER_DIM_MS:
+      return 2 + nir_intrinsic_image_array(instr);
    default:
       unreachable("Invalid image dimension");
    }
