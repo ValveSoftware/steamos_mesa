@@ -299,8 +299,8 @@ get_aoa_deref_offset(nir_builder *b,
 }
 
 void
-brw_nir_lower_glsl_images(nir_shader *shader,
-                          const struct gl_program *prog)
+brw_nir_lower_gl_images(nir_shader *shader,
+                        const struct gl_program *prog)
 {
    /* We put image uniforms at the end */
    nir_foreach_variable(var, &shader->uniforms) {

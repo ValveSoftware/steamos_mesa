@@ -149,8 +149,8 @@ void brw_nir_setup_arb_uniforms(void *mem_ctx, nir_shader *shader,
                                 struct gl_program *prog,
                                 struct brw_stage_prog_data *stage_prog_data);
 
-void brw_nir_lower_glsl_images(nir_shader *shader,
-                               const struct gl_program *prog);
+void brw_nir_lower_gl_images(nir_shader *shader,
+                             const struct gl_program *prog);
 
 void brw_nir_analyze_ubo_ranges(const struct brw_compiler *compiler,
                                 nir_shader *nir,
