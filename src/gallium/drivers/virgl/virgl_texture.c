@@ -137,7 +137,6 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
    struct virgl_hw_res *hw_res;
    const unsigned h = u_minify(vtex->base.u.b.height0, level);
    const unsigned nblocksy = util_format_get_nblocksy(format, h);
-   bool is_depth = util_format_has_depth(util_format_description(resource->format));
    uint32_t l_stride;
    bool doflushwait;
 
@@ -165,7 +164,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
    else
       l_stride = trans->base.layer_stride;
 
-   if (is_depth && resource->nr_samples > 1) {
+   if (resource->nr_samples > 1) {
       struct pipe_resource tmp_resource;
       virgl_init_temp_resource_from_box(&tmp_resource, resource, box,
                                         level, 0);
