@@ -140,7 +140,6 @@ brw_create_nir(struct brw_context *brw,
    }
 
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
-   NIR_PASS_V(nir, brw_nir_lower_gl_images, prog);
 
    return nir;
 }
