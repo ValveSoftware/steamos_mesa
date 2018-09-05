@@ -36,6 +36,7 @@
 
 #include "u_debug.h"
 #include "u_cpu_detect.h"
+#include "c11/threads.h"
 
 #if defined(PIPE_ARCH_PPC)
 #if defined(PIPE_OS_APPLE)
@@ -366,14 +367,9 @@ check_os_arm_support(void)
 }
 #endif /* PIPE_ARCH_ARM */
 
-void
-util_cpu_detect(void)
+static void
+util_cpu_detect_once(void)
 {
-   static boolean util_cpu_detect_initialized = FALSE;
-
-   if(util_cpu_detect_initialized)
-      return;
-
    memset(&util_cpu_caps, 0, sizeof util_cpu_caps);
 
    /* Count the number of CPUs in system */
@@ -561,6 +557,12 @@ util_cpu_detect(void)
       debug_printf("util_cpu_caps.has_avx512vbmi = %u\n", util_cpu_caps.has_avx512vbmi);
    }
 #endif
+}
 
-   util_cpu_detect_initialized = TRUE;
+static once_flag cpu_once_flag = ONCE_FLAG_INIT;
+
+void
+util_cpu_detect(void)
+{
+   call_once(&cpu_once_flag, util_cpu_detect_once);
 }
