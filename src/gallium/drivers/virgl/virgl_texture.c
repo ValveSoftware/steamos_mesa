@@ -195,6 +195,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
 
    ptr = vs->vws->resource_map(vs->vws, hw_res);
    if (!ptr) {
+      slab_free(&vctx->texture_transfer_pool, trans);
       return NULL;
    }
 
