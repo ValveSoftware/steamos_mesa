@@ -186,7 +186,8 @@ svga_texture_view_surface(struct svga_context *svga,
    key->sampleCount = tex->b.b.nr_samples > 1 ? tex->b.b.nr_samples : 0;
 
    if (key->sampleCount > 1) {
-      key->flags |= SVGA3D_SURFACE_MASKABLE_ANTIALIAS;
+      assert(ss->sws->have_sm4_1);
+      key->flags |= SVGA3D_SURFACE_MULTISAMPLE;
    }
 
    if (tex->b.b.target == PIPE_TEXTURE_CUBE && layer_pick < 0) {

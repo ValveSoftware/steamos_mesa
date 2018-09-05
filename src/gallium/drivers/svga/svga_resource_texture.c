@@ -1000,7 +1000,8 @@ svga_texture_create(struct pipe_screen *screen,
       tex->b.b.nr_samples = 0;
    }
    else if (tex->b.b.nr_samples > 1) {
-      tex->key.flags |= SVGA3D_SURFACE_MASKABLE_ANTIALIAS;
+      assert(svgascreen->sws->have_sm4_1);
+      tex->key.flags |= SVGA3D_SURFACE_MULTISAMPLE;
    }
 
    tex->key.sampleCount = tex->b.b.nr_samples;
