@@ -1053,7 +1053,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
       MESA_FORMAT_B8G8R8X8_UNORM
    };
 
-   /* GLX_SWAP_COPY_OML is not supported due to page flipping. */
+   /* __DRI_ATTRIB_SWAP_COPY is not supported due to page flipping. */
    static const GLenum back_buffer_modes[] = {
       __DRI_ATTRIB_SWAP_UNDEFINED, __DRI_ATTRIB_SWAP_NONE
    };
