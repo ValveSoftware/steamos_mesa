@@ -49,7 +49,7 @@ typedef unsigned char GLbitfield8;
 typedef unsigned short GLbitfield16;
 typedef GLuint64 GLbitfield64;
 
-typedef int GLclampx;
+/* Common GLES 1.0 and 2.0 tokens */
 
 #ifndef GL_OES_EGL_image_external
 #define GL_TEXTURE_EXTERNAL_OES                                 0x8D65
@@ -57,6 +57,15 @@ typedef int GLclampx;
 #define GL_TEXTURE_BINDING_EXTERNAL_OES                         0x8D67
 #define GL_REQUIRED_TEXTURE_IMAGE_UNITS_OES                     0x8D68
 #endif
+
+#ifndef GL_OES_compressed_ETC1_RGB8_texture
+#define GL_ETC1_RGB8_OES                                        0x8D64
+#endif
+
+
+/* GLES 1.0 only tokens */
+
+typedef int GLclampx;
 
 #ifndef GL_OES_point_size_array
 #define GL_POINT_SIZE_ARRAY_OES                                 0x8B9C
@@ -71,15 +80,15 @@ typedef int GLclampx;
 #define GL_TEXTURE_CROP_RECT_OES                                0x8B9D
 #endif
 
+#ifndef GL_TEXTURE_GEN_STR_OES
+#define GL_TEXTURE_GEN_STR_OES                                  0x8D60
+#endif
+
+
+/* GLES 2.0 only tokens */
 
 #ifndef GL_PROGRAM_BINARY_LENGTH_OES
 #define GL_PROGRAM_BINARY_LENGTH_OES                            0x8741
-#endif
-
-/* GLES 2.0 tokens */
-
-#ifndef GL_TEXTURE_GEN_STR_OES
-#define GL_TEXTURE_GEN_STR_OES                                  0x8D60
 #endif
 
 #ifndef GL_OES_texture_compression_astc
@@ -105,15 +114,6 @@ typedef int GLclampx;
 #define GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6x6_OES               0x93E9
 #endif
 
-#ifndef GL_ATI_texture_compression_3dc
-#define GL_ATI_texture_compression_3dc                          1
-#define GL_COMPRESSED_LUMINANCE_ALPHA_3DC_ATI                   0x8837
-#endif
-
-#ifndef GL_OES_compressed_ETC1_RGB8_texture
-#define GL_ETC1_RGB8_OES                                        0x8D64
-#endif
-
 #ifndef GL_EXT_shader_framebuffer_fetch
 #define GL_FRAGMENT_SHADER_DISCARDS_SAMPLES_EXT                 0x8A52
 #endif
@@ -131,6 +131,13 @@ typedef int GLclampx;
 #ifndef GL_MESA_framebuffer_flip_y
 #define GL_FRAMEBUFFER_FLIP_Y_MESA                              0x8BBB
 #endif
+
+/* There is no formal spec for the following extension. */
+#ifndef GL_ATI_texture_compression_3dc
+#define GL_ATI_texture_compression_3dc                          1
+#define GL_COMPRESSED_LUMINANCE_ALPHA_3DC_ATI                   0x8837
+#endif
+
 
 /**
  * Internal token to represent a GLSL shader program (a collection of
