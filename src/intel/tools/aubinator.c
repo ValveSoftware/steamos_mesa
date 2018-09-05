@@ -95,6 +95,18 @@ aubinator_init(void *user_data, int aub_pci_id, const char *app_name)
 
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, outfile, batch_flags,
                              xml_path, NULL, NULL, NULL);
+
+   /* Check for valid spec instance, if wrong xml_path is passed then spec
+    * instance is not initialized properly
+    */
+   if (!batch_ctx.spec) {
+      fprintf(stderr, "Failed to initialize gen_batch_decode_ctx "
+                      "spec instance\n");
+      free(xml_path);
+      gen_batch_decode_ctx_finish(&batch_ctx);
+      exit(EXIT_FAILURE);
+   }
+
    batch_ctx.max_vbo_decoded_lines = max_vbo_lines;
 
    char *color = GREEN_HEADER, *reset_color = NORMAL;
@@ -178,14 +190,19 @@ aub_file_open(const char *filename)
    int fd;
 
    file = calloc(1, sizeof *file);
+   if (file == NULL)
+      return NULL;
+
    fd = open(filename, O_RDONLY);
    if (fd == -1) {
       fprintf(stderr, "open %s failed: %s\n", filename, strerror(errno));
+      free(file);
       exit(EXIT_FAILURE);
    }
 
    if (fstat(fd, &sb) == -1) {
       fprintf(stderr, "stat failed: %s\n", strerror(errno));
+      free(file);
       exit(EXIT_FAILURE);
    }
 
@@ -193,6 +210,7 @@ aub_file_open(const char *filename)
                     PROT_READ, MAP_SHARED, fd, 0);
    if (file->map == MAP_FAILED) {
       fprintf(stderr, "mmap failed: %s\n", strerror(errno));
+      free(file);
       exit(EXIT_FAILURE);
    }
 
@@ -333,6 +351,11 @@ int main(int argc, char *argv[])
    }
 
    file = aub_file_open(input_file);
+   if (!file) {
+      fprintf(stderr, "Unable to allocate buffer to open aub file\n");
+      free(xml_path);
+      exit(EXIT_FAILURE);
+   }
 
    struct aub_read aub_read = {
       .user_data = &mem,
@@ -359,9 +382,11 @@ int main(int argc, char *argv[])
    fflush(stdout);
    /* close the stdout which is opened to write the output */
    close(1);
+   free(file);
    free(xml_path);
 
    wait(NULL);
+   gen_batch_decode_ctx_finish(&batch_ctx);
 
    return EXIT_SUCCESS;
 }
