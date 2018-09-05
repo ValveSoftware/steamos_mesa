@@ -1222,11 +1222,6 @@ GLboolean XMesaMakeCurrent2( XMesaContext c, XMesaBuffer drawBuffer,
 
       c->xm_buffer = drawBuffer;
 
-      /* Call this periodically to detect when the user has begun using
-       * GL rendering from multiple threads.
-       */
-      _glapi_check_multithread();
-
       xmesa_check_and_update_buffer_size(c, drawBuffer);
       if (readBuffer != drawBuffer)
          xmesa_check_and_update_buffer_size(c, readBuffer);
