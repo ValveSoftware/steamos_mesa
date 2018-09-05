@@ -1623,7 +1623,7 @@ svga_get_format_cap(struct svga_screen *ss,
       assert(format < SVGA3D_UYVY || entry->defaultOperations == 0);
 
       /* Explicitly advertised format */
-      if (entry->devcap > SVGA3D_DEVCAP_DX) {
+      if (entry->devcap > SVGA3D_DEVCAP_DXCONTEXT) {
          /* Translate DX/VGPU10 format cap to VGPU9 cap */
          caps->value = 0;
          if (result.u & SVGA3D_DXFMT_COLOR_RENDERTARGET)

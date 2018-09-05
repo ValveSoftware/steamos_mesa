@@ -151,7 +151,7 @@ struct svga_winsys_surface *
 svga_texture_view_surface(struct svga_context *svga,
                           struct svga_texture *tex,
                           unsigned bind_flags,
-                          SVGA3dSurfaceFlags flags,
+                          SVGA3dSurface1Flags flags,
                           SVGA3dSurfaceFormat format,
                           unsigned start_mip,
                           unsigned num_mip,
@@ -261,7 +261,7 @@ svga_create_surface_view(struct pipe_context *pipe,
    struct svga_surface *s;
    unsigned layer, zslice, bind;
    unsigned nlayers = 1;
-   SVGA3dSurfaceFlags flags = 0;
+   SVGA3dSurface1Flags flags = 0;
    SVGA3dSurfaceFormat format;
    struct pipe_surface *retVal = NULL;
 

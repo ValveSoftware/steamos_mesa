@@ -99,7 +99,7 @@ SVGA3D_DestroyContext(struct svga_winsys_context *swc);
 enum pipe_error
 SVGA3D_BeginDefineSurface(struct svga_winsys_context *swc,
                           struct svga_winsys_surface *sid,
-                          SVGA3dSurfaceFlags flags,
+                          SVGA3dSurface1Flags flags,
                           SVGA3dSurfaceFormat format,
                           SVGA3dSurfaceFace **faces,
                           SVGA3dSize **mipSizes,

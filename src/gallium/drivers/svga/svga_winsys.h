@@ -36,6 +36,7 @@
 #define SVGA_WINSYS_H_
 
 #include "svga_types.h"
+#include "svga3d_types.h"
 #include "svga_reg.h"
 #include "svga3d_reg.h"
 
@@ -529,7 +530,7 @@ struct svga_winsys_screen
     */
    struct svga_winsys_surface *
    (*surface_create)(struct svga_winsys_screen *sws,
-                     SVGA3dSurfaceFlags flags,
+                     SVGA3dSurface1Flags flags,
                      SVGA3dSurfaceFormat format,
                      unsigned usage,
                      SVGA3dSize size,
