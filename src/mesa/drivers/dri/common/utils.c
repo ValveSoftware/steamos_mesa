@@ -41,6 +41,20 @@
 #include "utils.h"
 #include "dri_util.h"
 
+/* WARNING: HACK: Local defines to avoid pulling glx.h.
+ *
+ * Any parts of this file that use the following defines are either partial or
+ * entirely broken wrt EGL.
+ *
+ * For example any getConfigAttrib() or indexConfigAttrib() query from EGL for
+ * SLOW or NON_CONFORMANT_CONFIG will not work as expected since the EGL tokens
+ * are different from the GLX ones.
+ */
+#define GLX_NONE                                                0x8000
+#define GLX_SLOW_CONFIG                                         0x8001
+#define GLX_NON_CONFORMANT_CONFIG                               0x800D
+#define GLX_DONT_CARE                                           0xFFFFFFFF
+
 /**
  * Create the \c GL_RENDERER string for DRI drivers.
  * 
