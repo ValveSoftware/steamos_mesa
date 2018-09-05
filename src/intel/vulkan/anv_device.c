@@ -2279,7 +2279,7 @@ VkResult anv_AllocateMemory(
             const uint32_t i915_tiling =
                isl_tiling_to_i915_tiling(image->planes[0].surface.isl.tiling);
             int ret = anv_gem_set_tiling(device, mem->bo->gem_handle,
-                                         image->planes[0].surface.isl.row_pitch,
+                                         image->planes[0].surface.isl.row_pitch_B,
                                          i915_tiling);
             if (ret) {
                anv_bo_cache_release(device, &device->bo_cache, mem->bo);
@@ -2897,9 +2897,9 @@ anv_fill_buffer_surface_state(struct anv_device *device, struct anv_state state,
    isl_buffer_fill_state(&device->isl_dev, state.map,
                          .address = anv_address_physical(address),
                          .mocs = device->default_mocs,
-                         .size = range,
+                         .size_B = range,
                          .format = format,
-                         .stride = stride);
+                         .stride_B = stride);
 
    anv_state_flush(device, state);
 }

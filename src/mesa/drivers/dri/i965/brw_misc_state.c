@@ -291,7 +291,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
 
    BEGIN_BATCH(len);
    OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
-   OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch - 1 : 0) |
+   OUT_BATCH((depth_mt ? depth_mt->surf.row_pitch_B - 1 : 0) |
              (depthbuffer_format << 18) |
              (BRW_TILEWALK_YMAJOR << 26) |
              (tiled_surface << 27) |

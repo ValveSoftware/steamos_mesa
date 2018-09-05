@@ -457,7 +457,7 @@ intel_setup_image_from_mipmap_tree(struct brw_context *brw, __DRIimage *image,
                          level - mt->first_level);
    image->height = minify(mt->surf.phys_level0_sa.height,
                           level - mt->first_level);
-   image->pitch = mt->surf.row_pitch;
+   image->pitch = mt->surf.row_pitch_B;
 
    image->offset = intel_miptree_get_tile_offsets(mt, level, zoffset,
                                                   &image->tile_x,
@@ -533,7 +533,7 @@ intel_create_image_from_renderbuffer(__DRIcontext *context,
    brw_bo_reference(irb->mt->bo);
    image->width = rb->Width;
    image->height = rb->Height;
-   image->pitch = irb->mt->surf.row_pitch;
+   image->pitch = irb->mt->surf.row_pitch_B;
    image->dri_format = driGLFormatToImageFormat(image->format);
    image->has_depthstencil = irb->mt->stencil_mt? true : false;
 
@@ -740,7 +740,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
       }
    } else {
       assert(mod_info->aux_usage == ISL_AUX_USAGE_NONE);
-      aux_surf.size = 0;
+      aux_surf.size_B = 0;
    }
 
    /* We request that the bufmgr zero the buffer for us for two reasons:
@@ -753,23 +753,23 @@ intel_create_image_common(__DRIscreen *dri_screen,
     *     in the pass-through state which is what we want.
     */
    image->bo = brw_bo_alloc_tiled(screen->bufmgr, "image",
-                                  surf.size + aux_surf.size,
+                                  surf.size_B + aux_surf.size_B,
                                   BRW_MEMZONE_OTHER,
                                   isl_tiling_to_i915_tiling(mod_info->tiling),
-                                  surf.row_pitch, BO_ALLOC_ZEROED);
+                                  surf.row_pitch_B, BO_ALLOC_ZEROED);
    if (image->bo == NULL) {
       free(image);
       return NULL;
    }
    image->width = width;
    image->height = height;
-   image->pitch = surf.row_pitch;
+   image->pitch = surf.row_pitch_B;
    image->modifier = modifier;
 
-   if (aux_surf.size) {
-      image->aux_offset = surf.size;
-      image->aux_pitch = aux_surf.row_pitch;
-      image->aux_size = aux_surf.size;
+   if (aux_surf.size_B) {
+      image->aux_offset = surf.size_B;
+      image->aux_pitch = aux_surf.row_pitch_B;
+      image->aux_size = aux_surf.size_B;
    }
 
    return image;
@@ -1113,7 +1113,7 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
                          .levels = 1,
                          .array_len = 1,
                          .samples = 1,
-                         .row_pitch = strides[index],
+                         .row_pitch_B = strides[index],
                          .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT |
                                   ISL_SURF_USAGE_TEXTURE_BIT |
                                   ISL_SURF_USAGE_STORAGE_BIT,
@@ -1124,7 +1124,7 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
          return NULL;
       }
 
-      const int end = offsets[index] + surf.size;
+      const int end = offsets[index] + surf.size_B;
       if (size < end)
          size = end;
    }
@@ -1162,9 +1162,9 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
          return NULL;
       }
 
-      image->aux_size = aux_surf.size;
+      image->aux_size = aux_surf.size_B;
 
-      const int end = image->aux_offset + aux_surf.size;
+      const int end = image->aux_offset + aux_surf.size_B;
       if (size < end)
          size = end;
    } else {

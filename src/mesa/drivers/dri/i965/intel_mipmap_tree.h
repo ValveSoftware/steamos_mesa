@@ -719,7 +719,7 @@ intel_miptree_get_clear_color(const struct gen_device_info *devinfo,
 static inline int
 intel_miptree_blt_pitch(struct intel_mipmap_tree *mt)
 {
-   int pitch = mt->surf.row_pitch;
+   int pitch = mt->surf.row_pitch_B;
    if (mt->surf.tiling != ISL_TILING_LINEAR)
       pitch /= 4;
    return pitch;

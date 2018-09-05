@@ -249,7 +249,7 @@ isl_surf_fill_image_param(const struct isl_device *dev,
 
    const int cpp = isl_format_get_layout(surf->format)->bpb / 8;
    param->stride[0] = cpp;
-   param->stride[1] = surf->row_pitch / cpp;
+   param->stride[1] = surf->row_pitch_B / cpp;
 
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(surf);

@@ -634,9 +634,9 @@ brw_emit_buffer_surface_state(struct brw_context *brw,
                                                     *out_offset + brw->isl_dev.ss.addr_offset,
                                                     bo, buffer_offset,
                                                     reloc_flags),
-                         .size = buffer_size,
+                         .size_B = buffer_size,
                          .format = surface_format,
-                         .stride = pitch,
+                         .stride_B = pitch,
                          .mocs = brw_get_bo_mocs(devinfo, bo));
 }
 
@@ -949,7 +949,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
 	      (rb->Height - 1) << BRW_SURFACE_HEIGHT_SHIFT);
 
    surf[3] = (brw_get_surface_tiling_bits(mt->surf.tiling) |
-	      (mt->surf.row_pitch - 1) << BRW_SURFACE_PITCH_SHIFT);
+	      (mt->surf.row_pitch_B - 1) << BRW_SURFACE_PITCH_SHIFT);
 
    surf[4] = brw_get_surface_num_multisamples(mt->surf.samples);
 

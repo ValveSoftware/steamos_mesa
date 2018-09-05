@@ -203,7 +203,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       yoffset, yoffset + height,
       pixels,
       map + irb->mt->offset,
-      dst_pitch, irb->mt->surf.row_pitch,
+      dst_pitch, irb->mt->surf.row_pitch_B,
       brw->has_swizzling,
       irb->mt->surf.tiling,
       mem_copy

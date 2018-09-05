@@ -2615,7 +2615,7 @@ anv_pipeline_setup_l3_config(struct anv_pipeline *pipeline, bool needs_slm);
  * Subsurface of an anv_image.
  */
 struct anv_surface {
-   /** Valid only if isl_surf::size > 0. */
+   /** Valid only if isl_surf::size_B > 0. */
    struct isl_surf isl;
 
    /**
@@ -2764,7 +2764,7 @@ anv_image_aux_levels(const struct anv_image * const image,
                      VkImageAspectFlagBits aspect)
 {
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-   return image->planes[plane].aux_surface.isl.size > 0 ?
+   return image->planes[plane].aux_surface.isl.size_B > 0 ?
           image->planes[plane].aux_surface.isl.levels : 0;
 }
 

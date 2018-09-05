@@ -948,7 +948,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
 
-   if (image->planes[plane].shadow_surface.isl.size > 0 &&
+   if (image->planes[plane].shadow_surface.isl.size_B > 0 &&
        final_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
       /* This surface is a linear compressed image with a tiled shadow surface
        * for texturing.  The client is about to use it in READ_ONLY_OPTIMAL so
@@ -3760,7 +3760,7 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 
       if (GEN_GEN < 10 &&
           (att_state->pending_load_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) &&
-          image->planes[0].aux_surface.isl.size > 0 &&
+          image->planes[0].aux_surface.isl.size_B > 0 &&
           iview->planes[0].isl.base_level == 0 &&
           iview->planes[0].isl.base_array_layer == 0) {
          if (att_state->aux_usage != ISL_AUX_USAGE_NONE) {

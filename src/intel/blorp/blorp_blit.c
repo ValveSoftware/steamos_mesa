@@ -2109,7 +2109,7 @@ shrink_surface_params(const struct isl_device *dev,
    x_offset_sa = (uint32_t)*x0 * px_size_sa.w + info->tile_x_sa;
    y_offset_sa = (uint32_t)*y0 * px_size_sa.h + info->tile_y_sa;
    isl_tiling_get_intratile_offset_sa(info->surf.tiling,
-                                      info->surf.format, info->surf.row_pitch,
+                                      info->surf.format, info->surf.row_pitch_B,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,
                                       &info->tile_x_sa, &info->tile_y_sa);
@@ -2709,7 +2709,7 @@ do_buffer_copy(struct blorp_batch *batch,
                       .levels = 1,
                       .array_len = 1,
                       .samples = 1,
-                      .row_pitch = width * block_size,
+                      .row_pitch_B = width * block_size,
                       .usage = ISL_SURF_USAGE_TEXTURE_BIT |
                                ISL_SURF_USAGE_RENDER_TARGET_BIT,
                       .tiling_flags = ISL_TILING_LINEAR_BIT);
