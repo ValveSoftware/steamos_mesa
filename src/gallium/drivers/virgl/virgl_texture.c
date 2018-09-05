@@ -240,7 +240,7 @@ static void virgl_texture_transfer_unmap(struct pipe_context *ctx,
 }
 
 
-static boolean
+static void
 vrend_resource_layout(struct virgl_texture *res,
                       uint32_t *total_size)
 {
@@ -276,7 +276,6 @@ vrend_resource_layout(struct virgl_texture *res,
       *total_size = buffer_size;
    else /* don't create guest backing store for MSAA */
       *total_size = 0;
-   return TRUE;
 }
 
 static boolean virgl_texture_get_handle(struct pipe_screen *screen,
