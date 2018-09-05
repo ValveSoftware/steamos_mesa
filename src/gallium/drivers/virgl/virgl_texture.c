@@ -311,15 +311,11 @@ virgl_texture_from_handle(struct virgl_screen *vs,
                           const struct pipe_resource *template,
                           struct winsys_handle *whandle)
 {
-   struct virgl_texture *tex;
-   uint32_t size;
-
-   tex = CALLOC_STRUCT(virgl_texture);
+   struct virgl_texture *tex = CALLOC_STRUCT(virgl_texture);
    tex->base.u.b = *template;
    tex->base.u.b.screen = &vs->base;
    pipe_reference_init(&tex->base.u.b.reference, 1);
    tex->base.u.vtbl = &virgl_texture_vtbl;
-   vrend_resource_layout(tex, &size);
 
    tex->base.hw_res = vs->vws->resource_create_from_handle(vs->vws, whandle);
    return &tex->base.u.b;
