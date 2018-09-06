@@ -475,6 +475,8 @@ subpixel precision bias in bits during conservative rasterization.
 * ``PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET: Maximum recommend memory size
   for all active texture uploads combined. This is a performance hint.
   0 means no limit.
+* ``PIPE_CAP_MAX_VERTEX_ELEMENT_SRC_OFFSET``: The maximum supported value for
+  of pipe_vertex_element::src_offset.
 
 .. _pipe_capf:
 
