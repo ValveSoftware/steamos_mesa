@@ -126,7 +126,7 @@ util_vasprintf(char **ret, const char *format, va_list ap)
       return -1;
 
    *ret = (char *) malloc(r + 1);
-   if (!ret)
+   if (!*ret)
       return -1;
 
    /* Print to buffer */
