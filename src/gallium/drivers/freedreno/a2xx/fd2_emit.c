@@ -241,7 +241,8 @@ fd2_emit_state(struct fd_context *ctx, const enum fd_dirty_3d_state dirty)
 		OUT_RING(ring, fui(1.0));                /* PA_CL_GB_HORZ_DISC_ADJ */
 	}
 
-	if (dirty & FD_DIRTY_SCISSOR) {
+	/* NOTE: scissor enabled bit is part of rasterizer state: */
+	if (dirty & (FD_DIRTY_SCISSOR | FD_DIRTY_RASTERIZER)) {
 		struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 
 		OUT_PKT3(ring, CP_SET_CONSTANT, 3);
