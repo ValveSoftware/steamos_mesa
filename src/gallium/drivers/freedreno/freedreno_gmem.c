@@ -442,20 +442,6 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 	flush_ring(batch);
 }
 
-/* tile needs restore if it isn't completely contained within the
- * cleared scissor:
- */
-static bool
-skip_restore(struct pipe_scissor_state *scissor, struct fd_tile *tile)
-{
-	unsigned minx = tile->xoff;
-	unsigned maxx = tile->xoff + tile->bin_w;
-	unsigned miny = tile->yoff;
-	unsigned maxy = tile->yoff + tile->bin_h;
-	return (minx >= scissor->minx) && (maxx <= scissor->maxx) &&
-			(miny >= scissor->miny) && (maxy <= scissor->maxy);
-}
-
 /* When deciding whether a tile needs mem2gmem, we need to take into
  * account the scissor rect(s) that were cleared.  To simplify we only
  * consider the last scissor rect for each buffer, since the common
@@ -466,22 +452,6 @@ fd_gmem_needs_restore(struct fd_batch *batch, struct fd_tile *tile,
 		uint32_t buffers)
 {
 	if (!(batch->restore & buffers))
-		return false;
-
-	/* if buffers partially cleared, then slow-path to figure out
-	 * if this particular tile needs restoring:
-	 */
-	if ((buffers & FD_BUFFER_COLOR) &&
-			(batch->partial_cleared & FD_BUFFER_COLOR) &&
-			skip_restore(&batch->cleared_scissor.color, tile))
-		return false;
-	if ((buffers & FD_BUFFER_DEPTH) &&
-			(batch->partial_cleared & FD_BUFFER_DEPTH) &&
-			skip_restore(&batch->cleared_scissor.depth, tile))
-		return false;
-	if ((buffers & FD_BUFFER_STENCIL) &&
-			(batch->partial_cleared & FD_BUFFER_STENCIL) &&
-			skip_restore(&batch->cleared_scissor.stencil, tile))
 		return false;
 
 	return true;

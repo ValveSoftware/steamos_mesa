@@ -69,7 +69,7 @@ batch_init(struct fd_batch *batch)
 	batch->in_fence_fd = -1;
 	batch->fence = fd_fence_create(batch);
 
-	batch->cleared = batch->partial_cleared = 0;
+	batch->cleared = 0;
 	batch->restore = batch->resolve = 0;
 	batch->needs_flush = false;
 	batch->flushed = false;
@@ -78,10 +78,6 @@ batch_init(struct fd_batch *batch)
 	batch->stage = FD_STAGE_NULL;
 
 	fd_reset_wfi(batch);
-
-	/* reset maximal bounds: */
-	batch->max_scissor.minx = batch->max_scissor.miny = ~0;
-	batch->max_scissor.maxx = batch->max_scissor.maxy = 0;
 
 	util_dynarray_init(&batch->draw_patches, NULL);
 

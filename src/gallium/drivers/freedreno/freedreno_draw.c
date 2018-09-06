@@ -336,12 +336,6 @@ fd_blitter_clear(struct pipe_context *pctx, unsigned buffers,
 	fd_blitter_pipe_end(ctx);
 }
 
-/* TODO figure out how to make better use of existing state mechanism
- * for clear (and possibly gmem->mem / mem->gmem) so we can (a) keep
- * track of what state really actually changes, and (b) reduce the code
- * in the a2xx/a3xx parts.
- */
-
 static void
 fd_clear(struct pipe_context *pctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
@@ -349,7 +343,6 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_batch *batch = fd_context_batch(ctx);
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
-	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned cleared_buffers;
 	int i;
 
@@ -362,6 +355,14 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 		fd_context_all_dirty(ctx);
 	}
 
+	/* pctx->clear() is only for full-surface clears, so scissor is
+	 * equivalent to having GL_SCISSOR_TEST disabled:
+	 */
+	batch->max_scissor.minx = 0;
+	batch->max_scissor.miny = 0;
+	batch->max_scissor.maxx = pfb->width;
+	batch->max_scissor.maxy = pfb->height;
+
 	/* for bookkeeping about which buffers have been cleared (and thus
 	 * can fully or partially skip mem2gmem) we need to ignore buffers
 	 * that have already had a draw, in case apps do silly things like
@@ -370,19 +371,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	 * the depth buffer, etc)
 	 */
 	cleared_buffers = buffers & (FD_BUFFER_ALL & ~batch->restore);
+	batch->cleared |= cleared_buffers;
 
-	/* do we have full-screen scissor? */
-	if (!memcmp(scissor, &ctx->disabled_scissor, sizeof(*scissor))) {
-		batch->cleared |= cleared_buffers;
-	} else {
-		batch->partial_cleared |= cleared_buffers;
-		if (cleared_buffers & PIPE_CLEAR_COLOR)
-			batch->cleared_scissor.color = *scissor;
-		if (cleared_buffers & PIPE_CLEAR_DEPTH)
-			batch->cleared_scissor.depth = *scissor;
-		if (cleared_buffers & PIPE_CLEAR_STENCIL)
-			batch->cleared_scissor.stencil = *scissor;
-	}
 	batch->resolve |= buffers;
 	batch->needs_flush = true;
 

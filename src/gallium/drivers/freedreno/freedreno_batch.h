@@ -91,7 +91,7 @@ struct fd_batch {
 		FD_BUFFER_DEPTH   = PIPE_CLEAR_DEPTH,
 		FD_BUFFER_STENCIL = PIPE_CLEAR_STENCIL,
 		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
-	} cleared, partial_cleared, restore, resolve;
+	} cleared, restore, resolve;
 
 	/* is this a non-draw batch (ie compute/blit which has no pfb state)? */
 	bool nondraw : 1;
@@ -126,14 +126,6 @@ struct fd_batch {
 	 * mem2gmem/gmem2mem) to avoid needlessly moving data in/out of gmem.
 	 */
 	struct pipe_scissor_state max_scissor;
-
-	/* Track the cleared scissor for color/depth/stencil, so we know
-	 * which, if any, tiles need to be restored (mem2gmem).  Only valid
-	 * if the corresponding bit in ctx->cleared is set.
-	 */
-	struct {
-		struct pipe_scissor_state color, depth, stencil;
-	} cleared_scissor;
 
 	/* Keep track of DRAW initiators that need to be patched up depending
 	 * on whether we using binning or not:
