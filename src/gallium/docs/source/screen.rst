@@ -342,6 +342,8 @@ The integer capabilities:
   for ``pipe_rasterizer_state::offset_units_unscaled``.
 * ``PIPE_CAP_VIEWPORT_SUBPIXEL_BITS``: Number of bits of subpixel precision for
   floating point viewport bounds.
+* ``PIPE_CAP_RASTERIZER_SUBPIXEL_BITS``: Number of bits of subpixel precision used
+  by the rasterizer.
 * ``PIPE_CAP_MIXED_COLOR_DEPTH_BITS``: Whether there is non-fallback
   support for color/depth format combinations that use a different
   number of bits. For the purpose of this cap, Z24 is treated as

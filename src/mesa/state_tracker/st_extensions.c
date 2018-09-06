@@ -111,6 +111,7 @@ void st_init_limits(struct pipe_screen *screen,
    c->MaxRenderbufferSize = c->MaxTextureRectSize;
 
    c->SubPixelBits =
+      screen->get_param(screen, PIPE_CAP_RASTERIZER_SUBPIXEL_BITS);
    c->ViewportSubpixelBits =
       screen->get_param(screen, PIPE_CAP_VIEWPORT_SUBPIXEL_BITS);
 
