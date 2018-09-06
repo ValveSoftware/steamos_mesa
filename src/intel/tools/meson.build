@@ -90,7 +90,7 @@ libintel_sanitize_gpu = shared_library(
   dependencies : [dep_dl, dep_thread],
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
   link_with : [libintel_common, libmesa_util],
-  c_args : [c_vis_args, no_override_init_args],
+  c_args : [c_vis_args, no_override_init_args, c_sse2_args],
   build_by_default : true,
   install_dir: get_option('libexecdir'),
   install: true
