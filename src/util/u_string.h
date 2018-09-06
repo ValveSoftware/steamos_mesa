@@ -119,7 +119,7 @@ util_vasprintf(char **ret, const char *format, va_list ap)
 
    /* Compute length of output string first */
    va_copy(ap_copy, ap);
-   int r = util_vsnprintf(NULL, 0, format, ap);
+   int r = util_vsnprintf(NULL, 0, format, ap_copy);
    va_end(ap_copy);
 
    if (r < 0)
