@@ -69,7 +69,6 @@ build_blit_info(struct pipe_resource *dst_tex,
             src_box->depth, &blit->dst.box);
 }
 
-
 /**
  * Copy when src texture and dst texture are same with IntraSurfaceCopy
  * command.
@@ -84,6 +83,12 @@ intra_surface_copy(struct svga_context *svga, struct pipe_resource *tex,
    enum pipe_error ret;
    SVGA3dCopyBox box;
    struct svga_texture *stex;
+
+   /*
+    * Makes sure we have flushed all buffered draw operations and also
+    * synchronizes all surfaces with any emulated surface views.
+    */
+   svga_surfaces_flush(svga);
 
    stex = svga_texture(tex);
 
@@ -251,7 +256,6 @@ is_blending_enabled(struct svga_context *svga,
    return blend_enable;
 }
 
-
 /**
  * If GL_FRAMEBUFFER_SRGB is enabled, then output colorspace is
  * expected to be sRGB if blending is not enabled.
@@ -339,13 +343,15 @@ can_blit_via_svga_copy_region(struct svga_context *svga,
    return check_blending_and_srgb_cond(svga, blit_info);
 }
 
-
+/**
+ * Check whether we can blit using the intra_surface_copy command.
+ */
 static bool
 can_blit_via_intra_surface_copy(struct svga_context *svga,
                                 const struct pipe_blit_info *blit_info)
 {
-   struct svga_texture *dtex, *stex;
    struct svga_winsys_screen *sws = svga_screen(svga->pipe.screen)->sws;
+   struct svga_texture *dtex, *stex;
 
    if (!svga_have_vgpu10(svga))
       return false;
@@ -357,10 +363,7 @@ can_blit_via_intra_surface_copy(struct svga_context *svga,
    if (!sws->have_intra_surface_copy)
       return false;
 
-   stex = svga_texture(blit_info->src.resource);
-   dtex = svga_texture(blit_info->dst.resource);
-
-   if (stex->handle != dtex->handle)
+   if (svga->render_condition && blit_info->render_condition_enable)
       return false;
 
    if (blit_info->src.level != blit_info->dst.level)
@@ -371,25 +374,10 @@ can_blit_via_intra_surface_copy(struct svga_context *svga,
          return false;
    }
 
-   /* check that the blit src/dst regions are same size, no flipping, etc. */
-   if (blit_info->src.box.width != blit_info->dst.box.width ||
-       blit_info->src.box.height != blit_info->dst.box.height)
-      return false;
+   stex = svga_texture(blit_info->src.resource);
+   dtex = svga_texture(blit_info->dst.resource);
 
-   /* For depth+stencil formats, copy with mask != PIPE_MASK_ZS is not
-    * supported
-    */
-   if (util_format_is_depth_and_stencil(blit_info->src.format) &&
-      blit_info->mask != (PIPE_MASK_ZS))
-     return false;
-
-   if (blit_info->alpha_blend ||
-       (svga->render_condition && blit_info->render_condition_enable) ||
-       blit_info->scissor_enable)
-      return false;
-
-   return !(is_blending_enabled(svga, blit_info) &&
-           util_format_is_srgb(blit_info->src.resource->format));
+   return (stex->handle == dtex->handle);
 }
 
 
@@ -585,7 +573,7 @@ try_blit(struct svga_context *svga, const struct pipe_blit_info *blit_info)
    struct pipe_blit_info blit = *blit_info;
 
    SVGA_STATS_TIME_PUSH(sws, SVGA_STATS_TIME_BLITBLITTER);
-   
+
    /**
     * Avoid using util_blitter_blit() for these depth formats on non-vgpu10
     * devices because these depth formats only support comparison mode
