@@ -1205,10 +1205,6 @@ else
 endif
 if with_llvm
   _llvm_version = dep_llvm.version().split('.')
-  # Development versions of LLVM have an 'svn' or 'git' suffix, we don't want
-  # that for our version checks.
-  # svn suffixes are stripped by meson as of 0.43, and git suffixes are
-  # strippped as of 0.44, but we support older meson versions.
 
   # 3 digits versions in LLVM only started from 3.4.1 on
   if dep_llvm.version().version_compare('>= 3.4.1')
@@ -1217,11 +1213,6 @@ if with_llvm
     _llvm_patch = '0'
   endif
 
-  if _llvm_patch.endswith('svn')
-    _llvm_patch = _llvm_patch.split('s')[0]
-  elif _llvm_patch.contains('git')
-    _llvm_patch = _llvm_patch.split('g')[0]
-  endif
   pre_args += [
     '-DHAVE_LLVM=0x0@0@0@1@'.format(_llvm_version[0], _llvm_version[1]),
     '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
