@@ -420,8 +420,9 @@ util_cpu_detect_once(void)
          cpuid (0x00000001, regs2);
 
          util_cpu_caps.x86_cpu_type = (regs2[0] >> 8) & 0xf;
+         /* Add "extended family". */
          if (util_cpu_caps.x86_cpu_type == 0xf)
-             util_cpu_caps.x86_cpu_type = 8 + ((regs2[0] >> 20) & 255); /* use extended family (P4, IA64) */
+             util_cpu_caps.x86_cpu_type += ((regs2[0] >> 20) & 0xff);
 
          /* general feature flags */
          util_cpu_caps.has_tsc    = (regs2[3] >>  4) & 1; /* 0x0000010 */
