@@ -316,6 +316,9 @@ svga_buffer_add_host_surface(struct svga_buffer *sbuf,
    /* add the surface to the surface list */
    LIST_ADD(&bufsurf->list, &sbuf->surfaces);
 
+   /* Set the new bind flags for this buffer resource */
+   sbuf->bind_flags = bind_flags;
+
    return PIPE_OK;
 }
 
