@@ -463,14 +463,13 @@ character_data(void *data, const XML_Char *s, int len)
 }
 
 static int
-devinfo_to_gen(const struct gen_device_info *devinfo)
+devinfo_to_gen(const struct gen_device_info *devinfo, bool x10)
 {
-   int value = 10 * devinfo->gen;
+   if (devinfo->is_baytrail || devinfo->is_haswell) {
+      return devinfo->gen * 10 + 5;
+   }
 
-   if (devinfo->is_baytrail || devinfo->is_haswell)
-      value += 5;
-
-   return value;
+   return x10 ? devinfo->gen * 10 : devinfo->gen;
 }
 
 static uint32_t zlib_inflate(const void *compressed_data,
@@ -558,7 +557,7 @@ gen_spec_load(const struct gen_device_info *devinfo)
    uint8_t *text_data = NULL;
    uint32_t text_offset = 0, text_length = 0;
    MAYBE_UNUSED uint32_t total_length;
-   uint32_t gen_10 = devinfo_to_gen(devinfo);
+   uint32_t gen_10 = devinfo_to_gen(devinfo, true);
 
    for (int i = 0; i < ARRAY_SIZE(genxml_files_table); i++) {
       if (genxml_files_table[i].gen_10 == gen_10) {
@@ -627,7 +626,7 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    FILE *input;
 
    len = snprintf(filename, filename_len, "%s/gen%i.xml",
-                  path, devinfo_to_gen(devinfo));
+                  path, devinfo_to_gen(devinfo, false));
    assert(len < filename_len);
 
    input = fopen(filename, "r");
