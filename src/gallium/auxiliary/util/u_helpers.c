@@ -25,9 +25,11 @@
  *
  **************************************************************************/
 
+#include "util/u_cpu_detect.h"
 #include "util/u_helpers.h"
 #include "util/u_inlines.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_thread.h"
 #include <inttypes.h>
 
 /**
@@ -116,6 +118,46 @@ util_upload_index_buffer(struct pipe_context *pipe,
    u_upload_unmap(pipe->stream_uploader);
    *out_offset -= start_offset;
    return *out_buffer != NULL;
+}
+
+/**
+ * Called by MakeCurrent. Used to notify the driver that the application
+ * thread may have been changed.
+ *
+ * The function pins the current thread and driver threads to a group of
+ * CPU cores that share the same L3 cache. This is needed for good multi-
+ * threading performance on AMD Zen CPUs.
+ *
+ * \param upper_thread  thread in the state tracker that also needs to be
+ *                      pinned.
+ */
+void
+util_context_thread_changed(struct pipe_context *ctx, thrd_t *upper_thread)
+{
+   thrd_t current = thrd_current();
+   int cache = util_get_L3_for_pinned_thread(current,
+                                             util_cpu_caps.cores_per_L3);
+
+   /* If the main thread is not pinned, choose the L3 cache. */
+   if (cache == -1) {
+      unsigned num_caches = util_cpu_caps.nr_cpus /
+                            util_cpu_caps.cores_per_L3;
+      static unsigned last_cache;
+
+      /* Choose a different L3 cache for each subsequent MakeCurrent. */
+      cache = p_atomic_inc_return(&last_cache) % num_caches;
+      util_pin_thread_to_L3(current, cache, util_cpu_caps.cores_per_L3);
+   }
+
+   /* Tell the driver to pin its threads to the same L3 cache. */
+   if (ctx->set_context_param) {
+      ctx->set_context_param(ctx, PIPE_CONTEXT_PARAM_PIN_THREADS_TO_L3_CACHE,
+                             cache);
+   }
+
+   /* Do the same for the upper level thread if there is any (e.g. glthread) */
+   if (upper_thread)
+      util_pin_thread_to_L3(*upper_thread, cache, util_cpu_caps.cores_per_L3);
 }
 
 /* This is a helper for hardware bring-up. Don't remove. */

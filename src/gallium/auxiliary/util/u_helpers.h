@@ -29,6 +29,7 @@
 #define U_HELPERS_H
 
 #include "pipe/p_state.h"
+#include "c11/threads.h"
 #include <stdio.h>
 
 #ifdef __cplusplus
@@ -49,6 +50,9 @@ bool util_upload_index_buffer(struct pipe_context *pipe,
                               const struct pipe_draw_info *info,
                               struct pipe_resource **out_buffer,
                               unsigned *out_offset);
+
+void
+util_context_thread_changed(struct pipe_context *ctx, thrd_t *upper_thread);
 
 struct pipe_query *
 util_begin_pipestat_query(struct pipe_context *ctx);
