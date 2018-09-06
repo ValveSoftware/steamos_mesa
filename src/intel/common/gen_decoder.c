@@ -654,25 +654,27 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    ctx.spec = gen_spec_init();
    if (ctx.spec == NULL) {
       fprintf(stderr, "Failed to create gen_spec\n");
-      return NULL;
+      goto end;
    }
 
    do {
       buf = XML_GetBuffer(ctx.parser, XML_BUFFER_SIZE);
       len = fread(buf, 1, XML_BUFFER_SIZE, input);
-      if (len == 0) {
+      if (ferror(input)) {
          fprintf(stderr, "fread: %m\n");
-         free(ctx.spec);
+         gen_spec_destroy(ctx.spec);
          ctx.spec = NULL;
          goto end;
-      }
+      } else if (feof(input))
+         goto end;
+
       if (XML_ParseBuffer(ctx.parser, len, len == 0) == 0) {
          fprintf(stderr,
                  "Error parsing XML at line %ld col %ld: %s\n",
                  XML_GetCurrentLineNumber(ctx.parser),
                  XML_GetCurrentColumnNumber(ctx.parser),
                  XML_ErrorString(XML_GetErrorCode(ctx.parser)));
-         free(ctx.spec);
+         gen_spec_destroy(ctx.spec);
          ctx.spec = NULL;
          goto end;
       }
@@ -683,6 +685,12 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
 
    fclose(input);
    free(filename);
+
+   /* free ctx.spec if genxml is empty */
+   if (ctx.spec && _mesa_hash_table_num_entries(ctx.spec->commands) == 0) {
+      gen_spec_destroy(ctx.spec);
+      return NULL;
+   }
 
    return ctx.spec;
 }
