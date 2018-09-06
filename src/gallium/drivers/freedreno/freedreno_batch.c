@@ -483,12 +483,16 @@ fd_batch_check_size(struct fd_batch *batch)
 {
 	debug_assert(!batch->flushed);
 
+	if (unlikely(fd_mesa_debug & FD_DBG_FLUSH)) {
+		fd_batch_flush(batch, true, false);
+		return;
+	}
+
 	if (fd_device_version(batch->ctx->screen->dev) >= FD_VERSION_UNLIMITED_CMDS)
 		return;
 
 	struct fd_ringbuffer *ring = batch->draw;
-	if (((ring->cur - ring->start) > (ring->size/4 - 0x1000)) ||
-			(fd_mesa_debug & FD_DBG_FLUSH))
+	if ((ring->cur - ring->start) > (ring->size/4 - 0x1000))
 		fd_batch_flush(batch, true, false);
 }
 

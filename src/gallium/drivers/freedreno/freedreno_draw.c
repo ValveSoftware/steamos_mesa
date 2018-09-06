@@ -429,6 +429,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	if (fallback) {
 		fd_blitter_clear(pctx, buffers, color, depth, stencil);
 	}
+
+	fd_batch_check_size(batch);
 }
 
 static void
