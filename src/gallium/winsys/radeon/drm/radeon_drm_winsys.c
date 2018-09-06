@@ -29,6 +29,7 @@
 #include "radeon_drm_cs.h"
 #include "radeon_drm_public.h"
 
+#include "util/u_cpu_detect.h"
 #include "util/u_memory.h"
 #include "util/u_hash_table.h"
 
@@ -797,6 +798,17 @@ static int handle_compare(void *key1, void *key2)
     return PTR_TO_UINT(key1) != PTR_TO_UINT(key2);
 }
 
+static void radeon_pin_threads_to_L3_cache(struct radeon_winsys *ws,
+                                           unsigned cache)
+{
+    struct radeon_drm_winsys *rws = (struct radeon_drm_winsys*)ws;
+
+    if (util_queue_is_initialized(&rws->cs_queue)) {
+        util_pin_thread_to_L3(rws->cs_queue.threads[0], cache,
+                              util_cpu_caps.cores_per_L3);
+    }
+}
+
 PUBLIC struct radeon_winsys *
 radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
 			 radeon_screen_create_t screen_create)
@@ -864,6 +876,7 @@ radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
     ws->base.unref = radeon_winsys_unref;
     ws->base.destroy = radeon_winsys_destroy;
     ws->base.query_info = radeon_query_info;
+    ws->base.pin_threads_to_L3_cache = radeon_pin_threads_to_L3_cache;
     ws->base.cs_request_feature = radeon_cs_request_feature;
     ws->base.query_value = radeon_query_value;
     ws->base.read_registers = radeon_read_registers;

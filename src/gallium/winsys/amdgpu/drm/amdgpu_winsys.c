@@ -30,6 +30,7 @@
 #include "amdgpu_cs.h"
 #include "amdgpu_public.h"
 
+#include "util/u_cpu_detect.h"
 #include "util/u_hash_table.h"
 #include "util/hash_table.h"
 #include "util/xmlconfig.h"
@@ -235,6 +236,14 @@ static const char* amdgpu_get_chip_name(struct radeon_winsys *ws)
    return amdgpu_get_marketing_name(dev);
 }
 
+static void amdgpu_pin_threads_to_L3_cache(struct radeon_winsys *rws,
+                                           unsigned cache)
+{
+   struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
+
+   util_pin_thread_to_L3(ws->cs_queue.threads[0], cache,
+                         util_cpu_caps.cores_per_L3);
+}
 
 PUBLIC struct radeon_winsys *
 amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
@@ -314,6 +323,7 @@ amdgpu_winsys_create(int fd, const struct pipe_screen_config *config,
    ws->base.query_value = amdgpu_query_value;
    ws->base.read_registers = amdgpu_read_registers;
    ws->base.get_chip_name = amdgpu_get_chip_name;
+   ws->base.pin_threads_to_L3_cache = amdgpu_pin_threads_to_L3_cache;
 
    amdgpu_bo_init_functions(ws);
    amdgpu_cs_init_functions(ws);
