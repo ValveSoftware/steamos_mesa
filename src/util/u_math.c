@@ -29,7 +29,7 @@
 
 #include "pipe/p_config.h"
 #include "util/u_math.h"
-#include "util/u_cpu_detect.h"
+#include "x86/common_x86_features.h"
 
 #if defined(PIPE_ARCH_SSE)
 #include <xmmintrin.h>
@@ -90,13 +90,38 @@ util_fpstate_get(void)
    unsigned mxcsr = 0;
 
 #if defined(PIPE_ARCH_SSE)
-   if (util_cpu_caps.has_sse) {
+   if (cpu_has_xmm) {
       mxcsr = _mm_getcsr();
    }
 #endif
 
    return mxcsr;
 }
+
+/* TODO: this was copied from u_cpu_detection. It's another case of duplication
+ * between gallium and core mesa, and it would be nice to get rid of that
+ * duplication as well.
+ */
+#if defined(PIPE_ARCH_X86)
+PIPE_ALIGN_STACK static inline bool sse2_has_daz(void)
+{
+   struct {
+      uint32_t pad1[7];
+      uint32_t mxcsr_mask;
+      uint32_t pad2[128-8];
+   } PIPE_ALIGN_VAR(16) fxarea;
+
+   fxarea.mxcsr_mask = 0;
+#if defined(PIPE_CC_GCC)
+   __asm __volatile ("fxsave %0" : "+m" (fxarea));
+#elif defined(PIPE_CC_MSVC) || defined(PIPE_CC_ICL)
+   _fxsave(&fxarea);
+#else
+   fxarea.mxcsr_mask = 0;
+#endif
+   return !!(fxarea.mxcsr_mask & (1 << 6));
+}
+#endif
 
 /**
  * Make sure that the fp treats the denormalized floating
@@ -108,13 +133,21 @@ unsigned
 util_fpstate_set_denorms_to_zero(unsigned current_mxcsr)
 {
 #if defined(PIPE_ARCH_SSE)
-   if (util_cpu_caps.has_sse) {
+   if (cpu_has_xmm) {
       /* Enable flush to zero mode */
       current_mxcsr |= _MM_FLUSH_ZERO_MASK;
-      if (util_cpu_caps.has_daz) {
+      /* x86_64 cpus always have daz, as do cpus with sse3 in fact, there's
+       * basically only a handful of very early pentium 4's that have sse2 but
+       * not daz.
+       */
+# if !defined(PIPE_ARCH_x86_64) && !defined(PIPE_ARCH_SSSE3)
+      if (sse2_has_daz()) {
+# endif
          /* Enable denormals are zero mode */
          current_mxcsr |= _MM_DENORMALS_ZERO_MASK;
+# if !defined(PIPE_ARCH_x86_64) && !defined(PIPE_ARCH_SSSE3)
       }
+#endif
       util_fpstate_set(current_mxcsr);
    }
 #endif
@@ -130,7 +163,7 @@ void
 util_fpstate_set(unsigned mxcsr)
 {
 #if defined(PIPE_ARCH_SSE)
-   if (util_cpu_caps.has_sse) {
+   if (cpu_has_xmm) {
       _mm_setcsr(mxcsr);
    }
 #endif
