@@ -187,6 +187,9 @@ blorp_surf_for_miptree(struct brw_context *brw,
    assert((surf->aux_usage == ISL_AUX_USAGE_NONE) ==
           (surf->aux_addr.buffer == NULL));
 
+   if (!is_render_target && brw->screen->devinfo.gen == 9)
+      gen9_apply_single_tex_astc5x5_wa(brw, mt->format, surf->aux_usage);
+
    /* ISL wants real levels, not offset ones. */
    *level -= mt->first_level;
 }
@@ -382,7 +385,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    enum isl_format src_isl_format =
       brw_blorp_to_isl_format(brw, src_format, false);
    enum isl_aux_usage src_aux_usage =
-      intel_miptree_texture_aux_usage(brw, src_mt, src_isl_format);
+      intel_miptree_texture_aux_usage(brw, src_mt, src_isl_format,
+                                      0 /* The astc5x5 WA isn't needed */);
    /* We do format workarounds for some depth formats so we can't reliably
     * sample with HiZ.  One of these days, we should fix that.
     */
