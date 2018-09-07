@@ -297,7 +297,8 @@ fd_blitter_clear(struct pipe_context *pctx, unsigned buffers,
 			.half_pixel_center = 1,
 			.bottom_edge_rule = 1,
 			.flatshade = 1,
-			.depth_clip = 1,
+			.depth_clip_near = 1,
+			.depth_clip_far = 1,
 		};
 		ctx->clear_rs_state = pctx->create_rasterizer_state(pctx, &tmpl);
 	}
