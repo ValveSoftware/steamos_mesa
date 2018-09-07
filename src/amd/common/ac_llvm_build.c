@@ -184,7 +184,7 @@ ac_get_type_size(LLVMTypeRef type)
 	case LLVMDoubleTypeKind:
 		return 8;
 	case LLVMPointerTypeKind:
-		if (LLVMGetPointerAddressSpace(type) == AC_CONST_32BIT_ADDR_SPACE)
+		if (LLVMGetPointerAddressSpace(type) == AC_ADDR_SPACE_CONST_32BIT)
 			return 4;
 		return 8;
 	case LLVMVectorTypeKind:
@@ -891,7 +891,7 @@ ac_build_load_custom(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
 	LLVMValueRef indices[2] = {ctx->i32_0, index};
 
 	if (no_unsigned_wraparound &&
-	    LLVMGetPointerAddressSpace(LLVMTypeOf(base_ptr)) == AC_CONST_32BIT_ADDR_SPACE)
+	    LLVMGetPointerAddressSpace(LLVMTypeOf(base_ptr)) == AC_ADDR_SPACE_CONST_32BIT)
 		pointer = LLVMBuildInBoundsGEP(ctx->builder, base_ptr, indices, 2, "");
 	else
 		pointer = LLVMBuildGEP(ctx->builder, base_ptr, indices, 2, "");
@@ -2482,7 +2482,7 @@ void ac_declare_lds_as_pointer(struct ac_llvm_context *ctx)
 {
 	unsigned lds_size = ctx->chip_class >= CIK ? 65536 : 32768;
 	ctx->lds = LLVMBuildIntToPtr(ctx->builder, ctx->i32_0,
-				     LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), AC_LOCAL_ADDR_SPACE),
+				     LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), AC_ADDR_SPACE_LDS),
 				     "lds");
 }
 
@@ -2564,7 +2564,7 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 LLVMTypeRef ac_array_in_const_addr_space(LLVMTypeRef elem_type)
 {
 	return LLVMPointerType(LLVMArrayType(elem_type, 0),
-			       AC_CONST_ADDR_SPACE);
+			       AC_ADDR_SPACE_CONST);
 }
 
 LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type)
@@ -2573,7 +2573,7 @@ LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type)
 		return ac_array_in_const_addr_space(elem_type);
 
 	return LLVMPointerType(LLVMArrayType(elem_type, 0),
-			       AC_CONST_32BIT_ADDR_SPACE);
+			       AC_ADDR_SPACE_CONST_32BIT);
 }
 
 static struct ac_llvm_flow *

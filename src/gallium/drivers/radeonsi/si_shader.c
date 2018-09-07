@@ -2287,7 +2287,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx)
 	struct si_shader_selector *sel = ctx->shader->selector;
 	unsigned lds_size = sel->info.properties[TGSI_PROPERTY_CS_LOCAL_SIZE];
 
-	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, AC_LOCAL_ADDR_SPACE);
+	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, AC_ADDR_SPACE_LDS);
 	LLVMValueRef var;
 
 	assert(!ctx->ac.lds);
@@ -2295,7 +2295,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx)
 	var = LLVMAddGlobalInAddressSpace(ctx->ac.module,
 	                                  LLVMArrayType(ctx->i8, lds_size),
 	                                  "compute_lds",
-	                                  AC_LOCAL_ADDR_SPACE);
+	                                  AC_ADDR_SPACE_LDS);
 	LLVMSetAlignment(var, 4);
 
 	ctx->ac.lds = LLVMBuildBitCast(ctx->ac.builder, var, i8p, "");
@@ -6669,7 +6669,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			if (LLVMTypeOf(arg) != param_type) {
 				if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
 					if (LLVMGetPointerAddressSpace(param_type) ==
-					    AC_CONST_32BIT_ADDR_SPACE) {
+					    AC_ADDR_SPACE_CONST_32BIT) {
 						arg = LLVMBuildBitCast(builder, arg, ctx->i32, "");
 						arg = LLVMBuildIntToPtr(builder, arg, param_type, "");
 					} else {

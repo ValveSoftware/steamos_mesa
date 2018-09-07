@@ -3928,7 +3928,7 @@ setup_shared(struct ac_nir_context *ctx,
 			LLVMAddGlobalInAddressSpace(
 			   ctx->ac.module, glsl_to_llvm_type(&ctx->ac, variable->type),
 			   variable->name ? variable->name : "",
-			   AC_LOCAL_ADDR_SPACE);
+			   AC_ADDR_SPACE_LDS);
 		_mesa_hash_table_insert(ctx->vars, variable, shared);
 	}
 }
