@@ -514,7 +514,7 @@ struct intel_batchbuffer {
    int exec_array_size;
 
    /** The amount of aperture space (in bytes) used by all exec_bos */
-   int aperture_space;
+   uint64_t aperture_space;
 
    struct {
       uint32_t *map_next;

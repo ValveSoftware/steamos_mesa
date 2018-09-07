@@ -44,8 +44,12 @@ int _intel_batchbuffer_flush_fence(struct brw_context *brw,
 void intel_batchbuffer_data(struct brw_context *brw,
                             const void *data, GLuint bytes);
 
-bool brw_batch_has_aperture_space(struct brw_context *brw,
-                                  unsigned extra_space_in_bytes);
+static inline bool
+brw_batch_has_aperture_space(struct brw_context *brw, uint64_t extra_space)
+{
+   return brw->batch.aperture_space + extra_space <=
+          brw->screen->aperture_threshold;
+}
 
 bool brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo);
 
