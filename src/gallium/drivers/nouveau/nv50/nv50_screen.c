@@ -117,6 +117,9 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 8;
    case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
       return 1;
+   case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
+   case PIPE_CAP_RASTERIZER_SUBPIXEL_BITS:
+      return 8;
    case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
       return 4;
    case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
@@ -127,6 +130,10 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 1024;
    case PIPE_CAP_MAX_VERTEX_STREAMS:
       return 1;
+   case PIPE_CAP_MAX_GS_INVOCATIONS:
+      return 0;
+   case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
+      return 0;
    case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
       return 2048;
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
@@ -260,7 +267,6 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
    case PIPE_CAP_TGSI_VOTE:
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
-   case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
    case PIPE_CAP_NATIVE_FENCE_FD:
@@ -296,12 +302,11 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_MAX_CONSERVATIVE_RASTER_SUBPIXEL_PRECISION_BIAS:
    case PIPE_CAP_PROGRAMMABLE_SAMPLE_LOCATIONS:
    case PIPE_CAP_MAX_TEXTURE_UPLOAD_MEMORY_BUDGET:
+   case PIPE_CAP_MAX_COMBINED_SHADER_BUFFERS:
+   case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTERS:
+   case PIPE_CAP_MAX_COMBINED_HW_ATOMIC_COUNTER_BUFFERS:
       return 0;
 
-   case PIPE_CAP_MAX_GS_INVOCATIONS:
-      return 32;
-   case PIPE_CAP_MAX_SHADER_BUFFER_SIZE:
-      return 1 << 27;
    case PIPE_CAP_VENDOR_ID:
       return 0x10de;
    case PIPE_CAP_DEVICE_ID: {
@@ -319,6 +324,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_UMA:
       return 0;
    default:
+      debug_printf("%s: unhandled cap %d\n", __func__, param);
       return u_pipe_screen_get_param_defaults(pscreen, param);
    }
 }
