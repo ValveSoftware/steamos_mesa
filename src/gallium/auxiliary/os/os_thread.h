@@ -165,7 +165,11 @@ pipe_tsd_set(pipe_tsd *tsd, void *value)
 static inline int64_t
 pipe_current_thread_get_time_nano(void)
 {
-   return u_thread_get_time_nano(thrd_current());
+#if defined(HAVE_PTHREAD)
+   return u_thread_get_time_nano(pthread_self());
+#else
+   return 0;
+#endif
 }
 
 #endif /* OS_THREAD_H_ */
