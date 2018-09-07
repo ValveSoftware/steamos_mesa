@@ -80,7 +80,8 @@ vlVdpOutputSurfaceCreate(VdpDevice device,
     * if the VDPAU RGB component order doesn't match the X11 one so
     * we only allow the X11 format
     */
-   vlsurface->send_to_X = rgba_format == VDP_RGBA_FORMAT_B8G8R8A8;
+   vlsurface->send_to_X = dev->vscreen->color_depth == 24 &&
+      rgba_format == VDP_RGBA_FORMAT_B8G8R8A8;
 
    res_tmpl.target = PIPE_TEXTURE_2D;
    res_tmpl.format = VdpFormatRGBAToPipe(rgba_format);
