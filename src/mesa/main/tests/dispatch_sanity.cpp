@@ -224,6 +224,8 @@ TEST_F(DispatchSanity_test, GLES31)
 }
 
 const struct function common_desktop_functions_possible[] = {
+   { "glBindRenderbufferEXT", 10, -1 },
+   { "glBindFramebufferEXT", 10, -1 },
    { "glCullFace", 10, -1 },
    { "glFrontFace", 10, -1 },
    { "glHint", 10, -1 },
@@ -1200,8 +1202,6 @@ const struct function common_desktop_functions_possible[] = {
 };
 
 const struct function gl_compatibility_functions_possible[] = {
-   { "glBindRenderbufferEXT", 10, -1 },
-   { "glBindFramebufferEXT", 10, -1 },
    { "glNewList", 10, _gloffset_NewList },
    { "glEndList", 10, _gloffset_EndList },
    { "glCallList", 10, _gloffset_CallList },
