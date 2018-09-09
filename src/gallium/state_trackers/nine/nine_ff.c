@@ -1698,7 +1698,6 @@ nine_ff_get_vs(struct NineDevice9 *device)
         (void)err;
         assert(err == PIPE_OK);
         device->ff.num_vs++;
-        NineUnknown_ConvertRefToBind(NineUnknown(vs));
 
         vs->num_inputs = bld.num_inputs;
         for (n = 0; n < bld.num_inputs; ++n)
@@ -1850,7 +1849,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
         (void)err;
         assert(err == PIPE_OK);
         device->ff.num_ps++;
-        NineUnknown_ConvertRefToBind(NineUnknown(ps));
 
         ps->rt_mask = 0x1;
         ps->sampler_mask = sampler_mask;

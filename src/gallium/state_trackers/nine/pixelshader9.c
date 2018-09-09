@@ -203,5 +203,9 @@ NinePixelShader9_new( struct NineDevice9 *pDevice,
                       struct NinePixelShader9 **ppOut,
                       const DWORD *pFunction, void *cso )
 {
-    NINE_DEVICE_CHILD_NEW(PixelShader9, ppOut, pDevice, pFunction, cso);
+    if (cso) { /* ff shader. Needs to start with bind count */
+        NINE_DEVICE_CHILD_BIND_NEW(PixelShader9, ppOut, pDevice, pFunction, cso);
+    } else {
+        NINE_DEVICE_CHILD_NEW(PixelShader9, ppOut, pDevice, pFunction, cso);
+    }
 }
