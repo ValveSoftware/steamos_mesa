@@ -842,6 +842,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_fsign: {
+      assert(!instr->dest.saturate);
       if (op[0].abs) {
          /* Straightforward since the source can be assumed to be either
           * strictly >= 0 or strictly <= 0 depending on the setting of the
@@ -854,10 +855,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
             : bld.MOV(result, brw_imm_f(1.0f));
 
          set_predicate(BRW_PREDICATE_NORMAL, inst);
-
-         if (instr->dest.saturate)
-            inst->saturate = true;
-
       } else if (type_sz(op[0].type) < 8) {
          /* AND(val, 0x80000000) gives the sign bit.
           *
@@ -873,10 +870,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
          inst = bld.OR(result_int, result_int, brw_imm_ud(0x3f800000u));
          inst->predicate = BRW_PREDICATE_NORMAL;
-         if (instr->dest.saturate) {
-            inst = bld.MOV(result, result);
-            inst->saturate = true;
-         }
       } else {
          /* For doubles we do the same but we need to consider:
           *
@@ -897,11 +890,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
          set_predicate(BRW_PREDICATE_NORMAL,
                        bld.OR(r, r, brw_imm_ud(0x3ff00000u)));
-
-         if (instr->dest.saturate) {
-            inst = bld.MOV(result, result);
-            inst->saturate = true;
-         }
       }
       break;
    }
