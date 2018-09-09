@@ -86,6 +86,7 @@ static inline void _nine_bind(void **dst, void *obj)
         __params.dtor = (void *)Nine##nine##_dtor; \
         __params.container = NULL; \
         __params.device = dev; \
+        __params.start_with_bind_not_ref = false; \
         { \
             HRESULT __hr = Nine##nine##_ctor(__data, &__params, ## __VA_ARGS__); \
             if (FAILED(__hr)) { \
@@ -111,6 +112,7 @@ static inline void _nine_bind(void **dst, void *obj)
         __params.dtor = (void *)Nine##nine##_dtor; \
         __params.container = NULL; \
         __params.device = NULL; \
+        __params.start_with_bind_not_ref = false; \
         { \
             HRESULT __hr = Nine##nine##_ctor(__data, &__params, ## __VA_ARGS__); \
             if (FAILED(__hr)) { \
