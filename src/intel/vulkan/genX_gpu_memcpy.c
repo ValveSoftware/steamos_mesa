@@ -224,7 +224,7 @@ genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
 
 #if GEN_GEN >= 8
       sob.SOBufferEnable = true;
-      sob.SurfaceSize = size - 1;
+      sob.SurfaceSize = size / 4 - 1;
 #else
       sob.SurfacePitch = bs;
       sob.SurfaceEndAddress = sob.SurfaceBaseAddress;
