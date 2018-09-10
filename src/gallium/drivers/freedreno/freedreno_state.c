@@ -211,6 +211,10 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 	struct fd_context *ctx = fd_context(pctx);
 	struct pipe_framebuffer_state *cso;
 
+	DBG("%ux%u, %u layers, %u samples",
+		framebuffer->width, framebuffer->height,
+		framebuffer->layers, framebuffer->samples);
+
 	if (ctx->screen->reorder) {
 		struct fd_batch *old_batch = NULL;
 
