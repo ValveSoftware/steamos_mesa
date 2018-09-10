@@ -481,6 +481,9 @@ struct shader_translator
         struct ureg_dst p;
         struct ureg_dst address;
         struct ureg_dst a0;
+        struct ureg_dst predicate;
+        struct ureg_dst predicate_tmp;
+        struct ureg_dst predicate_dst;
         struct ureg_dst tS[8]; /* texture stage registers */
         struct ureg_dst tdst; /* scratch dst if we need extra modifiers */
         struct ureg_dst t[5]; /* scratch TEMPs */
@@ -496,6 +499,7 @@ struct shader_translator
     unsigned loop_labels[NINE_MAX_LOOP_DEPTH];
     unsigned cond_labels[NINE_MAX_COND_DEPTH];
     boolean loop_or_rep[NINE_MAX_LOOP_DEPTH]; /* true: loop, false: rep */
+    boolean predicated_activated;
 
     unsigned *inst_labels; /* LABEL op */
     unsigned num_inst_labels;
@@ -975,7 +979,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         }
         break;
     case D3DSPR_PREDICATE:
-        assert(!"D3DSPR_PREDICATE");
+        if (ureg_dst_is_undef(tx->regs.predicate)) {
+            /* Forbidden to use the predicate register before being set */
+            tx->failure = TRUE;
+            tx->regs.predicate = ureg_DECL_temporary(tx->ureg);
+        }
+        src = ureg_src(tx->regs.predicate);
         break;
     case D3DSPR_SAMPLER:
         assert(param->mod == NINED3DSPSM_NONE);
@@ -1157,11 +1166,15 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         src = ureg_src(tmp);
         break;
     case NINED3DSPSM_NOT:
-        if (tx->native_integers) {
+        if (tx->native_integers && param->file == D3DSPR_CONSTBOOL) {
             tmp = tx_scratch(tx);
             ureg_NOT(ureg, tmp, src);
             src = ureg_src(tmp);
             break;
+        } else { /* predicate */
+            tmp = tx_scratch(tx);
+            ureg_ADD(ureg, tmp, ureg_imm1f(ureg, 1.0f), ureg_negate(src));
+            src = ureg_src(tmp);
         }
         /* fall through */
     case NINED3DSPSM_COMP:
@@ -1292,7 +1305,9 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         dst = tx->regs.oDepth; /* XXX: must write .z component */
         break;
     case D3DSPR_PREDICATE:
-        assert(!"D3DSPR_PREDICATE");
+        if (ureg_dst_is_undef(tx->regs.predicate))
+            tx->regs.predicate = ureg_DECL_temporary(tx->ureg);
+        dst = tx->regs.predicate;
         break;
     case D3DSPR_TEMPFLOAT16:
         DBG("unhandled D3DSPR: %u\n", param->file);
@@ -1308,6 +1323,11 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         dst = ureg_writemask(dst, param->mask);
     if (param->mod & NINED3DSPDM_SATURATE)
         dst = ureg_saturate(dst);
+
+    if (tx->predicated_activated) {
+        tx->regs.predicate_dst = dst;
+        dst = tx->regs.predicate_tmp;
+    }
 
     return dst;
 }
@@ -2891,12 +2911,24 @@ DECL_SPECIAL(TEXLDL)
 
 DECL_SPECIAL(SETP)
 {
-    STUB(D3DERR_INVALIDCALL);
+    const unsigned cmp_op = sm1_insn_flags_to_tgsi_setop(tx->insn.flags);
+    struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
+    struct ureg_src src[2] = {
+       tx_src_param(tx, &tx->insn.src[0]),
+       tx_src_param(tx, &tx->insn.src[1])
+    };
+    ureg_insn(tx->ureg, cmp_op, &dst, 1, src, 2, 0);
+    return D3D_OK;
 }
 
 DECL_SPECIAL(BREAKP)
 {
-    STUB(D3DERR_INVALIDCALL);
+    struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
+    ureg_IF(tx->ureg, src, tx_cond(tx));
+    ureg_BRK(tx->ureg);
+    tx_endcond(tx);
+    ureg_ENDIF(tx->ureg);
+    return D3D_OK;
 }
 
 DECL_SPECIAL(PHASE)
@@ -3323,8 +3355,6 @@ sm1_parse_instruction(struct shader_translator *tx)
     insn->ndst = info->ndst;
     insn->nsrc = info->nsrc;
 
-    assert(!insn->predicated && "TODO: predicated instructions");
-
     /* check version */
     {
         unsigned min = IS_VS ? info->vert_version.min : info->frag_version.min;
@@ -3353,11 +3383,29 @@ sm1_parse_instruction(struct shader_translator *tx)
     sm1_dump_instruction(insn, tx->cond_depth + tx->loop_depth);
     sm1_instruction_check(insn);
 
+    if (insn->predicated) {
+        tx->predicated_activated = true;
+        if (ureg_dst_is_undef(tx->regs.predicate_tmp)) {
+            tx->regs.predicate_tmp = ureg_DECL_temporary(tx->ureg);
+            tx->regs.predicate_dst = ureg_DECL_temporary(tx->ureg);
+        }
+    }
+
     if (info->handler)
         hr = info->handler(tx);
     else
         hr = NineTranslateInstruction_Generic(tx);
     tx_apply_dst0_modifiers(tx);
+
+    if (insn->predicated) {
+        tx->predicated_activated = false;
+        /* TODO: predicate might be allowed on outputs,
+         * which cannot be src. Workaround it. */
+        ureg_CMP(tx->ureg, tx->regs.predicate_dst,
+                 ureg_negate(tx_src_param(tx, &insn->pred)),
+                 ureg_src(tx->regs.predicate_tmp),
+                 ureg_src(tx->regs.predicate_dst));
+    }
 
     if (hr != D3D_OK)
         tx->failure = TRUE;
