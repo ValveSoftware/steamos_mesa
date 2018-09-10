@@ -70,6 +70,7 @@ struct vl_screen
    struct pipe_loader_device *dev;
 
    void *xcb_screen;
+   uint32_t color_depth;
 };
 
 #ifdef HAVE_X11_PLATFORM

@@ -835,6 +835,7 @@ vl_dri3_screen_create(Display *display, int screen)
       free(geom_reply);
       goto close_fd;
    }
+   scrn->base.color_depth = geom_reply->depth;
    free(geom_reply);
 
    if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd))
