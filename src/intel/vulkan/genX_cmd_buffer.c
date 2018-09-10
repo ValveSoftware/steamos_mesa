@@ -872,20 +872,21 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
    assert(cmd_buffer && image);
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
-   struct anv_bo *ss_bo =
-      &cmd_buffer->device->surface_state_pool.block_pool.bo;
-   uint32_t ss_clear_offset = surface_state.offset +
-      cmd_buffer->device->isl_dev.ss.clear_value_offset;
+   struct anv_address ss_clear_addr = {
+      .bo = &cmd_buffer->device->surface_state_pool.block_pool.bo,
+      .offset = surface_state.offset +
+                cmd_buffer->device->isl_dev.ss.clear_value_offset,
+   };
    const struct anv_address entry_addr =
       anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
    unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
 
    if (copy_from_surface_state) {
-      genX(cmd_buffer_mi_memcpy)(cmd_buffer, entry_addr.bo, entry_addr.offset,
-                                 ss_bo, ss_clear_offset, copy_size);
+      genX(cmd_buffer_mi_memcpy)(cmd_buffer, entry_addr,
+                                 ss_clear_addr, copy_size);
    } else {
-      genX(cmd_buffer_mi_memcpy)(cmd_buffer, ss_bo, ss_clear_offset,
-                                 entry_addr.bo, entry_addr.offset, copy_size);
+      genX(cmd_buffer_mi_memcpy)(cmd_buffer, ss_clear_addr,
+                                 entry_addr, copy_size);
 
       /* Updating a surface state object may require that the state cache be
        * invalidated. From the SKL PRM, Shared Functions -> State -> State
@@ -1501,8 +1502,15 @@ genX(CmdExecuteCommands)(
          struct anv_state dst_state = secondary->state.render_pass_states;
          assert(src_state.alloc_size == dst_state.alloc_size);
 
-         genX(cmd_buffer_so_memcpy)(primary, ss_bo, dst_state.offset,
-                                    ss_bo, src_state.offset,
+         genX(cmd_buffer_so_memcpy)(primary,
+                                    (struct anv_address) {
+                                       .bo = ss_bo,
+                                       .offset = dst_state.offset,
+                                    },
+                                    (struct anv_address) {
+                                       .bo = ss_bo,
+                                       .offset = src_state.offset,
+                                    },
                                     src_state.alloc_size);
       }
 
