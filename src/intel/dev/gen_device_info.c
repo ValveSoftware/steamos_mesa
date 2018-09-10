@@ -872,20 +872,7 @@ static const struct gen_device_info gen_device_info_cnl_5x8 = {
    .max_gs_threads = 224,                           \
    .max_tcs_threads = 224,                          \
    .max_tes_threads = 364,                          \
-   .max_cs_threads = 56,                            \
-   .urb = {                                         \
-      .size = 1024,                                 \
-      .min_entries = {                              \
-         [MESA_SHADER_VERTEX]    = 64,              \
-         [MESA_SHADER_TESS_EVAL] = 34,              \
-      },                                            \
-      .max_entries = {                              \
-         [MESA_SHADER_VERTEX]    = 2384,            \
-         [MESA_SHADER_TESS_CTRL] = 1032,            \
-         [MESA_SHADER_TESS_EVAL] = 2384,            \
-         [MESA_SHADER_GEOMETRY]  = 1032,            \
-      },                                            \
-   }
+   .max_cs_threads = 56
 
 #define GEN11_FEATURES(_gt, _slices, _subslices, _l3) \
    GEN8_FEATURES,                                     \
@@ -897,23 +884,51 @@ static const struct gen_device_info gen_device_info_cnl_5x8 = {
    .num_subslices = _subslices,                       \
    .num_eu_per_subslice = 8
 
+#define GEN11_URB_MIN_MAX_ENTRIES                     \
+   .min_entries = {                                   \
+      [MESA_SHADER_VERTEX]    = 64,                   \
+      [MESA_SHADER_TESS_EVAL] = 34,                   \
+   },                                                 \
+   .max_entries = {                                   \
+      [MESA_SHADER_VERTEX]    = 2384,                 \
+      [MESA_SHADER_TESS_CTRL] = 1032,                 \
+      [MESA_SHADER_TESS_EVAL] = 2384,                 \
+      [MESA_SHADER_GEOMETRY]  = 1032,                 \
+   }
+
 static const struct gen_device_info gen_device_info_icl_8x8 = {
    GEN11_FEATURES(2, 1, subslices(8), 8),
+   .urb = {
+      .size = 1024,
+      GEN11_URB_MIN_MAX_ENTRIES,
+   },
    .simulator_id = 19,
 };
 
 static const struct gen_device_info gen_device_info_icl_6x8 = {
    GEN11_FEATURES(1, 1, subslices(6), 6),
+   .urb = {
+      .size = 768,
+      GEN11_URB_MIN_MAX_ENTRIES,
+   },
    .simulator_id = 19,
 };
 
 static const struct gen_device_info gen_device_info_icl_4x8 = {
    GEN11_FEATURES(1, 1, subslices(4), 6),
+   .urb = {
+      .size = 768,
+      GEN11_URB_MIN_MAX_ENTRIES,
+   },
    .simulator_id = 19,
 };
 
 static const struct gen_device_info gen_device_info_icl_1x8 = {
    GEN11_FEATURES(1, 1, subslices(1), 6),
+   .urb = {
+      .size = 768,
+      GEN11_URB_MIN_MAX_ENTRIES,
+   },
    .simulator_id = 19,
 };
 
