@@ -934,6 +934,14 @@ void anv_GetPhysicalDeviceFeatures2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT: {
+         VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT *features =
+            (VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT *)ext;
+         features->vertexAttributeInstanceRateDivisor = VK_TRUE;
+         features->vertexAttributeInstanceRateZeroDivisor = VK_TRUE;
+         break;
+      }
+
       default:
          anv_debug_ignored_stype(ext->sType);
          break;
