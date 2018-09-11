@@ -1050,8 +1050,7 @@ show_aubfile_window(void)
 
    list_inithead(&window->parent_link);
    window->size = ImVec2(-1, 250);
-   window->position =
-      ImVec2(0, ImGui::GetIO().DisplaySize.y - window->size.y);
+   window->position = ImVec2(0, 0);
    window->opened = true;
    window->display = display_aubfile_window;
    window->destroy = NULL;
@@ -1144,6 +1143,21 @@ unrealize_area(GtkGLArea *area)
 }
 
 static void
+size_allocate_area(GtkGLArea *area,
+                   GdkRectangle *allocation,
+                   gpointer user_data)
+{
+   if (!gtk_widget_get_realized(GTK_WIDGET(area)))
+      return;
+
+   /* We want to catch only initial size allocate. */
+   g_signal_handlers_disconnect_by_func(area,
+                                        (gpointer) size_allocate_area,
+                                        user_data);
+   show_aubfile_window();
+}
+
+static void
 print_help(const char *progname, FILE *file)
 {
    fprintf(file,
@@ -1198,11 +1212,10 @@ int main(int argc, char *argv[])
    g_signal_connect(gl_area, "render", G_CALLBACK(repaint_area), NULL);
    g_signal_connect(gl_area, "realize", G_CALLBACK(realize_area), NULL);
    g_signal_connect(gl_area, "unrealize", G_CALLBACK(unrealize_area), NULL);
+   g_signal_connect(gl_area, "size_allocate", G_CALLBACK(size_allocate_area), NULL);
    gtk_container_add(GTK_CONTAINER(context.gtk_window), gl_area);
 
    gtk_widget_show_all(context.gtk_window);
-
-   show_aubfile_window();
 
    gtk_main();
 
