@@ -681,6 +681,9 @@ emit_resolve_blit(struct fd_batch *batch, uint32_t base,
 	struct fd_ringbuffer *ring = batch->gmem;
 	uint32_t info = 0;
 
+	if (!rsc->valid)
+		return;
+
 	switch (buffer) {
 	case FD_BUFFER_COLOR:
 		break;

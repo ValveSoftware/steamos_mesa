@@ -84,6 +84,10 @@ struct fd_batch {
 	 * The 'cleared' bits will be set for buffers which are *entirely*
 	 * cleared, and 'partial_cleared' bits will be set if you must
 	 * check cleared_scissor.
+	 *
+	 * The 'invalidated' bits are set for cleared buffers, and buffers
+	 * where the contents are undefined, ie. what we don't need to restore
+	 * to gmem.
 	 */
 	enum {
 		/* align bitmask values w/ PIPE_CLEAR_*.. since that is convenient.. */
@@ -91,7 +95,7 @@ struct fd_batch {
 		FD_BUFFER_DEPTH   = PIPE_CLEAR_DEPTH,
 		FD_BUFFER_STENCIL = PIPE_CLEAR_STENCIL,
 		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
-	} cleared, restore, resolve;
+	} invalidated, cleared, restore, resolve;
 
 	/* is this a non-draw batch (ie compute/blit which has no pfb state)? */
 	bool nondraw : 1;

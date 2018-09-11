@@ -70,6 +70,7 @@ batch_init(struct fd_batch *batch)
 	batch->fence = fd_fence_create(batch);
 
 	batch->cleared = 0;
+	batch->invalidated = 0;
 	batch->restore = batch->resolve = 0;
 	batch->needs_flush = false;
 	batch->flushed = false;

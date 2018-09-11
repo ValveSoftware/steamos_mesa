@@ -69,6 +69,9 @@ emit_gmem2mem_surf(struct fd_batch *batch, uint32_t base,
 	struct fd_resource *rsc = fd_resource(psurf->texture);
 	uint32_t swap = fmt2swap(psurf->format);
 
+	if (!rsc->valid)
+		return;
+
 	OUT_PKT3(ring, CP_SET_CONSTANT, 2);
 	OUT_RING(ring, CP_REG(REG_A2XX_RB_COLOR_INFO));
 	OUT_RING(ring, A2XX_RB_COLOR_INFO_SWAP(swap) |

@@ -157,6 +157,9 @@ emit_gmem2mem_surf(struct fd_batch *batch, bool stencil,
 	struct fd_resource_slice *slice;
 	uint32_t offset;
 
+	if (!rsc->valid)
+		return;
+
 	if (stencil) {
 		debug_assert(rsc->stencil);
 		rsc = rsc->stencil;
