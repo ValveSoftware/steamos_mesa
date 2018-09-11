@@ -50,10 +50,20 @@ struct fd6_context {
 
 	struct fd_bo *vs_pvt_mem, *fs_pvt_mem;
 
-	/* This only needs to be 4 * num_of_pipes bytes (ie. 32 bytes).  We
-	 * could combine it with another allocation.
+	/* Two buffers related to hw binning / visibility stream (VSC).
+	 * Compared to previous generations
+	 *   (1) we cannot specify individual buffers per VSC, instead
+	 *       just a pitch and base address
+	 *   (2) there is a second smaller buffer, for something.. we
+	 *       also stash VSC_BIN_SIZE at end of 2nd buffer.
 	 */
-	struct fd_bo *vsc_size_mem;
+	struct fd_bo *vsc_data, *vsc_data2;
+
+// TODO annoyingly large sizes to prevent hangs with larger amounts
+// of geometry, like aquarium with max # of fish.  Need to figure
+// out how to calculate the required size.
+#define A6XX_VSC_DATA_PITCH  0x4400
+#define A6XX_VSC_DATA2_PITCH 0x10400
 
 	/* TODO not sure what this is for.. probably similar to
 	 * CACHE_FLUSH_TS on kernel side, where value gets written

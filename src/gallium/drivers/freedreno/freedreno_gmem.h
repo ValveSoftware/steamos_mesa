@@ -35,6 +35,7 @@
 
 /* per-pipe configuration for hw binning: */
 struct fd_vsc_pipe {
+	// TODO a3xx/a4xx/a5xx could probably move to single bo for vsc stream, like a6xx does
 	struct fd_bo *bo;
 	uint8_t x, y, w, h;      /* VSC_PIPE[p].CONFIG */
 };

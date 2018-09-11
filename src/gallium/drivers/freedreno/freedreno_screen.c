@@ -822,7 +822,11 @@ fd_screen_create(struct fd_device *dev)
 		goto fail;
 	}
 
-	if (screen->gpu_id >= 500) {
+	if (screen->gpu_id >= 600) {
+		screen->gmem_alignw = 32;
+		screen->gmem_alignh = 32;
+		screen->num_vsc_pipes = 32;
+	} else if (screen->gpu_id >= 500) {
 		screen->gmem_alignw = 64;
 		screen->gmem_alignh = 32;
 		screen->num_vsc_pipes = 16;

@@ -49,7 +49,8 @@ fd6_context_destroy(struct pipe_context *pctx)
 
 	fd_bo_del(fd6_ctx->vs_pvt_mem);
 	fd_bo_del(fd6_ctx->fs_pvt_mem);
-	fd_bo_del(fd6_ctx->vsc_size_mem);
+	fd_bo_del(fd6_ctx->vsc_data);
+	fd_bo_del(fd6_ctx->vsc_data2);
 	fd_bo_del(fd6_ctx->blit_mem);
 
 	fd_context_cleanup_common_vbos(&fd6_ctx->base);
@@ -104,7 +105,12 @@ fd6_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 	fd6_ctx->fs_pvt_mem = fd_bo_new(screen->dev, 0x2000,
 			DRM_FREEDRENO_GEM_TYPE_KMEM);
 
-	fd6_ctx->vsc_size_mem = fd_bo_new(screen->dev, 0x1000,
+	fd6_ctx->vsc_data = fd_bo_new(screen->dev,
+			(A6XX_VSC_DATA_PITCH * 32) + 0x100,
+			DRM_FREEDRENO_GEM_TYPE_KMEM);
+
+	fd6_ctx->vsc_data2 = fd_bo_new(screen->dev,
+			A6XX_VSC_DATA2_PITCH * 32,
 			DRM_FREEDRENO_GEM_TYPE_KMEM);
 
 	fd6_ctx->blit_mem = fd_bo_new(screen->dev, 0x1000,

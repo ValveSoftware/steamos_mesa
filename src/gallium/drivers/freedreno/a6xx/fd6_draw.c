@@ -248,7 +248,8 @@ fd6_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	/* figure out whether we need to disable LRZ write for binning
 	 * pass using draw pass's fp:
 	 */
-	emit.no_lrz_write = fp->writes_pos || fp->has_kill;
+	// TODO disable until lrz is wired up:
+	emit.no_lrz_write = true; // fp->writes_pos || fp->has_kill;
 
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;

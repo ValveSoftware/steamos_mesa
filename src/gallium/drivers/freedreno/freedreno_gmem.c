@@ -107,17 +107,18 @@ static void
 calculate_tiles(struct fd_batch *batch)
 {
 	struct fd_context *ctx = batch->ctx;
+	struct fd_screen *screen = ctx->screen;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct pipe_scissor_state *scissor = &batch->max_scissor;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
-	const uint32_t gmem_alignw = ctx->screen->gmem_alignw;
-	const uint32_t gmem_alignh = ctx->screen->gmem_alignh;
-	const unsigned npipes = ctx->screen->num_vsc_pipes;
-	const uint32_t gmem_size = ctx->screen->gmemsize_bytes;
+	const uint32_t gmem_alignw = screen->gmem_alignw;
+	const uint32_t gmem_alignh = screen->gmem_alignh;
+	const unsigned npipes = screen->num_vsc_pipes;
+	const uint32_t gmem_size = screen->gmemsize_bytes;
 	uint32_t minx, miny, width, height;
 	uint32_t nbins_x = 1, nbins_y = 1;
 	uint32_t bin_w, bin_h;
-	uint32_t max_width = bin_width(ctx->screen);
+	uint32_t max_width = bin_width(screen);
 	uint8_t cbuf_cpp[MAX_RENDER_TARGETS] = {0}, zsbuf_cpp[2] = {0};
 	uint32_t i, j, t, xoff, yoff;
 	uint32_t tpp_x, tpp_y;
@@ -216,10 +217,10 @@ calculate_tiles(struct fd_batch *batch)
 #define div_round_up(v, a)  (((v) + (a) - 1) / (a))
 	/* figure out number of tiles per pipe: */
 	tpp_x = tpp_y = 1;
-	while (div_round_up(nbins_y, tpp_y) > 8)
+	while (div_round_up(nbins_y, tpp_y) > screen->num_vsc_pipes)
 		tpp_y += 2;
 	while ((div_round_up(nbins_y, tpp_y) *
-			div_round_up(nbins_x, tpp_x)) > 8)
+			div_round_up(nbins_x, tpp_x)) > screen->num_vsc_pipes)
 		tpp_x += 1;
 
 	gmem->maxpw = tpp_x;

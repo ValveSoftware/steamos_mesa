@@ -258,7 +258,7 @@ struct fd_context {
 	 * means we'd always have to recalc tiles ever batch)
 	 */
 	struct fd_gmem_stateobj gmem;
-	struct fd_vsc_pipe      vsc_pipe[16];
+	struct fd_vsc_pipe      vsc_pipe[32];
 	struct fd_tile          tile[512];
 
 	/* which state objects need to be re-emit'd: */
