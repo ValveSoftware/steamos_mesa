@@ -33,12 +33,11 @@
 #include "genxml/genX_pack.h"
 
 static void
-emit_lrm(struct anv_batch *batch,
-         uint32_t reg, struct anv_bo *bo, uint32_t offset)
+emit_lrm(struct anv_batch *batch, uint32_t reg, struct anv_address addr)
 {
    anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
       lrm.RegisterAddress  = reg;
-      lrm.MemoryAddress    = (struct anv_address) { bo, offset };
+      lrm.MemoryAddress    = addr;
    }
 }
 
@@ -2868,30 +2867,30 @@ load_indirect_parameters(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_batch *batch = &cmd_buffer->batch;
 
-   emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, addr.bo, addr.offset);
+   emit_lrm(batch, GEN7_3DPRIM_VERTEX_COUNT, anv_address_add(addr, 0));
 
    unsigned view_count = anv_subpass_view_count(cmd_buffer->state.subpass);
    if (view_count > 1) {
 #if GEN_IS_HASWELL || GEN_GEN >= 8
-      emit_lrm(batch, CS_GPR(0), addr.bo, addr.offset + 4);
+      emit_lrm(batch, CS_GPR(0), anv_address_add(addr, 4));
       emit_mul_gpr0(batch, view_count);
       emit_lrr(batch, GEN7_3DPRIM_INSTANCE_COUNT, CS_GPR(0));
 #else
       anv_finishme("Multiview + indirect draw requires MI_MATH; "
                    "MI_MATH is not supported on Ivy Bridge");
-      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, addr.bo, addr.offset + 4);
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, anv_address_add(addr, 4));
 #endif
    } else {
-      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, addr.bo, addr.offset + 4);
+      emit_lrm(batch, GEN7_3DPRIM_INSTANCE_COUNT, anv_address_add(addr, 4));
    }
 
-   emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, addr.bo, addr.offset + 8);
+   emit_lrm(batch, GEN7_3DPRIM_START_VERTEX, anv_address_add(addr, 8));
 
    if (indexed) {
-      emit_lrm(batch, GEN7_3DPRIM_BASE_VERTEX, addr.bo, addr.offset + 12);
-      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, addr.bo, addr.offset + 16);
+      emit_lrm(batch, GEN7_3DPRIM_BASE_VERTEX, anv_address_add(addr, 12));
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, anv_address_add(addr, 16));
    } else {
-      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, addr.bo, addr.offset + 12);
+      emit_lrm(batch, GEN7_3DPRIM_START_INSTANCE, anv_address_add(addr, 12));
       emit_lri(batch, GEN7_3DPRIM_BASE_VERTEX, 0);
    }
 }
@@ -3225,9 +3224,9 @@ void genX(CmdDispatchIndirect)(
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
 
-   emit_lrm(batch, GPGPU_DISPATCHDIMX, addr.bo, addr.offset);
-   emit_lrm(batch, GPGPU_DISPATCHDIMY, addr.bo, addr.offset + 4);
-   emit_lrm(batch, GPGPU_DISPATCHDIMZ, addr.bo, addr.offset + 8);
+   emit_lrm(batch, GPGPU_DISPATCHDIMX, anv_address_add(addr, 0));
+   emit_lrm(batch, GPGPU_DISPATCHDIMY, anv_address_add(addr, 4));
+   emit_lrm(batch, GPGPU_DISPATCHDIMZ, anv_address_add(addr, 8));
 
 #if GEN_GEN <= 7
    /* Clear upper 32-bits of SRC0 and all 64-bits of SRC1 */
@@ -3236,7 +3235,7 @@ void genX(CmdDispatchIndirect)(
    emit_lri(batch, MI_PREDICATE_SRC1 + 4, 0);
 
    /* Load compute_dispatch_indirect_x_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 0);
+   emit_lrm(batch, MI_PREDICATE_SRC0, anv_address_add(addr, 0));
 
    /* predicate = (compute_dispatch_indirect_x_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
@@ -3246,7 +3245,7 @@ void genX(CmdDispatchIndirect)(
    }
 
    /* Load compute_dispatch_indirect_y_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 4);
+   emit_lrm(batch, MI_PREDICATE_SRC0, anv_address_add(addr, 4));
 
    /* predicate |= (compute_dispatch_indirect_y_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
@@ -3256,7 +3255,7 @@ void genX(CmdDispatchIndirect)(
    }
 
    /* Load compute_dispatch_indirect_z_size into SRC0 */
-   emit_lrm(batch, MI_PREDICATE_SRC0, addr.bo, addr.offset + 8);
+   emit_lrm(batch, MI_PREDICATE_SRC0, anv_address_add(addr, 8));
 
    /* predicate |= (compute_dispatch_indirect_z_size == 0); */
    anv_batch_emit(batch, GENX(MI_PREDICATE), mip) {
