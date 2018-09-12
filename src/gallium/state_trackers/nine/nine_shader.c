@@ -460,6 +460,7 @@ struct shader_translator
     boolean shift_wpos;
     boolean wpos_is_sysval;
     boolean face_is_sysval_integer;
+    boolean mul_zero_wins;
     unsigned texcoord_sn;
 
     struct sm1_instruction insn; /* current instruction */
@@ -2293,15 +2294,46 @@ DECL_SPECIAL(POW)
     return D3D_OK;
 }
 
+/* Tests results on Win 10:
+ * NV (NVIDIA GeForce GT 635M)
+ * AMD (AMD Radeon HD 7730M)
+ * INTEL (Intel(R) HD Graphics 4000)
+ * PS2 and PS3:
+ * RCP and RSQ can generate inf on NV and AMD.
+ * RCP and RSQ are clamped on INTEL (+- FLT_MAX),
+ * NV: log not clamped
+ * AMD: log(0) is -FLT_MAX (but log(inf) is inf)
+ * INTEL: log(0) is -FLT_MAX and log(inf) is 127
+ * All devices have 0*anything = 0
+ *
+ * INTEL VS2 and VS3: same behaviour.
+ * Some differences VS2 and VS3 for constants defined with inf/NaN.
+ * While PS3, VS3 and PS2 keep NaN and Inf shader constants without change,
+ * VS2 seems to clamp to zero (may be test failure).
+ * AMD VS2: unknown, VS3: very likely behaviour of PS3
+ * NV VS2 and VS3: very likely behaviour of PS3
+ * For both, Inf in VS becomes NaN is PS
+ * "Very likely" because the test was less extensive.
+ *
+ * Thus all clamping can be removed for shaders 2 and 3,
+ * as long as 0*anything = 0.
+ * Else clamps to enforce 0*anything = 0 (anything being then
+ * neither inf or NaN, the user being unlikely to pass them
+ * as constant).
+ * The status for VS1 and PS1 is unknown.
+ */
+
 DECL_SPECIAL(RCP)
 {
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
-    struct ureg_dst tmp = tx_scratch(tx);
+    struct ureg_dst tmp = tx->mul_zero_wins ? dst : tx_scratch(tx);
     ureg_RCP(ureg, tmp, src);
-    ureg_MIN(ureg, tmp, ureg_imm1f(ureg, FLT_MAX), ureg_src(tmp));
-    ureg_MAX(ureg, dst, ureg_imm1f(ureg, -FLT_MAX), ureg_src(tmp));
+    if (!tx->mul_zero_wins) {
+        ureg_MIN(ureg, tmp, ureg_imm1f(ureg, FLT_MAX), ureg_src(tmp));
+        ureg_MAX(ureg, dst, ureg_imm1f(ureg, -FLT_MAX), ureg_src(tmp));
+    }
     return D3D_OK;
 }
 
@@ -2310,9 +2342,10 @@ DECL_SPECIAL(RSQ)
     struct ureg_program *ureg = tx->ureg;
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
-    struct ureg_dst tmp = tx_scratch(tx);
+    struct ureg_dst tmp = tx->mul_zero_wins ? dst : tx_scratch(tx);
     ureg_RSQ(ureg, tmp, ureg_abs(src));
-    ureg_MIN(ureg, dst, ureg_imm1f(ureg, FLT_MAX), ureg_src(tmp));
+    if (!tx->mul_zero_wins)
+        ureg_MIN(ureg, dst, ureg_imm1f(ureg, FLT_MAX), ureg_src(tmp));
     return D3D_OK;
 }
 
@@ -2323,7 +2356,11 @@ DECL_SPECIAL(LOG)
     struct ureg_dst dst = tx_dst_param(tx, &tx->insn.dst[0]);
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
     ureg_LG2(ureg, tmp, ureg_abs(src));
-    ureg_MAX(ureg, dst, ureg_imm1f(ureg, -FLT_MAX), tx_src_scalar(tmp));
+    if (tx->mul_zero_wins) {
+        ureg_MOV(ureg, dst, tx_src_scalar(tmp));
+    } else {
+        ureg_MAX(ureg, dst, ureg_imm1f(ureg, -FLT_MAX), tx_src_scalar(tmp));
+    }
     return D3D_OK;
 }
 
@@ -2353,7 +2390,8 @@ DECL_SPECIAL(NRM)
     struct ureg_src src = tx_src_param(tx, &tx->insn.src[0]);
     ureg_DP3(ureg, tmp, src, src);
     ureg_RSQ(ureg, tmp, nrm);
-    ureg_MIN(ureg, tmp, ureg_imm1f(ureg, FLT_MAX), nrm);
+    if (!tx->mul_zero_wins)
+        ureg_MIN(ureg, tmp, ureg_imm1f(ureg, FLT_MAX), nrm);
     ureg_MUL(ureg, dst, src, nrm);
     return D3D_OK;
 }
@@ -3637,7 +3675,8 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info,
             ureg_property(tx->ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     }
 
-    if (GET_CAP(TGSI_MUL_ZERO_WINS))
+    tx->mul_zero_wins = GET_CAP(TGSI_MUL_ZERO_WINS);
+    if (tx->mul_zero_wins)
        ureg_property(tx->ureg, TGSI_PROPERTY_MUL_ZERO_WINS, 1);
 
     while (!sm1_parse_eof(tx) && !tx->failure)
