@@ -4468,19 +4468,27 @@ void radv_CmdBeginConditionalRenderingEXT(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_buffer, buffer, pConditionalRenderingBegin->buffer);
-	bool inverted;
+	bool draw_visible = true;
 	uint64_t va;
 
 	va = radv_buffer_get_va(buffer->bo) + pConditionalRenderingBegin->offset;
 
-	inverted = pConditionalRenderingBegin->flags & VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT;
+	/* By default, if the 32-bit value at offset in buffer memory is zero,
+	 * then the rendering commands are discarded, otherwise they are
+	 * executed as normal. If the inverted flag is set, all commands are
+	 * discarded if the value is non zero.
+	 */
+	if (pConditionalRenderingBegin->flags &
+	    VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT) {
+		draw_visible = false;
+	}
 
 	/* Enable predication for this command buffer. */
-	si_emit_set_predication_state(cmd_buffer, inverted, va);
+	si_emit_set_predication_state(cmd_buffer, draw_visible, va);
 	cmd_buffer->state.predicating = true;
 
 	/* Store conditional rendering user info. */
-	cmd_buffer->state.predication_type = inverted;
+	cmd_buffer->state.predication_type = draw_visible;
 	cmd_buffer->state.predication_va = va;
 }
 
