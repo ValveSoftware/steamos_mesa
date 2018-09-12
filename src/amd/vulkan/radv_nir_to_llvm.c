@@ -416,7 +416,7 @@ get_tcs_out_current_patch_data_offset(struct radv_shader_context *ctx)
 			     patch0_patch_data_offset);
 }
 
-#define MAX_ARGS 23
+#define MAX_ARGS 64
 struct arg_info {
 	LLVMTypeRef types[MAX_ARGS];
 	LLVMValueRef *assign[MAX_ARGS];
