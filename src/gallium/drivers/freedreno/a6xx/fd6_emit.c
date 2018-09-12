@@ -608,13 +608,13 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT4(ring, REG_A6XX_SP_FS_RENDER_COMPONENTS, 1);
 		OUT_RING(ring,
 				 A6XX_SP_FS_RENDER_COMPONENTS_RT0(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT1(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT2(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT3(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT4(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT5(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT6(mrt_comp[0]) |
-				 A6XX_SP_FS_RENDER_COMPONENTS_RT7(mrt_comp[0]));
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT1(mrt_comp[1]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT2(mrt_comp[2]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT3(mrt_comp[3]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT4(mrt_comp[4]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT5(mrt_comp[5]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT6(mrt_comp[6]) |
+				 A6XX_SP_FS_RENDER_COMPONENTS_RT7(mrt_comp[7]));
 	}
 
 	if (dirty & FD_DIRTY_ZSA) {
