@@ -516,7 +516,6 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       }
    }
 
-   unsigned image_uniform;
    if (map->image_count > 0) {
       assert(map->image_count <= MAX_IMAGES);
       assert(shader->num_uniforms == prog_data->nr_params * 4);
