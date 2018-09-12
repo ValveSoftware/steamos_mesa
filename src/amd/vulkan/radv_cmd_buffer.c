@@ -1716,6 +1716,8 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 					 VK_PIPELINE_BIND_POINT_GRAPHICS;
 	struct radv_descriptor_state *descriptors_state =
 		radv_get_descriptors_state(cmd_buffer, bind_point);
+	struct radv_cmd_state *state = &cmd_buffer->state;
+	bool flush_indirect_descriptors;
 
 	if (!descriptors_state->dirty)
 		return;
@@ -1723,10 +1725,14 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	if (descriptors_state->push_dirty)
 		radv_flush_push_descriptors(cmd_buffer, bind_point);
 
-	if ((cmd_buffer->state.pipeline && cmd_buffer->state.pipeline->need_indirect_descriptor_sets) ||
-	    (cmd_buffer->state.compute_pipeline && cmd_buffer->state.compute_pipeline->need_indirect_descriptor_sets)) {
+	flush_indirect_descriptors =
+		(bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS &&
+		 state->pipeline && state->pipeline->need_indirect_descriptor_sets) ||
+		(bind_point == VK_PIPELINE_BIND_POINT_COMPUTE &&
+		 state->compute_pipeline && state->compute_pipeline->need_indirect_descriptor_sets);
+
+	if (flush_indirect_descriptors)
 		radv_flush_indirect_descriptor_sets(cmd_buffer, bind_point);
-	}
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 	                                                   cmd_buffer->cs,
