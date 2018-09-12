@@ -1362,7 +1362,7 @@ static const __DRIextension *droid_image_loader_extensions[] = {
    NULL,
 };
 
-EGLBoolean
+static EGLBoolean
 droid_load_driver(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = disp->DriverData;
