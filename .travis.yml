@@ -186,7 +186,6 @@ matrix:
             - libelf-dev
             - libunwind8-dev
     - env:
-        # NOTE: Analogous to SWR above, building Clover is quite slow.
         - LABEL="make Gallium ST Clover LLVM-3.9"
         - BUILD=make
         - MAKEFLAGS="-j4"
@@ -225,7 +224,6 @@ matrix:
             - libelf-dev
             - libunwind8-dev
     - env:
-        # NOTE: Analogous to SWR above, building Clover is quite slow.
         - LABEL="make Gallium ST Clover LLVM-4.0"
         - BUILD=make
         - MAKEFLAGS="-j4"
@@ -261,7 +259,6 @@ matrix:
             - libelf-dev
             - libunwind8-dev
     - env:
-        # NOTE: Analogous to SWR above, building Clover is quite slow.
         - LABEL="make Gallium ST Clover LLVM-5.0"
         - BUILD=make
         - MAKEFLAGS="-j4"
@@ -297,7 +294,6 @@ matrix:
             - libelf-dev
             - libunwind8-dev
     - env:
-        # NOTE: Analogous to SWR above, building Clover is quite slow.
         - LABEL="make Gallium ST Clover LLVM-6.0"
         - BUILD=make
         - MAKEFLAGS="-j4"
