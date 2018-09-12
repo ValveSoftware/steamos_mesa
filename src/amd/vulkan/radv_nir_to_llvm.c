@@ -811,7 +811,6 @@ set_global_input_locs(struct radv_shader_context *ctx, gl_shader_stage stage,
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if ((ctx->shader_info->info.desc_set_used_mask & (1 << i)) &&
 			    ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				set_loc_desc(ctx, i, user_sgpr_idx, true);
 				ctx->descriptor_sets[i] =
 					ac_build_load_to_sgpr(&ctx->ac,
 							      desc_sets,
