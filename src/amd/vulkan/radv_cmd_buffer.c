@@ -2298,20 +2298,6 @@ VkResult radv_ResetCommandBuffer(
 	return radv_reset_cmd_buffer(cmd_buffer);
 }
 
-static void emit_gfx_buffer_state(struct radv_cmd_buffer *cmd_buffer)
-{
-	struct radv_device *device = cmd_buffer->device;
-	if (device->gfx_init) {
-		uint64_t va = radv_buffer_get_va(device->gfx_init);
-		radv_cs_add_buffer(device->ws, cmd_buffer->cs, device->gfx_init);
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
-		radeon_emit(cmd_buffer->cs, va);
-		radeon_emit(cmd_buffer->cs, va >> 32);
-		radeon_emit(cmd_buffer->cs, device->gfx_init_size_dw & 0xffff);
-	} else
-		si_init_config(cmd_buffer);
-}
-
 VkResult radv_BeginCommandBuffer(
 	VkCommandBuffer commandBuffer,
 	const VkCommandBufferBeginInfo *pBeginInfo)
@@ -2336,21 +2322,6 @@ VkResult radv_BeginCommandBuffer(
 	cmd_buffer->state.last_first_instance = -1;
 	cmd_buffer->state.predication_type = -1;
 	cmd_buffer->usage_flags = pBeginInfo->flags;
-
-	/* setup initial configuration into command buffer */
-	if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-		switch (cmd_buffer->queue_family_index) {
-		case RADV_QUEUE_GENERAL:
-			emit_gfx_buffer_state(cmd_buffer);
-			break;
-		case RADV_QUEUE_COMPUTE:
-			si_init_compute(cmd_buffer);
-			break;
-		case RADV_QUEUE_TRANSFER:
-		default:
-			break;
-		}
-	}
 
 	if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY &&
 	    (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT)) {

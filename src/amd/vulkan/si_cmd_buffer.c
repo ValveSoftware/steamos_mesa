@@ -79,7 +79,7 @@ si_write_harvested_raster_configs(struct radv_physical_device *physical_device,
 		radeon_set_context_reg(cs, R_028354_PA_SC_RASTER_CONFIG_1, raster_config_1);
 }
 
-static void
+void
 si_emit_compute(struct radv_physical_device *physical_device,
                 struct radeon_cmdbuf *cs)
 {
@@ -117,13 +117,6 @@ si_emit_compute(struct radv_physical_device *physical_device,
 	}
 }
 
-void
-si_init_compute(struct radv_cmd_buffer *cmd_buffer)
-{
-	struct radv_physical_device *physical_device = cmd_buffer->device->physical_device;
-	si_emit_compute(physical_device, cmd_buffer->cs);
-}
-
 /* 12.4 fixed-point */
 static unsigned radv_pack_float_12p4(float x)
 {
@@ -159,9 +152,9 @@ si_set_raster_config(struct radv_physical_device *physical_device,
 	}
 }
 
-static void
-si_emit_config(struct radv_physical_device *physical_device,
-	       struct radeon_cmdbuf *cs)
+void
+si_emit_graphics(struct radv_physical_device *physical_device,
+		 struct radeon_cmdbuf *cs)
 {
 	int i;
 
@@ -388,13 +381,6 @@ si_emit_config(struct radv_physical_device *physical_device,
 	si_emit_compute(physical_device, cs);
 }
 
-void si_init_config(struct radv_cmd_buffer *cmd_buffer)
-{
-	struct radv_physical_device *physical_device = cmd_buffer->device->physical_device;
-
-	si_emit_config(physical_device, cmd_buffer->cs);
-}
-
 void
 cik_create_gfx_config(struct radv_device *device)
 {
@@ -402,7 +388,7 @@ cik_create_gfx_config(struct radv_device *device)
 	if (!cs)
 		return;
 
-	si_emit_config(device->physical_device, cs);
+	si_emit_graphics(device->physical_device, cs);
 
 	while (cs->cdw & 7) {
 		if (device->physical_device->rad_info.gfx_ib_pad_with_type2)
