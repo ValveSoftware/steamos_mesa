@@ -2698,9 +2698,7 @@ handle_es_outputs_post(struct radv_shader_context *ctx,
 	if (ctx->ac.chip_class  >= GFX9) {
 		unsigned itemsize_dw = outinfo->esgs_itemsize / 4;
 		LLVMValueRef vertex_idx = ac_get_thread_id(&ctx->ac);
-		LLVMValueRef wave_idx = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
-		                                     LLVMConstInt(ctx->ac.i32, 24, false),
-		                                     LLVMConstInt(ctx->ac.i32, 4, false), false);
+		LLVMValueRef wave_idx = ac_unpack_param(&ctx->ac, ctx->merged_wave_info, 24, 4);
 		vertex_idx = LLVMBuildOr(ctx->ac.builder, vertex_idx,
 					 LLVMBuildMul(ctx->ac.builder, wave_idx,
 						      LLVMConstInt(ctx->ac.i32, 64, false), ""), "");
@@ -3195,9 +3193,7 @@ ac_nir_get_max_workgroup_size(enum chip_class chip_class,
 /* Fixup the HW not emitting the TCS regs if there are no HS threads. */
 static void ac_nir_fixup_ls_hs_input_vgprs(struct radv_shader_context *ctx)
 {
-	LLVMValueRef count = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
-	                                  LLVMConstInt(ctx->ac.i32, 8, false),
-	                                  LLVMConstInt(ctx->ac.i32, 8, false), false);
+	LLVMValueRef count = ac_unpack_param(&ctx->ac, ctx->merged_wave_info, 8, 8);
 	LLVMValueRef hs_empty = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, count,
 	                                      ctx->ac.i32_0, "");
 	ctx->abi.instance_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->rel_auto_id, ctx->abi.instance_id, "");
@@ -3208,14 +3204,11 @@ static void ac_nir_fixup_ls_hs_input_vgprs(struct radv_shader_context *ctx)
 static void prepare_gs_input_vgprs(struct radv_shader_context *ctx)
 {
 	for(int i = 5; i >= 0; --i) {
-		ctx->gs_vtx_offset[i] = ac_build_bfe(&ctx->ac, ctx->gs_vtx_offset[i & ~1],
-		                                     LLVMConstInt(ctx->ac.i32, (i & 1) * 16, false),
-		                                     LLVMConstInt(ctx->ac.i32, 16, false), false);
+		ctx->gs_vtx_offset[i] = ac_unpack_param(&ctx->ac, ctx->gs_vtx_offset[i & ~1],
+							(i & 1) * 16, 16);
 	}
 
-	ctx->gs_wave_id = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
-	                               LLVMConstInt(ctx->ac.i32, 16, false),
-	                               LLVMConstInt(ctx->ac.i32, 8, false), false);
+	ctx->gs_wave_id = ac_unpack_param(&ctx->ac, ctx->merged_wave_info, 16, 8);
 }
 
 
@@ -3347,9 +3340,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(struct ac_llvm_compiler *ac_llvm,
 			LLVMBasicBlockRef then_block = LLVMAppendBasicBlockInContext(ctx.ac.context, fn, "");
 			merge_block = LLVMAppendBasicBlockInContext(ctx.ac.context, fn, "");
 
-			LLVMValueRef count = ac_build_bfe(&ctx.ac, ctx.merged_wave_info,
-			                                  LLVMConstInt(ctx.ac.i32, 8 * i, false),
-			                                  LLVMConstInt(ctx.ac.i32, 8, false), false);
+			LLVMValueRef count = ac_unpack_param(&ctx.ac, ctx.merged_wave_info, 8 * i, 8);
 			LLVMValueRef thread_id = ac_get_thread_id(&ctx.ac);
 			LLVMValueRef cond = LLVMBuildICmp(ctx.ac.builder, LLVMIntULT,
 			                                  thread_id, count, "");
