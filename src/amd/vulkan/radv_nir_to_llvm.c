@@ -3135,21 +3135,42 @@ ac_setup_rings(struct radv_shader_context *ctx)
 	}
 
 	if (ctx->is_gs_copy_shader) {
-		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_VS, false));
+		ctx->gsvs_ring =
+			ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets,
+					      LLVMConstInt(ctx->ac.i32,
+							   RING_GSVS_VS, false));
 	}
+
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
-		LLVMValueRef tmp;
-		uint32_t num_entries = 64;
-		LLVMValueRef gsvs_ring_desc = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size << 16, false);
-		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
+		unsigned num_records = 64;
+		LLVMValueRef base_ring;
+		LLVMValueRef ring, tmp;
+		unsigned stride;
 
-		ctx->gsvs_ring = LLVMBuildBitCast(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.v4i32, "");
+		base_ring =
+			ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets,
+					      LLVMConstInt(ctx->ac.i32,
+							   RING_GSVS_GS, false));
 
-		tmp = LLVMConstInt(ctx->ac.i32, num_entries, false);
-		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, LLVMConstInt(ctx->ac.i32, 2, false), "");
-		tmp = LLVMBuildExtractElement(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.i32_1, "");
-		tmp = LLVMBuildOr(ctx->ac.builder, tmp, gsvs_ring_desc, "");
-		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, ctx->ac.i32_1, "");
+		stride = ctx->max_gsvs_emit_size;
+
+		ring = LLVMBuildBitCast(ctx->ac.builder, base_ring,
+					ctx->ac.v4i32, "");
+
+		tmp = LLVMBuildExtractElement(ctx->ac.builder, ring,
+					      ctx->ac.i32_1, "");
+		tmp = LLVMBuildOr(ctx->ac.builder, tmp,
+				  LLVMConstInt(ctx->ac.i32,
+					       S_008F04_STRIDE(stride), false), "");
+		ring = LLVMBuildInsertElement(ctx->ac.builder, ring, tmp,
+					      ctx->ac.i32_1, "");
+
+		ring = LLVMBuildInsertElement(ctx->ac.builder, ring,
+					      LLVMConstInt(ctx->ac.i32,
+							   num_records, false),
+					      LLVMConstInt(ctx->ac.i32, 2, false), "");
+
+		ctx->gsvs_ring = ring;
 	}
 
 	if (ctx->stage == MESA_SHADER_TESS_CTRL ||
