@@ -3140,15 +3140,12 @@ ac_setup_rings(struct radv_shader_context *ctx)
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
 		LLVMValueRef tmp;
 		uint32_t num_entries = 64;
-		LLVMValueRef gsvs_ring_stride = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size, false);
 		LLVMValueRef gsvs_ring_desc = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size << 16, false);
 		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.v4i32, "");
 
 		tmp = LLVMConstInt(ctx->ac.i32, num_entries, false);
-		if (ctx->options->chip_class >= VI)
-			tmp = LLVMBuildMul(ctx->ac.builder, gsvs_ring_stride, tmp, "");
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, LLVMConstInt(ctx->ac.i32, 2, false), "");
 		tmp = LLVMBuildExtractElement(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.i32_1, "");
 		tmp = LLVMBuildOr(ctx->ac.builder, tmp, gsvs_ring_desc, "");
