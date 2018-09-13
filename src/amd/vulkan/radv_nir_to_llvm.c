@@ -1725,15 +1725,10 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 		unsigned output_usage_mask =
 			ctx->shader_info->info.gs.output_usage_mask[i];
 		LLVMValueRef *out_ptr = &addrs[i * 4];
-		int length = 4;
+		int length = util_last_bit(output_usage_mask);
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
-
-		if (i == VARYING_SLOT_CLIP_DIST0) {
-			/* pack clip and cull into a single set of slots */
-			length = util_last_bit(output_usage_mask);
-		}
 
 		for (unsigned j = 0; j < length; j++) {
 			if (!(output_usage_mask & (1 << j)))
@@ -3591,15 +3586,10 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		unsigned output_usage_mask =
 			ctx->shader_info->info.gs.output_usage_mask[i];
-		int length = 4;
+		int length = util_last_bit(output_usage_mask);
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
-
-		if (i == VARYING_SLOT_CLIP_DIST0) {
-			/* unpack clip and cull from a single set of slots */
-			length = util_last_bit(output_usage_mask);
-		}
 
 		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef value, soffset;
