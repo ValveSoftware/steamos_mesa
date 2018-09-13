@@ -33,19 +33,10 @@
 void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
 {
                 v3d_cl_ensure_space_with_branch(&job->bcl,
-                                                cl_packet_length(OCCLUSION_QUERY_COUNTER) +
 #if V3D_VERSION >= 41
                                                 cl_packet_length(TRANSFORM_FEEDBACK_SPECS) +
 #endif
                                                 cl_packet_length(FLUSH_ALL_STATE));
-
-                if (job->oq_enabled) {
-                        /* Disable the OQ at the end of the CL, so that the
-                         * draw calls at the start of the CL don't inherit the
-                         * OQ counter.
-                         */
-                        cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter);
-                }
 
                 /* Disable TF at the end of the CL, so that the TF block
                  * cleans up and finishes before it gets reset by the next
