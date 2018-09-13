@@ -121,16 +121,39 @@ util_upload_index_buffer(struct pipe_context *pipe,
    return *out_buffer != NULL;
 }
 
+#ifdef HAVE_PTHREAD_SETAFFINITY
+
 static unsigned L3_cache_number;
-static once_flag init_cache_number_flag = ONCE_FLAG_INIT;
+static once_flag thread_pinning_once_flag = ONCE_FLAG_INIT;
 
 static void
-util_init_cache_number(void)
+util_set_full_cpu_affinity(void)
+{
+   cpu_set_t cpuset;
+
+   CPU_ZERO(&cpuset);
+   for (unsigned i = 0; i < CPU_SETSIZE; i++)
+      CPU_SET(i, &cpuset);
+
+   pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+}
+
+static void
+util_init_thread_pinning(void)
 {
    /* Get a semi-random number. */
    int64_t t = os_time_get_nano();
    L3_cache_number = (t ^ (t >> 8) ^ (t >> 16));
+
+   /* Reset thread affinity for all child processes to prevent them from
+    * inheriting the current thread's affinity.
+    *
+    * What happens if a driver is unloaded and the app creates a thread?
+    */
+   pthread_atfork(NULL, NULL, util_set_full_cpu_affinity);
 }
+
+#endif
 
 /**
  * Called by MakeCurrent. Used to notify the driver that the application
@@ -146,10 +169,16 @@ util_init_cache_number(void)
 void
 util_context_thread_changed(struct pipe_context *ctx, thrd_t *upper_thread)
 {
-#ifdef HAVE_PTHREAD
+#ifdef HAVE_PTHREAD_SETAFFINITY
+   /* If pinning has no effect, don't do anything. */
+   if (util_cpu_caps.nr_cpus == util_cpu_caps.cores_per_L3)
+      return;
+
    thrd_t current = thrd_current();
    int cache = util_get_L3_for_pinned_thread(current,
                                              util_cpu_caps.cores_per_L3);
+
+   call_once(&thread_pinning_once_flag, util_init_thread_pinning);
 
    /* If the main thread is not pinned, choose the L3 cache. */
    if (cache == -1) {
@@ -157,7 +186,6 @@ util_context_thread_changed(struct pipe_context *ctx, thrd_t *upper_thread)
                                util_cpu_caps.cores_per_L3;
 
       /* Choose a different L3 cache for each subsequent MakeCurrent. */
-      call_once(&init_cache_number_flag, util_init_cache_number);
       cache = p_atomic_inc_return(&L3_cache_number) % num_L3_caches;
       util_pin_thread_to_L3(current, cache, util_cpu_caps.cores_per_L3);
    }
