@@ -1712,6 +1712,10 @@ wsi_display_surface_create_swapchain(
 
    VkResult result = wsi_swapchain_init(wsi_device, &chain->base, device,
                                         create_info, allocator);
+   if (result != VK_SUCCESS) {
+      vk_free(allocator, chain);
+      return result;
+   }
 
    chain->base.destroy = wsi_display_swapchain_destroy;
    chain->base.get_wsi_image = wsi_display_get_wsi_image;
