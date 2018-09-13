@@ -36,7 +36,7 @@ void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
 #if V3D_VERSION >= 41
                                                 cl_packet_length(TRANSFORM_FEEDBACK_SPECS) +
 #endif
-                                                cl_packet_length(FLUSH_ALL_STATE));
+                                                cl_packet_length(FLUSH));
 
                 /* Disable TF at the end of the CL, so that the TF block
                  * cleans up and finishes before it gets reset by the next
@@ -50,10 +50,10 @@ void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
                 }
 #endif /* V3D_VERSION >= 41 */
 
-                /* The FLUSH_ALL emits any unwritten state changes in each
-                 * tile.  We can use this to reset any state that needs to be
-                 * present at the start of the next tile, as we do with
-                 * OCCLUSION_QUERY_COUNTER above.
+                /* We just FLUSH here to tell the HW to cap the bin CLs with a
+                 * return.  Any remaining state changes won't be flushed to
+                 * the bins first -- you would need FLUSH_ALL for that, but
+                 * the HW for hasn't been validated
                  */
-                cl_emit(&job->bcl, FLUSH_ALL_STATE, flush);
+                cl_emit(&job->bcl, FLUSH, flush);
 }
