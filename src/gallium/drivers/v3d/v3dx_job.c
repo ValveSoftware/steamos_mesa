@@ -47,10 +47,9 @@ void v3dX(bcl_epilogue)(struct v3d_context *v3d, struct v3d_job *job)
                         cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter);
                 }
 
-                /* Disable TF at the end of the CL, so that the next job to be
-                 * run doesn't start out trying to write TF primitives.  On
-                 * V3D 3.x, it's only the TF primitive mode that triggers TF
-                 * writes.
+                /* Disable TF at the end of the CL, so that the TF block
+                 * cleans up and finishes before it gets reset by the next
+                 * frame's tile binning mode cfg packet. (SWVC5-718).
                  */
 #if V3D_VERSION >= 41
                 if (job->tf_enabled) {

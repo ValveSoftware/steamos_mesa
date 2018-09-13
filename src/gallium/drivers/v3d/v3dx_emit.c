@@ -701,13 +701,14 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                               v3d->prog.bind_vs->tf_specs);
 
 #if V3D_VERSION >= 40
-                        job->tf_enabled = (v3d->prog.bind_vs->num_tf_specs != 0 &&
+                        bool tf_enabled = (v3d->prog.bind_vs->num_tf_specs != 0 &&
                                            v3d->active_queries);
+                        job->tf_enabled |= tf_enabled;
 
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
                                 tfe.number_of_16_bit_output_data_specs_following =
                                         v3d->prog.bind_vs->num_tf_specs;
-                                tfe.enable = job->tf_enabled;
+                                tfe.enable = tf_enabled;
                         };
 #else /* V3D_VERSION < 40 */
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_ENABLE, tfe) {
@@ -720,12 +721,11 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         for (int i = 0; i < v3d->prog.bind_vs->num_tf_specs; i++) {
                                 cl_emit_prepacked(&job->bcl, &tf_specs[i]);
                         }
-                } else if (job->tf_enabled) {
+                } else {
 #if V3D_VERSION >= 40
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
                                 tfe.enable = false;
                         };
-                        job->tf_enabled = false;
 #endif /* V3D_VERSION >= 40 */
                 }
         }

@@ -308,8 +308,7 @@ struct v3d_job {
         bool oq_enabled;
 
         /**
-         * Set when a packet enabling TF on all further primitives has been
-         * emitted.
+         * Set if a packet enabling TF has been emitted in the job (V3D 4.x).
          */
         bool tf_enabled;
 
