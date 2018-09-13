@@ -3609,6 +3609,9 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef value, soffset;
 
+			if (!(output_usage_mask & (1 << j)))
+				continue;
+
 			soffset = LLVMConstInt(ctx->ac.i32,
 					       (slot * 4 + j) *
 					       ctx->gs_max_out_vertices * 16 * 4, false);
