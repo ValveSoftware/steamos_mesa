@@ -222,6 +222,7 @@ SVGA3D_vgpu10_SetViewports(struct svga_winsys_context *swc,
 {
    SVGA3D_CREATE_CMD_COUNT(SetViewports, SET_VIEWPORTS, SVGA3dViewport);
 
+   cmd->pad0 = 0;
    memcpy(cmd + 1, viewports, count * sizeof(SVGA3dViewport));
 
    swc->commit(swc);
@@ -508,6 +509,7 @@ SVGA3D_vgpu10_SetScissorRects(struct svga_winsys_context *swc,
    if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
+   cmd->pad0 = 0;
    memcpy(cmd + 1, rects, count * sizeof(SVGASignedRect));
 
    swc->commit(swc);
@@ -602,6 +604,7 @@ SVGA3D_vgpu10_DrawAuto(struct svga_winsys_context *swc)
 {
    SVGA3D_CREATE_COMMAND(DrawAuto, DRAW_AUTO);
 
+   cmd->pad0 = 0;
    swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
    swc->commit(swc);
    swc->num_draw_commands++;
@@ -819,6 +822,9 @@ SVGA3D_vgpu10_DefineDepthStencilView(struct svga_winsys_context *swc,
    cmd->mipSlice = desc->tex.mipSlice;
    cmd->firstArraySlice = desc->tex.firstArraySlice;
    cmd->arraySize = desc->tex.arraySize;
+   cmd->flags = 0;
+   cmd->pad0 = 0;
+   cmd->pad1 = 0;
 
    surface_to_resourceid(swc, surface,
                          &cmd->sid,
@@ -1031,6 +1037,8 @@ SVGA3D_vgpu10_DefineSamplerState(struct svga_winsys_context *swc,
    SVGA3D_COPY_BASIC_5(maxAnisotropy, comparisonFunc,
                        borderColor, minLOD,
                        maxLOD);
+   cmd->pad0 = 0;
+   cmd->pad1 = 0;
 
    swc->commit(swc);
    return PIPE_OK;
@@ -1124,6 +1132,7 @@ SVGA3D_vgpu10_DefineStreamOutput(struct svga_winsys_context *swc,
           sizeof(SVGA3dStreamOutputDeclarationEntry)
           * SVGA3D_MAX_STREAMOUT_DECLS);
 
+   cmd->rasterizedStream = 0;
    swc->commit(swc);
    return PIPE_OK;
 }
