@@ -311,6 +311,22 @@ VkResult genX(GetQueryPoolResults)(
 }
 
 static void
+emit_srm32(struct anv_batch *batch, struct anv_address addr, uint32_t reg)
+{
+   anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+      srm.MemoryAddress    = addr;
+      srm.RegisterAddress  = reg;
+   }
+}
+
+static void
+emit_srm64(struct anv_batch *batch, struct anv_address addr, uint32_t reg)
+{
+   emit_srm32(batch, anv_address_add(addr, 0), reg + 0);
+   emit_srm32(batch, anv_address_add(addr, 4), reg + 4);
+}
+
+static void
 emit_ps_depth_count(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_address addr)
 {
@@ -394,16 +410,7 @@ emit_pipeline_stat(struct anv_cmd_buffer *cmd_buffer, uint32_t stat,
                  (1 << ARRAY_SIZE(vk_pipeline_stat_to_reg)) - 1);
 
    assert(stat < ARRAY_SIZE(vk_pipeline_stat_to_reg));
-   uint32_t reg = vk_pipeline_stat_to_reg[stat];
-
-   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), lrm) {
-      lrm.RegisterAddress  = reg;
-      lrm.MemoryAddress    = anv_address_add(addr, 0);
-   }
-   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), lrm) {
-      lrm.RegisterAddress  = reg + 4;
-      lrm.MemoryAddress    = anv_address_add(addr, 4);
-   }
+   emit_srm64(&cmd_buffer->batch, addr, vk_pipeline_stat_to_reg[stat]);
 }
 
 void genX(CmdBeginQuery)(
@@ -515,14 +522,7 @@ void genX(CmdWriteTimestamp)(
 
    switch (pipelineStage) {
    case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
-         srm.RegisterAddress  = TIMESTAMP;
-         srm.MemoryAddress    = anv_address_add(query_addr, 8);
-      }
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
-         srm.RegisterAddress  = TIMESTAMP + 4;
-         srm.MemoryAddress    = anv_address_add(query_addr, 12);
-      }
+      emit_srm64(&cmd_buffer->batch, anv_address_add(query_addr, 8), TIMESTAMP);
       break;
 
    default:
@@ -689,21 +689,10 @@ gpu_write_query_result(struct anv_batch *batch,
                        VkQueryResultFlags flags,
                        uint32_t value_index, uint32_t reg)
 {
-   if (flags & VK_QUERY_RESULT_64_BIT)
-      dst_addr = anv_address_add(dst_addr, value_index * 8);
-   else
-      dst_addr = anv_address_add(dst_addr, value_index * 4);
-
-   anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
-      srm.RegisterAddress  = reg;
-      srm.MemoryAddress    = anv_address_add(dst_addr, 0);
-   }
-
    if (flags & VK_QUERY_RESULT_64_BIT) {
-      anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM), srm) {
-         srm.RegisterAddress  = reg + 4;
-         srm.MemoryAddress    = anv_address_add(dst_addr, 4);
-      }
+      emit_srm64(batch, anv_address_add(dst_addr, value_index * 8), reg);
+   } else {
+      emit_srm32(batch, anv_address_add(dst_addr, value_index * 4), reg);
    }
 }
 
