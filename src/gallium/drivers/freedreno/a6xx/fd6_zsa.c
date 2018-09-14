@@ -101,7 +101,8 @@ fd6_zsa_state_create(struct pipe_context *pctx,
 				A6XX_RB_STENCIL_CONTROL_ZPASS_BF(fd_stencil_op(bs->zpass_op)) |
 				A6XX_RB_STENCIL_CONTROL_ZFAIL_BF(fd_stencil_op(bs->zfail_op));
 
-			// TODO backface stencil state?
+			so->rb_stencilmask |= A6XX_RB_STENCILMASK_BFMASK(bs->valuemask);
+			so->rb_stencilwrmask |= A6XX_RB_STENCILWRMASK_BFWRMASK(bs->writemask);
 		}
 	}
 

@@ -654,7 +654,8 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct pipe_stencil_ref *sr = &ctx->stencil_ref;
 
 		OUT_PKT4(ring, REG_A6XX_RB_STENCILREF, 3);
-		OUT_RING(ring, A6XX_RB_STENCILREF_REF(sr->ref_value[0]));  // TODO bf?
+		OUT_RING(ring, A6XX_RB_STENCILREF_REF(sr->ref_value[0]) |
+				A6XX_RB_STENCILREF_BFREF(sr->ref_value[1]));
 		OUT_RING(ring, zsa->rb_stencilmask);
 		OUT_RING(ring, zsa->rb_stencilwrmask);
 	}
