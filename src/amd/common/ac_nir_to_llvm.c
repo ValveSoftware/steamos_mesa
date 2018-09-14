@@ -836,7 +836,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_bitfield_insert(&ctx->ac, src[0], src[1], src[2], src[3]);
 		break;
 	case nir_op_bitfield_reverse:
-		result = ac_build_intrinsic(&ctx->ac, "llvm.bitreverse.i32", ctx->ac.i32, src, 1, AC_FUNC_ATTR_READNONE);
+		result = ac_build_bitfield_reverse(&ctx->ac, src[0]);
 		break;
 	case nir_op_bit_count:
 		result = ac_build_bit_count(&ctx->ac, src[0]);
