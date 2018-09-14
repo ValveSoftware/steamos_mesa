@@ -249,18 +249,19 @@ VkResult genX(GetQueryPoolResults)(
        */
       bool write_results = available || (flags & VK_QUERY_RESULT_PARTIAL_BIT);
 
-      if (write_results) {
-         switch (pool->type) {
-         case VK_QUERY_TYPE_OCCLUSION: {
-            cpu_write_query_result(pData, flags, 0, slot[2] - slot[1]);
-            break;
-         }
+      uint32_t idx = 0;
+      switch (pool->type) {
+      case VK_QUERY_TYPE_OCCLUSION:
+         if (write_results)
+            cpu_write_query_result(pData, flags, idx, slot[2] - slot[1]);
+         idx++;
+         break;
 
-         case VK_QUERY_TYPE_PIPELINE_STATISTICS: {
-            uint32_t statistics = pool->pipeline_statistics;
-            uint32_t idx = 0;
-            while (statistics) {
-               uint32_t stat = u_bit_scan(&statistics);
+      case VK_QUERY_TYPE_PIPELINE_STATISTICS: {
+         uint32_t statistics = pool->pipeline_statistics;
+         while (statistics) {
+            uint32_t stat = u_bit_scan(&statistics);
+            if (write_results) {
                uint64_t result = slot[idx * 2 + 2] - slot[idx * 2 + 1];
 
                /* WaDividePSInvocationCountBy4:HSW,BDW */
@@ -269,29 +270,28 @@ VkResult genX(GetQueryPoolResults)(
                   result >>= 2;
 
                cpu_write_query_result(pData, flags, idx, result);
-
-               idx++;
             }
-            assert(idx == util_bitcount(pool->pipeline_statistics));
-            break;
+            idx++;
          }
+         assert(idx == util_bitcount(pool->pipeline_statistics));
+         break;
+      }
 
-         case VK_QUERY_TYPE_TIMESTAMP: {
-            cpu_write_query_result(pData, flags, 0, slot[1]);
-            break;
-         }
-         default:
-            unreachable("invalid pool type");
-         }
-      } else {
+      case VK_QUERY_TYPE_TIMESTAMP:
+         if (write_results)
+            cpu_write_query_result(pData, flags, idx, slot[1]);
+         idx++;
+         break;
+
+      default:
+         unreachable("invalid pool type");
+      }
+
+      if (!write_results)
          status = VK_NOT_READY;
-      }
 
-      if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-         uint32_t idx = (pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS) ?
-                        util_bitcount(pool->pipeline_statistics) : 1;
+      if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
          cpu_write_query_result(pData, flags, idx, available);
-      }
 
       pData += stride;
       if (pData >= data_end)
@@ -749,17 +749,17 @@ void genX(CmdCopyQueryPoolResults)(
 
    for (uint32_t i = 0; i < queryCount; i++) {
       slot_offset = (firstQuery + i) * pool->stride;
+      uint32_t idx = 0;
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION:
          compute_query_result(&cmd_buffer->batch, MI_ALU_REG2,
                               &pool->bo, slot_offset + 8);
          gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
-                                flags, 0, CS_GPR(2));
+                                flags, idx++, CS_GPR(2));
          break;
 
       case VK_QUERY_TYPE_PIPELINE_STATISTICS: {
          uint32_t statistics = pool->pipeline_statistics;
-         uint32_t idx = 0;
          while (statistics) {
             uint32_t stat = u_bit_scan(&statistics);
 
@@ -774,9 +774,7 @@ void genX(CmdCopyQueryPoolResults)(
             }
 
             gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
-                                   flags, idx, CS_GPR(0));
-
-            idx++;
+                                   flags, idx++, CS_GPR(0));
          }
          assert(idx == util_bitcount(pool->pipeline_statistics));
          break;
@@ -794,9 +792,6 @@ void genX(CmdCopyQueryPoolResults)(
       }
 
       if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-         uint32_t idx = (pool->type == VK_QUERY_TYPE_PIPELINE_STATISTICS) ?
-                        util_bitcount(pool->pipeline_statistics) : 1;
-
          emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0),
                                &pool->bo, slot_offset);
          gpu_write_query_result(&cmd_buffer->batch, buffer, destOffset,
