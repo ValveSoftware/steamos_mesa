@@ -392,17 +392,18 @@ disable_msaa(struct fd_ringbuffer *ring)
 static void
 set_bin_size(struct fd_ringbuffer *ring, uint32_t w, uint32_t h, uint32_t flag)
 {
-	OUT_PKT4(ring, REG_A6XX_X1_BIN_SIZE, 1);
-	OUT_RING(ring, A6XX_X1_BIN_SIZE_WIDTH(w) |
-			 A6XX_X1_BIN_SIZE_HEIGHT(h) | flag);
-	OUT_PKT4(ring, REG_A6XX_X2_BIN_SIZE, 1);
-	OUT_RING(ring, A6XX_X2_BIN_SIZE_WIDTH(w) |
-			 A6XX_X2_BIN_SIZE_HEIGHT(h) | flag);
+	OUT_PKT4(ring, REG_A6XX_GRAS_BIN_CONTROL, 1);
+	OUT_RING(ring, A6XX_GRAS_BIN_CONTROL_BINW(w) |
+			 A6XX_GRAS_BIN_CONTROL_BINH(h) | flag);
+
+	OUT_PKT4(ring, REG_A6XX_RB_BIN_CONTROL, 1);
+	OUT_RING(ring, A6XX_RB_BIN_CONTROL_BINW(w) |
+			 A6XX_RB_BIN_CONTROL_BINH(h) | flag);
 
 	/* no flag for X3_BIN_SIZE... */
-	OUT_PKT4(ring, REG_A6XX_X3_BIN_SIZE, 1);
-	OUT_RING(ring, A6XX_X3_BIN_SIZE_WIDTH(w) |
-			 A6XX_X3_BIN_SIZE_HEIGHT(h));
+	OUT_PKT4(ring, REG_A6XX_RB_BIN_CONTROL2, 1);
+	OUT_RING(ring, A6XX_RB_BIN_CONTROL2_BINW(w) |
+			 A6XX_RB_BIN_CONTROL2_BINH(h));
 }
 
 /* before first tile */
@@ -473,17 +474,17 @@ set_window_offset(struct fd_ringbuffer *ring, uint32_t x1, uint32_t y1)
 	OUT_RING(ring, A6XX_RB_WINDOW_OFFSET_X(x1) |
 			A6XX_RB_WINDOW_OFFSET_Y(y1));
 
-	OUT_PKT4(ring, REG_A6XX_X1_WINDOW_OFFSET, 1);
-	OUT_RING(ring, A6XX_X1_WINDOW_OFFSET_X(x1) |
-			A6XX_X1_WINDOW_OFFSET_Y(y1));
+	OUT_PKT4(ring, REG_A6XX_RB_WINDOW_OFFSET2, 1);
+	OUT_RING(ring, A6XX_RB_WINDOW_OFFSET2_X(x1) |
+			A6XX_RB_WINDOW_OFFSET2_Y(y1));
 
-	OUT_PKT4(ring, REG_A6XX_X2_WINDOW_OFFSET, 1);
-	OUT_RING(ring, A6XX_X2_WINDOW_OFFSET_X(x1) |
-			A6XX_X2_WINDOW_OFFSET_Y(y1));
+	OUT_PKT4(ring, REG_A6XX_SP_WINDOW_OFFSET, 1);
+	OUT_RING(ring, A6XX_SP_WINDOW_OFFSET_X(x1) |
+			A6XX_SP_WINDOW_OFFSET_Y(y1));
 
-	OUT_PKT4(ring, REG_A6XX_X3_WINDOW_OFFSET, 1);
-	OUT_RING(ring, A6XX_X3_WINDOW_OFFSET_X(x1) |
-			A6XX_X3_WINDOW_OFFSET_Y(y1));
+	OUT_PKT4(ring, REG_A6XX_SP_TP_WINDOW_OFFSET, 1);
+	OUT_RING(ring, A6XX_SP_TP_WINDOW_OFFSET_X(x1) |
+			A6XX_SP_TP_WINDOW_OFFSET_Y(y1));
 }
 
 /* before mem2gmem */
