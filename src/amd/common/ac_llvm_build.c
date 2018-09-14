@@ -2069,14 +2069,25 @@ LLVMValueRef ac_build_isign(struct ac_llvm_context *ctx, LLVMValueRef src0,
 	LLVMValueRef cmp, val, zero, one;
 	LLVMTypeRef type;
 
-	if (bitsize == 32) {
-		type = ctx->i32;
-		zero = ctx->i32_0;
-		one = ctx->i32_1;
-	} else {
+	switch (bitsize) {
+	case 64:
 		type = ctx->i64;
 		zero = ctx->i64_0;
 		one = ctx->i64_1;
+		break;
+	case 32:
+		type = ctx->i32;
+		zero = ctx->i32_0;
+		one = ctx->i32_1;
+		break;
+	case 16:
+		type = ctx->i16;
+		zero = ctx->i16_0;
+		one = ctx->i16_1;
+		break;
+	default:
+		unreachable(!"invalid bitsize");
+		break;
 	}
 
 	cmp = LLVMBuildICmp(ctx->builder, LLVMIntSGT, src0, zero, "");
