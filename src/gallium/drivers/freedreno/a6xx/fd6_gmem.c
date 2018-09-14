@@ -174,7 +174,7 @@ emit_zs(struct fd_ringbuffer *ring, struct pipe_surface *zsbuf,
 			size = slice->size0;
 			uint32_t base = gmem ? gmem->zsbuf_base[1] : 0;
 
-			OUT_PKT4(ring, REG_A6XX_RB_STENCIL_INFO, 5);
+			OUT_PKT4(ring, REG_A6XX_RB_STENCIL_INFO, 6);
 			OUT_RING(ring, A6XX_RB_STENCIL_INFO_SEPARATE_STENCIL);
 			OUT_RING(ring, A6XX_RB_STENCIL_BUFFER_PITCH(stride));
 			OUT_RING(ring, A6XX_RB_STENCIL_BUFFER_ARRAY_PITCH(size));
