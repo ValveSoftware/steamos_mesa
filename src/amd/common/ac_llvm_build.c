@@ -2107,6 +2107,34 @@ LLVMValueRef ac_build_fsign(struct ac_llvm_context *ctx, LLVMValueRef src0,
 	return val;
 }
 
+LLVMValueRef ac_build_bit_count(struct ac_llvm_context *ctx, LLVMValueRef src0)
+{
+	LLVMValueRef result;
+	unsigned bitsize;
+
+	bitsize = ac_get_elem_bits(ctx, LLVMTypeOf(src0));
+
+	switch (bitsize) {
+	case 64:
+		result = ac_build_intrinsic(ctx, "llvm.ctpop.i64", ctx->i64,
+					    (LLVMValueRef []) { src0 }, 1,
+					    AC_FUNC_ATTR_READNONE);
+
+		result = LLVMBuildTrunc(ctx->builder, result, ctx->i32, "");
+		break;
+	case 32:
+		result = ac_build_intrinsic(ctx, "llvm.ctpop.i32", ctx->i32,
+					    (LLVMValueRef []) { src0 }, 1,
+					    AC_FUNC_ATTR_READNONE);
+		break;
+	default:
+		unreachable(!"invalid bitsize");
+		break;
+	}
+
+	return result;
+}
+
 #define AC_EXP_TARGET		0
 #define AC_EXP_ENABLED_CHANNELS 1
 #define AC_EXP_OUT0		2
