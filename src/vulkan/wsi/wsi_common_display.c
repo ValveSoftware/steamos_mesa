@@ -1297,7 +1297,7 @@ wsi_display_crtc_solo(struct wsi_display *wsi,
  * which is currently idle.
  */
 static uint32_t
-wsi_display_select_crtc(struct wsi_display_connector *connector,
+wsi_display_select_crtc(const struct wsi_display_connector *connector,
                         drmModeResPtr mode_res,
                         drmModeConnectorPtr drm_connector)
 {
