@@ -87,6 +87,8 @@ ac_llvm_context_init(struct ac_llvm_context *ctx,
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
 
+	ctx->i16_0 = LLVMConstInt(ctx->i16, 0, false);
+	ctx->i16_1 = LLVMConstInt(ctx->i16, 1, false);
 	ctx->i32_0 = LLVMConstInt(ctx->i32, 0, false);
 	ctx->i32_1 = LLVMConstInt(ctx->i32, 1, false);
 	ctx->i64_0 = LLVMConstInt(ctx->i64, 0, false);
