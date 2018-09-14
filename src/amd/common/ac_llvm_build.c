@@ -2499,14 +2499,25 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 	const char *intrin_name;
 	LLVMTypeRef type;
 	LLVMValueRef zero;
-	if (src0_bitsize == 64) {
+
+	switch (src0_bitsize) {
+	case 64:
 		intrin_name = "llvm.cttz.i64";
 		type = ctx->i64;
 		zero = ctx->i64_0;
-	} else {
+		break;
+	case 32:
 		intrin_name = "llvm.cttz.i32";
 		type = ctx->i32;
 		zero = ctx->i32_0;
+		break;
+	case 16:
+		intrin_name = "llvm.cttz.i16";
+		type = ctx->i16;
+		zero = ctx->i16_0;
+		break;
+	default:
+		unreachable(!"invalid bitsize");
 	}
 
 	LLVMValueRef params[2] = {
