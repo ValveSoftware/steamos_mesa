@@ -346,21 +346,11 @@ emit_zero_queries(struct anv_cmd_buffer *cmd_buffer,
                   struct anv_query_pool *pool,
                   uint32_t first_index, uint32_t num_queries)
 {
-   const uint32_t num_elements = pool->stride / sizeof(uint64_t);
-
    for (uint32_t i = 0; i < num_queries; i++) {
       struct anv_address slot_addr =
          anv_query_address(pool, first_index + i);
-      for (uint32_t j = 1; j < num_elements; j++) {
-         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-            sdi.Address = anv_address_add(slot_addr, j * sizeof(uint64_t));
-            sdi.ImmediateData = 0ull;
-         }
-         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-            sdi.Address = anv_address_add(slot_addr, j * sizeof(uint64_t) + 4);
-            sdi.ImmediateData = 0ull;
-         }
-      }
+      genX(cmd_buffer_mi_memset)(cmd_buffer, anv_address_add(slot_addr, 8),
+                                 0, pool->stride - 8);
       emit_query_availability(cmd_buffer, slot_addr);
    }
 }

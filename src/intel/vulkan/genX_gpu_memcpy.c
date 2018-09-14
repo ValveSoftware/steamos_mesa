@@ -109,6 +109,23 @@ genX(cmd_buffer_mi_memcpy)(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
+genX(cmd_buffer_mi_memset)(struct anv_cmd_buffer *cmd_buffer,
+                           struct anv_address dst, uint32_t value,
+                           uint32_t size)
+{
+   /* This memset operates in units of dwords. */
+   assert(size % 4 == 0);
+   assert(dst.offset % 4 == 0);
+
+   for (uint32_t i = 0; i < size; i += 4) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         sdi.Address = anv_address_add(dst, i);
+         sdi.ImmediateData = value;
+      }
+   }
+}
+
+void
 genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
                            struct anv_address dst, struct anv_address src,
                            uint32_t size)
