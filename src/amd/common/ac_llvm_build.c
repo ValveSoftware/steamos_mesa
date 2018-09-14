@@ -1393,17 +1393,31 @@ ac_build_umsb(struct ac_llvm_context *ctx,
 	LLVMTypeRef type;
 	LLVMValueRef highest_bit;
 	LLVMValueRef zero;
+	unsigned bitsize;
 
-	if (ac_get_elem_bits(ctx, LLVMTypeOf(arg)) == 64) {
+	bitsize = ac_get_elem_bits(ctx, LLVMTypeOf(arg));
+	switch (bitsize) {
+	case 64:
 		intrin_name = "llvm.ctlz.i64";
 		type = ctx->i64;
 		highest_bit = LLVMConstInt(ctx->i64, 63, false);
 		zero = ctx->i64_0;
-	} else {
+		break;
+	case 32:
 		intrin_name = "llvm.ctlz.i32";
 		type = ctx->i32;
 		highest_bit = LLVMConstInt(ctx->i32, 31, false);
 		zero = ctx->i32_0;
+		break;
+	case 16:
+		intrin_name = "llvm.ctlz.i16";
+		type = ctx->i16;
+		highest_bit = LLVMConstInt(ctx->i16, 15, false);
+		zero = ctx->i16_0;
+		break;
+	default:
+		unreachable(!"invalid bitsize");
+		break;
 	}
 
 	LLVMValueRef params[2] = {
