@@ -333,8 +333,11 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->cursor.hotspot.y = -1;
     This->cursor.w = This->cursor.h = 0;
     This->cursor.visible = FALSE;
-    This->cursor.pos.x = 0;
-    This->cursor.pos.y = 0;
+    if (ID3DPresent_GetCursorPos(This->swapchains[0]->present, &This->cursor.pos) != S_OK) {
+        This->cursor.pos.x = 0;
+        This->cursor.pos.y = 0;
+    }
+
     {
         struct pipe_resource tmpl;
         memset(&tmpl, 0, sizeof(tmpl));
