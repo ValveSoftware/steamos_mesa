@@ -1683,6 +1683,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.tc_dim_output |= dim << (s * 3);
     }
 
+    DBG("VS ff key hash: %x\n", nine_ff_vs_key_hash(&key));
     vs = util_hash_table_get(device->ff.ht_vs, &key);
     if (vs)
         return vs;
@@ -1836,6 +1837,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
             !(projection_matrix->_34 == 0.0f &&
               projection_matrix->_44 == 1.0f);
 
+    DBG("PS ff key hash: %x\n", nine_ff_ps_key_hash(&key));
     ps = util_hash_table_get(device->ff.ht_ps, &key);
     if (ps)
         return ps;
