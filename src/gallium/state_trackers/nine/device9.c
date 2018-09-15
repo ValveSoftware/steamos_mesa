@@ -810,7 +810,14 @@ NineDevice9_ShowCursor( struct NineDevice9 *This,
 
     DBG("This=%p bShow=%d\n", This, (int) bShow);
 
-    This->cursor.visible = bShow && (This->cursor.hotspot.x != -1);
+    /* No-op until a cursor is set in d3d */
+    if (This->cursor.hotspot.x == -1)
+        return old;
+
+    This->cursor.visible = bShow;
+    /* Note: Don't optimize by avoiding the call if This->cursor.visible
+     * hasn't changed. One has to keep in mind the app may do SetCursor
+     * calls outside d3d, thus such an optimization affects behaviour. */
     if (!This->cursor.software)
         This->cursor.software = ID3DPresent_SetCursor(This->swapchains[0]->present, NULL, NULL, bShow) != D3D_OK;
 
