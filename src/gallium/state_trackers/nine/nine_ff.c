@@ -1463,9 +1463,9 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             ureg_MUL(ureg, ps.rMod, ps.rCurSrc, ps.rTexSrc);
         }
 
-        colorarg[0] = (key->ts[s].colorarg0 | ((key->colorarg_b4[0] >> s) << 4) | ((key->colorarg_b5[0] >> s) << 5)) & 0x3f;
-        colorarg[1] = (key->ts[s].colorarg1 | ((key->colorarg_b4[1] >> s) << 4) | ((key->colorarg_b5[1] >> s) << 5)) & 0x3f;
-        colorarg[2] = (key->ts[s].colorarg2 | ((key->colorarg_b4[2] >> s) << 4) | ((key->colorarg_b5[2] >> s) << 5)) & 0x3f;
+        colorarg[0] = (key->ts[s].colorarg0 | (((key->colorarg_b4[0] >> s) & 0x1) << 4) | ((key->colorarg_b5[0] >> s) << 5)) & 0x3f;
+        colorarg[1] = (key->ts[s].colorarg1 | (((key->colorarg_b4[1] >> s) & 0x1) << 4) | ((key->colorarg_b5[1] >> s) << 5)) & 0x3f;
+        colorarg[2] = (key->ts[s].colorarg2 | (((key->colorarg_b4[2] >> s) & 0x1) << 4) | ((key->colorarg_b5[2] >> s) << 5)) & 0x3f;
         alphaarg[0] = (key->ts[s].alphaarg0 | ((key->alphaarg_b4[0] >> s) << 4)) & 0x1f;
         alphaarg[1] = (key->ts[s].alphaarg1 | ((key->alphaarg_b4[1] >> s) << 4)) & 0x1f;
         alphaarg[2] = (key->ts[s].alphaarg2 | ((key->alphaarg_b4[2] >> s) << 4)) & 0x1f;
