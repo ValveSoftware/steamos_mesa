@@ -1765,9 +1765,9 @@ nine_ff_get_ps(struct NineDevice9 *device)
             sampler_mask |= (1 << s);
 
         if (key.ts[s].colorop != D3DTOP_DISABLE) {
-            if (used_c & 0x1) key.ts[s].colorarg0 = context->ff.tex_stage[s][D3DTSS_COLORARG0];
-            if (used_c & 0x2) key.ts[s].colorarg1 = context->ff.tex_stage[s][D3DTSS_COLORARG1];
-            if (used_c & 0x4) key.ts[s].colorarg2 = context->ff.tex_stage[s][D3DTSS_COLORARG2];
+            if (used_c & 0x1) key.ts[s].colorarg0 = context->ff.tex_stage[s][D3DTSS_COLORARG0] & 0x7;
+            if (used_c & 0x2) key.ts[s].colorarg1 = context->ff.tex_stage[s][D3DTSS_COLORARG1] & 0x7;
+            if (used_c & 0x4) key.ts[s].colorarg2 = context->ff.tex_stage[s][D3DTSS_COLORARG2] & 0x7;
             if (used_c & 0x1) key.colorarg_b4[0] |= (context->ff.tex_stage[s][D3DTSS_COLORARG0] >> 4) << s;
             if (used_c & 0x1) key.colorarg_b5[0] |= (context->ff.tex_stage[s][D3DTSS_COLORARG0] >> 5) << s;
             if (used_c & 0x2) key.colorarg_b4[1] |= (context->ff.tex_stage[s][D3DTSS_COLORARG1] >> 4) << s;
@@ -1776,9 +1776,9 @@ nine_ff_get_ps(struct NineDevice9 *device)
             if (used_c & 0x4) key.colorarg_b5[2] |= (context->ff.tex_stage[s][D3DTSS_COLORARG2] >> 5) << s;
         }
         if (key.ts[s].alphaop != D3DTOP_DISABLE) {
-            if (used_a & 0x1) key.ts[s].alphaarg0 = context->ff.tex_stage[s][D3DTSS_ALPHAARG0];
-            if (used_a & 0x2) key.ts[s].alphaarg1 = context->ff.tex_stage[s][D3DTSS_ALPHAARG1];
-            if (used_a & 0x4) key.ts[s].alphaarg2 = context->ff.tex_stage[s][D3DTSS_ALPHAARG2];
+            if (used_a & 0x1) key.ts[s].alphaarg0 = context->ff.tex_stage[s][D3DTSS_ALPHAARG0] & 0x7;
+            if (used_a & 0x2) key.ts[s].alphaarg1 = context->ff.tex_stage[s][D3DTSS_ALPHAARG1] & 0x7;
+            if (used_a & 0x4) key.ts[s].alphaarg2 = context->ff.tex_stage[s][D3DTSS_ALPHAARG2] & 0x7;
             if (used_a & 0x1) key.alphaarg_b4[0] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG0] >> 4) << s;
             if (used_a & 0x2) key.alphaarg_b4[1] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG1] >> 4) << s;
             if (used_a & 0x4) key.alphaarg_b4[2] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG2] >> 4) << s;
