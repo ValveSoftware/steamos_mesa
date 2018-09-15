@@ -121,8 +121,8 @@ genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
 
    /* The maximum copy block size is 4 32-bit components at a time. */
    unsigned bs = 16;
-   bs = gcd_pow2_u64(bs, src_offset);
-   bs = gcd_pow2_u64(bs, dst_offset);
+   bs = gcd_pow2_u64(bs, src.offset);
+   bs = gcd_pow2_u64(bs, dst.offset);
    bs = gcd_pow2_u64(bs, size);
 
    enum isl_format format;
