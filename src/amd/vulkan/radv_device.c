@@ -1179,6 +1179,20 @@ void radv_GetPhysicalDeviceProperties2(
 			properties->protectedNoFault = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONSERVATIVE_RASTERIZATION_PROPERTIES_EXT: {
+			VkPhysicalDeviceConservativeRasterizationPropertiesEXT *properties =
+				(VkPhysicalDeviceConservativeRasterizationPropertiesEXT *)ext;
+			properties->primitiveOverestimationSize = 0;
+			properties->maxExtraPrimitiveOverestimationSize = 0;
+			properties->extraPrimitiveOverestimationSizeGranularity = 0;
+			properties->primitiveUnderestimation = VK_FALSE;
+			properties->conservativePointAndLineRasterization = VK_FALSE;
+			properties->degenerateTrianglesRasterized = VK_FALSE;
+			properties->degenerateLinesRasterized = VK_FALSE;
+			properties->fullyCoveredFragmentShaderInputVariable = VK_FALSE;
+			properties->conservativeRasterizationPostDepthCoverage = VK_FALSE;
+			break;
+		}
 		default:
 			break;
 		}
