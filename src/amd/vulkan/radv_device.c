@@ -1462,6 +1462,28 @@ static int radv_get_device_extension_index(const char *name)
 	return -1;
 }
 
+static int
+radv_get_int_debug_option(const char *name, int default_value)
+{
+	const char *str;
+	int result;
+
+	str = getenv(name);
+	if (!str) {
+		result = default_value;
+	} else {
+		char *endptr;
+
+		result = strtol(str, &endptr, 0);
+		if (str == endptr) {
+			/* No digits founs. */
+			result = default_value;
+		}
+	}
+
+	return result;
+}
+
 VkResult radv_CreateDevice(
 	VkPhysicalDevice                            physicalDevice,
 	const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1656,6 +1678,13 @@ VkResult radv_CreateDevice(
 		goto fail_meta;
 
 	device->mem_cache = radv_pipeline_cache_from_handle(pc);
+
+	device->force_aniso =
+		MIN2(16, radv_get_int_debug_option("RADV_TEX_ANISO", -1));
+	if (device->force_aniso >= 0) {
+		fprintf(stderr, "radv: Forcing anisotropy filter to %ix\n",
+			1 << util_logbase2(device->force_aniso));
+	}
 
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
@@ -4455,13 +4484,26 @@ radv_tex_filter_mode(VkSamplerReductionModeEXT mode)
 	return 0;
 }
 
+static uint32_t
+radv_get_max_anisotropy(struct radv_device *device,
+			const VkSamplerCreateInfo *pCreateInfo)
+{
+	if (device->force_aniso >= 0)
+		return device->force_aniso;
+
+	if (pCreateInfo->anisotropyEnable &&
+	    pCreateInfo->maxAnisotropy > 1.0f)
+		return (uint32_t)pCreateInfo->maxAnisotropy;
+
+	return 0;
+}
+
 static void
 radv_init_sampler(struct radv_device *device,
 		  struct radv_sampler *sampler,
 		  const VkSamplerCreateInfo *pCreateInfo)
 {
-	uint32_t max_aniso = pCreateInfo->anisotropyEnable && pCreateInfo->maxAnisotropy > 1.0 ?
-					(uint32_t) pCreateInfo->maxAnisotropy : 0;
+	uint32_t max_aniso = radv_get_max_anisotropy(device, pCreateInfo);
 	uint32_t max_aniso_ratio = radv_tex_aniso_filter(max_aniso);
 	bool is_vi = (device->physical_device->rad_info.chip_class >= VI);
 	unsigned filter_mode = SQ_IMG_FILTER_MODE_BLEND;
