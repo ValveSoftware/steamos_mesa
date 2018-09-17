@@ -384,7 +384,7 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 			pipeline = &device->meta_state.blit.pipeline_3d_src[fs_key];
 			break;
 		default:
-			unreachable(!"bad VkImageType");
+			unreachable("bad VkImageType");
 		}
 		break;
 	}
@@ -413,7 +413,7 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 			pipeline = &device->meta_state.blit.depth_only_3d_pipeline;
 			break;
 		default:
-			unreachable(!"bad VkImageType");
+			unreachable("bad VkImageType");
 		}
 		break;
 	}
@@ -442,12 +442,12 @@ meta_emit_blit(struct radv_cmd_buffer *cmd_buffer,
 			pipeline = &device->meta_state.blit.stencil_only_3d_pipeline;
 			break;
 		default:
-			unreachable(!"bad VkImageType");
+			unreachable("bad VkImageType");
 		}
 		break;
 	}
 	default:
-		unreachable(!"bad VkImageType");
+		unreachable("bad VkImageType");
 	}
 
 	if (!*pipeline) {
