@@ -2464,13 +2464,7 @@ void radv_CmdBindDescriptorSets(
 	for (unsigned i = 0; i < descriptorSetCount; ++i) {
 		unsigned idx = i + firstSet;
 		RADV_FROM_HANDLE(radv_descriptor_set, set, pDescriptorSets[i]);
-
-		/* If the set is already bound we only need to update the
-		 * (potentially changed) dynamic offsets. */
-		if (descriptors_state->sets[idx] != set ||
-		    !(descriptors_state->valid & (1u << idx))) {
-			radv_bind_descriptor_set(cmd_buffer, pipelineBindPoint, set, idx);
-		}
+		radv_bind_descriptor_set(cmd_buffer, pipelineBindPoint, set, idx);
 
 		for(unsigned j = 0; j < set->layout->dynamic_offset_count; ++j, ++dyn_idx) {
 			unsigned idx = j + layout->set[i + firstSet].dynamic_offset_start;
