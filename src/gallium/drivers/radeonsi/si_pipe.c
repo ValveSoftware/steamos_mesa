@@ -710,6 +710,7 @@ static void si_handle_env_var_force_family(struct si_screen *sscreen)
 		if (!strcmp(family, ac_get_llvm_processor_name(i))) {
 			/* Override family and chip_class. */
 			sscreen->info.family = i;
+			sscreen->info.name = "GCN-NOOP";
 
 			if (i >= CHIP_VEGA10)
 				sscreen->info.chip_class = GFX9;
