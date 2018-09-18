@@ -569,8 +569,6 @@ elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
   else
     _va = 'false'
   endif
-elif _va == 'auto'
-  _va = 'true'
 endif
 with_gallium_va = false
 dep_va = null_dep
