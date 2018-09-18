@@ -127,9 +127,10 @@ the popular compilers, a complete list is available
 
 
 <dt><code>LLVM</code></dt>
-<dd><p>Meson includes upstream logic to wrap llvm-config using it's standard
+<dd><p>Meson includes upstream logic to wrap llvm-config using its standard
 dependency interface. It will search <code>$PATH</code> (or <code>%PATH%</code> on windows) for
-llvm-config, so using an LLVM from a non-standard path is as easy as
+llvm-config (and llvm-config$version and llvm-config-$version), so using an
+LLVM from a non-standard path is as easy as
 <code>PATH=/path/with/llvm-config:$PATH meson build</code>.
 </p></dd>
 </dl>
