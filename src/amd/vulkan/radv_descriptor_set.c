@@ -569,10 +569,9 @@ VkResult radv_CreateDescriptorPool(
 	}
 
 	if (!(pCreateInfo->flags & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)) {
-		uint64_t host_size = sizeof(struct radv_descriptor_set);
+		uint64_t host_size = pCreateInfo->maxSets * sizeof(struct radv_descriptor_set);
 		host_size += sizeof(struct radeon_winsys_bo*) * bo_count;
 		host_size += sizeof(struct radv_descriptor_range) * range_count;
-		host_size *= pCreateInfo->maxSets;
 		size += host_size;
 	} else {
 		size += sizeof(struct radv_descriptor_pool_entry) * pCreateInfo->maxSets;
