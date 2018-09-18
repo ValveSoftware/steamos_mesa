@@ -167,10 +167,6 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
    if (tcp) {
       nir = tcp->program.nir;
    } else {
-      /* Create a dummy nir_shader.  We won't actually use NIR code to
-       * generate assembly (it's easier to generate assembly directly),
-       * but the whole compiler assumes one of these exists.
-       */
       const nir_shader_compiler_options *options =
          ctx->Const.ShaderCompilerOptions[MESA_SHADER_TESS_CTRL].NirOptions;
       nir = create_passthrough_tcs(mem_ctx, compiler, options, key);
