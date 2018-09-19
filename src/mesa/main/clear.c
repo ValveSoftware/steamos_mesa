@@ -35,7 +35,6 @@
 #include "context.h"
 #include "enums.h"
 #include "fbobject.h"
-#include "framebuffer.h"
 #include "get.h"
 #include "macros.h"
 #include "mtypes.h"
@@ -136,10 +135,10 @@ color_buffer_writes_enabled(const struct gl_context *ctx, unsigned idx)
  * \param mask bit-mask indicating the buffers to be cleared.
  *
  * Flushes the vertices and verifies the parameter.
- * If __struct gl_contextRec::NewState contains _NEW_BUFFERS then calls
- * _mesa_update_framebuffer() to update gl_frame_buffer::_Xmin, etc. If the
- * rasterization mode is set to GL_RENDER then requests the driver to clear
- * the buffers, via the dd_function_table::Clear callback.
+ * If __struct gl_contextRec::NewState is set then calls _mesa_update_state()
+ * to update gl_frame_buffer::_Xmin, etc.  If the rasterization mode is set to
+ * GL_RENDER then requests the driver to clear the buffers, via the
+ * dd_function_table::Clear callback.
  */
 static ALWAYS_INLINE void
 clear(struct gl_context *ctx, GLbitfield mask, bool no_error)
@@ -166,9 +165,8 @@ clear(struct gl_context *ctx, GLbitfield mask, bool no_error)
       }
    }
 
-   if (ctx->NewState & _NEW_BUFFERS) {
-      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);	/* update _Xmin, etc */
-      ctx->NewState &= ~_NEW_BUFFERS;
+   if (ctx->NewState) {
+      _mesa_update_state( ctx );	/* update _Xmin, etc */
    }
 
    if (!no_error && ctx->DrawBuffer->_Status != GL_FRAMEBUFFER_COMPLETE_EXT) {
@@ -348,9 +346,8 @@ clear_bufferiv(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
    FLUSH_VERTICES(ctx, 0);
    FLUSH_CURRENT(ctx, 0);
 
-   if (ctx->NewState & _NEW_BUFFERS) {
-      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
-      ctx->NewState &= ~_NEW_BUFFERS;
+   if (ctx->NewState) {
+      _mesa_update_state( ctx );
    }
 
    switch (buffer) {
@@ -463,9 +460,8 @@ clear_bufferuiv(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
    FLUSH_VERTICES(ctx, 0);
    FLUSH_CURRENT(ctx, 0);
 
-   if (ctx->NewState & _NEW_BUFFERS) {
-      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
-      ctx->NewState &= ~_NEW_BUFFERS;
+   if (ctx->NewState) {
+      _mesa_update_state( ctx );
    }
 
    switch (buffer) {
@@ -553,9 +549,8 @@ clear_bufferfv(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
    FLUSH_VERTICES(ctx, 0);
    FLUSH_CURRENT(ctx, 0);
 
-   if (ctx->NewState & _NEW_BUFFERS) {
-      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
-      ctx->NewState &= ~_NEW_BUFFERS;
+   if (ctx->NewState) {
+      _mesa_update_state( ctx );
    }
 
    switch (buffer) {
@@ -696,9 +691,8 @@ clear_bufferfi(struct gl_context *ctx, GLenum buffer, GLint drawbuffer,
    if (ctx->RasterDiscard)
       return;
 
-   if (ctx->NewState & _NEW_BUFFERS) {
-      _mesa_update_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer);
-      ctx->NewState &= ~_NEW_BUFFERS;
+   if (ctx->NewState) {
+      _mesa_update_state( ctx );
    }
 
    if (ctx->DrawBuffer->Attachment[BUFFER_DEPTH].Renderbuffer)
