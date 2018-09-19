@@ -769,17 +769,14 @@ static void si_disk_cache_create(struct si_screen *sscreen)
 	if (sscreen->debug_flags & DBG_ALL_SHADERS)
 		return;
 
-	uint32_t mesa_timestamp;
-	if (disk_cache_get_function_timestamp(si_disk_cache_create,
-					      &mesa_timestamp)) {
-		char *timestamp_str;
+	uint32_t mesa_id;
+	if (disk_cache_get_function_identifier(si_disk_cache_create, &mesa_id)) {
+		char *driver_id_str;
 		int res = -1;
-		uint32_t llvm_timestamp;
-
-		if (disk_cache_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo,
-						      &llvm_timestamp)) {
-			res = asprintf(&timestamp_str, "%u_%u",
-				       mesa_timestamp, llvm_timestamp);
+		uint32_t llvm_id;
+		if (disk_cache_get_function_identifier(LLVMInitializeAMDGPUTargetInfo,
+						       &llvm_id)) {
+			res = asprintf(&driver_id_str, "%u_%u", mesa_id, llvm_id);
 		}
 
 		if (res != -1) {
@@ -800,9 +797,9 @@ static void si_disk_cache_create(struct si_screen *sscreen)
 
 			sscreen->disk_shader_cache =
 				disk_cache_create(sscreen->info.name,
-						  timestamp_str,
+						  driver_id_str,
 						  shader_debug_flags);
-			free(timestamp_str);
+			free(driver_id_str);
 		}
 	}
 }
