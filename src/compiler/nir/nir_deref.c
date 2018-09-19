@@ -481,7 +481,7 @@ rematerialize_deref_src(nir_src *src, void *_state)
 bool
 nir_rematerialize_derefs_in_use_blocks_impl(nir_function_impl *impl)
 {
-   struct rematerialize_deref_state state = { };
+   struct rematerialize_deref_state state = { 0 };
    nir_builder_init(&state.builder, impl);
 
    nir_foreach_block(block, impl) {
