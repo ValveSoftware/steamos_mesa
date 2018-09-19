@@ -854,13 +854,13 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 	if (rscreen->debug_flags & DBG_ALL_SHADERS)
 		return;
 
-	uint32_t mesa_timestamp;
-	if (disk_cache_get_function_timestamp(r600_disk_cache_create,
-					      &mesa_timestamp)) {
-		char *timestamp_str;
+	uint32_t mesa_id;
+	if (disk_cache_get_function_identifier(r600_disk_cache_create,
+					       &mesa_id)) {
+		char *mesa_id_str;
 		int res = -1;
 
-		res = asprintf(&timestamp_str, "%u",mesa_timestamp);
+		res = asprintf(&mesa_id_str, "%u", mesa_id);
 		if (res != -1) {
 			/* These flags affect shader compilation. */
 			uint64_t shader_debug_flags =
@@ -870,9 +870,9 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 
 			rscreen->disk_shader_cache =
 				disk_cache_create(r600_get_family_name(rscreen),
-						  timestamp_str,
+						  mesa_id_str,
 						  shader_debug_flags);
-			free(timestamp_str);
+			free(mesa_id_str);
 		}
 	}
 }
