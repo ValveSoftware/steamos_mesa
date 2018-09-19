@@ -26,6 +26,7 @@
 
 #ifdef HAVE_DLFCN_H
 #include <dlfcn.h>
+#include <stdio.h>
 #endif
 #include <assert.h>
 #include <stdint.h>
@@ -100,7 +101,15 @@ disk_cache_get_function_timestamp(void *ptr, uint32_t* timestamp)
    if (stat(info.dli_fname, &st)) {
       return false;
    }
+
+   if (!st.st_mtime) {
+      fprintf(stderr, "Mesa: The provided filesystem timestamp for the cache "
+              "is bogus! Disabling On-disk cache.\n");
+      return false;
+   }
+
    *timestamp = st.st_mtime;
+
    return true;
 }
 #endif

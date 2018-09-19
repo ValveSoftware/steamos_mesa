@@ -61,10 +61,6 @@ radv_get_build_id(void *ptr, struct mesa_sha1 *ctx)
 	} else
 #endif
 	if (disk_cache_get_function_timestamp(ptr, &timestamp)) {
-		if (!timestamp) {
-			fprintf(stderr, "radv: The provided filesystem timestamp for the cache is bogus!\n");
-		}
-
 		_mesa_sha1_update(ctx, &timestamp, sizeof(timestamp));
 	} else
 		return false;
