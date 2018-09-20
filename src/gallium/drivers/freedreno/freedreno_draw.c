@@ -469,7 +469,7 @@ fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
 	 * read vs written, so just assume the worst
 	 */
 	foreach_bit(i, ctx->shaderbuf[PIPE_SHADER_COMPUTE].enabled_mask)
-		resource_read(batch, ctx->shaderbuf[PIPE_SHADER_COMPUTE].sb[i].buffer);
+		resource_written(batch, ctx->shaderbuf[PIPE_SHADER_COMPUTE].sb[i].buffer);
 
 	foreach_bit(i, ctx->shaderimg[PIPE_SHADER_COMPUTE].enabled_mask) {
 		struct pipe_image_view *img =
