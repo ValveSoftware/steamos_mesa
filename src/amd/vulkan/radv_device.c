@@ -77,7 +77,9 @@ radv_device_get_cache_uuid(enum radeon_family family, void *uuid)
 	struct mesa_sha1 ctx;
 	unsigned char sha1[20];
 	unsigned ptr_size = sizeof(void*);
+
 	memset(uuid, 0, VK_UUID_SIZE);
+	_mesa_sha1_init(&ctx);
 
 	if (!radv_get_build_id(radv_device_get_cache_uuid, &ctx) ||
 	    !radv_get_build_id(LLVMInitializeAMDGPUTargetInfo, &ctx))
