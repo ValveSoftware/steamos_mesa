@@ -45,6 +45,9 @@
 #include "fd6_format.h"
 #include "fd6_zsa.h"
 
+/* some bits in common w/ a4xx: */
+#include "a4xx/fd4_draw.h"
+
 static void
 emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		struct pipe_surface **bufs, struct fd_gmem_stateobj *gmem)
