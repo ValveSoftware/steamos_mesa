@@ -81,26 +81,26 @@ draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		  const struct pipe_draw_info *info,
 		  unsigned index_offset)
 {
-	enum pc_di_src_sel src_sel;
-
 	if (info->index_size) {
 		assert(!info->has_user_indices);
 
 		struct pipe_resource *idx_buffer = info->index.resource;
 		uint32_t idx_size = info->index_size * info->count;
 		uint32_t idx_offset = index_offset + info->start * info->index_size;
-		enum a4xx_index_size idx_type = fd4_size2indextype(info->index_size);
-		src_sel = DI_SRC_SEL_DMA;
+
+		/* leave vis mode blank for now, it will be patched up when
+		 * we know if we are binning or not
+		 */
+		uint32_t draw = CP_DRAW_INDX_OFFSET_0_PRIM_TYPE(primtype) |
+			CP_DRAW_INDX_OFFSET_0_SOURCE_SELECT(DI_SRC_SEL_DMA) |
+			CP_DRAW_INDX_OFFSET_0_INDEX_SIZE(fd4_size2indextype(info->index_size)) |
+			0x2000;
 
 		OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, 7);
 		if (vismode == USE_VISIBILITY) {
-			/* leave vis mode blank for now, it will be patched up when
-			 * we know if we are binning or not
-			 */
-			OUT_RINGP(ring, DRAW4(primtype, src_sel, idx_type, 0) | 0x2000,
-					  &batch->draw_patches);
+			OUT_RINGP(ring, draw, &batch->draw_patches);
 		} else {
-			OUT_RING(ring, DRAW4(primtype, src_sel, idx_type, vismode) | 0x2000);
+			OUT_RING(ring, draw);
 		}
 		OUT_RING(ring, info->instance_count);    /* NumInstances */
 		OUT_RING(ring, info->count);             /* NumIndices */
@@ -108,17 +108,18 @@ draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		OUT_RELOC(ring, fd_resource(idx_buffer)->bo, idx_offset, 0, 0);
 		OUT_RING (ring, idx_size);
 	} else {
-		src_sel = DI_SRC_SEL_AUTO_INDEX;
+		/* leave vis mode blank for now, it will be patched up when
+		 * we know if we are binning or not
+		 */
+		uint32_t draw = CP_DRAW_INDX_OFFSET_0_PRIM_TYPE(primtype) |
+			CP_DRAW_INDX_OFFSET_0_SOURCE_SELECT(DI_SRC_SEL_AUTO_INDEX) |
+			0x2000;
 
 		OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, 3);
 		if (vismode == USE_VISIBILITY) {
-			/* leave vis mode blank for now, it will be patched up when
-			 * we know if we are binning or not
-			 */
-			OUT_RINGP(ring, DRAW4(primtype, src_sel, INDEX4_SIZE_32_BIT, 0) | 0x2000,
-					  &batch->draw_patches);
+			OUT_RINGP(ring, draw, &batch->draw_patches);
 		} else {
-			OUT_RING(ring, DRAW4(primtype, src_sel, INDEX4_SIZE_32_BIT, vismode) | 0x2000);
+			OUT_RING(ring, draw);
 		}
 		OUT_RING(ring, info->instance_count);    /* NumInstances */
 		OUT_RING(ring, info->count);             /* NumIndices */
