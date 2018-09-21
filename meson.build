@@ -789,9 +789,12 @@ foreach a : ['-Wall', '-Werror=implicit-function-declaration',
     c_args += a
   endif
 endforeach
-if cc.has_argument('-Wmissing-field-initializers')
-  c_args += '-Wno-missing-field-initializers'
-endif
+
+foreach a : ['missing-field-initializers']
+  if cc.has_argument('-W' + a)
+    c_args += '-Wno-' + a
+  endif
+endforeach
 
 c_vis_args = []
 if cc.has_argument('-fvisibility=hidden')
