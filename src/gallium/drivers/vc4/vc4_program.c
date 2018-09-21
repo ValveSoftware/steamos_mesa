@@ -758,13 +758,10 @@ ntq_fcos(struct vc4_compile *c, struct qreg src)
                 if (i != 1)
                         x = qir_FMUL(c, x, x2);
 
-                struct qreg mul = qir_FMUL(c,
+                sum = qir_FADD(c, qir_FMUL(c,
                                            x,
-                                           qir_uniform_f(c, coeff[i]));
-                if (i == 0)
-                        sum = mul;
-                else
-                        sum = qir_FADD(c, sum, mul);
+                                           qir_uniform_f(c, coeff[i])),
+                               sum);
         }
         return sum;
 }
