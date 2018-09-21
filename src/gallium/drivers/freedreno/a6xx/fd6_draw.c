@@ -94,30 +94,42 @@ draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		idx_size = info->index_size * info->count;
 		idx_offset = index_offset + info->start * info->index_size;
 		src_sel = DI_SRC_SEL_DMA;
+
+
+		OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 7 : 3);
+		if (vismode == USE_VISIBILITY) {
+			/* leave vis mode blank for now, it will be patched up when
+			 * we know if we are binning or not
+			 */
+			OUT_RINGP(ring, DRAW4(primtype, src_sel, idx_type, 0) | 0x2000,
+					  &batch->draw_patches);
+		} else {
+			OUT_RING(ring, DRAW4(primtype, src_sel, idx_type, vismode) | 0x2000);
+		}
+		OUT_RING(ring, info->instance_count);    /* NumInstances */
+		OUT_RING(ring, info->count);             /* NumIndices */
+		OUT_RING(ring, 0x0);           /* XXX */
+		OUT_RELOC(ring, fd_resource(idx_buffer)->bo, idx_offset, 0, 0);
+		OUT_RING (ring, idx_size);
 	} else {
 		idx_buffer = NULL;
 		idx_type = INDEX4_SIZE_32_BIT;
 		idx_size = 0;
 		idx_offset = 0;
 		src_sel = DI_SRC_SEL_AUTO_INDEX;
-	}
 
-	OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 7 : 3);
-	if (vismode == USE_VISIBILITY) {
-		/* leave vis mode blank for now, it will be patched up when
-		 * we know if we are binning or not
-		 */
-		OUT_RINGP(ring, DRAW4(primtype, src_sel, idx_type, 0) | 0x2000,
-				&batch->draw_patches);
-	} else {
-		OUT_RING(ring, DRAW4(primtype, src_sel, idx_type, vismode) | 0x2000);
-	}
-	OUT_RING(ring, info->instance_count);    /* NumInstances */
-	OUT_RING(ring, info->count);             /* NumIndices */
-	if (idx_buffer) {
-		OUT_RING(ring, 0x0);           /* XXX */
-		OUT_RELOC(ring, fd_resource(idx_buffer)->bo, idx_offset, 0, 0);
-		OUT_RING (ring, idx_size);
+		OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 7 : 3);
+		if (vismode == USE_VISIBILITY) {
+			/* leave vis mode blank for now, it will be patched up when
+			 * we know if we are binning or not
+			 */
+			OUT_RINGP(ring, DRAW4(primtype, src_sel, idx_type, 0) | 0x2000,
+					  &batch->draw_patches);
+		} else {
+			OUT_RING(ring, DRAW4(primtype, src_sel, idx_type, vismode) | 0x2000);
+		}
+		OUT_RING(ring, info->instance_count);    /* NumInstances */
+		OUT_RING(ring, info->count);             /* NumIndices */
 	}
 }
 
