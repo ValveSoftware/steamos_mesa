@@ -671,7 +671,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				       t->stride_in_dw);
 
 		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-		radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+		radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_SRC_MEM) |
 			    COPY_DATA_DST_SEL(COPY_DATA_REG) |
 			    COPY_DATA_WR_CONFIRM);
 		radeon_emit(cs, va);     /* src address lo */

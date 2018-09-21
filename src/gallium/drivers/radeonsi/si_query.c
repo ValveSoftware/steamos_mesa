@@ -799,7 +799,7 @@ static void si_query_hw_do_emit_start(struct si_context *sctx,
 		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 		radeon_emit(cs, COPY_DATA_COUNT_SEL |
 				COPY_DATA_SRC_SEL(COPY_DATA_TIMESTAMP) |
-				COPY_DATA_DST_SEL(COPY_DATA_MEM_ASYNC));
+				COPY_DATA_DST_SEL(COPY_DATA_DST_MEM));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, 0);
 		radeon_emit(cs, va);

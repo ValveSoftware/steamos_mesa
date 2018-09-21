@@ -734,7 +734,7 @@ static void si_setup_tgsi_user_data(struct si_context *sctx,
 
 			for (i = 0; i < 3; ++i) {
 				radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_SRC_MEM) |
 						COPY_DATA_DST_SEL(COPY_DATA_REG));
 				radeon_emit(cs, (va + 4 * i));
 				radeon_emit(cs, (va + 4 * i) >> 32);
