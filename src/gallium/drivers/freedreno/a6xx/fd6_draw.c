@@ -43,44 +43,48 @@
 /* some bits in common w/ a4xx: */
 #include "a4xx/fd4_draw.h"
 
-static inline void
-fd6_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
-		enum pc_di_primtype primtype,
-		enum pc_di_vis_cull_mode vismode,
-		const struct pipe_draw_info *info,
-		unsigned index_offset)
+static void
+draw_emit_indirect(struct fd_batch *batch, struct fd_ringbuffer *ring,
+				   enum pc_di_primtype primtype,
+				   enum pc_di_vis_cull_mode vismode,
+				   const struct pipe_draw_info *info,
+				   unsigned index_offset)
+{
+	struct fd_resource *ind = fd_resource(info->indirect->buffer);
+
+	if (info->index_size) {
+		struct pipe_resource *idx = info->index.resource;
+		unsigned max_indicies = (idx->width0 - info->indirect->offset) /
+			info->index_size;
+
+		OUT_PKT7(ring, CP_DRAW_INDX_INDIRECT, 6);
+		OUT_RINGP(ring, DRAW4(primtype, DI_SRC_SEL_DMA,
+							  fd4_size2indextype(info->index_size), 0),
+				  &batch->draw_patches);
+		OUT_RELOC(ring, fd_resource(idx)->bo,
+				  index_offset, 0, 0);
+		// XXX: Check A5xx vs A6xx
+		OUT_RING(ring, A5XX_CP_DRAW_INDX_INDIRECT_3_MAX_INDICES(max_indicies));
+		OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
+	} else {
+		OUT_PKT7(ring, CP_DRAW_INDIRECT, 3);
+		OUT_RINGP(ring, DRAW4(primtype, DI_SRC_SEL_AUTO_INDEX, 0, 0),
+				  &batch->draw_patches);
+		OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
+	}
+}
+
+static void
+draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
+		  enum pc_di_primtype primtype,
+		  enum pc_di_vis_cull_mode vismode,
+		  const struct pipe_draw_info *info,
+		  unsigned index_offset)
 {
 	struct pipe_resource *idx_buffer = NULL;
 	enum a4xx_index_size idx_type;
 	enum pc_di_src_sel src_sel;
 	uint32_t idx_size, idx_offset;
-
-	if (info->indirect) {
-		struct fd_resource *ind = fd_resource(info->indirect->buffer);
-
-		if (info->index_size) {
-			struct pipe_resource *idx = info->index.resource;
-			unsigned max_indicies = (idx->width0 - info->indirect->offset) /
-					info->index_size;
-
-			OUT_PKT7(ring, CP_DRAW_INDX_INDIRECT, 6);
-			OUT_RINGP(ring, DRAW4(primtype, DI_SRC_SEL_DMA,
-					fd4_size2indextype(info->index_size), 0),
-					&batch->draw_patches);
-			OUT_RELOC(ring, fd_resource(idx)->bo,
-					index_offset, 0, 0);
-			// XXX: Check A5xx vs A6xx
-			OUT_RING(ring, A5XX_CP_DRAW_INDX_INDIRECT_3_MAX_INDICES(max_indicies));
-			OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
-		} else {
-			OUT_PKT7(ring, CP_DRAW_INDIRECT, 3);
-			OUT_RINGP(ring, DRAW4(primtype, DI_SRC_SEL_AUTO_INDEX, 0, 0),
-					&batch->draw_patches);
-			OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
-		}
-
-		return;
-	}
 
 	if (info->index_size) {
 		assert(!info->has_user_indices);
@@ -147,9 +151,15 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	 */
 	emit_marker6(ring, 7);
 
-	fd6_draw_emit(ctx->batch, ring, primtype,
-			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
-			info, index_offset);
+	if (info->indirect) {
+		draw_emit_indirect(ctx->batch, ring, primtype,
+						   emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
+						   info, index_offset);
+	} else {
+		draw_emit(ctx->batch, ring, primtype,
+				  emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
+				  info, index_offset);
+	}
 
 	emit_marker6(ring, 7);
 	fd_reset_wfi(ctx->batch);
