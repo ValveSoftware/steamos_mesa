@@ -52,14 +52,6 @@ fd6_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		uint32_t idx_size, uint32_t idx_offset,
 		struct pipe_resource *idx_buffer)
 {
-	/* for debug after a lock up, write a unique counter value
-	 * to scratch7 for each draw, to make it easier to match up
-	 * register dumps to cmdstream.  The combination of IB
-	 * (scratch6) and DRAW is enough to "triangulate" the
-	 * particular draw that caused lockup.
-	 */
-	emit_marker6(ring, 7);
-
 	OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 7 : 3);
 	if (vismode == USE_VISIBILITY) {
 		/* leave vis mode blank for now, it will be patched up when
@@ -77,10 +69,6 @@ fd6_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 		OUT_RELOC(ring, fd_resource(idx_buffer)->bo, idx_offset, 0, 0);
 		OUT_RING (ring, idx_size);
 	}
-
-	emit_marker6(ring, 7);
-
-	fd_reset_wfi(batch);
 }
 
 static inline void
@@ -97,8 +85,6 @@ fd6_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 
 	if (info->indirect) {
 		struct fd_resource *ind = fd_resource(info->indirect->buffer);
-
-		emit_marker6(ring, 7);
 
 		if (info->index_size) {
 			struct pipe_resource *idx = info->index.resource;
@@ -120,9 +106,6 @@ fd6_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 					&batch->draw_patches);
 			OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
 		}
-
-		emit_marker6(ring, 7);
-		fd_reset_wfi(batch);
 
 		return;
 	}
@@ -169,9 +152,21 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			info->restart_index : 0xffffffff);
 
 	fd6_emit_render_cntl(ctx, false, emit->key.binning_pass);
+
+	/* for debug after a lock up, write a unique counter value
+	 * to scratch7 for each draw, to make it easier to match up
+	 * register dumps to cmdstream.  The combination of IB
+	 * (scratch6) and DRAW is enough to "triangulate" the
+	 * particular draw that caused lockup.
+	 */
+	emit_marker6(ring, 7);
+
 	fd6_draw_emit(ctx->batch, ring, primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info, index_offset);
+
+	emit_marker6(ring, 7);
+	fd_reset_wfi(ctx->batch);
 }
 
 /* fixup dirty shader state in case some "unrelated" (from the state-
