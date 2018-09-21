@@ -2747,7 +2747,7 @@ void ac_build_uif(struct ac_llvm_context *ctx, LLVMValueRef value,
 	if_cond_emit(ctx, cond, label_id);
 }
 
-LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac, LLVMTypeRef type,
+LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac, LLVMTypeRef type,
 			     const char *name)
 {
 	LLVMBuilderRef builder = ac->builder;
@@ -2765,18 +2765,15 @@ LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac, LLVMTypeRef type,
 	}
 
 	res = LLVMBuildAlloca(first_builder, type, name);
-	LLVMBuildStore(builder, LLVMConstNull(type), res);
-
 	LLVMDisposeBuilder(first_builder);
-
 	return res;
 }
 
-LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac,
+LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac,
 				   LLVMTypeRef type, const char *name)
 {
-	LLVMValueRef ptr = ac_build_alloca(ac, type, name);
-	LLVMBuildStore(ac->builder, LLVMGetUndef(type), ptr);
+	LLVMValueRef ptr = ac_build_alloca_undef(ac, type, name);
+	LLVMBuildStore(ac->builder, LLVMConstNull(type), ptr);
 	return ptr;
 }
 
