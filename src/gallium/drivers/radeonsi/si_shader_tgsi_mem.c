@@ -1446,9 +1446,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 		   opcode != TGSI_OPCODE_TXF_LZ &&
 		   ctx->screen->info.chip_class <= VI) {
 		unsigned array_coord = target == TGSI_TEXTURE_1D_ARRAY ? 1 : 2;
-		args.coords[array_coord] =
-			ac_build_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32,
-					   &args.coords[array_coord], 1, 0);
+		args.coords[array_coord] = ac_build_round(&ctx->ac, args.coords[array_coord]);
 	}
 
 	/* 1D textures are allocated and used as 2D on GFX9. */

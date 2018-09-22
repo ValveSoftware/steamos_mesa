@@ -3311,7 +3311,7 @@ static LLVMValueRef apply_round_slice(struct ac_llvm_context *ctx,
 				      LLVMValueRef coord)
 {
 	coord = ac_to_float(ctx, coord);
-	coord = ac_build_intrinsic(ctx, "llvm.rint.f32", ctx->f32, &coord, 1, 0);
+	coord = ac_build_round(ctx, coord);
 	coord = ac_to_integer(ctx, coord);
 	return coord;
 }

@@ -558,6 +558,22 @@ LLVMValueRef ac_build_expand_to_vec4(struct ac_llvm_context *ctx,
 	return ac_build_gather_values(ctx, chan, 4);
 }
 
+LLVMValueRef ac_build_round(struct ac_llvm_context *ctx, LLVMValueRef value)
+{
+	unsigned type_size = ac_get_type_size(LLVMTypeOf(value));
+	const char *name;
+
+	if (type_size == 2)
+		name = "llvm.rint.f16";
+	else if (type_size == 4)
+		name = "llvm.rint.f32";
+	else
+		name = "llvm.rint.f64";
+
+	return ac_build_intrinsic(ctx, name, LLVMTypeOf(value), &value, 1,
+				  AC_FUNC_ATTR_READNONE);
+}
+
 LLVMValueRef
 ac_build_fdiv(struct ac_llvm_context *ctx,
 	      LLVMValueRef num,
@@ -675,8 +691,7 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 	LLVMValueRef invma;
 
 	if (is_array && !is_lod) {
-		LLVMValueRef tmp = coords_arg[3];
-		tmp = ac_build_intrinsic(ctx, "llvm.rint.f32", ctx->f32, &tmp, 1, 0);
+		LLVMValueRef tmp = ac_build_round(ctx, coords_arg[3]);
 
 		/* Section 8.9 (Texture Functions) of the GLSL 4.50 spec says:
 		 *
