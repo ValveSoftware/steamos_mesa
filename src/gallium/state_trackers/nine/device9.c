@@ -1967,6 +1967,19 @@ NineDevice9_Clear( struct NineDevice9 *This,
     return D3D_OK;
 }
 
+static void
+nine_D3DMATRIX_print(const D3DMATRIX *M)
+{
+    DBG("\n(%f %f %f %f)\n"
+        "(%f %f %f %f)\n"
+        "(%f %f %f %f)\n"
+        "(%f %f %f %f)\n",
+        M->m[0][0], M->m[0][1], M->m[0][2], M->m[0][3],
+        M->m[1][0], M->m[1][1], M->m[1][2], M->m[1][3],
+        M->m[2][0], M->m[2][1], M->m[2][2], M->m[2][3],
+        M->m[3][0], M->m[3][1], M->m[3][2], M->m[3][3]);
+}
+
 HRESULT NINE_WINAPI
 NineDevice9_SetTransform( struct NineDevice9 *This,
                           D3DTRANSFORMSTATETYPE State,
@@ -1978,6 +1991,7 @@ NineDevice9_SetTransform( struct NineDevice9 *This,
     DBG("This=%p State=%d pMatrix=%p\n", This, State, pMatrix);
 
     user_assert(M, D3DERR_INVALIDCALL);
+    nine_D3DMATRIX_print(pMatrix);
 
     *M = *pMatrix;
     if (unlikely(This->is_recording)) {
