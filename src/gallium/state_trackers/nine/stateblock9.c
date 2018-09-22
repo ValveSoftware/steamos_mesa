@@ -293,7 +293,7 @@ nine_state_copy_common(struct NineDevice9 *device,
     if (mask->changed.group & NINE_STATE_FF_MATERIAL)
         dst->ff.material = src->ff.material;
 
-    if (mask->changed.group & NINE_STATE_FF_PSSTAGES) {
+    if (mask->changed.group & NINE_STATE_FF_PS_CONSTS) {
         for (s = 0; s < NINE_MAX_TEXTURE_STAGES; ++s) {
             for (i = 0; i < NINED3DTSS_COUNT; ++i)
                 if (mask->ff.changed.tex_stage[s][i / 32] & (1 << (i % 32)))

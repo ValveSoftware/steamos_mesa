@@ -1949,7 +1949,7 @@ nine_ff_load_point_and_fog_params(struct NineDevice9 *device)
     struct nine_context *context = &device->context;
     struct fvec4 *dst = (struct fvec4 *)device->ff.vs_const;
 
-    if (!(context->changed.group & NINE_STATE_FF_OTHER))
+    if (!(context->changed.group & NINE_STATE_FF_VS_OTHER))
         return;
     dst[26].x = asfloat(context->rs[D3DRS_POINTSIZE_MIN]);
     dst[26].y = asfloat(context->rs[D3DRS_POINTSIZE_MAX]);
@@ -1986,7 +1986,7 @@ nine_ff_load_ps_params(struct NineDevice9 *device)
     struct fvec4 *dst = (struct fvec4 *)device->ff.ps_const;
     unsigned s;
 
-    if (!(context->changed.group & (NINE_STATE_FF_PSSTAGES | NINE_STATE_FF_OTHER)))
+    if (!(context->changed.group & NINE_STATE_FF_PS_CONSTS))
         return;
 
     for (s = 0; s < 8; ++s)

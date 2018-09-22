@@ -2350,7 +2350,7 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
     if (Type == D3DSBT_ALL || Type == D3DSBT_PIXELSTATE) {
        dst->changed.group |=
           NINE_STATE_PS | NINE_STATE_PS_CONST | NINE_STATE_BLEND |
-          NINE_STATE_FF_OTHER | NINE_STATE_FF_PSSTAGES | NINE_STATE_PS_CONST |
+          NINE_STATE_FF_VS_OTHER | NINE_STATE_FF_PS_CONSTS | NINE_STATE_PS_CONST |
           NINE_STATE_FB | NINE_STATE_DSA | NINE_STATE_MULTISAMPLE |
           NINE_STATE_RASTERIZER | NINE_STATE_STENCIL_REF;
        memcpy(dst->changed.rs,
@@ -2539,7 +2539,7 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     if (unlikely(This->is_recording)) {
         if (Type == D3DTSS_TEXTURETRANSFORMFLAGS)
             state->changed.group |= NINE_STATE_PS_PARAMS_MISC;
-        state->changed.group |= NINE_STATE_FF_PSSTAGES;
+        state->changed.group |= NINE_STATE_FF_PS_CONSTS;
         state->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
     } else
         nine_context_set_texture_stage_state(This, Stage, Type, Value);
