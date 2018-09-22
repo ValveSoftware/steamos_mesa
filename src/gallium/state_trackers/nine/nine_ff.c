@@ -2066,6 +2066,8 @@ nine_ff_update(struct NineDevice9 *device)
 
         context->pipe_data.cb_vs_ff = cb;
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
+
+        context->changed.group &= ~NINE_STATE_FF_VS;
     }
 
     if (!context->ps) {
@@ -2078,9 +2080,9 @@ nine_ff_update(struct NineDevice9 *device)
 
         context->pipe_data.cb_ps_ff = cb;
         context->commit |= NINE_STATE_COMMIT_CONST_PS;
-    }
 
-    context->changed.group &= ~NINE_STATE_FF;
+        context->changed.group &= ~NINE_STATE_FF_PS;
+    }
 }
 
 
