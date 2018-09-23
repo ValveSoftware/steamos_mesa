@@ -487,7 +487,7 @@ struct shader_translator
         struct ureg_dst predicate_dst;
         struct ureg_dst tS[8]; /* texture stage registers */
         struct ureg_dst tdst; /* scratch dst if we need extra modifiers */
-        struct ureg_dst t[5]; /* scratch TEMPs */
+        struct ureg_dst t[8]; /* scratch TEMPs */
         struct ureg_src vC[2]; /* PS color in */
         struct ureg_src vT[8]; /* PS texcoord in */
         struct ureg_dst rL[NINE_MAX_LOOP_DEPTH]; /* loop ctr */
