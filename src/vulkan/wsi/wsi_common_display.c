@@ -2308,6 +2308,7 @@ wsi_acquire_xlib_display(VkPhysicalDevice physical_device,
    if (!crtc)
       return VK_ERROR_INITIALIZATION_FAILED;
 
+#ifdef HAVE_DRI3_MODIFIERS
    xcb_randr_lease_t lease = xcb_generate_id(connection);
    xcb_randr_create_lease_cookie_t cl_c =
       xcb_randr_create_lease(connection, root, lease, 1, 1,
@@ -2328,6 +2329,7 @@ wsi_acquire_xlib_display(VkPhysicalDevice physical_device,
       return VK_ERROR_INITIALIZATION_FAILED;
 
    wsi->fd = fd;
+#endif
 
    return VK_SUCCESS;
 }
