@@ -90,6 +90,10 @@
 #define NINE_STATE_ALL          0x1fffffff
 #define NINE_STATE_UNHANDLED   (1 << 29)
 
+/* These states affect the ff shader key,
+ * which we recompute everytime. */
+#define NINE_STATE_FF_SHADER    0
+
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
 #define NINE_STATE_COMMIT_BLEND (1 << 2)
