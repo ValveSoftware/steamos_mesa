@@ -1732,7 +1732,7 @@ NVC0LoweringPass::loadSuInfo32(Value *ptr, int slot, uint32_t off, bool bindless
                         prog->driver->io.suInfoBase);
 }
 
-inline Value *
+Value *
 NVC0LoweringPass::loadMsAdjInfo32(TexInstruction::Target target, uint32_t index, int slot, Value *ind, bool bindless)
 {
    if (!bindless || targ->getChipset() < NVISA_GM107_CHIPSET)
