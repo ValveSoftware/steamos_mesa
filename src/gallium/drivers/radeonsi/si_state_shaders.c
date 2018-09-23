@@ -1194,7 +1194,8 @@ static void si_shader_selector_key_vs(struct si_context *sctx,
 				      struct si_shader_key *key,
 				      struct si_vs_prolog_bits *prolog_key)
 {
-	if (!sctx->vertex_elements)
+	if (!sctx->vertex_elements ||
+	    vs->info.properties[TGSI_PROPERTY_VS_BLIT_SGPRS])
 		return;
 
 	prolog_key->instance_divisor_is_one =
