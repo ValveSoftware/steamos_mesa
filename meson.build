@@ -1189,28 +1189,21 @@ endif
 _shared_llvm = get_option('shared-llvm')
 
 _llvm = get_option('llvm')
-if _llvm == 'auto'
+dep_llvm = null_dep
+with_llvm = false
+if _llvm != 'false'
   dep_llvm = dependency(
     'llvm',
     version : _llvm_version,
     modules : llvm_modules,
     optional_modules : llvm_optional_modules,
-    required : with_amd_vk or with_gallium_radeonsi or with_gallium_swr or with_gallium_opencl,
-    static : not _shared_llvm
-  )
-  with_llvm = dep_llvm.found()
-elif _llvm == 'true'
-  dep_llvm = dependency(
-    'llvm',
-    version : _llvm_version,
-    modules : llvm_modules,
-    optional_modules : llvm_optional_modules,
+    required : (
+      with_amd_vk or with_gallium_radeonsi or with_gallium_swr or
+      with_gallium_opencl or _llvm == 'true'
+    ),
     static : not _shared_llvm,
   )
-  with_llvm = true
-else
-  dep_llvm = null_dep
-  with_llvm = false
+  with_llvm = dep_llvm.found()
 endif
 if with_llvm
   _llvm_version = dep_llvm.version().split('.')
