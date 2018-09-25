@@ -215,6 +215,12 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 		framebuffer->width, framebuffer->height,
 		framebuffer->layers, framebuffer->samples);
 
+	cso = &ctx->framebuffer;
+
+	util_copy_framebuffer_state(cso, framebuffer);
+
+	cso->samples = util_framebuffer_get_num_samples(cso);
+
 	if (ctx->screen->reorder) {
 		struct fd_batch *old_batch = NULL;
 
@@ -240,13 +246,8 @@ fd_set_framebuffer_state(struct pipe_context *pctx,
 		DBG("%d: cbufs[0]=%p, zsbuf=%p", ctx->batch->needs_flush,
 				framebuffer->cbufs[0], framebuffer->zsbuf);
 		fd_batch_flush(ctx->batch, false, false);
+		util_copy_framebuffer_state(&ctx->batch->framebuffer, cso);
 	}
-
-	cso = &ctx->framebuffer;
-
-	util_copy_framebuffer_state(cso, framebuffer);
-
-	cso->samples = util_framebuffer_get_num_samples(cso);
 
 	ctx->dirty |= FD_DIRTY_FRAMEBUFFER;
 
