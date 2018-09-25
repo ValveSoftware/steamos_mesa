@@ -1566,7 +1566,7 @@ vk_priority_to_gen(int priority)
 }
 
 static void
-anv_device_init_hiz_clear_batch(struct anv_device *device)
+anv_device_init_hiz_clear_value_bo(struct anv_device *device)
 {
    anv_bo_init_new(&device->hiz_clear_bo, device, 4096);
    uint32_t *map = anv_gem_mmap(device, device->hiz_clear_bo.gem_handle,
@@ -1802,7 +1802,7 @@ VkResult anv_CreateDevice(
    anv_device_init_trivial_batch(device);
 
    if (device->info.gen >= 10)
-      anv_device_init_hiz_clear_batch(device);
+      anv_device_init_hiz_clear_value_bo(device);
 
    anv_scratch_pool_init(device, &device->scratch_pool);
 
