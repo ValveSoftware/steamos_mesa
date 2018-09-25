@@ -558,7 +558,6 @@ build_nir_buffer_fetch(struct nir_builder *b, struct radv_device *device,
 	nir_ssa_def *pos_y = nir_channel(b, tex_pos, 1);
 	pos_y = nir_imul(b, pos_y, &width->dest.ssa);
 	pos_x = nir_iadd(b, pos_x, pos_y);
-	//pos_x = nir_iadd(b, pos_x, nir_imm_int(b, 100000));
 
 	nir_ssa_def *tex_deref = &nir_build_deref_var(b, sampler)->dest.ssa;
 
