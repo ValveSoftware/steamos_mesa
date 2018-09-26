@@ -1215,6 +1215,8 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 				  size + skipped_size + realign_size,
 				  &dma_flags);
 
+		dma_flags &= ~CP_DMA_SYNC;
+
 		si_emit_cp_dma(cmd_buffer, main_dest_va, main_src_va,
 			       byte_count, dma_flags);
 
