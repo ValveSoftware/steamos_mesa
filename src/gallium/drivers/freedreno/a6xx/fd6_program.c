@@ -272,8 +272,7 @@ setup_stages(struct fd6_emit *emit, struct stage *s)
 	for (i = 0; i < MAX_STAGES; i++) {
 		if (s[i].v) {
 			s[i].i = &s[i].v->info;
-			/* constlen is in units of 4 * vec4: */
-			s[i].constlen = align(s[i].v->constlen, 4) / 4;
+			s[i].constlen = align(s[i].v->constlen, 4);
 			/* instrlen is already in units of 16 instr.. although
 			 * probably we should ditch that and not make the compiler
 			 * care about instruction group size of a3xx vs a5xx
@@ -390,13 +389,13 @@ fd6_program_emit(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, s[FS].instrlen);							  /* SP_FS_INSTRLEN */
 
 	OUT_PKT4(ring, REG_A6XX_HLSQ_VS_CNTL, 4);
-	OUT_RING(ring, A6XX_HLSQ_VS_CNTL_CONSTLEN(align(s[VS].constlen, 4)) | 0x100);    /* HLSQ_VS_CONSTLEN */
-	OUT_RING(ring, A6XX_HLSQ_HS_CNTL_CONSTLEN(align(s[HS].constlen, 4)));    /* HLSQ_HS_CONSTLEN */
-	OUT_RING(ring, A6XX_HLSQ_DS_CNTL_CONSTLEN(align(s[DS].constlen, 4)));    /* HLSQ_DS_CONSTLEN */
-	OUT_RING(ring, A6XX_HLSQ_GS_CNTL_CONSTLEN(align(s[GS].constlen, 4)));    /* HLSQ_GS_CONSTLEN */
+	OUT_RING(ring, A6XX_HLSQ_VS_CNTL_CONSTLEN(s[VS].constlen) | 0x100);    /* HLSQ_VS_CONSTLEN */
+	OUT_RING(ring, A6XX_HLSQ_HS_CNTL_CONSTLEN(s[HS].constlen));    /* HLSQ_HS_CONSTLEN */
+	OUT_RING(ring, A6XX_HLSQ_DS_CNTL_CONSTLEN(s[DS].constlen));    /* HLSQ_DS_CONSTLEN */
+	OUT_RING(ring, A6XX_HLSQ_GS_CNTL_CONSTLEN(s[GS].constlen));    /* HLSQ_GS_CONSTLEN */
 
 	OUT_PKT4(ring, REG_A6XX_HLSQ_FS_CNTL, 1);
-	OUT_RING(ring, s[FS].constlen | 0x100);    /* HLSQ_FS_CONSTLEN */
+	OUT_RING(ring, A6XX_HLSQ_VS_CNTL_CONSTLEN(s[FS].constlen) | 0x100);    /* HLSQ_FS_CONSTLEN */
 
 	OUT_PKT4(ring, REG_A6XX_SP_VS_CTRL_REG0, 1);
 	OUT_RING(ring, A6XX_SP_VS_CTRL_REG0_THREADSIZE(fssz) |
