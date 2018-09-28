@@ -12,11 +12,11 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2018-07-03 19:37:13)
 - /home/robclark/src/envytools/rnndb/adreno/a2xx.xml          (  36805 bytes, from 2018-07-03 19:37:13)
 - /home/robclark/src/envytools/rnndb/adreno/adreno_common.xml (  13634 bytes, from 2018-07-03 19:37:13)
-- /home/robclark/src/envytools/rnndb/adreno/adreno_pm4.xml    (  42399 bytes, from 2018-09-27 19:00:01)
+- /home/robclark/src/envytools/rnndb/adreno/adreno_pm4.xml    (  42585 bytes, from 2018-10-02 12:17:45)
 - /home/robclark/src/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2018-07-03 19:37:13)
 - /home/robclark/src/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2018-07-03 19:37:13)
-- /home/robclark/src/envytools/rnndb/adreno/a5xx.xml          ( 147240 bytes, from 2018-09-27 18:43:08)
-- /home/robclark/src/envytools/rnndb/adreno/a6xx.xml          ( 139337 bytes, from 2018-09-27 19:00:01)
+- /home/robclark/src/envytools/rnndb/adreno/a5xx.xml          ( 147240 bytes, from 2018-10-02 12:17:45)
+- /home/robclark/src/envytools/rnndb/adreno/a6xx.xml          ( 139581 bytes, from 2018-10-02 12:17:45)
 - /home/robclark/src/envytools/rnndb/adreno/a6xx_gmu.xml      (  10431 bytes, from 2018-09-14 13:03:07)
 - /home/robclark/src/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2018-07-03 19:37:13)
 
@@ -2579,26 +2579,8 @@ static inline uint32_t A6XX_GRAS_BIN_CONTROL_BINH(uint32_t val)
 	assert(!(val & 0xf));
 	return ((val >> 4) << A6XX_GRAS_BIN_CONTROL_BINH__SHIFT) & A6XX_GRAS_BIN_CONTROL_BINH__MASK;
 }
-#define A6XX_GRAS_BIN_CONTROL_DEPTH				0x00040000
+#define A6XX_GRAS_BIN_CONTROL_BINNING_PASS			0x00040000
 #define A6XX_GRAS_BIN_CONTROL_USE_VIZ				0x00200000
-
-#define REG_A6XX_RB_BIN_CONTROL					0x00008800
-#define A6XX_RB_BIN_CONTROL_BINW__MASK				0x000000ff
-#define A6XX_RB_BIN_CONTROL_BINW__SHIFT				0
-static inline uint32_t A6XX_RB_BIN_CONTROL_BINW(uint32_t val)
-{
-	assert(!(val & 0x1f));
-	return ((val >> 5) << A6XX_RB_BIN_CONTROL_BINW__SHIFT) & A6XX_RB_BIN_CONTROL_BINW__MASK;
-}
-#define A6XX_RB_BIN_CONTROL_BINH__MASK				0x0001ff00
-#define A6XX_RB_BIN_CONTROL_BINH__SHIFT				8
-static inline uint32_t A6XX_RB_BIN_CONTROL_BINH(uint32_t val)
-{
-	assert(!(val & 0xf));
-	return ((val >> 4) << A6XX_RB_BIN_CONTROL_BINH__SHIFT) & A6XX_RB_BIN_CONTROL_BINH__MASK;
-}
-#define A6XX_RB_BIN_CONTROL_DEPTH				0x00040000
-#define A6XX_RB_BIN_CONTROL_USE_VIZ				0x00200000
 
 #define REG_A6XX_RB_BIN_CONTROL2				0x000088d3
 #define A6XX_RB_BIN_CONTROL2_BINW__MASK				0x000000ff
@@ -3119,6 +3101,35 @@ static inline uint32_t A6XX_GRAS_RESOLVE_CNTL_2_Y(uint32_t val)
 }
 
 #define REG_A6XX_GRAS_UNKNOWN_8600				0x00008600
+
+#define REG_A6XX_RB_BIN_CONTROL					0x00008800
+#define A6XX_RB_BIN_CONTROL_BINW__MASK				0x000000ff
+#define A6XX_RB_BIN_CONTROL_BINW__SHIFT				0
+static inline uint32_t A6XX_RB_BIN_CONTROL_BINW(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A6XX_RB_BIN_CONTROL_BINW__SHIFT) & A6XX_RB_BIN_CONTROL_BINW__MASK;
+}
+#define A6XX_RB_BIN_CONTROL_BINH__MASK				0x0001ff00
+#define A6XX_RB_BIN_CONTROL_BINH__SHIFT				8
+static inline uint32_t A6XX_RB_BIN_CONTROL_BINH(uint32_t val)
+{
+	assert(!(val & 0xf));
+	return ((val >> 4) << A6XX_RB_BIN_CONTROL_BINH__SHIFT) & A6XX_RB_BIN_CONTROL_BINH__MASK;
+}
+#define A6XX_RB_BIN_CONTROL_BINNING_PASS			0x00040000
+#define A6XX_RB_BIN_CONTROL_USE_VIZ				0x00200000
+
+#define REG_A6XX_RB_RENDER_CNTL					0x00008801
+#define A6XX_RB_RENDER_CNTL_UNK4				0x00000010
+#define A6XX_RB_RENDER_CNTL_BINNING				0x00000080
+#define A6XX_RB_RENDER_CNTL_FLAG_DEPTH				0x00004000
+#define A6XX_RB_RENDER_CNTL_FLAG_MRTS__MASK			0x00ff0000
+#define A6XX_RB_RENDER_CNTL_FLAG_MRTS__SHIFT			16
+static inline uint32_t A6XX_RB_RENDER_CNTL_FLAG_MRTS(uint32_t val)
+{
+	return ((val) << A6XX_RB_RENDER_CNTL_FLAG_MRTS__SHIFT) & A6XX_RB_RENDER_CNTL_FLAG_MRTS__MASK;
+}
 
 #define REG_A6XX_RB_RAS_MSAA_CNTL				0x00008802
 #define A6XX_RB_RAS_MSAA_CNTL_SAMPLES__MASK			0x00000003
