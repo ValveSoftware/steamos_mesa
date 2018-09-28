@@ -1075,7 +1075,9 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	ms->pa_sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
 	ms->pa_sc_aa_config = 0;
 	ms->db_eqaa = S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
-		S_028804_STATIC_ANCHOR_ASSOCIATIONS(1);
+		      S_028804_STATIC_ANCHOR_ASSOCIATIONS(1) |
+		      S_028804_INTERPOLATE_COMP_Z(1) |
+		      S_028804_STATIC_ANCHOR_ASSOCIATIONS(1);
 	ms->pa_sc_mode_cntl_1 =
 		S_028A4C_WALK_FENCE_ENABLE(1) | //TODO linear dst fixes
 		S_028A4C_WALK_FENCE_SIZE(num_tile_pipes == 2 ? 2 : 3) |
