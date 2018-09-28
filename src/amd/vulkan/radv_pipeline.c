@@ -2708,7 +2708,6 @@ radv_pipeline_generate_raster_state(struct radeon_cmdbuf *cs,
 	uint32_t pa_sc_conservative_rast = 0;
 
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
-	                       S_028810_PS_UCP_MODE(3) |
 	                       S_028810_DX_CLIP_SPACE_DEF(1) | // vulkan uses DX conventions.
 	                       S_028810_ZCLIP_NEAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
 	                       S_028810_ZCLIP_FAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
