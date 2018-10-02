@@ -894,8 +894,17 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
           * It doesn't matter where it points now so long as has a valid
           * relocation.  We'll adjust it later as part of the chaining
           * process.
+          *
+          * We set the end of the batch a little short so we would be sure we
+          * have room for the chaining command.  Since we're about to emit the
+          * chaining command, let's set it back where it should go.
           */
+         cmd_buffer->batch.end += GEN8_MI_BATCH_BUFFER_START_length * 4;
+         assert(cmd_buffer->batch.start == batch_bo->bo.map);
+         assert(cmd_buffer->batch.end == batch_bo->bo.map + batch_bo->bo.size);
+
          emit_batch_buffer_start(cmd_buffer, &batch_bo->bo, 0);
+         assert(cmd_buffer->batch.start == batch_bo->bo.map);
       } else {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
       }
