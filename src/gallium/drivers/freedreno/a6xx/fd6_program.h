@@ -32,10 +32,6 @@
 #include "freedreno_context.h"
 #include "ir3_shader.h"
 
-struct fd6_shader_stateobj {
-	struct ir3_shader *shader;
-};
-
 struct fd6_emit;
 
 void fd6_emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so);

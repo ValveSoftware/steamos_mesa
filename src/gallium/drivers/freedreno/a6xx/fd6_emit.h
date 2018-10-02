@@ -76,8 +76,8 @@ static inline const struct ir3_shader_variant *
 fd6_emit_get_vp(struct fd6_emit *emit)
 {
 	if (!emit->vp) {
-		struct fd6_shader_stateobj *so = emit->prog->vp;
-		emit->vp = ir3_shader_variant(so->shader, emit->key, emit->debug);
+		struct ir3_shader *shader = emit->prog->vp;
+		emit->vp = ir3_shader_variant(shader, emit->key, emit->debug);
 	}
 	return emit->vp;
 }
@@ -91,8 +91,8 @@ fd6_emit_get_fp(struct fd6_emit *emit)
 			static const struct ir3_shader_variant binning_fp = {};
 			emit->fp = &binning_fp;
 		} else {
-			struct fd6_shader_stateobj *so = emit->prog->fp;
-			emit->fp = ir3_shader_variant(so->shader, emit->key, emit->debug);
+			struct ir3_shader *shader = emit->prog->fp;
+			emit->fp = ir3_shader_variant(shader, emit->key,emit->debug);
 		}
 	}
 	return emit->fp;
