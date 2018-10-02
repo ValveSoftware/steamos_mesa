@@ -101,6 +101,57 @@ static int virgl_vtest_send_init(struct virgl_vtest_winsys *vws)
    return 0;
 }
 
+static int virgl_vtest_negotiate_version(struct virgl_vtest_winsys *vws)
+{
+   uint32_t vtest_hdr[VTEST_HDR_SIZE];
+   uint32_t version_buf[VCMD_PROTOCOL_VERSION_SIZE];
+   uint32_t busy_wait_buf[VCMD_BUSY_WAIT_SIZE];
+   uint32_t busy_wait_result[1];
+   int ret;
+
+   vtest_hdr[VTEST_CMD_LEN] = VCMD_PING_PROTOCOL_VERSION_SIZE;
+   vtest_hdr[VTEST_CMD_ID] = VCMD_PING_PROTOCOL_VERSION;
+   virgl_block_write(vws->sock_fd, &vtest_hdr, sizeof(vtest_hdr));
+
+   vtest_hdr[VTEST_CMD_LEN] = VCMD_BUSY_WAIT_SIZE;
+   vtest_hdr[VTEST_CMD_ID] = VCMD_RESOURCE_BUSY_WAIT;
+   busy_wait_buf[VCMD_BUSY_WAIT_HANDLE] = 0;
+   busy_wait_buf[VCMD_BUSY_WAIT_FLAGS] = 0;
+   virgl_block_write(vws->sock_fd, &vtest_hdr, sizeof(vtest_hdr));
+   virgl_block_write(vws->sock_fd, &busy_wait_buf, sizeof(busy_wait_buf));
+
+   ret = virgl_block_read(vws->sock_fd, vtest_hdr, sizeof(vtest_hdr));
+   assert(ret);
+
+   if (vtest_hdr[VTEST_CMD_ID] == VCMD_PING_PROTOCOL_VERSION) {
+     /* Read dummy busy_wait response */
+     ret = virgl_block_read(vws->sock_fd, vtest_hdr, sizeof(vtest_hdr));
+     assert(ret);
+     ret = virgl_block_read(vws->sock_fd, busy_wait_result, sizeof(busy_wait_result));
+     assert(ret);
+
+     vtest_hdr[VTEST_CMD_LEN] = VCMD_PROTOCOL_VERSION_SIZE;
+     vtest_hdr[VTEST_CMD_ID] = VCMD_PROTOCOL_VERSION;
+     version_buf[VCMD_PROTOCOL_VERSION_VERSION] = VTEST_PROTOCOL_VERSION;
+     virgl_block_write(vws->sock_fd, &vtest_hdr, sizeof(vtest_hdr));
+     virgl_block_write(vws->sock_fd, &version_buf, sizeof(version_buf));
+
+     ret = virgl_block_read(vws->sock_fd, vtest_hdr, sizeof(vtest_hdr));
+     assert(ret);
+     ret = virgl_block_read(vws->sock_fd, version_buf, sizeof(version_buf));
+     assert(ret);
+     return version_buf[VCMD_PROTOCOL_VERSION_VERSION];
+   }
+
+   /* Read dummy busy_wait response */
+   assert(vtest_hdr[VTEST_CMD_ID] == VCMD_RESOURCE_BUSY_WAIT);
+   ret = virgl_block_read(vws->sock_fd, busy_wait_result, sizeof(busy_wait_result));
+   assert(ret);
+
+   /* Old server, return version 0 */
+   return 0;
+}
+
 int virgl_vtest_connect(struct virgl_vtest_winsys *vws)
 {
    struct sockaddr_un un;
@@ -123,6 +174,7 @@ int virgl_vtest_connect(struct virgl_vtest_winsys *vws)
 
    vws->sock_fd = sock;
    virgl_vtest_send_init(vws);
+   vws->protocol_version = virgl_vtest_negotiate_version(vws);
    return 0;
 }
 
