@@ -920,6 +920,9 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
    case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
       unreachable("VK_KHR_shared_presentable_image is unsupported");
+
+   case VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV:
+      unreachable("VK_NV_shading_rate_image is unsupported");
    }
 
    /* If the layout isn't recognized in the exhaustive switch above, the
