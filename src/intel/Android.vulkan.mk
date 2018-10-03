@@ -229,6 +229,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_anv_entrypoints \
 	libmesa_genxml \
+	libmesa_git_sha1 \
 	libmesa_vulkan_util
 
 # The rule generates both C and H files, but due to some strange
