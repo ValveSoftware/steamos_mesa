@@ -440,8 +440,8 @@ static void polaris_set_vgt_vertex_reuse(struct si_screen *sscreen,
 		    PIPE_TESS_SPACING_FRACTIONAL_ODD)
 			vtx_reuse_depth = 14;
 
-		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
-			       vtx_reuse_depth);
+		assert(pm4->shader);
+		pm4->shader->vgt_vertex_reuse_block_cntl = vtx_reuse_depth;
 	}
 }
 
@@ -574,6 +574,10 @@ static void si_emit_shader_es(struct si_context *sctx)
 					   SI_TRACKED_VGT_TF_PARAM,
 					   shader->vgt_tf_param);
 
+	if (shader->vgt_vertex_reuse_block_cntl)
+		radeon_opt_set_context_reg(sctx, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+					   SI_TRACKED_VGT_VERTEX_REUSE_BLOCK_CNTL,
+					   shader->vgt_vertex_reuse_block_cntl);
 }
 
 static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
@@ -813,6 +817,10 @@ static void si_emit_shader_gs(struct si_context *sctx)
 			radeon_opt_set_context_reg(sctx, R_028B6C_VGT_TF_PARAM,
 						   SI_TRACKED_VGT_TF_PARAM,
 						   shader->vgt_tf_param);
+		if (shader->vgt_vertex_reuse_block_cntl)
+			radeon_opt_set_context_reg(sctx, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+						   SI_TRACKED_VGT_VERTEX_REUSE_BLOCK_CNTL,
+						   shader->vgt_vertex_reuse_block_cntl);
 	}
 }
 
@@ -981,6 +989,11 @@ static void si_emit_shader_vs(struct si_context *sctx)
 		radeon_opt_set_context_reg(sctx, R_028B6C_VGT_TF_PARAM,
 					   SI_TRACKED_VGT_TF_PARAM,
 					   shader->vgt_tf_param);
+
+	if (shader->vgt_vertex_reuse_block_cntl)
+		radeon_opt_set_context_reg(sctx, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+					   SI_TRACKED_VGT_VERTEX_REUSE_BLOCK_CNTL,
+					   shader->vgt_vertex_reuse_block_cntl);
 }
 
 /**

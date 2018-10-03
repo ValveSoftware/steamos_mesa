@@ -377,6 +377,7 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 		ctx->tracked_regs.reg_value[SI_TRACKED_SPI_SHADER_COL_FORMAT]  = 0x00000000;
 		ctx->tracked_regs.reg_value[SI_TRACKED_CB_SHADER_MASK]  = 0xffffffff;
 		ctx->tracked_regs.reg_value[SI_TRACKED_VGT_TF_PARAM]  = 0x00000000;
+		ctx->tracked_regs.reg_value[SI_TRACKED_VGT_VERTEX_REUSE_BLOCK_CNTL]  = 0x0000001e; /* From VI */
 
 		/* Set all saved registers state to saved. */
 		ctx->tracked_regs.reg_saved = 0xffffffffffffffff;
