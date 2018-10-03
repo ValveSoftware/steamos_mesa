@@ -686,6 +686,9 @@ struct si_shader {
 			unsigned	cb_shader_mask;
 		} ps;
 	} ctx_reg;
+
+	/*For save precompute registers value */
+	unsigned vgt_tf_param; /* VGT_TF_PARAM */
 };
 
 struct si_shader_part {

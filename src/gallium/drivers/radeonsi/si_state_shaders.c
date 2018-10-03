@@ -396,11 +396,11 @@ static void si_set_tesseval_regs(struct si_screen *sscreen,
 	} else
 		distribution_mode = V_028B6C_DISTRIBUTION_MODE_NO_DIST;
 
-	si_pm4_set_reg(pm4, R_028B6C_VGT_TF_PARAM,
-		       S_028B6C_TYPE(type) |
-		       S_028B6C_PARTITIONING(partitioning) |
-		       S_028B6C_TOPOLOGY(topology) |
-		       S_028B6C_DISTRIBUTION_MODE(distribution_mode));
+	assert(pm4->shader);
+	pm4->shader->vgt_tf_param = S_028B6C_TYPE(type) |
+				    S_028B6C_PARTITIONING(partitioning) |
+				    S_028B6C_TOPOLOGY(topology) |
+				    S_028B6C_DISTRIBUTION_MODE(distribution_mode);
 }
 
 /* Polaris needs different VTX_REUSE_DEPTH settings depending on
@@ -568,6 +568,12 @@ static void si_emit_shader_es(struct si_context *sctx)
 	radeon_opt_set_context_reg(sctx, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 				   SI_TRACKED_VGT_ESGS_RING_ITEMSIZE,
 				   shader->selector->esgs_itemsize / 4);
+
+	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
+		radeon_opt_set_context_reg(sctx, R_028B6C_VGT_TF_PARAM,
+					   SI_TRACKED_VGT_TF_PARAM,
+					   shader->vgt_tf_param);
+
 }
 
 static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
@@ -802,6 +808,11 @@ static void si_emit_shader_gs(struct si_context *sctx)
 		radeon_opt_set_context_reg(sctx, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 					   SI_TRACKED_VGT_ESGS_RING_ITEMSIZE,
 					   shader->ctx_reg.gs.vgt_esgs_ring_itemsize);
+
+		if (shader->key.part.gs.es->type == PIPE_SHADER_TESS_EVAL)
+			radeon_opt_set_context_reg(sctx, R_028B6C_VGT_TF_PARAM,
+						   SI_TRACKED_VGT_TF_PARAM,
+						   shader->vgt_tf_param);
 	}
 }
 
@@ -965,6 +976,11 @@ static void si_emit_shader_vs(struct si_context *sctx)
 	radeon_opt_set_context_reg(sctx, R_028818_PA_CL_VTE_CNTL,
 				   SI_TRACKED_PA_CL_VTE_CNTL,
 				   shader->ctx_reg.vs.pa_cl_vte_cntl);
+
+	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
+		radeon_opt_set_context_reg(sctx, R_028B6C_VGT_TF_PARAM,
+					   SI_TRACKED_VGT_TF_PARAM,
+					   shader->vgt_tf_param);
 }
 
 /**
