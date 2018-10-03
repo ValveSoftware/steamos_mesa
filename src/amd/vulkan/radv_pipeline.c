@@ -1081,6 +1081,7 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	ms->pa_sc_mode_cntl_1 =
 		S_028A4C_WALK_FENCE_ENABLE(1) | //TODO linear dst fixes
 		S_028A4C_WALK_FENCE_SIZE(num_tile_pipes == 2 ? 2 : 3) |
+		S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7) |
 		/* always 1: */
 		S_028A4C_WALK_ALIGN8_PRIM_FITS_ST(1) |
 		S_028A4C_SUPERTILE_WALK_ORDER_ENABLE(1) |
@@ -1124,8 +1125,7 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	}
 
 	if (out_of_order_rast) {
-		ms->pa_sc_mode_cntl_1 |= S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(1) |
-					 S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7);
+		ms->pa_sc_mode_cntl_1 |= S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(1);
 	}
 
 	if (vkms && vkms->pSampleMask) {
