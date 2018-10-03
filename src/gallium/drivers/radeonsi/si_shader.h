@@ -647,6 +647,45 @@ struct si_shader {
 	 */
 	char				*shader_log;
 	size_t				shader_log_size;
+
+	/* For save precompute context registers values. */
+	union {
+		struct {
+			unsigned	vgt_gsvs_ring_offset_1;
+			unsigned	vgt_gsvs_ring_offset_2;
+			unsigned	vgt_gsvs_ring_offset_3;
+			unsigned	vgt_gs_out_prim_type;
+			unsigned	vgt_gsvs_ring_itemsize;
+			unsigned	vgt_gs_max_vert_out;
+			unsigned	vgt_gs_vert_itemsize;
+			unsigned	vgt_gs_vert_itemsize_1;
+			unsigned	vgt_gs_vert_itemsize_2;
+			unsigned	vgt_gs_vert_itemsize_3;
+			unsigned	vgt_gs_instance_cnt;
+			unsigned	vgt_gs_onchip_cntl;
+			unsigned	vgt_gs_max_prims_per_subgroup;
+			unsigned	vgt_esgs_ring_itemsize;
+		} gs;
+
+		struct {
+			unsigned	vgt_gs_mode;
+			unsigned	vgt_primitiveid_en;
+			unsigned	vgt_reuse_off;
+			unsigned	spi_vs_out_config;
+			unsigned	spi_shader_pos_format;
+			unsigned	pa_cl_vte_cntl;
+		} vs;
+
+		struct {
+			unsigned	spi_ps_input_ena;
+			unsigned	spi_ps_input_addr;
+			unsigned	spi_baryc_cntl;
+			unsigned	spi_ps_in_control;
+			unsigned	spi_shader_z_format;
+			unsigned	spi_shader_col_format;
+			unsigned	cb_shader_mask;
+		} ps;
+	} ctx_reg;
 };
 
 struct si_shader_part {

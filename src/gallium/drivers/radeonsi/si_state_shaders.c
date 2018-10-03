@@ -749,6 +749,62 @@ static void gfx9_get_gs_info(struct si_shader_selector *es,
 	assert(out->max_prims_per_subgroup <= max_out_prims);
 }
 
+static void si_emit_shader_gs(struct si_context *sctx)
+{
+	struct si_shader *shader = sctx->queued.named.gs->shader;
+	if (!shader)
+		return;
+
+	/* R_028A60_VGT_GSVS_RING_OFFSET_1, R_028A64_VGT_GSVS_RING_OFFSET_2
+	 * R_028A68_VGT_GSVS_RING_OFFSET_3, R_028A6C_VGT_GS_OUT_PRIM_TYPE */
+	radeon_opt_set_context_reg4(sctx, R_028A60_VGT_GSVS_RING_OFFSET_1,
+				    SI_TRACKED_VGT_GSVS_RING_OFFSET_1,
+				    shader->ctx_reg.gs.vgt_gsvs_ring_offset_1,
+				    shader->ctx_reg.gs.vgt_gsvs_ring_offset_2,
+				    shader->ctx_reg.gs.vgt_gsvs_ring_offset_3,
+				    shader->ctx_reg.gs.vgt_gs_out_prim_type);
+
+
+	/* R_028AB0_VGT_GSVS_RING_ITEMSIZE */
+	radeon_opt_set_context_reg(sctx, R_028AB0_VGT_GSVS_RING_ITEMSIZE,
+				   SI_TRACKED_VGT_GSVS_RING_ITEMSIZE,
+				   shader->ctx_reg.gs.vgt_gsvs_ring_itemsize);
+
+	/* R_028B38_VGT_GS_MAX_VERT_OUT */
+	radeon_opt_set_context_reg(sctx, R_028B38_VGT_GS_MAX_VERT_OUT,
+				   SI_TRACKED_VGT_GS_MAX_VERT_OUT,
+				   shader->ctx_reg.gs.vgt_gs_max_vert_out);
+
+	/* R_028B5C_VGT_GS_VERT_ITEMSIZE, R_028B60_VGT_GS_VERT_ITEMSIZE_1
+	 * R_028B64_VGT_GS_VERT_ITEMSIZE_2, R_028B68_VGT_GS_VERT_ITEMSIZE_3 */
+	radeon_opt_set_context_reg4(sctx, R_028B5C_VGT_GS_VERT_ITEMSIZE,
+				    SI_TRACKED_VGT_GS_VERT_ITEMSIZE,
+				    shader->ctx_reg.gs.vgt_gs_vert_itemsize,
+				    shader->ctx_reg.gs.vgt_gs_vert_itemsize_1,
+				    shader->ctx_reg.gs.vgt_gs_vert_itemsize_2,
+				    shader->ctx_reg.gs.vgt_gs_vert_itemsize_3);
+
+	/* R_028B90_VGT_GS_INSTANCE_CNT */
+	radeon_opt_set_context_reg(sctx, R_028B90_VGT_GS_INSTANCE_CNT,
+				   SI_TRACKED_VGT_GS_INSTANCE_CNT,
+				   shader->ctx_reg.gs.vgt_gs_instance_cnt);
+
+	if (sctx->chip_class >= GFX9) {
+		/* R_028A44_VGT_GS_ONCHIP_CNTL */
+		radeon_opt_set_context_reg(sctx, R_028A44_VGT_GS_ONCHIP_CNTL,
+					   SI_TRACKED_VGT_GS_ONCHIP_CNTL,
+					   shader->ctx_reg.gs.vgt_gs_onchip_cntl);
+		/* R_028A94_VGT_GS_MAX_PRIMS_PER_SUBGROUP */
+		radeon_opt_set_context_reg(sctx, R_028A94_VGT_GS_MAX_PRIMS_PER_SUBGROUP,
+					   SI_TRACKED_VGT_GS_MAX_PRIMS_PER_SUBGROUP,
+					   shader->ctx_reg.gs.vgt_gs_max_prims_per_subgroup);
+		/* R_028AAC_VGT_ESGS_RING_ITEMSIZE */
+		radeon_opt_set_context_reg(sctx, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+					   SI_TRACKED_VGT_ESGS_RING_ITEMSIZE,
+					   shader->ctx_reg.gs.vgt_esgs_ring_itemsize);
+	}
+}
+
 static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_shader_selector *sel = shader->selector;
@@ -763,33 +819,38 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 	if (!pm4)
 		return;
 
+	pm4->atom.emit = si_emit_shader_gs;
+
 	offset = num_components[0] * sel->gs_max_out_vertices;
-	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, offset);
+	shader->ctx_reg.gs.vgt_gsvs_ring_offset_1 = offset;
+
 	if (max_stream >= 1)
 		offset += num_components[1] * sel->gs_max_out_vertices;
-	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, offset);
+	shader->ctx_reg.gs.vgt_gsvs_ring_offset_2 = offset;
+
 	if (max_stream >= 2)
 		offset += num_components[2] * sel->gs_max_out_vertices;
-	si_pm4_set_reg(pm4, R_028A68_VGT_GSVS_RING_OFFSET_3, offset);
-	si_pm4_set_reg(pm4, R_028A6C_VGT_GS_OUT_PRIM_TYPE,
-		       si_conv_prim_to_gs_out(sel->gs_output_prim));
+	shader->ctx_reg.gs.vgt_gsvs_ring_offset_3 = offset;
+
+	shader->ctx_reg.gs.vgt_gs_out_prim_type =
+		si_conv_prim_to_gs_out(sel->gs_output_prim);
+
 	if (max_stream >= 3)
 		offset += num_components[3] * sel->gs_max_out_vertices;
-	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, offset);
+	shader->ctx_reg.gs.vgt_gsvs_ring_itemsize = offset;
 
 	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
 	assert(offset < (1 << 15));
 
-	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, sel->gs_max_out_vertices);
+	shader->ctx_reg.gs.vgt_gs_max_vert_out = sel->gs_max_out_vertices;
 
-	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, num_components[0]);
-	si_pm4_set_reg(pm4, R_028B60_VGT_GS_VERT_ITEMSIZE_1, (max_stream >= 1) ? num_components[1] : 0);
-	si_pm4_set_reg(pm4, R_028B64_VGT_GS_VERT_ITEMSIZE_2, (max_stream >= 2) ? num_components[2] : 0);
-	si_pm4_set_reg(pm4, R_028B68_VGT_GS_VERT_ITEMSIZE_3, (max_stream >= 3) ? num_components[3] : 0);
+	shader->ctx_reg.gs.vgt_gs_vert_itemsize = num_components[0];
+	shader->ctx_reg.gs.vgt_gs_vert_itemsize_1 = (max_stream >= 1) ? num_components[1] : 0;
+	shader->ctx_reg.gs.vgt_gs_vert_itemsize_2 = (max_stream >= 2) ? num_components[2] : 0;
+	shader->ctx_reg.gs.vgt_gs_vert_itemsize_3 = (max_stream >= 3) ? num_components[3] : 0;
 
-	si_pm4_set_reg(pm4, R_028B90_VGT_GS_INSTANCE_CNT,
-		       S_028B90_CNT(MIN2(gs_num_invocations, 127)) |
-		       S_028B90_ENABLE(gs_num_invocations > 0));
+	shader->ctx_reg.gs.vgt_gs_instance_cnt = S_028B90_CNT(MIN2(gs_num_invocations, 127)) |
+						 S_028B90_ENABLE(gs_num_invocations > 0);
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
@@ -845,14 +906,14 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 			       S_00B22C_LDS_SIZE(gs_info.lds_size) |
 			       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
-		si_pm4_set_reg(pm4, R_028A44_VGT_GS_ONCHIP_CNTL,
-			       S_028A44_ES_VERTS_PER_SUBGRP(gs_info.es_verts_per_subgroup) |
-			       S_028A44_GS_PRIMS_PER_SUBGRP(gs_info.gs_prims_per_subgroup) |
-			       S_028A44_GS_INST_PRIMS_IN_SUBGRP(gs_info.gs_inst_prims_in_subgroup));
-		si_pm4_set_reg(pm4, R_028A94_VGT_GS_MAX_PRIMS_PER_SUBGROUP,
-			       S_028A94_MAX_PRIMS_PER_SUBGROUP(gs_info.max_prims_per_subgroup));
-		si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-			       shader->key.part.gs.es->esgs_itemsize / 4);
+		shader->ctx_reg.gs.vgt_gs_onchip_cntl =
+			S_028A44_ES_VERTS_PER_SUBGRP(gs_info.es_verts_per_subgroup) |
+			S_028A44_GS_PRIMS_PER_SUBGRP(gs_info.gs_prims_per_subgroup) |
+			S_028A44_GS_INST_PRIMS_IN_SUBGRP(gs_info.gs_inst_prims_in_subgroup);
+		shader->ctx_reg.gs.vgt_gs_max_prims_per_subgroup =
+			S_028A94_MAX_PRIMS_PER_SUBGROUP(gs_info.max_prims_per_subgroup);
+		shader->ctx_reg.gs.vgt_esgs_ring_itemsize =
+			shader->key.part.gs.es->esgs_itemsize / 4;
 
 		if (es_type == PIPE_SHADER_TESS_EVAL)
 			si_set_tesseval_regs(sscreen, shader->key.part.gs.es, pm4);
