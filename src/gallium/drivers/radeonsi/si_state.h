@@ -45,13 +45,6 @@ struct si_shader_selector;
 struct si_texture;
 struct si_qbo_state;
 
-/* State atoms are callbacks which write a sequence of packets into a GPU
- * command buffer (AKA indirect buffer, AKA IB, AKA command stream, AKA CS).
- */
-struct si_atom {
-	void (*emit)(struct si_context *ctx);
-};
-
 struct si_state_blend {
 	struct si_pm4_state	pm4;
 	uint32_t		cb_target_mask;
@@ -283,6 +276,8 @@ enum si_tracked_reg {
 	SI_TRACKED_PA_CL_GB_HORZ_DISC_ADJ,
 
 	SI_TRACKED_PA_SC_CLIPRECT_RULE,
+
+	SI_TRACKED_VGT_ESGS_RING_ITEMSIZE,
 
 	SI_NUM_TRACKED_REGS,
 };

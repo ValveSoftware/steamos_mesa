@@ -452,7 +452,13 @@ static struct si_pm4_state *si_get_shader_pm4_state(struct si_shader *shader)
 	else
 		shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	return shader->pm4;
+	if (shader->pm4) {
+		shader->pm4->shader = shader;
+		return shader->pm4;
+	} else {
+		fprintf(stderr, "radeonsi: Failed to create pm4 state.\n");
+		return NULL;
+	}
 }
 
 static unsigned si_get_num_vs_user_sgprs(unsigned num_always_on_user_sgprs)
@@ -552,6 +558,18 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 	}
 }
 
+static void si_emit_shader_es(struct si_context *sctx)
+{
+	struct si_shader *shader = sctx->queued.named.es->shader;
+
+	if (!shader)
+		return;
+
+	radeon_opt_set_context_reg(sctx, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+				   SI_TRACKED_VGT_ESGS_RING_ITEMSIZE,
+				   shader->selector->esgs_itemsize / 4);
+}
+
 static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
@@ -566,6 +584,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	if (!pm4)
 		return;
 
+	pm4->atom.emit = si_emit_shader_es;
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
 
@@ -581,8 +600,6 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 
 	oc_lds_en = shader->selector->type == PIPE_SHADER_TESS_EVAL ? 1 : 0;
 
-	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_00B320_SPI_SHADER_PGM_LO_ES, va >> 8);
 	si_pm4_set_reg(pm4, R_00B324_SPI_SHADER_PGM_HI_ES, S_00B324_MEM_BASE(va >> 40));
 	si_pm4_set_reg(pm4, R_00B328_SPI_SHADER_PGM_RSRC1_ES,
