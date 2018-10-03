@@ -328,6 +328,35 @@ intel_alloc_renderbuffer_storage(struct gl_context * ctx, struct gl_renderbuffer
    return intel_alloc_private_renderbuffer_storage(ctx, rb, internalFormat, width, height);
 }
 
+static mesa_format
+fallback_rgbx_to_rgba(struct intel_screen *screen, struct gl_renderbuffer *rb,
+                      mesa_format original_format)
+{
+   mesa_format format = original_format;
+
+   /* The base format and internal format must be derived from the user-visible
+    * format (that is, the gl_config's format), even if we internally use
+    * choose a different format for the renderbuffer. Otherwise, rendering may
+    * use incorrect channel write masks.
+    */
+   rb->_BaseFormat = _mesa_get_format_base_format(original_format);
+   rb->InternalFormat = rb->_BaseFormat;
+
+   if (!screen->mesa_format_supports_render[original_format]) {
+      /* The glRenderbufferStorage paths in core Mesa detect if the driver
+       * does not support the user-requested format, and then searches for
+       * a fallback format. The DRI code bypasses core Mesa, though. So we do
+       * the fallbacks here.
+       *
+       * We must support MESA_FORMAT_R8G8B8X8 on Android because the Android
+       * framework requires HAL_PIXEL_FORMAT_RGBX8888 winsys surfaces.
+       */
+      format = _mesa_format_fallback_rgbx_to_rgba(original_format);
+      assert(screen->mesa_format_supports_render[format]);
+   }
+   return format;
+}
+
 static void
 intel_image_target_renderbuffer_storage(struct gl_context *ctx,
 					struct gl_renderbuffer *rb,
@@ -350,8 +379,13 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
       return;
    }
 
+   rb->Format = fallback_rgbx_to_rgba(brw->screen, rb, image->format);
+
+   mesa_format chosen_format = rb->Format == image->format ?
+      image->format : rb->Format;
+
    /* __DRIimage is opaque to the core so it has to be checked here */
-   if (!brw->mesa_format_supports_render[image->format]) {
+   if (!brw->mesa_format_supports_render[chosen_format]) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
             "glEGLImageTargetRenderbufferStorage(unsupported image format)");
       return;
@@ -366,15 +400,12 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
     * content.
     */
    irb->mt = intel_miptree_create_for_dri_image(brw, image, GL_TEXTURE_2D,
-                                                image->format, false);
+                                                rb->Format, false);
    if (!irb->mt)
       return;
 
-   rb->InternalFormat = image->internal_format;
    rb->Width = image->width;
    rb->Height = image->height;
-   rb->Format = image->format;
-   rb->_BaseFormat = _mesa_get_format_base_format(image->format);
    rb->NeedsFinishRenderTexture = true;
    irb->layer_count = 1;
 }
@@ -436,27 +467,7 @@ intel_create_winsys_renderbuffer(struct intel_screen *screen,
    rb->NumSamples = num_samples;
    rb->NumStorageSamples = num_samples;
 
-   /* The base format and internal format must be derived from the user-visible
-    * format (that is, the gl_config's format), even if we internally use
-    * choose a different format for the renderbuffer. Otherwise, rendering may
-    * use incorrect channel write masks.
-    */
-   rb->_BaseFormat = _mesa_get_format_base_format(format);
-   rb->InternalFormat = rb->_BaseFormat;
-
-   rb->Format = format;
-   if (!screen->mesa_format_supports_render[rb->Format]) {
-      /* The glRenderbufferStorage paths in core Mesa detect if the driver
-       * does not support the user-requested format, and then searches for
-       * a falback format. The DRI code bypasses core Mesa, though. So we do
-       * the fallbacks here.
-       *
-       * We must support MESA_FORMAT_R8G8B8X8 on Android because the Android
-       * framework requires HAL_PIXEL_FORMAT_RGBX8888 winsys surfaces.
-       */
-      rb->Format = _mesa_format_fallback_rgbx_to_rgba(rb->Format);
-      assert(screen->mesa_format_supports_render[rb->Format]);
-   }
+   rb->Format = fallback_rgbx_to_rgba(screen, rb, format);
 
    /* intel-specific methods */
    rb->Delete = intel_delete_renderbuffer;
