@@ -1072,6 +1072,21 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 		ps_iter_samples = ms->num_samples;
 	}
 
+	const struct VkPipelineRasterizationStateRasterizationOrderAMD *raster_order =
+		vk_find_struct_const(pCreateInfo->pRasterizationState->pNext, PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD);
+	if (raster_order && raster_order->rasterizationOrder == VK_RASTERIZATION_ORDER_RELAXED_AMD) {
+		/* Out-of-order rasterization is explicitly enabled by the
+		 * application.
+		 */
+		out_of_order_rast = true;
+	} else {
+		/* Determine if the driver can enable out-of-order
+		 * rasterization internally.
+		 */
+		out_of_order_rast =
+			radv_pipeline_out_of_order_rast(pipeline, blend, pCreateInfo);
+	}
+
 	ms->pa_sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
 	ms->pa_sc_aa_config = 0;
 	ms->db_eqaa = S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
@@ -1081,6 +1096,7 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	ms->pa_sc_mode_cntl_1 =
 		S_028A4C_WALK_FENCE_ENABLE(1) | //TODO linear dst fixes
 		S_028A4C_WALK_FENCE_SIZE(num_tile_pipes == 2 ? 2 : 3) |
+		S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(out_of_order_rast) |
 		S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7) |
 		/* always 1: */
 		S_028A4C_WALK_ALIGN8_PRIM_FITS_ST(1) |
@@ -1107,25 +1123,6 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 		ms->pa_sc_mode_cntl_1 |= S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1);
 		if (ps_iter_samples > 1)
 			pipeline->graphics.spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
-	}
-
-	const struct VkPipelineRasterizationStateRasterizationOrderAMD *raster_order =
-		vk_find_struct_const(pCreateInfo->pRasterizationState->pNext, PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD);
-	if (raster_order && raster_order->rasterizationOrder == VK_RASTERIZATION_ORDER_RELAXED_AMD) {
-		/* Out-of-order rasterization is explicitly enabled by the
-		 * application.
-		 */
-		out_of_order_rast = true;
-	} else {
-		/* Determine if the driver can enable out-of-order
-		 * rasterization internally.
-		 */
-		out_of_order_rast =
-			radv_pipeline_out_of_order_rast(pipeline, blend, pCreateInfo);
-	}
-
-	if (out_of_order_rast) {
-		ms->pa_sc_mode_cntl_1 |= S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(1);
 	}
 
 	if (vkms && vkms->pSampleMask) {
