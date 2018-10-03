@@ -1124,6 +1124,36 @@ static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 	return value;
 }
 
+static void si_emit_shader_ps(struct si_context *sctx)
+{
+	struct si_shader *shader = sctx->queued.named.ps->shader;
+	if (!shader)
+		return;
+
+	/* R_0286CC_SPI_PS_INPUT_ENA, R_0286D0_SPI_PS_INPUT_ADDR*/
+	radeon_opt_set_context_reg2(sctx, R_0286CC_SPI_PS_INPUT_ENA,
+				    SI_TRACKED_SPI_PS_INPUT_ENA,
+				    shader->ctx_reg.ps.spi_ps_input_ena,
+				    shader->ctx_reg.ps.spi_ps_input_addr);
+
+	radeon_opt_set_context_reg(sctx, R_0286E0_SPI_BARYC_CNTL,
+				   SI_TRACKED_SPI_BARYC_CNTL,
+				   shader->ctx_reg.ps.spi_baryc_cntl);
+	radeon_opt_set_context_reg(sctx, R_0286D8_SPI_PS_IN_CONTROL,
+				   SI_TRACKED_SPI_PS_IN_CONTROL,
+				   shader->ctx_reg.ps.spi_ps_in_control);
+
+	/* R_028710_SPI_SHADER_Z_FORMAT, R_028714_SPI_SHADER_COL_FORMAT */
+	radeon_opt_set_context_reg2(sctx, R_028710_SPI_SHADER_Z_FORMAT,
+				    SI_TRACKED_SPI_SHADER_Z_FORMAT,
+				    shader->ctx_reg.ps.spi_shader_z_format,
+				    shader->ctx_reg.ps.spi_shader_col_format);
+
+	radeon_opt_set_context_reg(sctx, R_02823C_CB_SHADER_MASK,
+				   SI_TRACKED_CB_SHADER_MASK,
+				   shader->ctx_reg.ps.cb_shader_mask);
+}
+
 static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
@@ -1181,6 +1211,8 @@ static void si_shader_ps(struct si_shader *shader)
 	if (!pm4)
 		return;
 
+	pm4->atom.emit = si_emit_shader_ps;
+
 	/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
 	 * Possible vaules:
 	 * 0 -> Position = pixel center
@@ -1223,24 +1255,20 @@ static void si_shader_ps(struct si_shader *shader)
 	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask)
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
-	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
-	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR,
-		       shader->config.spi_ps_input_addr);
+	shader->ctx_reg.ps.spi_ps_input_ena = input_ena;
+	shader->ctx_reg.ps.spi_ps_input_addr = shader->config.spi_ps_input_addr;
 
 	/* Set interpolation controls. */
 	spi_ps_in_control = S_0286D8_NUM_INTERP(si_get_ps_num_interp(shader));
 
-	/* Set registers. */
-	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
-	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
-
-	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT,
-		       ac_get_spi_shader_z_format(info->writes_z,
-						  info->writes_stencil,
-						  info->writes_samplemask));
-
-	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT, spi_shader_col_format);
-	si_pm4_set_reg(pm4, R_02823C_CB_SHADER_MASK, cb_shader_mask);
+	shader->ctx_reg.ps.spi_baryc_cntl = spi_baryc_cntl;
+	shader->ctx_reg.ps.spi_ps_in_control = spi_ps_in_control;
+	shader->ctx_reg.ps.spi_shader_z_format =
+			ac_get_spi_shader_z_format(info->writes_z,
+						   info->writes_stencil,
+						   info->writes_samplemask);
+	shader->ctx_reg.ps.spi_shader_col_format = spi_shader_col_format;
+	shader->ctx_reg.ps.cb_shader_mask = cb_shader_mask;
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
