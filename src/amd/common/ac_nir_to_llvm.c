@@ -1456,6 +1456,11 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 	LLVMValueRef src_data = get_src(ctx, instr->src[0]);
 	int elem_size_bytes = ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src_data)) / 8;
 	unsigned writemask = nir_intrinsic_write_mask(instr);
+	enum gl_access_qualifier access = nir_intrinsic_access(instr);
+	LLVMValueRef glc = ctx->ac.i1false;
+
+	if (access & (ACCESS_VOLATILE | ACCESS_COHERENT))
+		glc = ctx->ac.i1true;
 
 	LLVMValueRef rsrc = ctx->abi->load_ssbo(ctx->abi,
 				        get_src(ctx, instr->src[1]), true);
@@ -1512,7 +1517,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 				ctx->ac.i32_0,
 				LLVMConstInt(ctx->ac.i32, 2, false), // dfmt (= 16bit)
 				LLVMConstInt(ctx->ac.i32, 4, false), // nfmt (= uint)
-				ctx->ac.i1false,
+				glc,
 				ctx->ac.i1false,
 			};
 			ac_build_intrinsic(&ctx->ac, store_name,
@@ -1540,7 +1545,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 				rsrc,
 				ctx->ac.i32_0, /* vindex */
 				offset,
-				ctx->ac.i1false,  /* glc */
+				glc,
 				ctx->ac.i1false,  /* slc */
 			};
 			ac_build_intrinsic(&ctx->ac, store_name,
@@ -1613,6 +1618,11 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 	int elem_size_bytes = instr->dest.ssa.bit_size / 8;
 	int num_components = instr->num_components;
 	int num_bytes = num_components * elem_size_bytes;
+	enum gl_access_qualifier access = nir_intrinsic_access(instr);
+	LLVMValueRef glc = ctx->ac.i1false;
+
+	if (access & (ACCESS_VOLATILE | ACCESS_COHERENT))
+		glc = ctx->ac.i1true;
 
 	for (int i = 0; i < num_bytes; i += load_bytes) {
 		load_bytes = MIN2(num_bytes - i, 16);
@@ -1631,7 +1641,8 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 								   vindex,
 								   offset,
 								   ctx->ac.i32_0,
-								   immoffset);
+								   immoffset,
+								   glc);
 		} else {
 			switch (load_bytes) {
 			case 16:
@@ -1655,7 +1666,7 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 				rsrc,
 				vindex,
 				LLVMBuildAdd(ctx->ac.builder, offset, immoffset, ""),
-				ctx->ac.i1false,
+				glc,
 				ctx->ac.i1false,
 			};
 			results[idx] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
@@ -1709,7 +1720,8 @@ static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
 								 ctx->ac.i32_0,
 								 offset,
 								 ctx->ac.i32_0,
-								 LLVMConstInt(ctx->ac.i32, 2 * i, 0));
+								 LLVMConstInt(ctx->ac.i32, 2 * i, 0),
+								 ctx->ac.i1false);
 		}
 		ret = ac_build_gather_values(&ctx->ac, results, num_components);
 	} else {

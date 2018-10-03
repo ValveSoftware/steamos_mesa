@@ -274,7 +274,8 @@ ac_build_tbuffer_load_short(struct ac_llvm_context *ctx,
 			    LLVMValueRef vindex,
 			    LLVMValueRef voffset,
 				LLVMValueRef soffset,
-				LLVMValueRef immoffset);
+				LLVMValueRef immoffset,
+				LLVMValueRef glc);
 
 LLVMValueRef
 ac_get_thread_id(struct ac_llvm_context *ctx);

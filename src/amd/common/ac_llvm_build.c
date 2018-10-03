@@ -1179,7 +1179,8 @@ ac_build_tbuffer_load_short(struct ac_llvm_context *ctx,
 			    LLVMValueRef vindex,
 			    LLVMValueRef voffset,
 				LLVMValueRef soffset,
-				LLVMValueRef immoffset)
+				LLVMValueRef immoffset,
+				LLVMValueRef glc)
 {
 	const char *name = "llvm.amdgcn.tbuffer.load.i32";
 	LLVMTypeRef type = ctx->i32;
@@ -1191,7 +1192,7 @@ ac_build_tbuffer_load_short(struct ac_llvm_context *ctx,
 				immoffset,
 				LLVMConstInt(ctx->i32, V_008F0C_BUF_DATA_FORMAT_16, false),
 				LLVMConstInt(ctx->i32, V_008F0C_BUF_NUM_FORMAT_UINT, false),
-				ctx->i1false,
+				glc,
 				ctx->i1false,
 	};
 	LLVMValueRef res = ac_build_intrinsic(ctx, name, type, params, 9, 0);
