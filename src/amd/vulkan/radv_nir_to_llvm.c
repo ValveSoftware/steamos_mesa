@@ -2282,7 +2282,7 @@ si_llvm_init_export_args(struct radv_shader_context *ctx,
 		return;
 
 	bool is_16bit = ac_get_type_size(LLVMTypeOf(values[0])) == 2;
-	if (ctx->stage == MESA_SHADER_FRAGMENT && target >= V_008DFC_SQ_EXP_MRT) {
+	if (ctx->stage == MESA_SHADER_FRAGMENT) {
 		unsigned index = target - V_008DFC_SQ_EXP_MRT;
 		unsigned col_format = (ctx->options->key.fs.col_format >> (4 * index)) & 0xf;
 		bool is_int8 = (ctx->options->key.fs.is_int8 >> index) & 1;
