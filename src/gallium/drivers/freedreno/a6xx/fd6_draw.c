@@ -248,8 +248,7 @@ fd6_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	/* figure out whether we need to disable LRZ write for binning
 	 * pass using draw pass's fp:
 	 */
-	// TODO disable until lrz is wired up:
-	emit.no_lrz_write = true; // fp->writes_pos || fp->has_kill;
+	emit.no_lrz_write = fp->writes_pos || fp->has_kill;
 
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
@@ -290,12 +289,10 @@ static bool is_z32(enum pipe_format format)
 	}
 }
 
-#if 0
 static void
 fd6_clear_lrz(struct fd_batch *batch, struct fd_resource *zsbuf, double depth)
 {
 	struct fd_ringbuffer *ring;
-	uint32_t clear = util_pack_z(PIPE_FORMAT_Z16_UNORM, depth);
 
 	// TODO mid-frame clears (ie. app doing crazy stuff)??  Maybe worth
 	// splitting both clear and lrz clear out into their own rb's.  And
@@ -310,137 +307,105 @@ fd6_clear_lrz(struct fd_batch *batch, struct fd_resource *zsbuf, double depth)
 
 	ring = batch->lrz_clear;
 
-	OUT_WFI5(ring);
+	emit_marker6(ring, 7);
+	OUT_PKT7(ring, CP_SET_MARKER, 1);
+	OUT_RING(ring, A2XX_CP_SET_MARKER_0_MODE(RM6_BYPASS));
+	emit_marker6(ring, 7);
 
 	OUT_PKT4(ring, REG_A6XX_RB_CCU_CNTL, 1);
 	OUT_RING(ring, 0x10000000);
 
 	OUT_PKT4(ring, REG_A6XX_HLSQ_UPDATE_CNTL, 1);
-	OUT_RING(ring, 0x20fffff);
+	OUT_RING(ring, 0x7ffff);
 
-	OUT_PKT4(ring, REG_A6XX_GRAS_SU_CNTL, 1);
-	OUT_RING(ring, A6XX_GRAS_SU_CNTL_LINEHALFWIDTH(0.0));
+	emit_marker6(ring, 7);
+	OUT_PKT7(ring, CP_SET_MARKER, 1);
+	OUT_RING(ring, A2XX_CP_SET_MARKER_0_MODE(0xc));
+	emit_marker6(ring, 7);
 
-	OUT_PKT4(ring, REG_A6XX_GRAS_CNTL, 1);
+	OUT_PKT4(ring, REG_A6XX_RB_UNKNOWN_8C01, 1);
+	OUT_RING(ring, 0x0);
+
+	OUT_PKT4(ring, REG_A6XX_SP_PS_2D_SRC_INFO, 13);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
 	OUT_RING(ring, 0x00000000);
 
-	OUT_PKT4(ring, REG_A6XX_GRAS_CL_CNTL, 1);
-	OUT_RING(ring, 0x00000181);
+	OUT_PKT4(ring, REG_A6XX_SP_UNKNOWN_ACC0, 1);
+	OUT_RING(ring, 0x0000f410);
 
-	OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
-	OUT_RING(ring, 0x00000000);
+	OUT_PKT4(ring, REG_A6XX_GRAS_2D_BLIT_CNTL, 1);
+	OUT_RING(ring, A6XX_GRAS_2D_BLIT_CNTL_COLOR_FORMAT(RB6_R16_UNORM) |
+			0x4f00080);
 
-	OUT_PKT4(ring, REG_A6XX_RB_MRT_BUF_INFO(0), 5);
-	OUT_RING(ring, A6XX_RB_MRT_BUF_INFO_COLOR_FORMAT(RB5_R16_UNORM) |
-			A6XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(TILE6_LINEAR) |
-			A6XX_RB_MRT_BUF_INFO_COLOR_SWAP(WZYX));
-	OUT_RING(ring, A6XX_RB_MRT_PITCH(zsbuf->lrz_pitch * 2));
-	OUT_RING(ring, A6XX_RB_MRT_ARRAY_PITCH(fd_bo_size(zsbuf->lrz)));
-	OUT_RELOCW(ring, zsbuf->lrz, 0x1000, 0, 0);
+	OUT_PKT4(ring, REG_A6XX_RB_2D_BLIT_CNTL, 1);
+	OUT_RING(ring, A6XX_RB_2D_BLIT_CNTL_COLOR_FORMAT(RB6_R16_UNORM) |
+			0x4f00080);
 
-	OUT_PKT4(ring, REG_A6XX_RB_RENDER_CNTL, 1);
-	OUT_RING(ring, 0x00000000);
-
-	OUT_PKT4(ring, REG_A6XX_RB_DEST_MSAA_CNTL, 1);
-	OUT_RING(ring, A6XX_RB_DEST_MSAA_CNTL_SAMPLES(MSAA_ONE));
-
-	OUT_PKT4(ring, REG_A6XX_RB_BLIT_CNTL, 1);
-	OUT_RING(ring, A6XX_RB_BLIT_CNTL_BUF(BLIT_MRT0));
-
-	OUT_PKT4(ring, REG_A6XX_RB_CLEAR_CNTL, 1);
-	OUT_RING(ring, A6XX_RB_CLEAR_CNTL_FAST_CLEAR |
-			A6XX_RB_CLEAR_CNTL_MASK(0xf));
-
-	OUT_PKT4(ring, REG_A6XX_RB_CLEAR_COLOR_DW0, 1);
-	OUT_RING(ring, clear);  /* RB_CLEAR_COLOR_DW0 */
-
-	OUT_PKT4(ring, REG_A6XX_VSC_RESOLVE_CNTL, 2);
-	OUT_RING(ring, A6XX_VSC_RESOLVE_CNTL_X(zsbuf->lrz_width) |
-			 A6XX_VSC_RESOLVE_CNTL_Y(zsbuf->lrz_height));
-	OUT_RING(ring, 0x00000000);   // XXX UNKNOWN_0CDE
-
-	OUT_PKT4(ring, REG_A6XX_RB_CNTL, 1);
-	OUT_RING(ring, A6XX_RB_CNTL_BYPASS);
-
-	OUT_PKT4(ring, REG_A6XX_RB_RESOLVE_CNTL_1, 2);
-	OUT_RING(ring, A6XX_RB_RESOLVE_CNTL_1_X(0) |
-			A6XX_RB_RESOLVE_CNTL_1_Y(0));
-	OUT_RING(ring, A6XX_RB_RESOLVE_CNTL_2_X(zsbuf->lrz_width - 1) |
-			A6XX_RB_RESOLVE_CNTL_2_Y(zsbuf->lrz_height - 1));
-
-	fd6_emit_blit(batch->ctx, ring);
-}
-#endif
-
-#if 0
-clear_with_cp_blit()
-{
-	/* Clear with CP_BLIT */
-	WRITE(REG_A6XX_GRAS_2D_BLIT_CNTL, 0x10f43180);
-
-	OUT_PKT4(ring, REG_A6XX_SP_PS_2D_SRC_INFO, 7);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-
-	WRITE(0xacc0, 0xf181);
-	WRITE(0xacc0, 0xf181);
-
-	WRITE(REG_A6XX_GRAS_2D_BLIT_CNTL, 0x10f43180);
-	WRITE(REG_A6XX_RB_2D_BLIT_CNTL, 0x10f43180);
+	fd6_event_write(batch, ring, UNK_1D, true);
+	fd6_event_write(batch, ring, PC_CCU_INVALIDATE_COLOR, false);
 
 	OUT_PKT4(ring, REG_A6XX_RB_2D_SRC_SOLID_C0, 4);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0xff);
-	OUT_RING(ring, 0);
+	OUT_RING(ring, fui(depth));
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
 
-	DBG("%x %x %x %x\n", color->ui[0], color->ui[1], color->ui[2], color->ui[3]);
-
-	struct pipe_surface *psurf = pfb->cbufs[0];
-	struct fd_resource *rsc = fd_resource(psurf->texture);
-	struct fd_resource_slice *slice = fd_resource_slice(rsc, psurf->u.tex.level);
-
-	uint32_t offset = fd_resource_offset(rsc, psurf->u.tex.level,
-										 psurf->u.tex.first_layer);
-	uint32_t stride = slice->pitch * rsc->cpp;
-
-	enum a6xx_color_fmt format = fd6_pipe2color(pfmt);
 	OUT_PKT4(ring, REG_A6XX_RB_2D_DST_INFO, 9);
-	OUT_RING(ring,
-			 A6XX_RB_2D_DST_INFO_COLOR_FORMAT(format) |
-			 A6XX_RB_2D_DST_INFO_TILE_MODE(TILE6_LINEAR) |
-			 A6XX_RB_2D_DST_INFO_COLOR_SWAP(WXYZ));
-	OUT_RELOCW(ring, rsc->bo, offset, 0, 0);  /* RB_2D_DST_LO/HI */
-	OUT_RING(ring, A6XX_RB_2D_DST_SIZE_PITCH(stride));
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
+	OUT_RING(ring, A6XX_RB_2D_DST_INFO_COLOR_FORMAT(RB6_R16_UNORM) |
+			A6XX_RB_2D_DST_INFO_TILE_MODE(TILE6_LINEAR) |
+			A6XX_RB_2D_DST_INFO_COLOR_SWAP(WZYX));
+	OUT_RELOCW(ring, zsbuf->lrz, 0, 0, 0);
+	OUT_RING(ring, A6XX_RB_2D_DST_SIZE_PITCH(zsbuf->lrz_pitch * 2));
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
+	OUT_RING(ring, 0x00000000);
 
 	OUT_PKT4(ring, REG_A6XX_GRAS_2D_SRC_TL_X, 4);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
-	OUT_RING(ring, 0);
+	OUT_RING(ring, A6XX_GRAS_2D_SRC_TL_X_X(0));
+	OUT_RING(ring, A6XX_GRAS_2D_SRC_BR_X_X(0));
+	OUT_RING(ring, A6XX_GRAS_2D_SRC_TL_Y_Y(0));
+	OUT_RING(ring, A6XX_GRAS_2D_SRC_BR_Y_Y(0));
 
 	OUT_PKT4(ring, REG_A6XX_GRAS_2D_DST_TL, 2);
-	OUT_RING(ring,
-			 A6XX_GRAS_2D_DST_TL_X(ctx->batch->max_scissor.minx) |
-			 A6XX_GRAS_2D_DST_TL_Y(ctx->batch->max_scissor.miny));
-	OUT_RING(ring,
-			 A6XX_GRAS_2D_DST_BR_X(ctx->batch->max_scissor.maxx) |
-			 A6XX_GRAS_2D_DST_BR_Y(ctx->batch->max_scissor.maxy));
+	OUT_RING(ring, A6XX_GRAS_2D_DST_TL_X(0) |
+			A6XX_GRAS_2D_DST_TL_Y(0));
+	OUT_RING(ring, A6XX_GRAS_2D_DST_BR_X(zsbuf->lrz_width - 1) |
+			A6XX_GRAS_2D_DST_BR_Y(zsbuf->lrz_height - 1));
+
+	fd6_event_write(batch, ring, 0x3f, false);
+
+	OUT_WFI5(ring);
+
+	OUT_PKT4(ring, REG_A6XX_RB_UNKNOWN_8E04, 1);
+	OUT_RING(ring, 0x1000000);
 
 	OUT_PKT7(ring, CP_BLIT, 1);
 	OUT_RING(ring, CP_BLIT_0_OP(BLIT_OP_SCALE));
+
+	OUT_WFI5(ring);
+
+	OUT_PKT4(ring, REG_A6XX_RB_UNKNOWN_8E04, 1);
+	OUT_RING(ring, 0x0);
+
+	fd6_event_write(batch, ring, UNK_1D, true);
+	fd6_event_write(batch, ring, FACENESS_FLUSH, true);
+	fd6_event_write(batch, ring, CACHE_FLUSH_TS, true);
+
+	fd6_cache_flush(batch, ring);
 }
-#endif
 
 static bool
 fd6_clear(struct fd_context *ctx, unsigned buffers,
@@ -567,7 +532,6 @@ fd6_clear(struct fd_context *ctx, unsigned buffers,
 
 		fd6_emit_blit(ctx->batch, ring);
 
-#if 0
 		if (pfb->zsbuf && (buffers & PIPE_CLEAR_DEPTH)) {
 			struct fd_resource *zsbuf = fd_resource(pfb->zsbuf->texture);
 			if (zsbuf->lrz) {
@@ -575,7 +539,6 @@ fd6_clear(struct fd_context *ctx, unsigned buffers,
 				fd6_clear_lrz(ctx->batch, zsbuf, depth);
 			}
 		}
-#endif
 	}
 
 	return true;

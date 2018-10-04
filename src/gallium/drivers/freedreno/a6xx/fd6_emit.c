@@ -632,20 +632,25 @@ fd6_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_BLEND | FD_DIRTY_PROG)) {
-		struct fd6_blend_stateobj *blend = fd6_blend_stateobj(ctx->blend);
 		struct fd6_zsa_stateobj *zsa = fd6_zsa_stateobj(ctx->zsa);
 
 		if (pfb->zsbuf) {
 			struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
 			uint32_t gras_lrz_cntl = zsa->gras_lrz_cntl;
+			uint32_t rb_lrz_cntl = zsa->rb_lrz_cntl;
 
-			if (emit->no_lrz_write || !rsc->lrz || !rsc->lrz_valid)
+			if (emit->no_lrz_write || !rsc->lrz || !rsc->lrz_valid) {
 				gras_lrz_cntl = 0;
-			else if (emit->key.binning_pass && blend->lrz_write && zsa->lrz_write)
+				rb_lrz_cntl = 0;
+			} else if (emit->key.binning_pass && zsa->lrz_write) {
 				gras_lrz_cntl |= A6XX_GRAS_LRZ_CNTL_LRZ_WRITE;
+			}
 
 			OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
 			OUT_RING(ring, gras_lrz_cntl);
+
+			OUT_PKT4(ring, REG_A6XX_RB_LRZ_CNTL, 1);
+			OUT_RING(ring, rb_lrz_cntl);
 		}
 	}
 
@@ -1157,6 +1162,12 @@ t7              opcode: CP_WAIT_FOR_IDLE (26) (1 dwords)
 	OUT_RING(ring, 0x00000000);
 
 	OUT_PKT4(ring, REG_A6XX_SP_GS_CTRL_REG0, 1);
+	OUT_RING(ring, 0x00000000);
+
+	OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
+	OUT_RING(ring, 0x00000000);
+
+	OUT_PKT4(ring, REG_A6XX_RB_LRZ_CNTL, 1);
 	OUT_RING(ring, 0x00000000);
 }
 

@@ -153,17 +153,8 @@ fd6_emit_render_cntl(struct fd_context *ctx, bool blit, bool binning)
 static inline void
 fd6_emit_lrz_flush(struct fd_ringbuffer *ring)
 {
-	/* TODO I think the extra writes to GRAS_LRZ_CNTL are probably
-	 * a workaround and not needed on all a5xx.
-	 */
-	OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
-	OUT_RING(ring, A6XX_GRAS_LRZ_CNTL_ENABLE);
-
 	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
 	OUT_RING(ring, LRZ_FLUSH);
-
-	OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
-	OUT_RING(ring, 0x0);
 }
 
 static inline enum a6xx_state_block

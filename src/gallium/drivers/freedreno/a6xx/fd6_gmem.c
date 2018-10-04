@@ -159,9 +159,12 @@ emit_zs(struct fd_ringbuffer *ring, struct pipe_surface *zsbuf,
 
 		if (rsc->lrz) {
 			OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_BUFFER_BASE_LO, 5);
-			OUT_RELOCW(ring, rsc->lrz, 0x1000, 0, 0);
+			OUT_RELOCW(ring, rsc->lrz, 0, 0, 0);
 			OUT_RING(ring, A6XX_GRAS_LRZ_BUFFER_PITCH_PITCH(rsc->lrz_pitch));
-			OUT_RELOCW(ring, rsc->lrz, 0, 0, 0); /* GRAS_LRZ_FAST_CLEAR_BUFFER_BASE_LO/HI */
+			//OUT_RELOCW(ring, rsc->lrz, 0, 0, 0); /* GRAS_LRZ_FAST_CLEAR_BUFFER_BASE_LO/HI */
+			// XXX a6xx seems to use a different buffer here.. not sure what for..
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
 		} else {
 			OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_BUFFER_BASE_LO, 5);
 			OUT_RING(ring, 0x00000000);
@@ -441,10 +444,10 @@ fd6_emit_tile_init(struct fd_batch *batch)
 
 	fd6_emit_restore(batch, ring);
 
+	fd6_emit_lrz_flush(ring);
+
 	if (batch->lrz_clear)
 		ctx->emit_ib(ring, batch->lrz_clear);
-
-	fd6_emit_lrz_flush(ring);
 
 	fd6_cache_flush(batch, ring);
 
@@ -468,7 +471,6 @@ fd6_emit_tile_init(struct fd_batch *batch)
 				A6XX_RB_BIN_CONTROL_BINNING_PASS | 0x6000000);
 		update_render_cntl(batch, true);
 		emit_binning_pass(batch);
-		fd6_emit_lrz_flush(ring);
 		patch_draws(batch, USE_VISIBILITY);
 
 		set_bin_size(ring, gmem->bin_w, gmem->bin_h,
@@ -790,6 +792,9 @@ static void
 fd6_emit_tile_fini(struct fd_batch *batch)
 {
 	struct fd_ringbuffer *ring = batch->gmem;
+
+	OUT_PKT4(ring, REG_A6XX_GRAS_LRZ_CNTL, 1);
+	OUT_RING(ring, A6XX_GRAS_LRZ_CNTL_ENABLE | A6XX_GRAS_LRZ_CNTL_UNK3);
 
 	fd6_emit_lrz_flush(ring);
 

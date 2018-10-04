@@ -43,6 +43,7 @@ struct fd6_zsa_stateobj {
 	uint32_t rb_stencilmask;
 	uint32_t rb_stencilwrmask;
 	uint32_t gras_lrz_cntl;
+	uint32_t rb_lrz_cntl;
 	bool lrz_write;
 };
 

@@ -48,7 +48,6 @@ struct fd6_blend_stateobj {
 	} rb_mrt[A6XX_MAX_RENDER_TARGETS];
 	uint32_t rb_blend_cntl;
 	uint32_t sp_blend_cntl;
-	bool lrz_write;
 };
 
 static inline struct fd6_blend_stateobj *

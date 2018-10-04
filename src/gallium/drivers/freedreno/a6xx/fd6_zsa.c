@@ -50,11 +50,13 @@ fd6_zsa_state_create(struct pipe_context *pctx,
 	case PIPE_FUNC_LESS:
 	case PIPE_FUNC_LEQUAL:
 		so->gras_lrz_cntl = A6XX_GRAS_LRZ_CNTL_ENABLE;
+		so->rb_lrz_cntl = A6XX_RB_LRZ_CNTL_ENABLE;
 		break;
 
 	case PIPE_FUNC_GREATER:
 	case PIPE_FUNC_GEQUAL:
 		so->gras_lrz_cntl = A6XX_GRAS_LRZ_CNTL_ENABLE | A6XX_GRAS_LRZ_CNTL_GREATER;
+		so->rb_lrz_cntl = A6XX_RB_LRZ_CNTL_ENABLE;
 		break;
 
 	default:
@@ -63,8 +65,11 @@ fd6_zsa_state_create(struct pipe_context *pctx,
 		break;
 	}
 
-	if (!(cso->stencil->enabled || cso->alpha.enabled || !cso->depth.writemask))
+	if (cso->depth.writemask) {
+		if (cso->depth.enabled)
+			so->gras_lrz_cntl |= A6XX_GRAS_LRZ_CNTL_UNK4;
 		so->lrz_write = true;
+	}
 
 	so->rb_depth_cntl |=
 		A6XX_RB_DEPTH_CNTL_ZFUNC(cso->depth.func); /* maps 1:1 */
