@@ -1358,6 +1358,7 @@ anv_bo_cache_import(struct anv_device *device,
       if ((new_flags & EXEC_OBJECT_PINNED) &&
           (bo->bo.flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS) !=
           (bo_flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS)) {
+         pthread_mutex_unlock(&cache->mutex);
          return vk_errorf(device->instance, NULL,
                           VK_ERROR_INVALID_EXTERNAL_HANDLE,
                           "The same BO was imported on two different heaps");
