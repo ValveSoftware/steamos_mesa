@@ -848,7 +848,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 		 (fd_mesa_debug & FD_DBG_LRZ) && has_depth(format)) {
 		const uint32_t flags = DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
 				DRM_FREEDRENO_GEM_TYPE_KMEM; /* TODO */
-		unsigned lrz_pitch  = align(DIV_ROUND_UP(tmpl->width0, 8), 32);
+		unsigned lrz_pitch  = align(DIV_ROUND_UP(tmpl->width0, 8), 64);
 		unsigned lrz_height = DIV_ROUND_UP(tmpl->height0, 8);
 		unsigned size = lrz_pitch * lrz_height * 2;
 
