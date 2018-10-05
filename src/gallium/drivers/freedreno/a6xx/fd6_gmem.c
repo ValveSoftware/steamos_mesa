@@ -446,8 +446,7 @@ fd6_emit_tile_init(struct fd_batch *batch)
 
 	fd6_emit_lrz_flush(ring);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, 0x31); /* vertex cache invalidate? */
+	fd6_cache_flush(batch, ring);
 
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
@@ -623,7 +622,7 @@ emit_blit(struct fd_batch *batch, uint32_t base,
 	OUT_PKT4(ring, REG_A6XX_RB_BLIT_BASE_GMEM, 1);
 	OUT_RING(ring, base);
 
-	fd6_emit_blit(batch->ctx, ring);
+	fd6_emit_blit(batch, ring);
 }
 
 static void
@@ -794,7 +793,7 @@ fd6_emit_tile_fini(struct fd_batch *batch)
 
 	fd6_emit_lrz_flush(ring);
 
-	fd6_cache_flush(batch, ring);
+	fd6_event_write(batch, ring, CACHE_FLUSH_TS, true);
 }
 
 static void
@@ -815,11 +814,8 @@ fd6_emit_sysmem_prep(struct fd_batch *batch)
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
 	OUT_RING(ring, 0x0);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, PC_CCU_INVALIDATE_COLOR);
-
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, 0x31); /* vertex cache invalidate? */
+	fd6_event_write(batch, ring, PC_CCU_INVALIDATE_COLOR, false);
+	fd6_cache_flush(batch, ring);
 
 #if 0
 	OUT_PKT4(ring, REG_A6XX_PC_POWER_CNTL, 1);
@@ -856,7 +852,6 @@ fd6_emit_sysmem_prep(struct fd_batch *batch)
 static void
 fd6_emit_sysmem_fini(struct fd_batch *batch)
 {
-	struct fd6_context *fd6_ctx = fd6_context(batch->ctx);
 	struct fd_ringbuffer *ring = batch->gmem;
 
 	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
@@ -864,10 +859,7 @@ fd6_emit_sysmem_fini(struct fd_batch *batch)
 
 	fd6_emit_lrz_flush(ring);
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
-	OUT_RING(ring, UNK_1D);
-	OUT_RELOCW(ring, fd6_ctx->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
-	OUT_RING(ring, 0x00000000);
+	fd6_event_write(batch, ring, UNK_1D, true);
 }
 
 void

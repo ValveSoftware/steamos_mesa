@@ -71,6 +71,7 @@ struct fd6_context {
 	 * synchronize when the CP is running far ahead)
 	 */
 	struct fd_bo *blit_mem;
+	uint32_t seqno;
 
 	struct u_upload_mgr *border_color_uploader;
 	struct pipe_resource *border_color_buf;

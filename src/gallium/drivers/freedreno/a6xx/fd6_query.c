@@ -31,6 +31,7 @@
 #include "freedreno_resource.h"
 
 #include "fd6_context.h"
+#include "fd6_emit.h"
 #include "fd6_format.h"
 #include "fd6_query.h"
 
@@ -63,9 +64,7 @@ occlusion_resume(struct fd_acc_query *aq, struct fd_batch *batch)
 	OUT_PKT4(ring, REG_A6XX_RB_SAMPLE_COUNT_ADDR_LO, 2);
 	OUT_RELOCW(ring, query_sample(aq, start));
 
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, ZPASS_DONE);
-	fd_reset_wfi(batch);
+	fd6_event_write(batch, ring, ZPASS_DONE, false);
 
 	fd6_context(batch->ctx)->samples_passed_queries++;
 }

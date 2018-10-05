@@ -268,8 +268,7 @@ fd6_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 
 		for (unsigned i = 0; i < PIPE_MAX_SO_BUFFERS; i++) {
 			if (emit.streamout_mask & (1 << i)) {
-				OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-				OUT_RING(ring, FLUSH_SO_0 + i);
+				fd6_event_write(ctx->batch, ring, FLUSH_SO_0 + i, false);
 			}
 		}
 	}
@@ -532,7 +531,7 @@ fd6_clear(struct fd_context *ctx, unsigned buffers,
 			OUT_RING(ring, uc.ui[2]);
 			OUT_RING(ring, uc.ui[3]);
 
-			fd6_emit_blit(ctx, ring);
+			fd6_emit_blit(ctx->batch, ring);
 		}
 	}
 
@@ -566,7 +565,7 @@ fd6_clear(struct fd_context *ctx, unsigned buffers,
 		OUT_PKT4(ring, REG_A6XX_RB_BLIT_CLEAR_COLOR_DW0, 1);
 		OUT_RING(ring, clear);
 
-		fd6_emit_blit(ctx, ring);
+		fd6_emit_blit(ctx->batch, ring);
 
 #if 0
 		if (pfb->zsbuf && (buffers & PIPE_CLEAR_DEPTH)) {

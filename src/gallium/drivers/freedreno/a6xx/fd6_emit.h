@@ -92,30 +92,31 @@ fd6_emit_get_fp(struct fd6_emit *emit)
 }
 
 static inline void
-fd6_cache_flush(struct fd_batch *batch, struct fd_ringbuffer *ring)
+fd6_event_write(struct fd_batch *batch, struct fd_ringbuffer *ring,
+		enum vgt_event_type evt, bool timestamp)
 {
 	fd_reset_wfi(batch);
-#if 0
-	OUT_PKT4(ring, REG_A6XX_UCHE_CACHE_INVALIDATE_MIN_LO, 5);
-	OUT_RING(ring, 0x00000000);   /* UCHE_CACHE_INVALIDATE_MIN_LO */
-	OUT_RING(ring, 0x00000000);   /* UCHE_CACHE_INVALIDATE_MIN_HI */
-	OUT_RING(ring, 0x00000000);   /* UCHE_CACHE_INVALIDATE_MAX_LO */
-	OUT_RING(ring, 0x00000000);   /* UCHE_CACHE_INVALIDATE_MAX_HI */
-	OUT_RING(ring, 0x00000012);   /* UCHE_CACHE_INVALIDATE */
-	fd_wfi(batch, ring);
-#else
-	DBG("fd6_cache_flush stub");
-#endif
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, timestamp ? 4 : 1);
+	OUT_RING(ring, CP_EVENT_WRITE_0_EVENT(evt));
+	if (timestamp) {
+		struct fd6_context *fd6_ctx = fd6_context(batch->ctx);
+		OUT_RELOCW(ring, fd6_ctx->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
+		OUT_RING(ring, ++fd6_ctx->seqno);
+	}
 }
 
 static inline void
-fd6_emit_blit(struct fd_context *ctx, struct fd_ringbuffer *ring)
+fd6_cache_flush(struct fd_batch *batch, struct fd_ringbuffer *ring)
+{
+	fd6_event_write(batch, ring, 0x31, false);
+}
+
+static inline void
+fd6_emit_blit(struct fd_batch *batch, struct fd_ringbuffer *ring)
 {
 	emit_marker6(ring, 7);
-
-	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
-	OUT_RING(ring, CP_EVENT_WRITE_0_EVENT(BLIT));
-
+	fd6_event_write(batch, ring, BLIT, false);
 	emit_marker6(ring, 7);
 }
 
