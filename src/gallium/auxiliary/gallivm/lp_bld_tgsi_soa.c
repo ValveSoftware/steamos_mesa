@@ -2037,7 +2037,7 @@ lp_build_lod_property(
       lod_property = LP_SAMPLER_LOD_SCALAR;
    }
    else if (bld_base->info->processor == PIPE_SHADER_FRAGMENT) {
-      if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
+      if (gallivm_perf & GALLIVM_PERF_NO_QUAD_LOD) {
          lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
       }
       else {
@@ -2225,7 +2225,7 @@ emit_tex( struct lp_build_tgsi_soa_context *bld,
        * cases exist in practice.
        */
       if (bld->bld_base.info->processor == PIPE_SHADER_FRAGMENT) {
-         if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
+         if (gallivm_perf & GALLIVM_PERF_NO_QUAD_LOD) {
             lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
          }
          else {
@@ -2394,7 +2394,7 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
        * cases exist in practice.
        */
       if (bld->bld_base.info->processor == PIPE_SHADER_FRAGMENT) {
-         if (gallivm_debug & GALLIVM_DEBUG_NO_QUAD_LOD) {
+         if (gallivm_perf & GALLIVM_PERF_NO_QUAD_LOD) {
             lod_property = LP_SAMPLER_LOD_PER_ELEMENT;
          }
          else {
