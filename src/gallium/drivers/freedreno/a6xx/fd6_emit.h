@@ -65,13 +65,6 @@ struct fd6_emit {
 	unsigned streamout_mask;
 };
 
-static inline enum a6xx_color_fmt fd6_emit_format(struct pipe_surface *surf)
-{
-	if (!surf)
-		return 0;
-	return fd6_pipe2color(surf->format);
-}
-
 static inline const struct ir3_shader_variant *
 fd6_emit_get_vp(struct fd6_emit *emit)
 {

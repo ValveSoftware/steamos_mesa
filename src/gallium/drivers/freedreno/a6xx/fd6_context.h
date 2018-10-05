@@ -115,18 +115,6 @@ fd6_context(struct fd_context *ctx)
 struct pipe_context *
 fd6_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);
 
-/* helper for places where we need to stall CP to wait for previous draws: */
-static inline void
-fd6_emit_flush(struct fd_context *ctx, struct fd_ringbuffer *ring)
-{
-	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
-	OUT_RING(ring, CACHE_FLUSH_TS);
-	OUT_RELOCW(ring, fd6_context(ctx)->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
-	OUT_RING(ring, 0x00000000);
-
-	OUT_WFI5(ring);
-}
-
 static inline void
 emit_marker6(struct fd_ringbuffer *ring, int scratch_idx)
 {
