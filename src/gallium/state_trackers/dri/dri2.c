@@ -101,6 +101,10 @@ static int convert_fourcc(int format, int *dri_components_p)
 {
    int dri_components;
    switch(format) {
+   case __DRI_IMAGE_FOURCC_ARGB1555:
+      format = __DRI_IMAGE_FORMAT_ARGB1555;
+      dri_components = __DRI_IMAGE_COMPONENTS_RGBA;
+      break;
    case __DRI_IMAGE_FOURCC_RGB565:
       format = __DRI_IMAGE_FORMAT_RGB565;
       dri_components = __DRI_IMAGE_COMPONENTS_RGB;
@@ -187,6 +191,9 @@ static int convert_fourcc(int format, int *dri_components_p)
 static int convert_to_fourcc(int format)
 {
    switch(format) {
+   case __DRI_IMAGE_FORMAT_ARGB1555:
+      format = __DRI_IMAGE_FOURCC_ARGB1555;
+      break;
    case __DRI_IMAGE_FORMAT_RGB565:
       format = __DRI_IMAGE_FOURCC_RGB565;
       break;
@@ -231,6 +238,9 @@ static enum pipe_format dri2_format_to_pipe_format (int format)
    enum pipe_format pf;
 
    switch (format) {
+   case __DRI_IMAGE_FORMAT_ARGB1555:
+      pf = PIPE_FORMAT_B5G5R5A1_UNORM;
+      break;
    case __DRI_IMAGE_FORMAT_RGB565:
       pf = PIPE_FORMAT_B5G6R5_UNORM;
       break;
@@ -523,6 +533,9 @@ dri_image_drawable_get_buffers(struct dri_drawable *drawable,
       }
 
       switch (pf) {
+      case PIPE_FORMAT_B5G5R5A1_UNORM:
+         image_format = __DRI_IMAGE_FORMAT_ARGB1555;
+         break;
       case PIPE_FORMAT_B5G6R5_UNORM:
          image_format = __DRI_IMAGE_FORMAT_RGB565;
          break;
