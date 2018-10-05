@@ -50,7 +50,7 @@ libglapi = shared_library(
   install : true,
 )
 
-if with_tests
+if with_any_opengl and with_tests
   test(
     'shared-glapi-test',
     executable(
