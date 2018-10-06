@@ -42,22 +42,16 @@
 #include <limits.h>
 #include <assert.h>
 
-/* uint_t and sint_t can be replaced by different integer types and the code
- * will work as-is. The only requirement is that sizeof(uintN) == sizeof(intN).
- */
-
 struct util_fast_udiv_info
-util_compute_fast_udiv_info(uint_t D, unsigned num_bits)
+util_compute_fast_udiv_info(uint64_t D, unsigned num_bits, unsigned UINT_BITS)
 {
-   /* The numerator must fit in a uint_t */
-   assert(num_bits > 0 && num_bits <= sizeof(uint_t) * CHAR_BIT);
+   /* The numerator must fit in a uint64_t */
+   assert(num_bits > 0 && num_bits <= UINT_BITS);
    assert(D != 0);
 
    /* The eventual result */
    struct util_fast_udiv_info result;
 
-   /* Bits in a uint_t */
-   const unsigned UINT_BITS = sizeof(uint_t) * CHAR_BIT;
 
    /* The extra shift implicit in the difference between UINT_BITS and num_bits
     */
@@ -66,23 +60,23 @@ util_compute_fast_udiv_info(uint_t D, unsigned num_bits)
    /* The initial power of 2 is one less than the first one that can possibly
     * work.
     */
-   const uint_t initial_power_of_2 = (uint_t)1 << (UINT_BITS-1);
+   const uint64_t initial_power_of_2 = (uint64_t)1 << (UINT_BITS-1);
 
    /* The remainder and quotient of our power of 2 divided by d */
-   uint_t quotient = initial_power_of_2 / D;
-   uint_t remainder = initial_power_of_2 % D;
+   uint64_t quotient = initial_power_of_2 / D;
+   uint64_t remainder = initial_power_of_2 % D;
 
    /* ceil(log_2 D) */
    unsigned ceil_log_2_D;
 
    /* The magic info for the variant "round down" algorithm */
-   uint_t down_multiplier = 0;
+   uint64_t down_multiplier = 0;
    unsigned down_exponent = 0;
    int has_magic_down = 0;
 
    /* Compute ceil(log_2 D) */
    ceil_log_2_D = 0;
-   uint_t tmp;
+   uint64_t tmp;
    for (tmp = D; tmp > 0; tmp >>= 1)
       ceil_log_2_D += 1;
 
@@ -110,14 +104,14 @@ util_compute_fast_udiv_info(uint_t D, unsigned num_bits)
        * so the check for >= ceil_log_2_D is critical.
        */
       if ((exponent + extra_shift >= ceil_log_2_D) ||
-          (D - remainder) <= ((uint_t)1 << (exponent + extra_shift)))
+          (D - remainder) <= ((uint64_t)1 << (exponent + extra_shift)))
          break;
 
       /* Set magic_down if we have not set it yet and this exponent works for
        * the round_down algorithm
        */
       if (!has_magic_down &&
-          remainder <= ((uint_t)1 << (exponent + extra_shift))) {
+          remainder <= ((uint64_t)1 << (exponent + extra_shift))) {
          has_magic_down = 1;
          down_multiplier = quotient;
          down_exponent = exponent;
@@ -140,12 +134,13 @@ util_compute_fast_udiv_info(uint_t D, unsigned num_bits)
    } else {
       /* Even divisor, so use a prefix-shifted dividend */
       unsigned pre_shift = 0;
-      uint_t shifted_D = D;
+      uint64_t shifted_D = D;
       while ((shifted_D & 1) == 0) {
          shifted_D >>= 1;
          pre_shift += 1;
       }
-      result = util_compute_fast_udiv_info(shifted_D, num_bits - pre_shift);
+      result = util_compute_fast_udiv_info(shifted_D, num_bits - pre_shift,
+                                           UINT_BITS);
       /* expect no increment or pre_shift in this path */
       assert(result.increment == 0 && result.pre_shift == 0);
       result.pre_shift = pre_shift;
@@ -153,8 +148,14 @@ util_compute_fast_udiv_info(uint_t D, unsigned num_bits)
    return result;
 }
 
+static inline int64_t
+sign_extend(int64_t x, unsigned SINT_BITS)
+{
+   return (x << (64 - SINT_BITS)) >> (64 - SINT_BITS);
+}
+
 struct util_fast_sdiv_info
-util_compute_fast_sdiv_info(sint_t D)
+util_compute_fast_sdiv_info(int64_t D, unsigned SINT_BITS)
 {
    /* D must not be zero. */
    assert(D != 0);
@@ -164,33 +165,30 @@ util_compute_fast_sdiv_info(sint_t D)
    /* Our result */
    struct util_fast_sdiv_info result;
 
-   /* Bits in an sint_t */
-   const unsigned SINT_BITS = sizeof(sint_t) * CHAR_BIT;
-
    /* Absolute value of D (we know D is not the most negative value since
     * that's a power of 2)
     */
-   const uint_t abs_d = (D < 0 ? -D : D);
+   const uint64_t abs_d = (D < 0 ? -D : D);
 
    /* The initial power of 2 is one less than the first one that can possibly
     * work */
    /* "two31" in Warren */
    unsigned exponent = SINT_BITS - 1;
-   const uint_t initial_power_of_2 = (uint_t)1 << exponent;
+   const uint64_t initial_power_of_2 = (uint64_t)1 << exponent;
 
    /* Compute the absolute value of our "test numerator,"
     * which is the largest dividend whose remainder with d is d-1.
     * This is called anc in Warren.
     */
-   const uint_t tmp = initial_power_of_2 + (D < 0);
-   const uint_t abs_test_numer = tmp - 1 - tmp % abs_d;
+   const uint64_t tmp = initial_power_of_2 + (D < 0);
+   const uint64_t abs_test_numer = tmp - 1 - tmp % abs_d;
 
    /* Initialize our quotients and remainders (q1, r1, q2, r2 in Warren) */
-   uint_t quotient1 = initial_power_of_2 / abs_test_numer;
-   uint_t remainder1 = initial_power_of_2 % abs_test_numer;
-   uint_t quotient2 = initial_power_of_2 / abs_d;
-   uint_t remainder2 = initial_power_of_2 % abs_d;
-   uint_t delta;
+   uint64_t quotient1 = initial_power_of_2 / abs_test_numer;
+   uint64_t remainder1 = initial_power_of_2 % abs_test_numer;
+   uint64_t quotient2 = initial_power_of_2 / abs_d;
+   uint64_t remainder2 = initial_power_of_2 % abs_d;
+   uint64_t delta;
 
    /* Begin our loop */
    do {
@@ -217,7 +215,7 @@ util_compute_fast_sdiv_info(sint_t D)
       delta = abs_d - remainder2;
    } while (quotient1 < delta || (quotient1 == delta && remainder1 == 0));
 
-   result.multiplier = quotient2 + 1;
+   result.multiplier = sign_extend(quotient2 + 1, SINT_BITS);
    if (D < 0) result.multiplier = -result.multiplier;
    result.shift = exponent - SINT_BITS;
    return result;

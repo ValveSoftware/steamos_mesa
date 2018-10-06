@@ -36,10 +36,6 @@
 extern "C" {
 #endif
 
-/* You can set these to different types to get different precision. */
-typedef int32_t sint_t;
-typedef uint32_t uint_t;
-
 /* Computes "magic info" for performing signed division by a fixed integer D.
  * The type 'sint_t' is assumed to be defined as a signed integer type large
  * enough to hold both the dividend and the divisor.
@@ -68,19 +64,19 @@ typedef uint32_t uint_t;
  */
 
 struct util_fast_sdiv_info {
-   sint_t multiplier; /* the "magic number" multiplier */
+   int64_t multiplier; /* the "magic number" multiplier */
    unsigned shift; /* shift for the dividend after multiplying */
 };
 
 struct util_fast_sdiv_info
-util_compute_fast_sdiv_info(sint_t D);
+util_compute_fast_sdiv_info(int64_t D, unsigned SINT_BITS);
 
 /* Computes "magic info" for performing unsigned division by a fixed positive
- * integer D. The type 'uint_t' is assumed to be defined as an unsigned
- * integer type large enough to hold both the dividend and the divisor.
- * num_bits can be set appropriately if n is known to be smaller than
- * the largest uint_t; if this is not known then pass
- * "(sizeof(uint_t) * CHAR_BIT)" for num_bits.
+ * integer D.  UINT_BITS is the bit size at which the final "magic"
+ * calculation will be performed; it is assumed to be large enough to hold
+ * both the dividand and the divisor.  num_bits can be set appropriately if n
+ * is known to be smaller than calc_bits; if this is not known then UINT_BITS
+ * for num_bits.
  *
  * Assume we have a hardware register of width UINT_BITS, a known constant D
  * which is not zero and not a power of 2, and a variable n of width num_bits
@@ -120,7 +116,7 @@ util_compute_fast_sdiv_info(sint_t D);
  */
 
 struct util_fast_udiv_info {
-   uint_t multiplier; /* the "magic number" multiplier */
+   uint64_t multiplier; /* the "magic number" multiplier */
    unsigned pre_shift; /* shift for the dividend before multiplying */
    unsigned post_shift; /* shift for the dividend after multiplying */
    int increment; /* 0 or 1; if set then increment the numerator, using one of
@@ -128,7 +124,7 @@ struct util_fast_udiv_info {
 };
 
 struct util_fast_udiv_info
-util_compute_fast_udiv_info(uint_t D, unsigned num_bits);
+util_compute_fast_udiv_info(uint64_t D, unsigned num_bits, unsigned UINT_BITS);
 
 /* Below are possible options for dividing by a uniform in a shader where
  * the divisor is constant but not known at compile time.
