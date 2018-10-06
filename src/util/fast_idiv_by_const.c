@@ -52,6 +52,27 @@ util_compute_fast_udiv_info(uint64_t D, unsigned num_bits, unsigned UINT_BITS)
    /* The eventual result */
    struct util_fast_udiv_info result;
 
+   if (util_is_power_of_two_or_zero64(D)) {
+      unsigned div_shift = util_logbase2_64(D);
+
+      if (div_shift) {
+         /* Dividing by a power of two. */
+         result.multiplier = 1ull << (UINT_BITS - div_shift);
+         result.pre_shift = 0;
+         result.post_shift = 0;
+         result.increment = 0;
+         return result;
+      } else {
+         /* Dividing by 1. */
+         /* Assuming: floor((num + 1) * (2^32 - 1) / 2^32) = num */
+         result.multiplier = UINT_BITS == 64 ? UINT64_MAX :
+                                               (1ull << UINT_BITS) - 1;
+         result.pre_shift = 0;
+         result.post_shift = 0;
+         result.increment = 1;
+         return result;
+      }
+   }
 
    /* The extra shift implicit in the difference between UINT_BITS and num_bits
     */

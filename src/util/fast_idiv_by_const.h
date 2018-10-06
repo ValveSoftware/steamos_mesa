@@ -98,8 +98,8 @@ util_compute_fast_sdiv_info(int64_t D, unsigned SINT_BITS);
  *   emit("result >>>= UINT_BITS")
  *   if m.post_shift > 0: emit("result >>>= m.post_shift")
  *
- * The shifts by UINT_BITS may be "free" if the high half of the full multiply
- * is put in a separate register.
+ * This second version works even if D is 1.  The shifts by UINT_BITS may be
+ * "free" if the high half of the full multiply is put in a separate register.
  *
  * saturated_increment(n) means "increment n unless it would wrap to 0," i.e.
  *   if n == (1 << UINT_BITS)-1: result = n
