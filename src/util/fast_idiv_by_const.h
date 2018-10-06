@@ -130,6 +130,50 @@ struct util_fast_udiv_info {
 struct util_fast_udiv_info
 util_compute_fast_udiv_info(uint_t D, unsigned num_bits);
 
+/* Below are possible options for dividing by a uniform in a shader where
+ * the divisor is constant but not known at compile time.
+ */
+
+/* Full version. */
+static inline uint32_t
+util_fast_udiv32(uint32_t n, struct util_fast_udiv_info info)
+{
+   n = n >> info.pre_shift;
+   /* For non-power-of-two divisors, use a 32-bit ADD that clamps to UINT_MAX. */
+   n = (((uint64_t)n + info.increment) * info.multiplier) >> 32;
+   n = n >> info.post_shift;
+   return n;
+}
+
+/* A little more efficient version if n != UINT_MAX, i.e. no unsigned
+ * wraparound in the computation.
+ */
+static inline uint32_t
+util_fast_udiv32_nuw(uint32_t n, struct util_fast_udiv_info info)
+{
+   assert(n != UINT32_MAX);
+   n = n >> info.pre_shift;
+   n = n + info.increment;
+   n = ((uint64_t)n * info.multiplier) >> 32;
+   n = n >> info.post_shift;
+   return n;
+}
+
+/* Even faster version but both operands must be 31-bit unsigned integers
+ * and the divisor must be greater than 1.
+ *
+ * info must be computed with num_bits == 31.
+ */
+static inline uint32_t
+util_fast_udiv32_u31_d_not_one(uint32_t n, struct util_fast_udiv_info info)
+{
+   assert(info.pre_shift == 0);
+   assert(info.increment == 0);
+   n = ((uint64_t)n * info.multiplier) >> 32;
+   n = n >> info.post_shift;
+   return n;
+}
+
 #ifdef __cplusplus
 } /* extern C */
 #endif
