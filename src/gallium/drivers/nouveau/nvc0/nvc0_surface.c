@@ -1573,6 +1573,13 @@ nvc0_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    bool eng3d = false;
 
+   if (info->src.box.width == 0 || info->src.box.height == 0 ||
+       info->dst.box.width == 0 || info->dst.box.height == 0) {
+      pipe_debug_message(&nvc0->base.debug, ERROR,
+                         "Blit with zero-size src or dst box");
+      return;
+   }
+
    if (util_format_is_depth_or_stencil(info->dst.resource->format)) {
       if (!(info->mask & PIPE_MASK_ZS))
          return;
