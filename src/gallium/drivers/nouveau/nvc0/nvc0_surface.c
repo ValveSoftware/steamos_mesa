@@ -1618,6 +1618,10 @@ nvc0_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
             if (util_format_is_alpha(info->src.format))
                eng3d = info->src.format != PIPE_FORMAT_A8_UNORM;
             else
+            if (util_format_is_srgb(info->dst.format) &&
+                util_format_get_nr_components(info->src.format) == 1)
+               eng3d = true;
+            else
                eng3d = !nv50_2d_format_supported(info->src.format);
          }
       } else
