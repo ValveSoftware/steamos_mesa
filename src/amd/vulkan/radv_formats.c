@@ -1091,6 +1091,20 @@ static VkResult radv_get_image_format_properties(struct radv_physical_device *ph
 		sampleCounts |= VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT | VK_SAMPLE_COUNT_8_BIT;
 	}
 
+	if (info->tiling == VK_IMAGE_TILING_LINEAR &&
+	    (info->format == VK_FORMAT_R32G32B32_SFLOAT ||
+	     info->format == VK_FORMAT_R32G32B32_SINT ||
+	     info->format == VK_FORMAT_R32G32B32_UINT)) {
+		/* R32G32B32 is a weird format and the driver currently only
+		 * supports the barely minimum.
+		 * TODO: Implement more if we really need to.
+		 */
+		if (info->type == VK_IMAGE_TYPE_3D)
+			goto unsupported;
+		maxArraySize = 1;
+		maxMipLevels = 1;
+	}
+
 	if (info->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
 		if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
 			goto unsupported;
