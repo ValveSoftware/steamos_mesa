@@ -541,7 +541,7 @@ svga_new_shader_variant(struct svga_context *svga)
 }
 
 
-enum pipe_error
+void
 svga_destroy_shader_variant(struct svga_context *svga,
                             SVGA3dShaderType type,
                             struct svga_shader_variant *variant)
@@ -557,6 +557,7 @@ svga_destroy_shader_variant(struct svga_context *svga,
             /* flush and try again */
             svga_context_flush(svga, NULL);
             ret = SVGA3D_vgpu10_DestroyShader(svga->swc, variant->id);
+            assert(ret == PIPE_OK);
          }
          util_bitmask_clear(svga->shader_id_bm, variant->id);
       }
@@ -583,8 +584,6 @@ svga_destroy_shader_variant(struct svga_context *svga,
    FREE(variant);
 
    svga->hud.num_shaders--;
-
-   return ret;
 }
 
 /*

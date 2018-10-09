@@ -285,7 +285,7 @@ svga_set_shader(struct svga_context *svga,
 struct svga_shader_variant *
 svga_new_shader_variant(struct svga_context *svga);
 
-enum pipe_error
+void
 svga_destroy_shader_variant(struct svga_context *svga,
                             SVGA3dShaderType type,
                             struct svga_shader_variant *variant);
