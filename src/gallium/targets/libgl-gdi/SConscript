@@ -16,6 +16,7 @@ env.Append(LIBS = [
     'user32',
     'kernel32',
     'ws2_32',
+    'advapi32',
 ])
 
 env.Prepend(LIBS = [
