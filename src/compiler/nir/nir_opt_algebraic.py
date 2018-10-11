@@ -751,6 +751,23 @@ for left, right in itertools.combinations_with_replacement(invert.keys(), 2):
    optimizations.append((('inot', ('iand(is_used_once)', (left, a, b), (right, c, d))),
                          ('ior', (invert[left], a, b), (invert[right], c, d))))
 
+# Optimize x2yN(b2x(x)) -> b2y
+optimizations.append((('f2b', ('b2f', a)), a))
+optimizations.append((('i2b', ('b2i', a)), a))
+for x, y in itertools.product(['f', 'u', 'i'], ['f', 'u', 'i']):
+   if x != 'f' and y != 'f' and x != y:
+      continue
+
+   b2x = 'b2f' if x == 'f' else 'b2i'
+   b2y = 'b2f' if y == 'f' else 'b2i'
+
+   for N in [8, 16, 32, 64]:
+      if y == 'f' and N == 8:
+         continue
+
+      x2yN = '{}2{}{}'.format(x, y, N)
+      optimizations.append(((x2yN, (b2x, a)), (b2y, a)))
+
 def fexp2i(exp, bits):
    # We assume that exp is already in the right range.
    if bits == 32:
