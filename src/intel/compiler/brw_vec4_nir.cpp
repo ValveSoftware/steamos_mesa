@@ -1586,7 +1586,12 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_b2i:
    case nir_op_b2f:
-      emit(MOV(dst, negate(op[0])));
+      if (nir_dest_bit_size(instr->dest.dest) > 32) {
+         assert(dst.type == BRW_REGISTER_TYPE_DF);
+         emit_conversion_to_double(dst, negate(op[0]), false);
+      } else {
+         emit(MOV(dst, negate(op[0])));
+      }
       break;
 
    case nir_op_f2b:
