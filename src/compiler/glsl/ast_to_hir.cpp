@@ -314,10 +314,6 @@ apply_implicit_conversion(const glsl_type *to, ir_rvalue * &from,
    if (!state->is_version(120, 0))
       return false;
 
-   /* ESSL does not allow implicit conversions */
-   if (state->es_shader)
-      return false;
-
    /* From page 27 (page 33 of the PDF) of the GLSL 1.50 spec:
     *
     *    "There are no implicit array or structure conversions. For
