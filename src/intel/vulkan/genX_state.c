@@ -157,6 +157,16 @@ genX(init_device_state)(struct anv_device *device)
       GEN_SAMPLE_POS_16X(sp._16xSample);
 #endif
    }
+
+   /* The BDW+ docs describe how to use the 3DSTATE_WM_HZ_OP instruction in the
+    * section titled, "Optimized Depth Buffer Clear and/or Stencil Buffer
+    * Clear." It mentions that the packet overrides GPU state for the clear
+    * operation and needs to be reset to 0s to clear the overrides. Depending
+    * on the kernel, we may not get a context with the state for this packet
+    * zeroed. Do it ourselves just in case. We've observed this to prevent a
+    * number of GPU hangs on ICL.
+    */
+   anv_batch_emit(&batch, GENX(3DSTATE_WM_HZ_OP), hzp);
 #endif
 
 #if GEN_GEN == 10
