@@ -667,6 +667,13 @@ radv_physical_device_get_format_properties(struct radv_physical_device *physical
 				linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 				tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 			}
+
+			/* Don't support blitting for R32G32B32 formats. */
+			if (format == VK_FORMAT_R32G32B32_SFLOAT ||
+			    format == VK_FORMAT_R32G32B32_UINT ||
+			    format == VK_FORMAT_R32G32B32_SINT) {
+				linear &= ~VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+			}
 		}
 		if (radv_is_colorbuffer_format_supported(format, &blendable)) {
 			linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
